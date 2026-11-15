@@ -1,0 +1,1927 @@
+{
+  "purpose": "Byte-level CSV facts. Every field value is kept as the exact source string; inferred types are descriptive only.",
+  "files": {
+    "cabin schema architecture.csv": {
+      "file": "cabin schema architecture.csv",
+      "encoding": "UTF-8",
+      "valid_utf8": true,
+      "non_ascii_byte_count": 9,
+      "bom_present": true,
+      "bom": "UTF-8 (EF BB BF)",
+      "delimiter": ",",
+      "delimiter_name": "comma",
+      "delimiter_counts_on_header_line": {
+        ",": 4,
+        ";": 0,
+        "\t": 0,
+        "|": 0
+      },
+      "quote_usage": {
+        "quote_char": "\"",
+        "quoted_field_count": 6,
+        "escaped_quote_pairs": 0,
+        "stray_quotes": 0,
+        "unterminated_quote": false,
+        "header_fields_quoted": 0,
+        "quoted_fields": [
+          {
+            "line": 2,
+            "column": "Grain & Purpose",
+            "value": "Aircraft model (737-700, 737-800, 737 MAX 8), ICAO/IATA codes, interior generation, total/tier seat counts, pitch bands, max seat width, power, Wi-Fi, and lavatory layout."
+          },
+          {
+            "line": 3,
+            "column": "Primary Key",
+            "value": "(lopa_id, row_number)"
+          },
+          {
+            "line": 3,
+            "column": "Grain & Purpose",
+            "value": "Row-level geometry, including explicit row_exists = false records for skipped rows 10–13 on 73G, omitted seat letters (1A–1C, 14A, 15A/15F, 30A/30F), exit/bulkhead flags, and FAA recline locks."
+          },
+          {
+            "line": 4,
+            "column": "Primary Key",
+            "value": "(lopa_id, row_number, seat_letter)"
+          },
+          {
+            "line": 4,
+            "column": "Foreign Keys",
+            "value": "(lopa_id, row_number) $\\rightarrow$ lopa_rows"
+          },
+          {
+            "line": 4,
+            "column": "Grain & Purpose",
+            "value": "Atomic physical seat attributes: seat_code, seat_position_type (Window/Middle/Aisle), commercial_tier (Extra Legroom/Preferred/Standard), pitch_range_inches, effective_width_inches, recline_status, window_status (Standard/Missing/Limited/Obstructed/Misaligned/Set-Back/N/A), has_unobstructed_legroom, tray_table_location, underseat_storage_allowed, and power_type."
+          }
+        ]
+      },
+      "line_endings": {
+        "CRLF": 3,
+        "LF": 0,
+        "CR": 0,
+        "inside_quoted_fields": 0
+      },
+      "line_ending_style": "CRLF",
+      "ends_with_newline": false,
+      "headers": [
+        "Entity / Table",
+        "Primary Key",
+        "Foreign Keys",
+        "Row Count",
+        "Grain & Purpose"
+      ],
+      "header_count": 5,
+      "row_count": 3,
+      "ragged_rows": [],
+      "primary_key": [
+        "Entity / Table"
+      ],
+      "duplicate_primary_keys": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Entity / Table",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 3
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "lopa_configurations",
+          "max_length": 19,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "lopa_configurations",
+              "count": 1
+            },
+            {
+              "value": "lopa_rows",
+              "count": 1
+            },
+            {
+              "value": "lopa_seats",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Primary Key",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 3
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "lopa_id",
+          "max_length": 34,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "lopa_id",
+              "count": 1
+            },
+            {
+              "value": "(lopa_id, row_number)",
+              "count": 1
+            },
+            {
+              "value": "(lopa_id, row_number, seat_letter)",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "name": "Foreign Keys",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 3
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "—",
+          "max_length": 45,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "—",
+              "count": 1
+            },
+            {
+              "value": "lopa_id $\\rightarrow$ lopa_configurations",
+              "count": 1
+            },
+            {
+              "value": "(lopa_id, row_number) $\\rightarrow$ lopa_rows",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "name": "Row Count",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 3
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "5",
+          "max_length": 3,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "5",
+              "count": 1
+            },
+            {
+              "value": "147",
+              "count": 1
+            },
+            {
+              "value": "837",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "name": "Grain & Purpose",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 3
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "Aircraft model (737-700, 737-800, 737 MAX 8), ICAO/IATA codes, interior generation, total/tier seat counts, pitch bands, max seat width, power, Wi-Fi, and lavatory layout.",
+          "max_length": 364,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Aircraft model (737-700, 737-800, 737 MAX 8), ICAO/IATA codes, interior generation, total/tier seat counts, pitch bands, max seat width, power, Wi-Fi, and lavatory layout.",
+              "count": 1
+            },
+            {
+              "value": "Row-level geometry, including explicit row_exists = false records for skipped rows 10–13 on 73G, omitted seat letters (1A–1C, 14A, 15A/15F, 30A/30F), exit/bulkhead flags, and FAA recline locks.",
+              "count": 1
+            },
+            {
+              "value": "Atomic physical seat attributes: seat_code, seat_position_type (Window/Middle/Aisle), commercial_tier (Extra Legroom/Preferred/Standard), pitch_range_inches, effective_width_inches, recline_status, window_status (Standard/Missing/Limited/Obstructed/Misaligned/Set-Back/N/A), has_unobstructed_legroom, tray_table_location, underseat_storage_allowed, and power_type.",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "southwest_737_lopa_configurations.csv": {
+      "file": "southwest_737_lopa_configurations.csv",
+      "encoding": "US-ASCII (valid UTF-8 subset)",
+      "valid_utf8": true,
+      "non_ascii_byte_count": 0,
+      "bom_present": false,
+      "bom": null,
+      "delimiter": ",",
+      "delimiter_name": "comma",
+      "delimiter_counts_on_header_line": {
+        ",": 20,
+        ";": 0,
+        "\t": 0,
+        "|": 0
+      },
+      "quote_usage": {
+        "quote_char": "\"",
+        "quoted_field_count": 9,
+        "escaped_quote_pairs": 14,
+        "stray_quotes": 0,
+        "unterminated_quote": false,
+        "header_fields_quoted": 0,
+        "quoted_fields": [
+          {
+            "line": 2,
+            "column": "numbered_row_range",
+            "value": "1-9, 14-27 (skips 10-13)"
+          },
+          {
+            "line": 3,
+            "column": "configuration_name",
+            "value": "Retrofitted Legacy \"Heart\" Cabin"
+          },
+          {
+            "line": 3,
+            "column": "interior_generation",
+            "value": "Legacy \"Heart\" Cabin"
+          },
+          {
+            "line": 5,
+            "column": "configuration_name",
+            "value": "2025 \"Elevated\" Retrofit Cabin"
+          },
+          {
+            "line": 5,
+            "column": "interior_generation",
+            "value": "2025 \"Elevate\" (RECARO R2)"
+          },
+          {
+            "line": 5,
+            "column": "elr_pitch_inches",
+            "value": "33-37 (Row 14 ~37\")"
+          },
+          {
+            "line": 6,
+            "column": "configuration_name",
+            "value": "2025 \"Elevated\" Factory Cabin"
+          },
+          {
+            "line": 6,
+            "column": "interior_generation",
+            "value": "2025 \"Elevate\" Factory (RECARO R2)"
+          },
+          {
+            "line": 6,
+            "column": "elr_pitch_inches",
+            "value": "33-37 (Row 14 ~37\")"
+          }
+        ]
+      },
+      "line_endings": {
+        "CRLF": 6,
+        "LF": 0,
+        "CR": 0,
+        "inside_quoted_fields": 0
+      },
+      "line_ending_style": "CRLF",
+      "ends_with_newline": true,
+      "headers": [
+        "lopa_id",
+        "boeing_model",
+        "icao_code",
+        "iata_code",
+        "configuration_name",
+        "interior_generation",
+        "seat_hardware_model",
+        "est_active_aircraft",
+        "total_seats",
+        "extra_legroom_seats",
+        "preferred_seats",
+        "standard_seats",
+        "numbered_row_range",
+        "elr_pitch_inches",
+        "standard_pitch_inches",
+        "max_seat_width_inches",
+        "in_seat_power",
+        "wifi_system",
+        "lavatory_count_fwd",
+        "lavatory_count_aft",
+        "notes"
+      ],
+      "header_count": 21,
+      "row_count": 5,
+      "ragged_rows": [],
+      "primary_key": [
+        "lopa_id"
+      ],
+      "duplicate_primary_keys": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "lopa_id",
+          "inferred_type": "string (mixed lexical forms: integer, string)",
+          "lexical_class_counts": {
+            "string": 4,
+            "integer": 1
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 5,
+          "example_raw_value": "73G",
+          "max_length": 5,
+          "preserve_as_string": [
+            {
+              "value": "738",
+              "count": 1,
+              "reason": "numeric-looking value in a column that also holds non-numeric labels"
+            },
+            {
+              "value": "7M8-1",
+              "count": 1,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "738-2",
+              "count": 1,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "7M8-2",
+              "count": 1,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "73G",
+              "count": 1
+            },
+            {
+              "value": "738",
+              "count": 1
+            },
+            {
+              "value": "7M8-1",
+              "count": 1
+            },
+            {
+              "value": "738-2",
+              "count": 1
+            },
+            {
+              "value": "7M8-2",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "name": "boeing_model",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "Boeing 737-700",
+          "max_length": 16,
+          "preserve_as_string": [
+            {
+              "value": "Boeing 737-700",
+              "count": 1,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "Boeing 737-800",
+              "count": 2,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Boeing 737-700",
+              "count": 1
+            },
+            {
+              "value": "Boeing 737-800",
+              "count": 2
+            },
+            {
+              "value": "Boeing 737 MAX 8",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "name": "icao_code",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "B737",
+          "max_length": 4,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "B737",
+              "count": 1
+            },
+            {
+              "value": "B738",
+              "count": 2
+            },
+            {
+              "value": "B38M",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "name": "iata_code",
+          "inferred_type": "string (mixed lexical forms: integer, string)",
+          "lexical_class_counts": {
+            "string": 3,
+            "integer": 2
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "73G",
+          "max_length": 3,
+          "preserve_as_string": [
+            {
+              "value": "738",
+              "count": 2,
+              "reason": "numeric-looking value in a column that also holds non-numeric labels"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "73G",
+              "count": 1
+            },
+            {
+              "value": "738",
+              "count": 2
+            },
+            {
+              "value": "7M8",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "name": "configuration_name",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 5,
+          "example_raw_value": "2026 Cabin Iteration (Retrofitted)",
+          "max_length": 34,
+          "preserve_as_string": [
+            {
+              "value": "2026 Cabin Iteration (Retrofitted)",
+              "count": 1,
+              "reason": "label-like: parenthetical qualifier"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "2026 Cabin Iteration (Retrofitted)",
+              "count": 1
+            },
+            {
+              "value": "Retrofitted Legacy \"Heart\" Cabin",
+              "count": 1
+            },
+            {
+              "value": "Retrofitted Original MAX Cabin",
+              "count": 1
+            },
+            {
+              "value": "2025 \"Elevated\" Retrofit Cabin",
+              "count": 1
+            },
+            {
+              "value": "2025 \"Elevated\" Factory Cabin",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "name": "interior_generation",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 5,
+          "example_raw_value": "2026 Cabin Retrofit",
+          "max_length": 34,
+          "preserve_as_string": [
+            {
+              "value": "2025 \"Elevate\" (RECARO R2)",
+              "count": 1,
+              "reason": "label-like: parenthetical qualifier"
+            },
+            {
+              "value": "2025 \"Elevate\" Factory (RECARO R2)",
+              "count": 1,
+              "reason": "label-like: parenthetical qualifier"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "2026 Cabin Retrofit",
+              "count": 1
+            },
+            {
+              "value": "Legacy \"Heart\" Cabin",
+              "count": 1
+            },
+            {
+              "value": "Pre-Oct 2025 Sky/Heart",
+              "count": 1
+            },
+            {
+              "value": "2025 \"Elevate\" (RECARO R2)",
+              "count": 1
+            },
+            {
+              "value": "2025 \"Elevate\" Factory (RECARO R2)",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "name": "seat_hardware_model",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 4,
+          "example_raw_value": "Legacy Slimline (Retrofitted)",
+          "max_length": 41,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Legacy Slimline (Retrofitted)",
+              "count": 1
+            },
+            {
+              "value": "Collins / BE Aerospace Heart Slimline",
+              "count": 1
+            },
+            {
+              "value": "Pre-Oct 2025 Boeing Sky Interior Slimline",
+              "count": 1
+            },
+            {
+              "value": "RECARO R2",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "name": "est_active_aircraft",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 5,
+          "example_raw_value": "~277",
+          "max_length": 26,
+          "preserve_as_string": [
+            {
+              "value": "~277",
+              "count": 1,
+              "reason": "label-like: tilde qualifier (~)"
+            },
+            {
+              "value": "~204",
+              "count": 1,
+              "reason": "label-like: tilde qualifier (~)"
+            },
+            {
+              "value": "~315",
+              "count": 1,
+              "reason": "label-like: tilde qualifier (~)"
+            },
+            {
+              "value": "~46+ (expanding)",
+              "count": 1,
+              "reason": "label-like: tilde qualifier (~), plus qualifier (n+), parenthetical qualifier"
+            },
+            {
+              "value": "New deliveries (Oct 2025+)",
+              "count": 1,
+              "reason": "label-like: plus qualifier (n+), parenthetical qualifier"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "~277",
+              "count": 1
+            },
+            {
+              "value": "~204",
+              "count": 1
+            },
+            {
+              "value": "~315",
+              "count": 1
+            },
+            {
+              "value": "~46+ (expanding)",
+              "count": 1
+            },
+            {
+              "value": "New deliveries (Oct 2025+)",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "name": "total_seats",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "137",
+          "max_length": 3,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "137",
+              "count": 1
+            },
+            {
+              "value": "175",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "name": "extra_legroom_seats",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "42",
+          "max_length": 2,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "42",
+              "count": 1
+            },
+            {
+              "value": "46",
+              "count": 2
+            },
+            {
+              "value": "48",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "name": "preferred_seats",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "23",
+          "max_length": 2,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "23",
+              "count": 1
+            },
+            {
+              "value": "45",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "name": "standard_seats",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "72",
+          "max_length": 2,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "72",
+              "count": 1
+            },
+            {
+              "value": "84",
+              "count": 2
+            },
+            {
+              "value": "82",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 12,
+          "name": "numbered_row_range",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "1-9, 14-27 (skips 10-13)",
+          "max_length": 24,
+          "preserve_as_string": [
+            {
+              "value": "1-9, 14-27 (skips 10-13)",
+              "count": 1,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier), parenthetical qualifier"
+            },
+            {
+              "value": "1-30",
+              "count": 4,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "1-9, 14-27 (skips 10-13)",
+              "count": 1
+            },
+            {
+              "value": "1-30",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "index": 13,
+          "name": "elr_pitch_inches",
+          "inferred_type": "string (mixed lexical forms: integer, string)",
+          "lexical_class_counts": {
+            "string": 3,
+            "integer": 2
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "35-36",
+          "max_length": 19,
+          "preserve_as_string": [
+            {
+              "value": "34",
+              "count": 2,
+              "reason": "numeric-looking value in a column that also holds non-numeric labels"
+            },
+            {
+              "value": "35-36",
+              "count": 1,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "33-37 (Row 14 ~37\")",
+              "count": 2,
+              "reason": "label-like: tilde qualifier (~), digit-hyphen-digit (range or hyphenated identifier), inch mark (\"), parenthetical qualifier"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "35-36",
+              "count": 1
+            },
+            {
+              "value": "34",
+              "count": 2
+            },
+            {
+              "value": "33-37 (Row 14 ~37\")",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 14,
+          "name": "standard_pitch_inches",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "31-33",
+          "max_length": 5,
+          "preserve_as_string": [
+            {
+              "value": "31-33",
+              "count": 1,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "31-32",
+              "count": 4,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "31-33",
+              "count": 1
+            },
+            {
+              "value": "31-32",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "index": 15,
+          "name": "max_seat_width_inches",
+          "inferred_type": "decimal",
+          "lexical_class_counts": {
+            "decimal": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "17.0",
+          "max_length": 4,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [
+            {
+              "value": "17.0",
+              "count": 1,
+              "numeric_round_trip": "17"
+            }
+          ],
+          "distinct_values": [
+            {
+              "value": "17.0",
+              "count": 1
+            },
+            {
+              "value": "17.8",
+              "count": 3
+            },
+            {
+              "value": "17.3",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "name": "in_seat_power",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 4,
+          "example_raw_value": "None (legacy) / USB-C on select retrofits",
+          "max_length": 45,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "None (legacy) / USB-C on select retrofits",
+              "count": 1
+            },
+            {
+              "value": "None (most airframes)",
+              "count": 1
+            },
+            {
+              "value": "None (early deliveries) / USB on newer frames",
+              "count": 1
+            },
+            {
+              "value": "USB-A & USB-C at every seat",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 17,
+          "name": "wifi_system",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 4,
+          "example_raw_value": "Anuvu Ku-band",
+          "max_length": 40,
+          "preserve_as_string": [
+            {
+              "value": "Anuvu Ku-band / Viasat Ka-band (N8849Q+)",
+              "count": 1,
+              "reason": "label-like: parenthetical qualifier"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Anuvu Ku-band",
+              "count": 2
+            },
+            {
+              "value": "Anuvu Ku-band / Viasat Ka-band (N8849Q+)",
+              "count": 1
+            },
+            {
+              "value": "Anuvu Ku-band / Viasat Ka-band",
+              "count": 1
+            },
+            {
+              "value": "Viasat Ka-band",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "name": "lavatory_count_fwd",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 1,
+          "example_raw_value": "1",
+          "max_length": 1,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "1",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "index": 19,
+          "name": "lavatory_count_aft",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "1",
+          "max_length": 1,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "1",
+              "count": 1
+            },
+            {
+              "value": "2",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "name": "notes",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 5
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 5,
+          "example_raw_value": "Single overwing exit at Row 15; Rows 10-13 omitted from numbering; 14A omitted for exit access.",
+          "max_length": 110,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Single overwing exit at Row 15; Rows 10-13 omitted from numbering; 14A omitted for exit access.",
+              "count": 1
+            },
+            {
+              "value": "1A-1C omitted (fwd lav/galley); 15A and 15F omitted at aft overwing exits giving 16A/16F unobstructed legroom.",
+              "count": 1
+            },
+            {
+              "value": "Identical LOPA geometry to 738 Heart retrofit; 1A-1C and 15A/15F omitted.",
+              "count": 1
+            },
+            {
+              "value": "Restores 15A/15F (+2 ELR seats) and reduces Row 30 to 4 seats (30B-30E) adjacent to aft lavatory complex.",
+              "count": 1
+            },
+            {
+              "value": "Factory-installed RECARO R2 Elevate cabin (Oct 2025+ deliveries); 48 ELR / 45 Preferred / 82 Standard.",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "southwest_737_lopa_seats.csv": {
+      "file": "southwest_737_lopa_seats.csv",
+      "encoding": "US-ASCII (valid UTF-8 subset)",
+      "valid_utf8": true,
+      "non_ascii_byte_count": 0,
+      "bom_present": false,
+      "bom": null,
+      "delimiter": ",",
+      "delimiter_name": "comma",
+      "delimiter_counts_on_header_line": {
+        ",": 17,
+        ";": 0,
+        "\t": 0,
+        "|": 0
+      },
+      "quote_usage": {
+        "quote_char": "\"",
+        "quoted_field_count": 14,
+        "escaped_quote_pairs": 14,
+        "stray_quotes": 0,
+        "unterminated_quote": false,
+        "header_fields_quoted": 0,
+        "quoted_fields": [
+          {
+            "line": 190,
+            "column": "window_notes",
+            "value": "Completely windowless blank wall covering environmental control ducting (~2\" narrower shoulder clearance)"
+          },
+          {
+            "line": 365,
+            "column": "window_notes",
+            "value": "Completely windowless blank wall covering environmental control ducting (~2\" narrower shoulder clearance)"
+          },
+          {
+            "line": 564,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 565,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 566,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 567,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 568,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 569,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 739,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 740,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 741,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 742,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 743,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          },
+          {
+            "line": 744,
+            "column": "special_notes",
+            "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply"
+          }
+        ]
+      },
+      "line_endings": {
+        "CRLF": 838,
+        "LF": 0,
+        "CR": 0,
+        "inside_quoted_fields": 0
+      },
+      "line_ending_style": "CRLF",
+      "ends_with_newline": true,
+      "headers": [
+        "lopa_id",
+        "row_number",
+        "seat_letter",
+        "seat_code",
+        "seat_position_type",
+        "commercial_tier",
+        "pitch_range_inches",
+        "effective_width_inches",
+        "recline_status",
+        "window_status",
+        "window_notes",
+        "is_exit_seat",
+        "is_bulkhead_seat",
+        "has_unobstructed_legroom",
+        "tray_table_location",
+        "underseat_storage_allowed",
+        "power_type",
+        "special_notes"
+      ],
+      "header_count": 18,
+      "row_count": 837,
+      "ragged_rows": [],
+      "primary_key": [
+        "lopa_id",
+        "row_number",
+        "seat_letter"
+      ],
+      "duplicate_primary_keys": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "lopa_id",
+          "inferred_type": "string (mixed lexical forms: integer, string)",
+          "lexical_class_counts": {
+            "string": 662,
+            "integer": 175
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 5,
+          "example_raw_value": "73G",
+          "max_length": 5,
+          "preserve_as_string": [
+            {
+              "value": "738",
+              "count": 175,
+              "reason": "numeric-looking value in a column that also holds non-numeric labels"
+            },
+            {
+              "value": "7M8-1",
+              "count": 175,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "738-2",
+              "count": 175,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "7M8-2",
+              "count": 175,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "73G",
+              "count": 137
+            },
+            {
+              "value": "738",
+              "count": 175
+            },
+            {
+              "value": "7M8-1",
+              "count": 175
+            },
+            {
+              "value": "738-2",
+              "count": 175
+            },
+            {
+              "value": "7M8-2",
+              "count": 175
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "name": "row_number",
+          "inferred_type": "integer",
+          "lexical_class_counts": {
+            "integer": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 30,
+          "example_raw_value": "1",
+          "max_length": 2,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": []
+        },
+        {
+          "index": 2,
+          "name": "seat_letter",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 6,
+          "example_raw_value": "A",
+          "max_length": 1,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "A",
+              "count": 134
+            },
+            {
+              "value": "B",
+              "count": 139
+            },
+            {
+              "value": "C",
+              "count": 139
+            },
+            {
+              "value": "D",
+              "count": 143
+            },
+            {
+              "value": "E",
+              "count": 143
+            },
+            {
+              "value": "F",
+              "count": 139
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "name": "seat_code",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 180,
+          "example_raw_value": "1A",
+          "max_length": 3,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": []
+        },
+        {
+          "index": 4,
+          "name": "seat_position_type",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "Window",
+          "max_length": 6,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Window",
+              "count": 273
+            },
+            {
+              "value": "Middle",
+              "count": 282
+            },
+            {
+              "value": "Aisle",
+              "count": 282
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "name": "commercial_tier",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 3,
+          "example_raw_value": "Extra Legroom",
+          "max_length": 13,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Extra Legroom",
+              "count": 230
+            },
+            {
+              "value": "Preferred",
+              "count": 203
+            },
+            {
+              "value": "Standard",
+              "count": 404
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "name": "pitch_range_inches",
+          "inferred_type": "string (mixed lexical forms: integer, string)",
+          "lexical_class_counts": {
+            "string": 733,
+            "integer": 104
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 6,
+          "example_raw_value": "35-36",
+          "max_length": 5,
+          "preserve_as_string": [
+            {
+              "value": "34",
+              "count": 92,
+              "reason": "numeric-looking value in a column that also holds non-numeric labels"
+            },
+            {
+              "value": "37",
+              "count": 12,
+              "reason": "numeric-looking value in a column that also holds non-numeric labels"
+            },
+            {
+              "value": "35-36",
+              "count": 42,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "31-33",
+              "count": 95,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "31-32",
+              "count": 512,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            },
+            {
+              "value": "33-34",
+              "count": 84,
+              "reason": "label-like: digit-hyphen-digit (range or hyphenated identifier)"
+            }
+          ],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "35-36",
+              "count": 42
+            },
+            {
+              "value": "31-33",
+              "count": 95
+            },
+            {
+              "value": "34",
+              "count": 92
+            },
+            {
+              "value": "31-32",
+              "count": 512
+            },
+            {
+              "value": "33-34",
+              "count": 84
+            },
+            {
+              "value": "37",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "name": "effective_width_inches",
+          "inferred_type": "decimal",
+          "lexical_class_counts": {
+            "decimal": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 5,
+          "example_raw_value": "15.5",
+          "max_length": 4,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [
+            {
+              "value": "17.0",
+              "count": 131,
+              "numeric_round_trip": "17"
+            }
+          ],
+          "distinct_values": [
+            {
+              "value": "15.5",
+              "count": 30
+            },
+            {
+              "value": "17.0",
+              "count": 131
+            },
+            {
+              "value": "17.8",
+              "count": 505
+            },
+            {
+              "value": "15.8",
+              "count": 2
+            },
+            {
+              "value": "17.3",
+              "count": 169
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "name": "recline_status",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 4,
+          "example_raw_value": "Standard",
+          "max_length": 15,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Standard",
+              "count": 738
+            },
+            {
+              "value": "None",
+              "count": 41
+            },
+            {
+              "value": "None/Limited",
+              "count": 26
+            },
+            {
+              "value": "None/Restricted",
+              "count": 32
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "name": "window_status",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 6,
+          "example_raw_value": "Standard",
+          "max_length": 19,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Standard",
+              "count": 221
+            },
+            {
+              "value": "N/A",
+              "count": 564
+            },
+            {
+              "value": "Misaligned/Set-Back",
+              "count": 38
+            },
+            {
+              "value": "Limited/Missing",
+              "count": 2
+            },
+            {
+              "value": "Missing",
+              "count": 4
+            },
+            {
+              "value": "Limited/Obstructed",
+              "count": 8
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "name": "window_notes",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "blank": 785,
+            "string": 52
+          },
+          "blank_count": 785,
+          "absent_count": 0,
+          "distinct_count": 8,
+          "example_raw_value": "Window frame positioned slightly behind seatback",
+          "max_length": 105,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "",
+              "count": 785
+            },
+            {
+              "value": "Window frame positioned slightly behind seatback",
+              "count": 2
+            },
+            {
+              "value": "Air-conditioning riser duct frame blocks/limits window visibility",
+              "count": 2
+            },
+            {
+              "value": "Window positioned behind headrest",
+              "count": 20
+            },
+            {
+              "value": "Completely windowless blank wall covering environmental control ducting (~2\" narrower shoulder clearance)",
+              "count": 2
+            },
+            {
+              "value": "Forward-offset window frame limits visibility",
+              "count": 8
+            },
+            {
+              "value": "Window positioned behind headrest due to RECARO R2 seat pitch geometry",
+              "count": 16
+            },
+            {
+              "value": "Completely windowless blank wall covering environmental control ducting",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "name": "is_exit_seat",
+          "inferred_type": "boolean(True/False)",
+          "lexical_class_counts": {
+            "boolean(True/False)": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "False",
+          "max_length": 5,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "False",
+              "count": 763
+            },
+            {
+              "value": "True",
+              "count": 74
+            }
+          ]
+        },
+        {
+          "index": 12,
+          "name": "is_bulkhead_seat",
+          "inferred_type": "boolean(True/False)",
+          "lexical_class_counts": {
+            "boolean(True/False)": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "True",
+          "max_length": 5,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "True",
+              "count": 30
+            },
+            {
+              "value": "False",
+              "count": 807
+            }
+          ]
+        },
+        {
+          "index": 13,
+          "name": "has_unobstructed_legroom",
+          "inferred_type": "boolean(True/False)",
+          "lexical_class_counts": {
+            "boolean(True/False)": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "False",
+          "max_length": 5,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "False",
+              "count": 832
+            },
+            {
+              "value": "True",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "index": 14,
+          "name": "tray_table_location",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "Armrest",
+          "max_length": 8,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Armrest",
+              "count": 35
+            },
+            {
+              "value": "Seatback",
+              "count": 802
+            }
+          ]
+        },
+        {
+          "index": 15,
+          "name": "underseat_storage_allowed",
+          "inferred_type": "boolean(True/False)",
+          "lexical_class_counts": {
+            "boolean(True/False)": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 2,
+          "example_raw_value": "False",
+          "max_length": 5,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "False",
+              "count": 30
+            },
+            {
+              "value": "True",
+              "count": 807
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "name": "power_type",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 837
+          },
+          "blank_count": 0,
+          "absent_count": 0,
+          "distinct_count": 4,
+          "example_raw_value": "None / Select USB-C",
+          "max_length": 45,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "None / Select USB-C",
+              "count": 137
+            },
+            {
+              "value": "None (most airframes)",
+              "count": 175
+            },
+            {
+              "value": "None (early deliveries) / USB on newer frames",
+              "count": 175
+            },
+            {
+              "value": "USB-A & USB-C",
+              "count": 350
+            }
+          ]
+        },
+        {
+          "index": 17,
+          "name": "special_notes",
+          "inferred_type": "string",
+          "lexical_class_counts": {
+            "string": 104,
+            "blank": 733
+          },
+          "blank_count": 733,
+          "absent_count": 0,
+          "distinct_count": 8,
+          "example_raw_value": "Bulkhead seat; armrest-stowed tray table; no floor stowage",
+          "max_length": 120,
+          "preserve_as_string": [],
+          "decimals_changed_by_numeric_round_trip": [],
+          "distinct_values": [
+            {
+              "value": "Bulkhead seat; armrest-stowed tray table; no floor stowage",
+              "count": 6
+            },
+            {
+              "value": "",
+              "count": 733
+            },
+            {
+              "value": "No seat directly ahead (14A omitted); armrest-stowed tray table",
+              "count": 1
+            },
+            {
+              "value": "Overwing exit row; FAA exit seating criteria apply",
+              "count": 5
+            },
+            {
+              "value": "Bulkhead position; armrest-stowed tray table; no floor stowage",
+              "count": 24
+            },
+            {
+              "value": "Overwing exit zone; FAA exit seating criteria apply",
+              "count": 52
+            },
+            {
+              "value": "No seat directly ahead (15A/15F omitted); armrest-stowed tray table; Overwing exit zone; FAA exit seating criteria apply",
+              "count": 4
+            },
+            {
+              "value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply",
+              "count": 12
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "foreign_key_checks": {
+    "note": "Rows live in southwest_737_lopa_rows.xlsx; its lopa_id cells typed as numbers (30 cells) are compared as identifier strings. That conversion is explicit and counted in cross-format-comparison.json.",
+    "seats_to_rows": {
+      "relation": "southwest_737_lopa_seats.csv(lopa_id,row_number) -> southwest_737_lopa_rows.xlsx(lopa_id,row_number)",
+      "seat_records_checked": 837,
+      "orphans": [],
+      "seats_referencing_row_exists_false": [],
+      "distinct_row_keys_referenced": 143
+    },
+    "seats_to_configurations": {
+      "relation": "southwest_737_lopa_seats.csv(lopa_id) -> southwest_737_lopa_configurations.csv(lopa_id)",
+      "orphans": []
+    },
+    "rows_to_configurations": {
+      "relation": "southwest_737_lopa_rows.xlsx(lopa_id) -> southwest_737_lopa_configurations.csv(lopa_id)",
+      "row_records_checked": 147,
+      "orphans": [],
+      "duplicate_row_primary_keys": []
+    },
+    "reverse_coverage": {
+      "existing_rows_without_any_seat": [],
+      "configurations_without_rows": []
+    },
+    "all_foreign_keys_resolve": true
+  },
+  "schema_architecture_csv_declared_counts": [
+    {
+      "line": 2,
+      "entity": "lopa_configurations",
+      "primary_key": "lopa_id",
+      "foreign_keys_raw": "—",
+      "declared_row_count_raw": "5"
+    },
+    {
+      "line": 3,
+      "entity": "lopa_rows",
+      "primary_key": "(lopa_id, row_number)",
+      "foreign_keys_raw": "lopa_id $\\rightarrow$ lopa_configurations",
+      "declared_row_count_raw": "147"
+    },
+    {
+      "line": 4,
+      "entity": "lopa_seats",
+      "primary_key": "(lopa_id, row_number, seat_letter)",
+      "foreign_keys_raw": "(lopa_id, row_number) $\\rightarrow$ lopa_rows",
+      "declared_row_count_raw": "837"
+    }
+  ]
+}

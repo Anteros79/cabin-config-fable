@@ -1,0 +1,562 @@
+{
+  "file": "Current Aircraft Seat Configurations.docx",
+  "table_count": 2,
+  "tables": [
+    {
+      "locator": "T01",
+      "style": "GridTable4-Accent1",
+      "grid_columns": 6,
+      "first_row_is_header_style": true,
+      "preceding_paragraph_locator": "P002",
+      "rows": [
+        {
+          "locator": "T01.R01",
+          "is_header": true,
+          "cells": [
+            {
+              "locator": "T01.R01.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Aircraft / active layout",
+              "paragraph_locators": [
+                "T01.R01.C01.P1"
+              ]
+            },
+            {
+              "locator": "T01.R01.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Capacity",
+              "paragraph_locators": [
+                "T01.R01.C02.P1"
+              ]
+            },
+            {
+              "locator": "T01.R01.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Seating arrangement",
+              "paragraph_locators": [
+                "T01.R01.C03.P1"
+              ]
+            },
+            {
+              "locator": "T01.R01.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Extra Legroom pitch",
+              "paragraph_locators": [
+                "T01.R01.C04.P1"
+              ]
+            },
+            {
+              "locator": "T01.R01.C05",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Standard / Preferred pitch",
+              "paragraph_locators": [
+                "T01.R01.C05.P1"
+              ]
+            },
+            {
+              "locator": "T01.R01.C06",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Seat width",
+              "paragraph_locators": [
+                "T01.R01.C06.P1"
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R02",
+          "is_header": false,
+          "cells": [
+            {
+              "locator": "T01.R02.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "737-700, 137-seat LOPA",
+              "paragraph_locators": [
+                "T01.R02.C01.P1"
+              ]
+            },
+            {
+              "locator": "T01.R02.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "137",
+              "paragraph_locators": [
+                "T01.R02.C02.P1"
+              ]
+            },
+            {
+              "locator": "T01.R02.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Single cabin, 3-3 seating; one double-seat exit-row section",
+              "paragraph_locators": [
+                "T01.R02.C03.P1"
+              ]
+            },
+            {
+              "locator": "T01.R02.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "35-36 in.",
+              "paragraph_locators": [
+                "T01.R02.C04.P1"
+              ]
+            },
+            {
+              "locator": "T01.R02.C05",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "31-33 in.",
+              "paragraph_locators": [
+                "T01.R02.C05.P1"
+              ]
+            },
+            {
+              "locator": "T01.R02.C06",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "15.5-17.0 in.",
+              "paragraph_locators": [
+                "T01.R02.C06.P1"
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R03",
+          "is_header": false,
+          "cells": [
+            {
+              "locator": "T01.R03.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "737-700, upgraded 138-seat LOPA",
+              "paragraph_locators": [
+                "T01.R03.C01.P1"
+              ]
+            },
+            {
+              "locator": "T01.R03.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "138",
+              "paragraph_locators": [
+                "T01.R03.C02.P1"
+              ]
+            },
+            {
+              "locator": "T01.R03.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Single cabin, 3-3 seating; exit row changed from two seats to three on the affected side",
+              "paragraph_locators": [
+                "T01.R03.C03.P1"
+              ]
+            },
+            {
+              "locator": "T01.R03.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "35-36 in.",
+              "paragraph_locators": [
+                "T01.R03.C04.P1"
+              ]
+            },
+            {
+              "locator": "T01.R03.C05",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "31-33 in.",
+              "paragraph_locators": [
+                "T01.R03.C05.P1"
+              ]
+            },
+            {
+              "locator": "T01.R03.C06",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "15.5-17.0 in.",
+              "paragraph_locators": [
+                "T01.R03.C06.P1"
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R04",
+          "is_header": false,
+          "cells": [
+            {
+              "locator": "T01.R04.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "737-800 / MAX 8, temporary LOPA",
+              "paragraph_locators": [
+                "T01.R04.C01.P1"
+              ]
+            },
+            {
+              "locator": "T01.R04.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "175",
+              "paragraph_locators": [
+                "T01.R04.C02.P1"
+              ]
+            },
+            {
+              "locator": "T01.R04.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Single cabin, 3-3 seating; reduced seating at part of the exit-row and rear-row areas",
+              "paragraph_locators": [
+                "T01.R04.C03.P1"
+              ]
+            },
+            {
+              "locator": "T01.R04.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "34 in.",
+              "paragraph_locators": [
+                "T01.R04.C04.P1"
+              ]
+            },
+            {
+              "locator": "T01.R04.C05",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "31-32 in.",
+              "paragraph_locators": [
+                "T01.R04.C05.P1"
+              ]
+            },
+            {
+              "locator": "T01.R04.C06",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "15.5-17.8 in.",
+              "paragraph_locators": [
+                "T01.R04.C06.P1"
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R05",
+          "is_header": false,
+          "cells": [
+            {
+              "locator": "T01.R05.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "737-800 / MAX 8, final LOPA",
+              "paragraph_locators": [
+                "T01.R05.C01.P1"
+              ]
+            },
+            {
+              "locator": "T01.R05.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "175",
+              "paragraph_locators": [
+                "T01.R05.C02.P1"
+              ]
+            },
+            {
+              "locator": "T01.R05.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Single cabin, 3-3 seating; three seats on both sides of the exit row and two seats on both sides of the last row",
+              "paragraph_locators": [
+                "T01.R05.C03.P1"
+              ]
+            },
+            {
+              "locator": "T01.R05.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "34 in.",
+              "paragraph_locators": [
+                "T01.R05.C04.P1"
+              ]
+            },
+            {
+              "locator": "T01.R05.C05",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "31-32 in.",
+              "paragraph_locators": [
+                "T01.R05.C05.P1"
+              ]
+            },
+            {
+              "locator": "T01.R05.C06",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "15.5-17.8 in.",
+              "paragraph_locators": [
+                "T01.R05.C06.P1"
+              ]
+            }
+          ]
+        }
+      ],
+      "row_count": 5,
+      "column_counts": [
+        6
+      ],
+      "header": [
+        "Aircraft / active layout",
+        "Capacity",
+        "Seating arrangement",
+        "Extra Legroom pitch",
+        "Standard / Preferred pitch",
+        "Seat width"
+      ],
+      "merged_cells": []
+    },
+    {
+      "locator": "T02",
+      "style": "GridTable4-Accent1",
+      "grid_columns": 4,
+      "first_row_is_header_style": true,
+      "preceding_paragraph_locator": "P009",
+      "rows": [
+        {
+          "locator": "T02.R01",
+          "is_header": true,
+          "cells": [
+            {
+              "locator": "T02.R01.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Seat tier",
+              "paragraph_locators": [
+                "T02.R01.C01.P1"
+              ]
+            },
+            {
+              "locator": "T02.R01.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Location",
+              "paragraph_locators": [
+                "T02.R01.C02.P1"
+              ]
+            },
+            {
+              "locator": "T02.R01.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Physical dimensions",
+              "paragraph_locators": [
+                "T02.R01.C03.P1"
+              ]
+            },
+            {
+              "locator": "T02.R01.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Included experience",
+              "paragraph_locators": [
+                "T02.R01.C04.P1"
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T02.R02",
+          "is_header": false,
+          "cells": [
+            {
+              "locator": "T02.R02.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Extra Legroom, premium tier",
+              "paragraph_locators": [
+                "T02.R02.C01.P1"
+              ]
+            },
+            {
+              "locator": "T02.R02.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Front of the cabin and designated exit-row positions",
+              "paragraph_locators": [
+                "T02.R02.C02.P1"
+              ]
+            },
+            {
+              "locator": "T02.R02.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "737-700: 35-36-inch pitch, up to five inches more than standard. 737-800/MAX 8: 34-inch pitch, approximately three inches more than standard",
+              "paragraph_locators": [
+                "T02.R02.C03.P1"
+              ]
+            },
+            {
+              "locator": "T02.R02.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Earlier boarding, enhanced snacks and a complimentary premium beverage when available",
+              "paragraph_locators": [
+                "T02.R02.C04.P1"
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T02.R03",
+          "is_header": false,
+          "cells": [
+            {
+              "locator": "T02.R03.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Preferred",
+              "paragraph_locators": [
+                "T02.R03.C01.P1"
+              ]
+            },
+            {
+              "locator": "T02.R03.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Standard-pitch seats toward the front",
+              "paragraph_locators": [
+                "T02.R03.C02.P1"
+              ]
+            },
+            {
+              "locator": "T02.R03.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Same pitch and width range as Standard for the aircraft type",
+              "paragraph_locators": [
+                "T02.R03.C03.P1"
+              ]
+            },
+            {
+              "locator": "T02.R03.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Primarily better cabin position and quicker deplaning; it is not a wider seat",
+              "paragraph_locators": [
+                "T02.R03.C04.P1"
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T02.R04",
+          "is_header": false,
+          "cells": [
+            {
+              "locator": "T02.R04.C01",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Standard",
+              "paragraph_locators": [
+                "T02.R04.C01.P1"
+              ]
+            },
+            {
+              "locator": "T02.R04.C02",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Rear portion of the cabin",
+              "paragraph_locators": [
+                "T02.R04.C02.P1"
+              ]
+            },
+            {
+              "locator": "T02.R04.C03",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "737-700: 31-33-inch pitch. 737-800/MAX 8: 31-32-inch pitch",
+              "paragraph_locators": [
+                "T02.R04.C03.P1"
+              ]
+            },
+            {
+              "locator": "T02.R04.C04",
+              "grid_span": 1,
+              "v_merge": null,
+              "nested_tables": 0,
+              "text": "Standard assigned seat",
+              "paragraph_locators": [
+                "T02.R04.C04.P1"
+              ]
+            }
+          ]
+        }
+      ],
+      "row_count": 4,
+      "column_counts": [
+        4
+      ],
+      "header": [
+        "Seat tier",
+        "Location",
+        "Physical dimensions",
+        "Included experience"
+      ],
+      "merged_cells": []
+    }
+  ]
+}

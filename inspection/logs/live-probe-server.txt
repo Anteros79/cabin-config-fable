@@ -1,0 +1,99 @@
+INFO:     Started server process [26605]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:53258 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53264 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53265 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53266 - "GET /api/aircraft HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53267 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53268 - "GET /vendor/THREE-LICENSE.txt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53269 - "GET /vendor/three.core.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53270 - "GET /api/lookup?tail=N100TL&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53271 - "GET /api/lookup?tail=N200TL&check_date=2026-06-30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53272 - "GET /api/lookup?tail=N200TL&check_date=2026-07-01 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53273 - "GET /api/lookup?tail=N300TL&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53274 - "GET /api/lookup?tail=N000TL&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53275 - "GET /api/lookup?tail=N110TL&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53276 - "GET /api/lookup?tail=N999ZZ&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53277 - "GET /api/lookup?tail=N100TL&check_date=2027-01-01 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53278 - "GET /api/lookup?tail=N100TL&check_date=2026-12-31 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53279 - "GET /api/lookup?tail=N100TL&check_date=2025-07-21 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53280 - "GET /api/lookup?tail=N100TL&check_date=2025-09-30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53281 - "GET /api/lookup?tail=N100TL&check_date=2025-10-01 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53282 - "GET /api/lookup?tail=N010TL&check_date=2025-07-21 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53283 - "GET /api/lookup?tail=N010TL&check_date=2025-07-22 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53284 - "GET /api/lookup?tail=N030TL&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53285 - "GET /api/lookup?tail=N040TL&check_date=2026-06-30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53286 - "GET /api/lookup?tail=N040TL&check_date=2026-07-01 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53287 - "GET /api/lookup?tail=N050TL&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53288 - "GET /api/lookup?tail=N090TL&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53289 - "GET /api/lookup?tail=N010TL&check_date=2023-12-31 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53290 - "GET /api/lookup?tail=%20n100tl%20&check_date=2026-11-12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53291 - "GET /api/lookup?tail=N100TL&check_date=bad HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53292 - "GET /api/lookup?tail=N100TL HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53293 - "GET /api/lookup?tail=N100TL&check_date=2026-02-30 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53294 - "POST /api/visits HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53295 - "PUT /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53296 - "PUT /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53297 - "PUT /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53298 - "PUT /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53299 - "GET /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53300 - "POST /api/visits HTTP/1.1" 201 Created
+INFO:     127.0.0.1:53301 - "POST /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/complete HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:53302 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53303 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53304 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53305 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53306 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53307 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53308 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53309 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53310 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53311 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53312 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53313 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53314 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53315 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53316 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53317 - "GET /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53318 - "DELETE /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements/cfb3bba6-c99d-464e-94c8-22d3f7fc1bf8 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53319 - "DELETE /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements/does-not-exist HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53320 - "DELETE /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements/cfb3bba6-c99d-464e-94c8-22d3f7fc1bf8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53321 - "POST /api/visits HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53322 - "POST /api/visits HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53323 - "POST /api/visits HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53324 - "POST /api/visits HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53325 - "POST /api/visits HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53326 - "POST /api/visits HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:53327 - "POST /api/visits HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:53328 - "GET /api/visits/missing HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53329 - "GET /api/visits/missing/report HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53330 - "POST /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/complete HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53331 - "PUT /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:53332 - "PUT /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:53333 - "DELETE /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements/050f52e5-ab35-4408-b04e-17e57da23cc9 HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:53334 - "POST /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/complete HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53335 - "GET /api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53336 - "GET /api/visits HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53337 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53340 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53343 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53341 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53348 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53345 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53347 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53338 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53339 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53344 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53342 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53346 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53350 - "GET /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53351 - "POST /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/complete HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53352 - "PUT /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:53353 - "GET /api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53354 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53355 - "GET /docs HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [26605]

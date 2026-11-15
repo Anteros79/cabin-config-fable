@@ -1,0 +1,72 @@
+# Located text extract of "Current Aircraft Seat Configurations.docx"
+# Locators: P### = body paragraph (document order); T##.R##.C## = table cell. Text is verbatim; hyperlinks are listed in docx-hyperlinks.json.
+
+[P001] {Heading 2} Current Southwest seat configurations
+[P002] As of November 13, 2026, Southwest is flying three aircraft families with four active seating layouts because portions of the fleet are still being standardized:
+[T01] table: 5 rows x 6 columns (style GridTable4-Accent1)
+[T01.R01.C01] {header} Aircraft / active layout
+[T01.R01.C02] {header} Capacity
+[T01.R01.C03] {header} Seating arrangement
+[T01.R01.C04] {header} Extra Legroom pitch
+[T01.R01.C05] {header} Standard / Preferred pitch
+[T01.R01.C06] {header} Seat width
+[T01.R02.C01] 737-700, 137-seat LOPA
+[T01.R02.C02] 137
+[T01.R02.C03] Single cabin, 3-3 seating; one double-seat exit-row section
+[T01.R02.C04] 35-36 in.
+[T01.R02.C05] 31-33 in.
+[T01.R02.C06] 15.5-17.0 in.
+[T01.R03.C01] 737-700, upgraded 138-seat LOPA
+[T01.R03.C02] 138
+[T01.R03.C03] Single cabin, 3-3 seating; exit row changed from two seats to three on the affected side
+[T01.R03.C04] 35-36 in.
+[T01.R03.C05] 31-33 in.
+[T01.R03.C06] 15.5-17.0 in.
+[T01.R04.C01] 737-800 / MAX 8, temporary LOPA
+[T01.R04.C02] 175
+[T01.R04.C03] Single cabin, 3-3 seating; reduced seating at part of the exit-row and rear-row areas
+[T01.R04.C04] 34 in.
+[T01.R04.C05] 31-32 in.
+[T01.R04.C06] 15.5-17.8 in.
+[T01.R05.C01] 737-800 / MAX 8, final LOPA
+[T01.R05.C02] 175
+[T01.R05.C03] Single cabin, 3-3 seating; three seats on both sides of the exit row and two seats on both sides of the last row
+[T01.R05.C04] 34 in.
+[T01.R05.C05] 31-32 in.
+[T01.R05.C06] 15.5-17.8 in.
+[P003] The measurements above are Southwest’s published ranges. Pitch is the distance from a point on one seat to the same point on the seat immediately ahead, not the amount of unobstructed knee clearance. [support.so...thwest.com]
+[P004] {Heading 3} What distinguishes the four layouts
+[P005] {list bullet L0} The 137-seat and 138-seat 737-700 layouts are both in circulation while 170 selected -700s are upgraded. The 138-seat version replaces Innovator seats with Meridian seats, adds in-seat power and converts the affected exit-row position to a triple-seat arrangement. Southwest expects the remaining non-upgraded aircraft to be retired, sold or otherwise removed from the fleet. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]
+[P006] {list bullet L0} The 737-800 and MAX 8 temporary and final LOPAs both retain 175 total seats. The final layout adds one Extra Legroom seat on each side of the exit row, while the last row becomes two seats per side, keeping the overall capacity unchanged. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]
+[P007] {list bullet L0} Existing aircraft can have Innovator, Collins Meridian or RECARO R2 seating, depending on the aircraft and retrofit status. New deliveries use the RECARO interior; selected -800s and -700s are also being converted as part of the standardization program. Revealed-Our-New-Elevated-Onboard-Experience.aspx [Revealed:...Experience | SharePoint]
+[P008] {Heading 2} Customer-facing seat tiers
+[P009] Southwest still operates one physical cabin, not a separate first- or business-class cabin. “Premium” refers to the Extra Legroom product within that cabin.
+[T02] table: 4 rows x 4 columns (style GridTable4-Accent1)
+[T02.R01.C01] {header} Seat tier
+[T02.R01.C02] {header} Location
+[T02.R01.C03] {header} Physical dimensions
+[T02.R01.C04] {header} Included experience
+[T02.R02.C01] Extra Legroom, premium tier
+[T02.R02.C02] Front of the cabin and designated exit-row positions
+[T02.R02.C03] 737-700: 35-36-inch pitch, up to five inches more than standard. 737-800/MAX 8: 34-inch pitch, approximately three inches more than standard
+[T02.R02.C04] Earlier boarding, enhanced snacks and a complimentary premium beverage when available
+[T02.R03.C01] Preferred
+[T02.R03.C02] Standard-pitch seats toward the front
+[T02.R03.C03] Same pitch and width range as Standard for the aircraft type
+[T02.R03.C04] Primarily better cabin position and quicker deplaning; it is not a wider seat
+[T02.R04.C01] Standard
+[T02.R04.C02] Rear portion of the cabin
+[T02.R04.C03] 737-700: 31-33-inch pitch. 737-800/MAX 8: 31-32-inch pitch
+[T02.R04.C04] Standard assigned seat
+[P010] Southwest describes Extra Legroom as providing three to five additional inches of pitch: five inches on the 737-700 and three inches on the 737-800/MAX 8. Preferred is a location upgrade, not a dimensional upgrade. [support.so...thwest.com]
+[P011] {Heading 3} Special 138-seat 737-700 treatment
+[P012] On the upgraded 138-seat -700 layout, seats 7D, 7E, 7F, 15B and 15C physically have Extra Legroom spacing but are sold as Preferred, not Extra Legroom. That distinction needs to be retained in any configuration, seat-map or appearance-part application because the physical pitch and commercial product designation do not match. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]
+[P013] {Heading 2} Premium access by fare and loyalty tier
+[P014] {list bullet L0} Choice Extra: Extra Legroom, Preferred or Standard at booking.
+[P015] {list bullet L0} Choice Preferred: Preferred or Standard at booking.
+[P016] {list bullet L0} Choice: Standard at booking.
+[P017] {list bullet L0} Basic: Standard seat assigned at check-in or the gate.
+[P018] {list bullet L0} A-List Preferred: Any available seat, including Extra Legroom, at booking.
+[P019] {list bullet L0} A-List: Preferred or Standard at booking, with an Extra Legroom upgrade available within 48 hours of departure when available. [support.so...thwest.com], [support.so...thwest.com]
+[P020] {Heading 2} Not currently included
+[P021] The 737 MAX 7 is not yet a current revenue configuration. Recent Tech Ops communication identifies a planned 150-passenger ELR/RECARO layout, with initial revenue service targeted for 2027 and dates subject to change. Know Before Fix | 737 MAX-7 vs MAX-8 Differences [Know Befor...ifferences | Outlook]

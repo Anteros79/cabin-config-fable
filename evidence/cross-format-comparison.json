@@ -1,0 +1,197 @@
+{
+  "purpose": "Compare the populated JSON registry with its CSV/XLSX exports, attribute by attribute.",
+  "independence_statement": "These four files are exports of one registry (same schema name, same records, same strings). Their agreement shows the exports are internally consistent; it is NOT independent verification of any seat, row or configuration fact. A value repeated in four formats is still one claim.",
+  "json_file": "southwest_737_lopa_normalized.json",
+  "embedded_timestamps": {
+    "json_generated_at_utc": "2026-11-13T16:29:49Z",
+    "xlsx_core_created": "2026-11-13T16:32:23Z",
+    "xlsx_core_modified": "2026-11-13T16:32:23Z",
+    "note": "CSV files carry no internal timestamp. Timestamps describe file generation, not validation or approval."
+  },
+  "totals": {
+    "shared_attribute_values_compared": 16641,
+    "agreeing": 16641,
+    "mismatching": 0,
+    "explicit_conversions": {
+      "csv_text_to_number": 1709,
+      "csv_number_text_lexically_different_from_json_number (e.g. \"17.0\" vs 17)": 132,
+      "xlsx_absent_cell_to_empty_string": 377,
+      "xlsx_numeric_cell_to_identifier_string": 30,
+      "csv_text_True/False_to_boolean": 3348
+    },
+    "workbook_numeric_identifier_conversions": 30,
+    "workbook_blank_to_empty_string_conversions": 377
+  },
+  "declared_vs_actual_record_counts": [
+    {
+      "entity": "lopa_configurations",
+      "json_schema_metadata_record_count": 5,
+      "json_actual_records": 5,
+      "export_actual_records": 5,
+      "schema_architecture_csv_row_count_raw": "5"
+    },
+    {
+      "entity": "lopa_rows",
+      "json_schema_metadata_record_count": 147,
+      "json_actual_records": 147,
+      "export_actual_records": 147,
+      "schema_architecture_csv_row_count_raw": "147"
+    },
+    {
+      "entity": "lopa_seats",
+      "json_schema_metadata_record_count": 837,
+      "json_actual_records": 837,
+      "export_actual_records": 837,
+      "schema_architecture_csv_row_count_raw": "837"
+    }
+  ],
+  "entities": [
+    {
+      "entity": "lopa_configurations",
+      "json_side": "southwest_737_lopa_normalized.json#/lopa_configurations",
+      "export_side": "southwest_737_lopa_configurations.csv",
+      "export_format": "CSV",
+      "json_record_count": 5,
+      "export_record_count": 5,
+      "keys_only_in_json": [],
+      "keys_only_in_export": [],
+      "record_order_identical": true,
+      "json_attribute_count": 21,
+      "json_records_with_non_uniform_keys": 0,
+      "export_attribute_count": 21,
+      "shared_attribute_count": 21,
+      "shared_attributes": [
+        "lopa_id",
+        "boeing_model",
+        "icao_code",
+        "iata_code",
+        "configuration_name",
+        "interior_generation",
+        "seat_hardware_model",
+        "est_active_aircraft",
+        "total_seats",
+        "extra_legroom_seats",
+        "preferred_seats",
+        "standard_seats",
+        "numbered_row_range",
+        "elr_pitch_inches",
+        "standard_pitch_inches",
+        "max_seat_width_inches",
+        "in_seat_power",
+        "wifi_system",
+        "lavatory_count_fwd",
+        "lavatory_count_aft",
+        "notes"
+      ],
+      "attributes_only_in_json": [],
+      "attributes_only_in_export": [],
+      "attribute_order_identical": true,
+      "attribute_values_compared": 105,
+      "attribute_values_agreeing": 105,
+      "attribute_values_mismatching": 0,
+      "explicit_conversions": {
+        "csv_text_to_number": 35,
+        "csv_number_text_lexically_different_from_json_number (e.g. \"17.0\" vs 17)": 1
+      },
+      "comparisons_without_conversion": {
+        "string = CSV text (no conversion)": 70
+      },
+      "mismatches": []
+    },
+    {
+      "entity": "lopa_rows",
+      "json_side": "southwest_737_lopa_normalized.json#/lopa_rows",
+      "export_side": "southwest_737_lopa_rows.xlsx",
+      "export_format": "XLSX",
+      "json_record_count": 147,
+      "export_record_count": 147,
+      "keys_only_in_json": [],
+      "keys_only_in_export": [],
+      "record_order_identical": true,
+      "json_attribute_count": 10,
+      "json_records_with_non_uniform_keys": 0,
+      "export_attribute_count": 10,
+      "shared_attribute_count": 10,
+      "shared_attributes": [
+        "lopa_id",
+        "row_number",
+        "row_exists",
+        "active_seat_count",
+        "omitted_seat_letters",
+        "is_exit_row",
+        "is_bulkhead_row",
+        "recline_status",
+        "recline_restriction_reason",
+        "row_notes"
+      ],
+      "attributes_only_in_json": [],
+      "attributes_only_in_export": [],
+      "attribute_order_identical": true,
+      "attribute_values_compared": 1470,
+      "attribute_values_agreeing": 1470,
+      "attribute_values_mismatching": 0,
+      "explicit_conversions": {
+        "xlsx_absent_cell_to_empty_string": 377,
+        "xlsx_numeric_cell_to_identifier_string": 30
+      },
+      "comparisons_without_conversion": {
+        "string = string cell (no conversion)": 328,
+        "number = numeric cell (no conversion)": 294,
+        "boolean = boolean cell (no conversion)": 441
+      },
+      "mismatches": []
+    },
+    {
+      "entity": "lopa_seats",
+      "json_side": "southwest_737_lopa_normalized.json#/lopa_seats",
+      "export_side": "southwest_737_lopa_seats.csv",
+      "export_format": "CSV",
+      "json_record_count": 837,
+      "export_record_count": 837,
+      "keys_only_in_json": [],
+      "keys_only_in_export": [],
+      "record_order_identical": true,
+      "json_attribute_count": 18,
+      "json_records_with_non_uniform_keys": 0,
+      "export_attribute_count": 18,
+      "shared_attribute_count": 18,
+      "shared_attributes": [
+        "lopa_id",
+        "row_number",
+        "seat_letter",
+        "seat_code",
+        "seat_position_type",
+        "commercial_tier",
+        "pitch_range_inches",
+        "effective_width_inches",
+        "recline_status",
+        "window_status",
+        "window_notes",
+        "is_exit_seat",
+        "is_bulkhead_seat",
+        "has_unobstructed_legroom",
+        "tray_table_location",
+        "underseat_storage_allowed",
+        "power_type",
+        "special_notes"
+      ],
+      "attributes_only_in_json": [],
+      "attributes_only_in_export": [],
+      "attribute_order_identical": true,
+      "attribute_values_compared": 15066,
+      "attribute_values_agreeing": 15066,
+      "attribute_values_mismatching": 0,
+      "explicit_conversions": {
+        "csv_text_to_number": 1674,
+        "csv_text_True/False_to_boolean": 3348,
+        "csv_number_text_lexically_different_from_json_number (e.g. \"17.0\" vs 17)": 131
+      },
+      "comparisons_without_conversion": {
+        "string = CSV text (no conversion)": 8526,
+        "empty string = empty CSV field (no conversion)": 1518
+      },
+      "mismatches": []
+    }
+  ],
+  "substantive_mismatches": []
+}

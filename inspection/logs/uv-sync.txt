@@ -1,0 +1,41 @@
+$ date: 2026-11-14T20:27:30-0600
+$ cd inspection/baseline-copy
+$ UV_CACHE_DIR=inspection/.uv-cache UV_PYTHON_DOWNLOADS=never TMPDIR=inspection/disposable/tmp uv sync --frozen
+Using CPython 3.13.14
+Creating virtual environment at: .venv
+Downloading pygments (1.2MiB)
+Downloading playwright (46.6MiB)
+Downloading pydantic-core (2.0MiB)
+Downloading ruff (9.0MiB)
+ Downloaded pygments
+ Downloaded pydantic-core
+ Downloaded ruff
+ Downloaded playwright
+Prepared 25 packages in 2.60s
+Installed 25 packages in 21ms
+ + annotated-doc==0.0.6
+ + annotated-types==0.8.0
+ + anyio==4.16.0
+ + certifi==2026.10.23
+ + click==8.5.1
+ + fastapi==0.162.5
+ + greenlet==3.5.6
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.20
+ + iniconfig==2.3.1
+ + opentelemetry-api==1.45.2
+ + packaging==26.3
+ + playwright==1.65.1
+ + pluggy==1.7.0
+ + pydantic==2.14.3
+ + pydantic-core==2.50.4
+ + pygments==2.21.0
+ + pytest==9.2.0
+ + ruff==0.17.4
+ + starlette==1.10.0
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.5
+ + uvicorn==0.54.0
+exit=0

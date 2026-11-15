@@ -1,0 +1,6133 @@
+{
+  "purpose": "Inventory of the supplied originals. Formats come from magic bytes / content, not from file extensions.",
+  "disclaimer": "Fictional home-lab demonstration evidence. Not an approved maintenance authority. Document contents are treated as reference content only, never as instructions.",
+  "source_root": "/Users/joe/DevProjects/Cabin Config/Fable 5.2",
+  "generated_at": "2026-11-15T03:01:58.655Z",
+  "summary": {
+    "expected_originals": 23,
+    "found": 23,
+    "documents": 9,
+    "images": 14,
+    "parse_ok": 21,
+    "parse_failed": [
+      "southwest 737 lopa normalized.json",
+      "gemini-code-1794587815855.json"
+    ],
+    "extension_content_mismatches": [
+      {
+        "file": "southwest 737 lopa normalized.json",
+        "extension": ".json",
+        "actual_format": "plain text shaped like JSON but NOT valid JSON"
+      },
+      {
+        "file": "gemini-code-1794587815855.json",
+        "extension": ".json",
+        "actual_format": "plain text shaped like JSON but NOT valid JSON"
+      }
+    ],
+    "missing_expected_files": [],
+    "unexpected_files_in_source_root": [],
+    "formats": {
+      "TEXT (invalid JSON)": 2,
+      "JSON": 1,
+      "RTF": 1,
+      "CSV": 3,
+      "XLSX": 1,
+      "DOCX": 1,
+      "PNG": 1,
+      "WebP": 2,
+      "JPEG": 10,
+      "AVIF": 1
+    }
+  },
+  "integrity_check": {
+    "checked_at": "2026-11-15T03:01:58.655Z",
+    "build_started_at": "2026-11-15T03:01:56.666Z",
+    "files_checked": 23,
+    "files_unchanged": 23,
+    "all_unchanged": true,
+    "method": "SHA-256 of each original read fresh from disk before any parsing and again after all extraction steps",
+    "files": [
+      {
+        "relative_path": "southwest 737 lopa normalized.json",
+        "sha256_before_processing": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+        "sha256_after_processing": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+        "size_bytes_after": 548,
+        "unchanged": true
+      },
+      {
+        "relative_path": "southwest_737_lopa_normalized.json",
+        "sha256_before_processing": "5643d1e130a8d28c2038d18d1695ca51b2ff09811314425f43a93270b69a7252",
+        "sha256_after_processing": "5643d1e130a8d28c2038d18d1695ca51b2ff09811314425f43a93270b69a7252",
+        "size_bytes_after": 578823,
+        "unchanged": true
+      },
+      {
+        "relative_path": "Southwest Cabin Configuration Standard.rtf",
+        "sha256_before_processing": "d15281b8b4df25e8dc1d2aed1088a7ee771d3522d25b4be57924925d2aef128b",
+        "sha256_after_processing": "d15281b8b4df25e8dc1d2aed1088a7ee771d3522d25b4be57924925d2aef128b",
+        "size_bytes_after": 29274,
+        "unchanged": true
+      },
+      {
+        "relative_path": "gemini-code-1794587815855.json",
+        "sha256_before_processing": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+        "sha256_after_processing": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+        "size_bytes_after": 548,
+        "unchanged": true
+      },
+      {
+        "relative_path": "cabin schema architecture.csv",
+        "sha256_before_processing": "2e23ce574c83737b2d596c2bf8cc43e143a85020c3eb9fc751502bd33043203e",
+        "sha256_after_processing": "2e23ce574c83737b2d596c2bf8cc43e143a85020c3eb9fc751502bd33043203e",
+        "size_bytes_after": 1026,
+        "unchanged": true
+      },
+      {
+        "relative_path": "southwest_737_lopa_seats.csv",
+        "sha256_before_processing": "3ac05f450ed414ff89a9da6ce94e34a01865aaaa8327b6b0d26c25ca2794fc2a",
+        "sha256_after_processing": "3ac05f450ed414ff89a9da6ce94e34a01865aaaa8327b6b0d26c25ca2794fc2a",
+        "size_bytes_after": 105688,
+        "unchanged": true
+      },
+      {
+        "relative_path": "southwest_737_lopa_rows.xlsx",
+        "sha256_before_processing": "c8a3fe13238b5a7ae269c4bf8a643acbe8a9986c6de1b7e29b6b232d6a6f9e7f",
+        "sha256_after_processing": "c8a3fe13238b5a7ae269c4bf8a643acbe8a9986c6de1b7e29b6b232d6a6f9e7f",
+        "size_bytes_after": 15573,
+        "unchanged": true
+      },
+      {
+        "relative_path": "southwest_737_lopa_configurations.csv",
+        "sha256_before_processing": "6244a799ac434b70b19e10d9dfbbd354f595e56ca84484a7b98672cbf2f8bdc6",
+        "sha256_after_processing": "6244a799ac434b70b19e10d9dfbbd354f595e56ca84484a7b98672cbf2f8bdc6",
+        "size_bytes_after": 2004,
+        "unchanged": true
+      },
+      {
+        "relative_path": "Current Aircraft Seat Configurations.docx",
+        "sha256_before_processing": "723d11ee62d028a0d2af44b8215e01d1f0723d94505c9647c9e9031ff7cfd985",
+        "sha256_after_processing": "723d11ee62d028a0d2af44b8215e01d1f0723d94505c9647c9e9031ff7cfd985",
+        "size_bytes_after": 20131,
+        "unchanged": true
+      },
+      {
+        "relative_path": "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png",
+        "sha256_before_processing": "61b22740bc46b74633afb6155b6bc28b0b39f2852434081deefe1d184dd2ae89",
+        "sha256_after_processing": "61b22740bc46b74633afb6155b6bc28b0b39f2852434081deefe1d184dd2ae89",
+        "size_bytes_after": 674957,
+        "unchanged": true
+      },
+      {
+        "relative_path": "barrier.webp",
+        "sha256_before_processing": "b6ee68403975b364d20dcc2bf2adc52a8c71ba6fbdc3ba3be4ef7320d2fb2909",
+        "sha256_after_processing": "b6ee68403975b364d20dcc2bf2adc52a8c71ba6fbdc3ba3be4ef7320d2fb2909",
+        "size_bytes_after": 93646,
+        "unchanged": true
+      },
+      {
+        "relative_path": "carpet.jpg",
+        "sha256_before_processing": "007e65eca369ef808e27da1f2623a46607a8f35062b92893a0eac00d04af5bcd",
+        "sha256_after_processing": "007e65eca369ef808e27da1f2623a46607a8f35062b92893a0eac00d04af5bcd",
+        "size_bytes_after": 278848,
+        "unchanged": true
+      },
+      {
+        "relative_path": "forward galley flight deck.jpg",
+        "sha256_before_processing": "0963d74c7e4d01dfc4a4e968f7c0da6fdac1eb2cf761eab5bbca079327c30557",
+        "sha256_after_processing": "0963d74c7e4d01dfc4a4e968f7c0da6fdac1eb2cf761eab5bbca079327c30557",
+        "size_bytes_after": 3352738,
+        "unchanged": true
+      },
+      {
+        "relative_path": "rear galley.jpg",
+        "sha256_before_processing": "f9ea2338140eeb77565fd1cee857804ba8a68acef49b0d17106793a165b5ee8e",
+        "sha256_after_processing": "f9ea2338140eeb77565fd1cee857804ba8a68acef49b0d17106793a165b5ee8e",
+        "size_bytes_after": 143251,
+        "unchanged": true
+      },
+      {
+        "relative_path": "recarro 2.jpg",
+        "sha256_before_processing": "58c8c019e04bc4ec32de62e667f2785e117f41623c60f7ee814b3e5b6f9e0c5d",
+        "sha256_after_processing": "58c8c019e04bc4ec32de62e667f2785e117f41623c60f7ee814b3e5b6f9e0c5d",
+        "size_bytes_after": 77918,
+        "unchanged": true
+      },
+      {
+        "relative_path": "seats 1.jpeg",
+        "sha256_before_processing": "d6c27a49eff8a74ae6a3104de1dca18560d2e01f4f874a9788b34be76fc00ad7",
+        "sha256_after_processing": "d6c27a49eff8a74ae6a3104de1dca18560d2e01f4f874a9788b34be76fc00ad7",
+        "size_bytes_after": 43764,
+        "unchanged": true
+      },
+      {
+        "relative_path": "seats 2 .jpeg",
+        "sha256_before_processing": "026cdd68f87a6cb60bc160b763de7404a701d0004c1fef78e1b792e550de4eac",
+        "sha256_after_processing": "026cdd68f87a6cb60bc160b763de7404a701d0004c1fef78e1b792e550de4eac",
+        "size_bytes_after": 30894,
+        "unchanged": true
+      },
+      {
+        "relative_path": "seats 3.jpg",
+        "sha256_before_processing": "29dae2e131d0a05db1eae3fb191c0478d65bd7a9ca71910495acee202919b29e",
+        "sha256_after_processing": "29dae2e131d0a05db1eae3fb191c0478d65bd7a9ca71910495acee202919b29e",
+        "size_bytes_after": 410493,
+        "unchanged": true
+      },
+      {
+        "relative_path": "seats 4.jpg",
+        "sha256_before_processing": "b108b845381296b523ba3bea5d13414e7dc885e7d40e4ed3b87cf4d8016d9bab",
+        "sha256_after_processing": "b108b845381296b523ba3bea5d13414e7dc885e7d40e4ed3b87cf4d8016d9bab",
+        "size_bytes_after": 3323626,
+        "unchanged": true
+      },
+      {
+        "relative_path": "seats 5.jpg",
+        "sha256_before_processing": "49f16c78b6a8c4e3ac2883035b020b0c6dcf63a2102b6e7689c1eb5ef92ef9b6",
+        "sha256_after_processing": "49f16c78b6a8c4e3ac2883035b020b0c6dcf63a2102b6e7689c1eb5ef92ef9b6",
+        "size_bytes_after": 443619,
+        "unchanged": true
+      },
+      {
+        "relative_path": "seats 6.avif",
+        "sha256_before_processing": "c7929bf7ac093e66fd8c949e120551de74e394b5ad630e2454034a85c5750dfe",
+        "sha256_after_processing": "c7929bf7ac093e66fd8c949e120551de74e394b5ad630e2454034a85c5750dfe",
+        "size_bytes_after": 86337,
+        "unchanged": true
+      },
+      {
+        "relative_path": "seats 8.jpg",
+        "sha256_before_processing": "94985372ea11685c4a37ff023fe736e9367237a5ecad5547daee57862f72d92c",
+        "sha256_after_processing": "94985372ea11685c4a37ff023fe736e9367237a5ecad5547daee57862f72d92c",
+        "size_bytes_after": 102063,
+        "unchanged": true
+      },
+      {
+        "relative_path": "southwest seats-7.webp",
+        "sha256_before_processing": "a0feb22156a758b51db8ef0ea2701156e945b91db4d558782e5880f9d3d7f574",
+        "sha256_after_processing": "a0feb22156a758b51db8ef0ea2701156e945b91db4d558782e5880f9d3d7f574",
+        "size_bytes_after": 215456,
+        "unchanged": true
+      }
+    ]
+  },
+  "entries": [
+    {
+      "relative_path": "southwest 737 lopa normalized.json",
+      "group": "document",
+      "extension": ".json",
+      "read_status": "ok",
+      "size_bytes": 548,
+      "sha256": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+      "sha256_before_processing": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+      "filesystem_modified_time": "2026-11-13T16:38:22.539Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "7b0a202022736368656d615f6d657461",
+      "magic_detection": "no known binary signature",
+      "actual_format": "plain text shaped like JSON but NOT valid JSON",
+      "actual_format_family": "TEXT (invalid JSON)",
+      "text_encoding": "US-ASCII (valid UTF-8 subset)",
+      "bom_present": false,
+      "parse_status": "failed",
+      "parse_error": "unexpected token \".\", expected a JSON value at byte offset 492 (line 12, column 28); native parser: Unexpected token '.', ...\"tions\": [ ... ],\n  \"\"... is not valid JSON",
+      "classification": "envelope",
+      "internal_metadata": {
+        "text_level_only": {
+          "schema_name": "southwest_airlines_737_lopa_registry",
+          "schema_version": "2026.1",
+          "normalization_form": "3NF (Third Normal Form)"
+        },
+        "note": "Extracted by pattern from the raw text because the file does not parse; nothing was repaired."
+      },
+      "counts": {
+        "lines": 15,
+        "placeholder_arrays": 3,
+        "records": 0
+      },
+      "content_established_role": "invalid JSON template (registry envelope with a metadata header and 3 elided \"[ ... ]\" arrays); holds no records; byte-identical to \"gemini-code-1794587815855.json\"",
+      "role_basis": [
+        "registry envelope/template: a schema_metadata header (names, primary keys, declared record counts) followed by entity arrays whose content is the literal placeholder \"[ ... ]\"; it holds no records, is not a JSON Schema document, contains no code and no prose, and is not valid JSON"
+      ],
+      "byte_identical_to": [
+        "gemini-code-1794587815855.json"
+      ],
+      "extension_matches_content": false
+    },
+    {
+      "relative_path": "southwest_737_lopa_normalized.json",
+      "group": "document",
+      "extension": ".json",
+      "read_status": "ok",
+      "size_bytes": 578823,
+      "sha256": "5643d1e130a8d28c2038d18d1695ca51b2ff09811314425f43a93270b69a7252",
+      "sha256_before_processing": "5643d1e130a8d28c2038d18d1695ca51b2ff09811314425f43a93270b69a7252",
+      "filesystem_modified_time": "2026-11-13T16:37:27.554Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "7b0a202022736368656d615f6d657461",
+      "magic_detection": "no known binary signature",
+      "actual_format": "JSON (valid; UTF-8 text)",
+      "actual_format_family": "JSON",
+      "text_encoding": "US-ASCII (valid UTF-8 subset)",
+      "bom_present": false,
+      "parse_status": "ok",
+      "parse_error": null,
+      "classification": "data",
+      "internal_metadata": {
+        "schema_metadata": {
+          "schema_name": "southwest_airlines_737_lopa_registry",
+          "schema_version": "2026.1",
+          "normalization_form": "3NF (Third Normal Form)",
+          "generated_at_utc": "2026-11-13T16:29:49Z",
+          "entities": {
+            "lopa_configurations": {
+              "primary_key": [
+                "lopa_id"
+              ],
+              "record_count": 5
+            },
+            "lopa_rows": {
+              "primary_key": [
+                "lopa_id",
+                "row_number"
+              ],
+              "foreign_keys": [
+                "lopa_id -> lopa_configurations.lopa_id"
+              ],
+              "record_count": 147
+            },
+            "lopa_seats": {
+              "primary_key": [
+                "lopa_id",
+                "row_number",
+                "seat_letter"
+              ],
+              "foreign_keys": [
+                "(lopa_id, row_number) -> lopa_rows.(lopa_id, row_number)"
+              ],
+              "record_count": 837
+            }
+          }
+        }
+      },
+      "counts": {
+        "top_level_keys": 4,
+        "lopa_configurations": 5,
+        "lopa_rows": 147,
+        "lopa_seats": 837
+      },
+      "content_established_role": "populated registry (configurations, rows, seats) — candidate data, unverified; the CSV/XLSX files are exports of the same records",
+      "role_basis": [
+        "valid JSON",
+        "populated record arrays whose lengths equal the declared record counts",
+        "all 16641 shared attribute values agree with the exports"
+      ],
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "Southwest Cabin Configuration Standard.rtf",
+      "group": "document",
+      "extension": ".rtf",
+      "read_status": "ok",
+      "size_bytes": 29274,
+      "sha256": "d15281b8b4df25e8dc1d2aed1088a7ee771d3522d25b4be57924925d2aef128b",
+      "sha256_before_processing": "d15281b8b4df25e8dc1d2aed1088a7ee771d3522d25b4be57924925d2aef128b",
+      "filesystem_modified_time": "2026-11-13T16:42:32.822Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "7b5c727466315c616e73695c616e7369",
+      "magic_detection": "RTF signature {\\rtf",
+      "actual_format": "Rich Text Format (RTF 1, ansi, code page 1252, Apple Cocoa text system (\\cocoartf2909))",
+      "actual_format_family": "RTF",
+      "parse_status": "ok",
+      "parse_error": null,
+      "internal_metadata": {
+        "header": {
+          "rtf_version": 1,
+          "charset": "ansi",
+          "ansi_code_page": 1252,
+          "cocoartf": 2909,
+          "default_font": null,
+          "other": {
+            "cocoatextscaling": 0,
+            "cocoaplatform": 0,
+            "margl": 1440,
+            "margr": 1440,
+            "vieww": 11520,
+            "viewh": 8400,
+            "viewkind": 0
+          }
+        },
+        "info_group_present": false,
+        "info_fields": {},
+        "note": "The file has no \\info group: no title, author, creation or revision time is stored inside the RTF.",
+        "fonts": {
+          "0": {
+            "name": "HelveticaNeue",
+            "family": "fnil",
+            "charset": 0
+          },
+          "1": {
+            "name": "HelveticaNeue-Bold",
+            "family": "fnil",
+            "charset": 0
+          },
+          "2": {
+            "name": ".AppleSystemUIFontMonospaced-Regular",
+            "family": "fnil",
+            "charset": 0
+          },
+          "3": {
+            "name": "Helvetica",
+            "family": "fswiss",
+            "charset": 0
+          },
+          "4": {
+            "name": "AppleSymbols",
+            "family": "fnil",
+            "charset": 0
+          },
+          "5": {
+            "name": "HelveticaNeue-Italic",
+            "family": "fnil",
+            "charset": 0
+          }
+        }
+      },
+      "counts": {
+        "paragraphs_non_empty": 57,
+        "paragraphs_empty_not_numbered": 19,
+        "heading_like_paragraphs": 9,
+        "list_item_paragraphs": 47,
+        "tables": 1,
+        "table_rows": 6,
+        "table_cells": 42,
+        "hyperlinks": 0,
+        "tokens": 3771
+      },
+      "secondary_cross_check": {
+        "tool": "/usr/bin/textutil -convert txt -stdout",
+        "available": true,
+        "comparison": "all text with whitespace removed (layout differs: textutil prints each table cell on its own line)",
+        "own_non_whitespace_chars": 5481,
+        "textutil_non_whitespace_chars": 5481,
+        "identical": true,
+        "difference": null
+      },
+      "content_established_role": "narrative standard (configuration summary table plus row-by-row tier, window and recline narrative per interior) — unverified claims; carries no author, date or revision metadata",
+      "role_basis": [
+        "one summary table and narrative paragraphs",
+        "no \\info group",
+        "no hyperlinks or citations"
+      ],
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "gemini-code-1794587815855.json",
+      "group": "document",
+      "extension": ".json",
+      "read_status": "ok",
+      "size_bytes": 548,
+      "sha256": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+      "sha256_before_processing": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+      "filesystem_modified_time": "2026-11-13T16:36:59.194Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "7b0a202022736368656d615f6d657461",
+      "magic_detection": "no known binary signature",
+      "actual_format": "plain text shaped like JSON but NOT valid JSON",
+      "actual_format_family": "TEXT (invalid JSON)",
+      "text_encoding": "US-ASCII (valid UTF-8 subset)",
+      "bom_present": false,
+      "parse_status": "failed",
+      "parse_error": "unexpected token \".\", expected a JSON value at byte offset 492 (line 12, column 28); native parser: Unexpected token '.', ...\"tions\": [ ... ],\n  \"\"... is not valid JSON",
+      "classification": "envelope",
+      "internal_metadata": {
+        "text_level_only": {
+          "schema_name": "southwest_airlines_737_lopa_registry",
+          "schema_version": "2026.1",
+          "normalization_form": "3NF (Third Normal Form)"
+        },
+        "note": "Extracted by pattern from the raw text because the file does not parse; nothing was repaired."
+      },
+      "counts": {
+        "lines": 15,
+        "placeholder_arrays": 3,
+        "records": 0
+      },
+      "content_established_role": "invalid JSON template (registry envelope with a metadata header and 3 elided \"[ ... ]\" arrays); holds no records; byte-identical to \"southwest 737 lopa normalized.json\"",
+      "role_basis": [
+        "registry envelope/template: a schema_metadata header (names, primary keys, declared record counts) followed by entity arrays whose content is the literal placeholder \"[ ... ]\"; it holds no records, is not a JSON Schema document, contains no code and no prose, and is not valid JSON"
+      ],
+      "byte_identical_to": [
+        "southwest 737 lopa normalized.json"
+      ],
+      "extension_matches_content": false
+    },
+    {
+      "relative_path": "cabin schema architecture.csv",
+      "group": "document",
+      "extension": ".csv",
+      "read_status": "ok",
+      "size_bytes": 1026,
+      "sha256": "2e23ce574c83737b2d596c2bf8cc43e143a85020c3eb9fc751502bd33043203e",
+      "sha256_before_processing": "2e23ce574c83737b2d596c2bf8cc43e143a85020c3eb9fc751502bd33043203e",
+      "filesystem_modified_time": "2026-11-13T16:36:45.557Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "efbbbf456e74697479202f205461626c",
+      "magic_detection": "no known binary signature",
+      "actual_format": "CSV text (comma-delimited, UTF-8 with BOM, CRLF line endings)",
+      "actual_format_family": "CSV",
+      "text_encoding": "UTF-8",
+      "bom_present": true,
+      "parse_status": "ok",
+      "parse_error": null,
+      "internal_metadata": {
+        "note": "CSV carries no internal revision or generation metadata.",
+        "headers": [
+          "Entity / Table",
+          "Primary Key",
+          "Foreign Keys",
+          "Row Count",
+          "Grain & Purpose"
+        ]
+      },
+      "counts": {
+        "data_rows": 3,
+        "columns": 5,
+        "quoted_fields": 6
+      },
+      "content_established_role": "descriptive architecture summary (one line per registry entity: keys, declared row count, prose description) — not operational records",
+      "role_basis": [
+        "3 data rows naming entities, not cabin data",
+        "free-text \"Grain & Purpose\" column",
+        "contains typesetting markup in the Foreign Keys column"
+      ],
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "southwest_737_lopa_seats.csv",
+      "group": "document",
+      "extension": ".csv",
+      "read_status": "ok",
+      "size_bytes": 105688,
+      "sha256": "3ac05f450ed414ff89a9da6ce94e34a01865aaaa8327b6b0d26c25ca2794fc2a",
+      "sha256_before_processing": "3ac05f450ed414ff89a9da6ce94e34a01865aaaa8327b6b0d26c25ca2794fc2a",
+      "filesystem_modified_time": "2026-11-13T16:34:28.842Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "6c6f70615f69642c726f775f6e756d62",
+      "magic_detection": "no known binary signature",
+      "actual_format": "CSV text (comma-delimited, US-ASCII (valid UTF-8 subset), no BOM, CRLF line endings)",
+      "actual_format_family": "CSV",
+      "text_encoding": "US-ASCII (valid UTF-8 subset)",
+      "bom_present": false,
+      "parse_status": "ok",
+      "parse_error": null,
+      "internal_metadata": {
+        "note": "CSV carries no internal revision or generation metadata.",
+        "headers": [
+          "lopa_id",
+          "row_number",
+          "seat_letter",
+          "seat_code",
+          "seat_position_type",
+          "commercial_tier",
+          "pitch_range_inches",
+          "effective_width_inches",
+          "recline_status",
+          "window_status",
+          "window_notes",
+          "is_exit_seat",
+          "is_bulkhead_seat",
+          "has_unobstructed_legroom",
+          "tray_table_location",
+          "underseat_storage_allowed",
+          "power_type",
+          "special_notes"
+        ]
+      },
+      "counts": {
+        "data_rows": 837,
+        "columns": 18,
+        "quoted_fields": 14
+      },
+      "content_established_role": "export of the registry lopa_seats entity (operational candidate records, unverified)",
+      "role_basis": [
+        "15066 of 15066 shared attribute values agree with the registry JSON"
+      ],
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "southwest_737_lopa_rows.xlsx",
+      "group": "document",
+      "extension": ".xlsx",
+      "read_status": "ok",
+      "size_bytes": 15573,
+      "sha256": "c8a3fe13238b5a7ae269c4bf8a643acbe8a9986c6de1b7e29b6b232d6a6f9e7f",
+      "sha256_before_processing": "c8a3fe13238b5a7ae269c4bf8a643acbe8a9986c6de1b7e29b6b232d6a6f9e7f",
+      "filesystem_modified_time": "2026-11-13T16:32:23.961Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "504b03041400060008000000210062ee",
+      "magic_detection": "ZIP local file header PK 03 04",
+      "actual_format": "OOXML SpreadsheetML workbook (ZIP package, .xlsx, no macros)",
+      "actual_format_family": "XLSX",
+      "parse_status": "ok",
+      "parse_error": null,
+      "internal_metadata": {
+        "core_properties": {
+          "cp:lastModifiedBy": "Joe McCarley",
+          "dcterms:created": "2026-11-13T16:32:23Z",
+          "dcterms:modified": "2026-11-13T16:32:23Z"
+        },
+        "app_properties": {
+          "Application": "Microsoft Macintosh Excel",
+          "DocSecurity": "0",
+          "ScaleCrop": "false",
+          "HeadingPairs": [
+            "Worksheets",
+            "1"
+          ],
+          "TitlesOfParts": [
+            "southwest_737_lopa_rows"
+          ],
+          "LinksUpToDate": "false",
+          "SharedDoc": "false",
+          "HyperlinksChanged": "false",
+          "AppVersion": "16.0300"
+        },
+        "file_version": {
+          "appName": "xl",
+          "lastEdited": "7",
+          "lowestEdited": "7",
+          "rupBuild": "11108"
+        },
+        "authoring_path_recorded_in_workbook": "/Users/joe/Downloads/"
+      },
+      "counts": {
+        "zip_entries": 10,
+        "sheets": 1,
+        "data_rows": 147,
+        "columns": 10,
+        "cells_present": 1103,
+        "formulas": 0,
+        "merged_ranges": 0,
+        "defined_names": 0,
+        "external_links": 0,
+        "shared_strings_unique": 44
+      },
+      "safety": {
+        "macros_present": false,
+        "external_connections": false,
+        "formulas_evaluated": false
+      },
+      "content_established_role": "export of the registry lopa_rows entity (operational candidate records, unverified); identifier typed as number in some cells",
+      "role_basis": [
+        "1470 of 1470 shared attribute values agree with the registry JSON after the listed conversions"
+      ],
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "southwest_737_lopa_configurations.csv",
+      "group": "document",
+      "extension": ".csv",
+      "read_status": "ok",
+      "size_bytes": 2004,
+      "sha256": "6244a799ac434b70b19e10d9dfbbd354f595e56ca84484a7b98672cbf2f8bdc6",
+      "sha256_before_processing": "6244a799ac434b70b19e10d9dfbbd354f595e56ca84484a7b98672cbf2f8bdc6",
+      "filesystem_modified_time": "2026-11-13T16:33:10.536Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "6c6f70615f69642c626f65696e675f6d",
+      "magic_detection": "no known binary signature",
+      "actual_format": "CSV text (comma-delimited, US-ASCII (valid UTF-8 subset), no BOM, CRLF line endings)",
+      "actual_format_family": "CSV",
+      "text_encoding": "US-ASCII (valid UTF-8 subset)",
+      "bom_present": false,
+      "parse_status": "ok",
+      "parse_error": null,
+      "internal_metadata": {
+        "note": "CSV carries no internal revision or generation metadata.",
+        "headers": [
+          "lopa_id",
+          "boeing_model",
+          "icao_code",
+          "iata_code",
+          "configuration_name",
+          "interior_generation",
+          "seat_hardware_model",
+          "est_active_aircraft",
+          "total_seats",
+          "extra_legroom_seats",
+          "preferred_seats",
+          "standard_seats",
+          "numbered_row_range",
+          "elr_pitch_inches",
+          "standard_pitch_inches",
+          "max_seat_width_inches",
+          "in_seat_power",
+          "wifi_system",
+          "lavatory_count_fwd",
+          "lavatory_count_aft",
+          "notes"
+        ]
+      },
+      "counts": {
+        "data_rows": 5,
+        "columns": 21,
+        "quoted_fields": 9
+      },
+      "content_established_role": "export of the registry lopa_configurations entity (operational candidate records, unverified)",
+      "role_basis": [
+        "105 of 105 shared attribute values agree with the registry JSON"
+      ],
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "Current Aircraft Seat Configurations.docx",
+      "group": "document",
+      "extension": ".docx",
+      "read_status": "ok",
+      "size_bytes": 20131,
+      "sha256": "723d11ee62d028a0d2af44b8215e01d1f0723d94505c9647c9e9031ff7cfd985",
+      "sha256_before_processing": "723d11ee62d028a0d2af44b8215e01d1f0723d94505c9647c9e9031ff7cfd985",
+      "filesystem_modified_time": "2026-11-13T17:37:31.259Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "504b030414000600080000002100a717",
+      "magic_detection": "ZIP local file header PK 03 04",
+      "actual_format": "OOXML WordprocessingML document (ZIP package, .docx, no macros)",
+      "actual_format_family": "DOCX",
+      "parse_status": "ok",
+      "parse_error": null,
+      "internal_metadata": {
+        "core_properties": {
+          "dc:title": "Document",
+          "dc:creator": "Un-named",
+          "cp:lastModifiedBy": "Joe McCarley",
+          "cp:revision": "2",
+          "dcterms:created": "2026-11-13T17:37:00Z",
+          "dcterms:modified": "2026-11-13T17:37:00Z"
+        },
+        "app_properties": {
+          "Template": "Normal.dotm",
+          "TotalTime": "0",
+          "Pages": "3",
+          "Words": "974",
+          "Characters": "5554",
+          "Application": "Microsoft Office Word",
+          "DocSecurity": "0",
+          "Lines": "46",
+          "Paragraphs": "13",
+          "ScaleCrop": "false",
+          "Company": "",
+          "LinksUpToDate": "false",
+          "CharactersWithSpaces": "6515",
+          "SharedDoc": "false",
+          "HyperlinksChanged": "false",
+          "AppVersion": "16.0000"
+        },
+        "sensitivity_labels": [
+          {
+            "id": "{6f6b1f18-f556-4b39-a158-6b6d47ff40df}",
+            "enabled": "1",
+            "method": "Standard",
+            "siteId": "{f5d3bd9c-a8c2-4efc-9493-ddf2d4b42f17}",
+            "removed": "0"
+          }
+        ],
+        "settings": {
+          "w14_doc_id": "2384D4C2",
+          "w15_doc_id": "{FDEE6D6D-8A64-6849-8152-E9611DAE9470}",
+          "rsid_root": "00C77B3A",
+          "rsids": [
+            "005168F2",
+            "00874FA5",
+            "00C77B3A",
+            "00F26E4E"
+          ],
+          "track_revisions": false,
+          "document_protection": false,
+          "theme_font_lang": "en-US"
+        }
+      },
+      "counts": {
+        "zip_entries": 13,
+        "body_paragraphs": 21,
+        "table_cell_paragraphs": 46,
+        "headings": 6,
+        "list_items": 9,
+        "tables": 2,
+        "table_rows": 9,
+        "hyperlinks": 13,
+        "distinct_hyperlink_targets": 9,
+        "embedded_media_parts": 0
+      },
+      "safety": {
+        "macros_present": false,
+        "embedded_media": false,
+        "tracked_changes": {
+          "inserted": 0,
+          "deleted": 0
+        }
+      },
+      "content_established_role": "narrative summary of current seat configurations (layout-category table, tier table, prose with citations to public and private pages) — unverified claims; layout grain differs from the registry",
+      "role_basis": [
+        "headings and tables describe layout categories, not seat records",
+        "13 hyperlinks as citations",
+        "no seat-by-seat data"
+      ],
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png",
+      "group": "image",
+      "extension": ".png",
+      "read_status": "ok",
+      "size_bytes": 674957,
+      "sha256": "61b22740bc46b74633afb6155b6bc28b0b39f2852434081deefe1d184dd2ae89",
+      "sha256_before_processing": "61b22740bc46b74633afb6155b6bc28b0b39f2852434081deefe1d184dd2ae89",
+      "filesystem_modified_time": "2026-11-13T17:05:17.440Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "89504e470d0a1a0a0000000d49484452",
+      "magic_detection": "PNG signature 89 50 4E 47 0D 0A 1A 0A",
+      "actual_format": "PNG",
+      "actual_format_family": "PNG",
+      "mime_type": "image/png",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 970,
+      "pixel_height": 521,
+      "color": {
+        "mode": "RGBA (truecolor + alpha)",
+        "channels": 4,
+        "bits_per_channel": 8,
+        "has_alpha": true
+      },
+      "image_structure": {
+        "chunk_counts": {
+          "IHDR": 1,
+          "iCCP": 1,
+          "eXIf": 1,
+          "pHYs": 1,
+          "iTXt": 1,
+          "IDAT": 41,
+          "IEND": 1
+        },
+        "interlace": "none",
+        "physical_pixel_dimensions": {
+          "x_pixels_per_unit": 2835,
+          "y_pixels_per_unit": 2835,
+          "unit": "metre"
+        },
+        "iccp_profile_name": "ICC Profile",
+        "srgb_chunk": null,
+        "gamma": null,
+        "time_chunk": null,
+        "trailing_bytes_after_iend": 0
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": true,
+          "byte_length": 150,
+          "byte_order": "big-endian (MM)",
+          "ifd0": {
+            "Orientation": 1,
+            "XResolution": "72/1",
+            "YResolution": "72/1",
+            "ResolutionUnit": 2,
+            "ExifIFDPointer": 90
+          },
+          "exif": {
+            "UserComment": {
+              "charset": "ASCII",
+              "text": "Screenshot"
+            },
+            "PixelXDimension": 970,
+            "PixelYDimension": 521
+          },
+          "gps": {},
+          "interop": {},
+          "ifd1": {},
+          "errors": []
+        },
+        "xmp": {
+          "present": true,
+          "byte_length": 553,
+          "toolkit": "XMP Core 6.0.0",
+          "properties": [
+            {
+              "path": "exif:PixelYDimension",
+              "value": "1200"
+            },
+            {
+              "path": "exif:UserComment",
+              "value": "Screenshot"
+            },
+            {
+              "path": "exif:PixelXDimension",
+              "value": "1920"
+            },
+            {
+              "path": "tiff:Orientation",
+              "value": "1"
+            }
+          ],
+          "truncated": false,
+          "parse_error": null
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": {
+          "byte_length": 4032,
+          "version": "2.1.0",
+          "device_class": "mntr",
+          "color_space": "RGB",
+          "description": "Display",
+          "copyright": "Copyright Apple Inc., 2024"
+        },
+        "png_text_chunks": [
+          {
+            "chunk": "iTXt",
+            "keyword": "XML:com.adobe.xmp",
+            "value": "[XMP packet, 553 chars — see xmp]"
+          }
+        ],
+        "metadata_declared_dimensions": [
+          {
+            "source": "EXIF PixelXDimension/PixelYDimension",
+            "width": 970,
+            "height": 521,
+            "matches_encoded_image": true
+          },
+          {
+            "source": "XMP exif:PixelXDimension/PixelYDimension",
+            "width": 1920,
+            "height": 1200,
+            "matches_encoded_image": false
+          }
+        ],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [
+        {
+          "source": "EXIF.IFD0",
+          "field": "XResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "YResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "UserComment",
+          "value": "Screenshot"
+        },
+        {
+          "source": "XMP",
+          "field": "exif:PixelYDimension",
+          "value": "1200"
+        },
+        {
+          "source": "XMP",
+          "field": "exif:UserComment",
+          "value": "Screenshot"
+        },
+        {
+          "source": "XMP",
+          "field": "exif:PixelXDimension",
+          "value": "1920"
+        },
+        {
+          "source": "XMP",
+          "field": "tiff:Orientation",
+          "value": "1"
+        },
+        {
+          "source": "ICC",
+          "field": "profile description",
+          "value": "Display"
+        },
+        {
+          "source": "ICC",
+          "field": "profile copyright",
+          "value": "Copyright Apple Inc., 2024"
+        }
+      ],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [
+          {
+            "field": "EXIF.Exif:UserComment",
+            "value": "Screenshot"
+          },
+          {
+            "field": "XMP:exif:UserComment",
+            "value": "Screenshot"
+          }
+        ],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 262144,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "png",
+          "width": 970,
+          "height": 521,
+          "space": "srgb",
+          "channels": 4,
+          "depth": "uchar",
+          "has_alpha": true,
+          "orientation": 1,
+          "density": 72,
+          "is_progressive": false,
+          "chroma_subsampling": null,
+          "compression": null,
+          "exif_bytes": 150,
+          "xmp_bytes": 553,
+          "iptc_bytes": 0,
+          "icc_bytes": 4032
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 4,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 9,
+        "descriptive_strings_excluding_icc": 7
+      },
+      "content_established_role": "screenshot / video still (per embedded UserComment \"Screenshot\"); reference image, subject not established from bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "EXIF/XMP UserComment"
+      ],
+      "filename_hint": {
+        "text": "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "barrier.webp",
+      "group": "image",
+      "extension": ".webp",
+      "read_status": "ok",
+      "size_bytes": 93646,
+      "sha256": "b6ee68403975b364d20dcc2bf2adc52a8c71ba6fbdc3ba3be4ef7320d2fb2909",
+      "sha256_before_processing": "b6ee68403975b364d20dcc2bf2adc52a8c71ba6fbdc3ba3be4ef7320d2fb2909",
+      "filesystem_modified_time": "2026-11-13T17:09:57.630Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "52494646c66d01005745425056503858",
+      "magic_detection": "RIFF....WEBP container",
+      "actual_format": "WebP",
+      "actual_format_family": "WebP",
+      "mime_type": "image/webp",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 960,
+      "pixel_height": 1048,
+      "color": {
+        "mode": "YUV 4:2:0 (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false
+      },
+      "image_structure": {
+        "riff_declared_size": 93638,
+        "chunks": [
+          {
+            "fourcc": "VP8X",
+            "size": 10
+          },
+          {
+            "fourcc": "ICCP",
+            "size": 3144
+          },
+          {
+            "fourcc": "VP8 ",
+            "size": 90456
+          }
+        ],
+        "vp8x": {
+          "has_icc": true,
+          "has_alpha": false,
+          "has_exif": false,
+          "has_xmp": false,
+          "has_animation": false,
+          "canvas_width": 960,
+          "canvas_height": 1048
+        },
+        "bitstream": {
+          "codec": "VP8 lossy (YUV 4:2:0)",
+          "width": 960,
+          "height": 1048
+        },
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": {
+          "byte_length": 3144,
+          "version": "2.1.0",
+          "device_class": "mntr",
+          "color_space": "RGB",
+          "description": "sRGB IEC61966-2.1",
+          "copyright": "Copyright (c) 1998 Hewlett-Packard Company"
+        },
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [
+        {
+          "source": "ICC",
+          "field": "profile description",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "source": "ICC",
+          "field": "profile copyright",
+          "value": "Copyright (c) 1998 Hewlett-Packard Company"
+        }
+      ],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 93646,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "webp",
+          "width": 960,
+          "height": 1048,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": null,
+          "is_progressive": false,
+          "chroma_subsampling": null,
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 3144
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 2,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "barrier",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "carpet.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 278848,
+      "sha256": "007e65eca369ef808e27da1f2623a46607a8f35062b92893a0eac00d04af5bcd",
+      "sha256_before_processing": "007e65eca369ef808e27da1f2623a46607a8f35062b92893a0eac00d04af5bcd",
+      "filesystem_modified_time": "2026-11-13T17:08:25.559Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000101010048",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 1000,
+      "pixel_height": 750,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:2:0"
+      },
+      "image_structure": {
+        "process": "baseline DCT (SOF0)",
+        "progressive": false,
+        "jfif": {
+          "version": "1.01",
+          "density_units": "dots per inch",
+          "x_density": 72,
+          "y_density": 72
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "APP1:Exif": 1,
+          "APP2:ICC_PROFILE": 1,
+          "APP1:XMP": 1,
+          "DQT": 2,
+          "SOF": 1,
+          "DHT": 4,
+          "SOS": 1
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 278846,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": true,
+          "byte_length": 38929,
+          "byte_order": "little-endian (II)",
+          "ifd0": {
+            "Make": "Google",
+            "Model": "Pixel 6a",
+            "Orientation": 1,
+            "XResolution": "72/1",
+            "YResolution": "72/1",
+            "ResolutionUnit": 2,
+            "Software": "HDR+ 1.0.641377693zd",
+            "DateTime": "2024:09:26 15:37:12",
+            "YCbCrPositioning": 1,
+            "ExifIFDPointer": 219,
+            "GPSInfoIFDPointer": 954
+          },
+          "exif": {
+            "ExposureTime": "8338/1000000",
+            "FNumber": "173/100",
+            "ExposureProgram": 2,
+            "ISOSpeedRatings": 1499,
+            "ExifVersion": "0232",
+            "DateTimeOriginal": "2024:09:26 15:37:12",
+            "DateTimeDigitized": "2024:09:26 15:37:12",
+            "OffsetTime": "-05:00",
+            "OffsetTimeOriginal": "-05:00",
+            "OffsetTimeDigitized": "-05:00",
+            "ComponentsConfiguration": [
+              1,
+              2,
+              3,
+              0
+            ],
+            "ShutterSpeedValue": "691/100",
+            "ApertureValue": "158/100",
+            "BrightnessValue": "-42/100",
+            "ExposureBiasValue": "0/6",
+            "MaxApertureValue": "158/100",
+            "SubjectDistance": "870/1000",
+            "MeteringMode": 2,
+            "Flash": 16,
+            "FocalLength": "4380/1000",
+            "SubSecTime": "784",
+            "SubSecTimeOriginal": "784",
+            "SubSecTimeDigitized": "784",
+            "FlashpixVersion": "0100",
+            "ColorSpace": 1,
+            "PixelXDimension": 4032,
+            "PixelYDimension": 3024,
+            "InteropIFDPointer": 924,
+            "SensingMethod": 2,
+            "SceneType": 1,
+            "CustomRendered": 1,
+            "ExposureMode": 0,
+            "WhiteBalance": 0,
+            "DigitalZoomRatio": "0/1",
+            "FocalLengthIn35mmFilm": 27,
+            "SceneCaptureType": 0,
+            "Contrast": 0,
+            "Saturation": 0,
+            "Sharpness": 0,
+            "SubjectDistanceRange": 1,
+            "LensMake": "Google",
+            "LensModel": "Pixel 6a back camera 4.38mm f/1.73",
+            "CompositeImage": 3
+          },
+          "gps": {
+            "GPSVersionID": [
+              2,
+              2,
+              0,
+              0
+            ],
+            "GPSLatitudeRef": "N",
+            "GPSLatitude": "[withheld: value present in the file]",
+            "GPSLongitudeRef": "W",
+            "GPSLongitude": "[withheld: value present in the file]",
+            "GPSAltitudeRef": 0,
+            "GPSAltitude": "[withheld: value present in the file]",
+            "GPSTimeStamp": "[withheld: value present in the file]",
+            "GPSImgDirectionRef": "M",
+            "GPSImgDirection": "[withheld: value present in the file]",
+            "GPSDateStamp": "2024:09:26"
+          },
+          "interop": {
+            "InteroperabilityIndex": "R98",
+            "InteroperabilityVersion": [
+              48,
+              49,
+              48,
+              48
+            ]
+          },
+          "ifd1": {
+            "Compression": 6,
+            "Orientation": 1,
+            "XResolution": "72/1",
+            "YResolution": "72/1",
+            "ResolutionUnit": 2,
+            "JPEGInterchangeFormat": 1297,
+            "JPEGInterchangeFormatLength": 37632
+          },
+          "errors": []
+        },
+        "xmp": {
+          "present": true,
+          "byte_length": 1463,
+          "toolkit": "Adobe XMP Core 5.1.0-jc003",
+          "properties": [
+            {
+              "path": "hdrgm:Version",
+              "value": "1.0"
+            },
+            {
+              "path": "xmpNote:HasExtendedXMP",
+              "value": "3B78F633D0A353F01F652180E28399F0"
+            },
+            {
+              "path": "GCamera:MotionPhoto",
+              "value": "1"
+            },
+            {
+              "path": "GCamera:MotionPhotoVersion",
+              "value": "1"
+            },
+            {
+              "path": "GCamera:MotionPhotoPresentationTimestampUs",
+              "value": "1321450"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Mime",
+              "value": "image/jpeg"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Semantic",
+              "value": "Primary"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Semantic",
+              "value": "GainMap"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Mime",
+              "value": "image/jpeg"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Length",
+              "value": "93806"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Mime",
+              "value": "video/mp4"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Semantic",
+              "value": "MotionPhoto"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Length",
+              "value": "3719349"
+            },
+            {
+              "path": "Container:Directory/Container:Item/Item:Padding",
+              "value": "0"
+            }
+          ],
+          "truncated": false,
+          "parse_error": null
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": {
+          "byte_length": 596,
+          "version": "4.0.0",
+          "device_class": "mntr",
+          "color_space": "RGB",
+          "description": "sRGB IEC61966-2.1",
+          "copyright": "Copyright (c) 2023 Google Inc."
+        },
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [
+          {
+            "source": "EXIF PixelXDimension/PixelYDimension",
+            "width": 4032,
+            "height": 3024,
+            "matches_encoded_image": false
+          }
+        ],
+        "gps_data_present": true,
+        "gps_values_withheld": {
+          "tags": [
+            "GPSLatitude",
+            "GPSLongitude",
+            "GPSAltitude",
+            "GPSTimeStamp",
+            "GPSImgDirection"
+          ],
+          "reason": "precise location data is not needed for this evidence stage; set CABIN_KIT_INCLUDE_GPS=1 to include the values"
+        }
+      },
+      "embedded_text_metadata": [
+        {
+          "source": "EXIF.IFD0",
+          "field": "Make",
+          "value": "Google"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Model",
+          "value": "Pixel 6a"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "XResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "YResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Software",
+          "value": "HDR+ 1.0.641377693zd"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "DateTime",
+          "value": "2024:09:26 15:37:12"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExposureTime",
+          "value": "8338/1000000"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FNumber",
+          "value": "173/100"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExifVersion",
+          "value": "0232"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "DateTimeOriginal",
+          "value": "2024:09:26 15:37:12"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "DateTimeDigitized",
+          "value": "2024:09:26 15:37:12"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "OffsetTime",
+          "value": "-05:00"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "OffsetTimeOriginal",
+          "value": "-05:00"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "OffsetTimeDigitized",
+          "value": "-05:00"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ShutterSpeedValue",
+          "value": "691/100"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ApertureValue",
+          "value": "158/100"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "BrightnessValue",
+          "value": "-42/100"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExposureBiasValue",
+          "value": "0/6"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "MaxApertureValue",
+          "value": "158/100"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubjectDistance",
+          "value": "870/1000"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FocalLength",
+          "value": "4380/1000"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubSecTime",
+          "value": "784"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubSecTimeOriginal",
+          "value": "784"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubSecTimeDigitized",
+          "value": "784"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FlashpixVersion",
+          "value": "0100"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "DigitalZoomRatio",
+          "value": "0/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "LensMake",
+          "value": "Google"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "LensModel",
+          "value": "Pixel 6a back camera 4.38mm f/1.73"
+        },
+        {
+          "source": "EXIF.GPS",
+          "field": "GPSLatitudeRef",
+          "value": "N"
+        },
+        {
+          "source": "EXIF.GPS",
+          "field": "GPSLongitudeRef",
+          "value": "W"
+        },
+        {
+          "source": "EXIF.GPS",
+          "field": "GPSImgDirectionRef",
+          "value": "M"
+        },
+        {
+          "source": "EXIF.GPS",
+          "field": "GPSDateStamp",
+          "value": "2024:09:26"
+        },
+        {
+          "source": "EXIF.IFD1",
+          "field": "XResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.IFD1",
+          "field": "YResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "XMP",
+          "field": "hdrgm:Version",
+          "value": "1.0"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpNote:HasExtendedXMP",
+          "value": "3B78F633D0A353F01F652180E28399F0"
+        },
+        {
+          "source": "XMP",
+          "field": "GCamera:MotionPhoto",
+          "value": "1"
+        },
+        {
+          "source": "XMP",
+          "field": "GCamera:MotionPhotoVersion",
+          "value": "1"
+        },
+        {
+          "source": "XMP",
+          "field": "GCamera:MotionPhotoPresentationTimestampUs",
+          "value": "1321450"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Mime",
+          "value": "image/jpeg"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Semantic",
+          "value": "Primary"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Semantic",
+          "value": "GainMap"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Mime",
+          "value": "image/jpeg"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Length",
+          "value": "93806"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Mime",
+          "value": "video/mp4"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Semantic",
+          "value": "MotionPhoto"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Length",
+          "value": "3719349"
+        },
+        {
+          "source": "XMP",
+          "field": "Container:Directory/Container:Item/Item:Padding",
+          "value": "0"
+        },
+        {
+          "source": "ICC",
+          "field": "profile description",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "source": "ICC",
+          "field": "profile copyright",
+          "value": "Copyright (c) 2023 Google Inc."
+        }
+      ],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [
+          {
+            "field": "EXIF.IFD0:Software",
+            "value": "HDR+ 1.0.641377693zd"
+          }
+        ],
+        "camera": [
+          {
+            "field": "EXIF.IFD0:Make",
+            "value": "Google"
+          },
+          {
+            "field": "EXIF.IFD0:Model",
+            "value": "Pixel 6a"
+          },
+          {
+            "field": "EXIF.Exif:LensMake",
+            "value": "Google"
+          },
+          {
+            "field": "EXIF.Exif:LensModel",
+            "value": "Pixel 6a back camera 4.38mm f/1.73"
+          }
+        ],
+        "dates": [
+          {
+            "field": "EXIF.IFD0:DateTime",
+            "value": "2024:09:26 15:37:12"
+          },
+          {
+            "field": "EXIF.Exif:DateTimeOriginal",
+            "value": "2024:09:26 15:37:12"
+          },
+          {
+            "field": "EXIF.Exif:DateTimeDigitized",
+            "value": "2024:09:26 15:37:12"
+          },
+          {
+            "field": "EXIF.Exif:OffsetTime",
+            "value": "-05:00"
+          },
+          {
+            "field": "EXIF.Exif:OffsetTimeOriginal",
+            "value": "-05:00"
+          },
+          {
+            "field": "EXIF.Exif:OffsetTimeDigitized",
+            "value": "-05:00"
+          },
+          {
+            "field": "EXIF.GPS:GPSDateStamp",
+            "value": "2024:09:26"
+          }
+        ]
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 262144,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 1000,
+          "height": 750,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": 1,
+          "density": 72,
+          "is_progressive": false,
+          "chroma_subsampling": "4:2:0",
+          "compression": null,
+          "exif_bytes": 38935,
+          "xmp_bytes": 1463,
+          "iptc_bytes": 0,
+          "icc_bytes": 596
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 50,
+        "descriptive_strings_excluding_icc": 48
+      },
+      "content_established_role": "camera photograph (per EXIF: Google Pixel 6a, 2024:09:26 15:37:12); reference image; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "EXIF Make/Model/DateTime"
+      ],
+      "filename_hint": {
+        "text": "carpet",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "forward galley flight deck.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 3352738,
+      "sha256": "0963d74c7e4d01dfc4a4e968f7c0da6fdac1eb2cf761eab5bbca079327c30557",
+      "sha256_before_processing": "0963d74c7e4d01dfc4a4e968f7c0da6fdac1eb2cf761eab5bbca079327c30557",
+      "filesystem_modified_time": "2026-11-13T17:09:26.127Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe1038645786966000049492a00",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 5184,
+      "pixel_height": 3456,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:4:4"
+      },
+      "image_structure": {
+        "process": "baseline DCT (SOF0)",
+        "progressive": false,
+        "jfif": null,
+        "adobe_app14": {
+          "dct_version": 100,
+          "color_transform": 1,
+          "color_transform_name": "YCbCr"
+        },
+        "segment_summary": {
+          "APP1:Exif": 1,
+          "APP13:Photoshop 3.0 (8BIM resources)": 1,
+          "APP2:ICC_PROFILE": 1,
+          "APP1:XMP": 1,
+          "DQT": 1,
+          "DRI": 1,
+          "APP14:Adobe": 1,
+          "SOF": 1,
+          "DHT": 1,
+          "SOS": 1
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [
+          {
+            "id": "0x03ed",
+            "size": 16
+          },
+          {
+            "id": "0x0404",
+            "size": 591
+          },
+          {
+            "id": "0x040a",
+            "size": 1
+          },
+          {
+            "id": "0x0425",
+            "size": 16
+          }
+        ],
+        "eoi_offset": 3352736,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": true,
+          "byte_length": 894,
+          "byte_order": "little-endian (II)",
+          "ifd0": {
+            "ImageDescription": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade",
+            "Make": "Canon",
+            "Model": "Canon EOS-1D X",
+            "XResolution": "300/1",
+            "YResolution": "300/1",
+            "ResolutionUnit": 2,
+            "Software": "Adobe Photoshop Lightroom 6.0 (Macintosh)",
+            "DateTime": "2015:09:17 14:43:06",
+            "Artist": "Brandon Wade",
+            "Copyright": "Brandon Wade",
+            "ExifIFDPointer": 346
+          },
+          "exif": {
+            "ExposureTime": "1/200",
+            "FNumber": "5/1",
+            "ExposureProgram": 1,
+            "ISOSpeedRatings": 640,
+            "SensitivityType": 2,
+            "RecommendedExposureIndex": 640,
+            "ExifVersion": "0230",
+            "DateTimeOriginal": "2015:08:27 15:57:30",
+            "DateTimeDigitized": "2015:08:27 15:57:30",
+            "ShutterSpeedValue": "7643856/1000000",
+            "ApertureValue": "4643856/1000000",
+            "ExposureBiasValue": "0/1",
+            "MaxApertureValue": "3/1",
+            "MeteringMode": 5,
+            "Flash": 16,
+            "FocalLength": "16/1",
+            "SubSecTimeOriginal": "01",
+            "SubSecTimeDigitized": "01",
+            "FocalPlaneXResolution": "47185920/32768",
+            "FocalPlaneYResolution": "47185920/32768",
+            "FocalPlaneResolutionUnit": 3,
+            "CustomRendered": 0,
+            "ExposureMode": 1,
+            "WhiteBalance": 0,
+            "SceneCaptureType": 0,
+            "BodySerialNumber": "072012000789",
+            "LensSpecification": [
+              "16/1",
+              "35/1",
+              "0/0",
+              "0/0"
+            ],
+            "LensModel": "EF16-35mm f/2.8L II USM",
+            "LensSerialNumber": "0000000000"
+          },
+          "gps": {},
+          "interop": {},
+          "ifd1": {},
+          "errors": []
+        },
+        "xmp": {
+          "present": true,
+          "byte_length": 8271,
+          "toolkit": "Adobe XMP Core 5.6-c011 79.156380, 2014/05/21-23:38:37        ",
+          "properties": [
+            {
+              "path": "photoshop:City",
+              "value": "Los Angeles"
+            },
+            {
+              "path": "photoshop:State",
+              "value": "Tx"
+            },
+            {
+              "path": "photoshop:Country",
+              "value": "USA"
+            },
+            {
+              "path": "photoshop:Category",
+              "value": "A"
+            },
+            {
+              "path": "photoshop:AuthorsPosition",
+              "value": "Freelance"
+            },
+            {
+              "path": "photoshop:Credit",
+              "value": "Brandon Wade"
+            },
+            {
+              "path": "photoshop:CaptionWriter",
+              "value": "BW"
+            },
+            {
+              "path": "photoshop:Instructions",
+              "value": "Shot with a Canon EOS-1D X Canon camera on 8/27/15 at 3:57:30 PM with ISO of 640, white balance set to Auto, at 1/200 and aperture of 5, color mode of AdobeRGB and exposure compensation of 0.0, lens at 16, meter set to Manual, sharpening set at 0 and tone Compensation to -2."
+            },
+            {
+              "path": "photoshop:DateCreated",
+              "value": "2015-08-27T15:57:30.01-05:00"
+            },
+            {
+              "path": "xmpRights:Marked",
+              "value": "True"
+            },
+            {
+              "path": "xmp:CreateDate",
+              "value": "2015-08-27T15:57:30.01-05:00"
+            },
+            {
+              "path": "xmp:ModifyDate",
+              "value": "2015-09-17T14:43:06-05:00"
+            },
+            {
+              "path": "xmp:MetadataDate",
+              "value": "2015-09-17T14:43:06-05:00"
+            },
+            {
+              "path": "xmp:CreatorTool",
+              "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+            },
+            {
+              "path": "photomechanic:ColorClass",
+              "value": "0"
+            },
+            {
+              "path": "photomechanic:Tagged",
+              "value": "False"
+            },
+            {
+              "path": "photomechanic:Prefs",
+              "value": "0:0:0:005794"
+            },
+            {
+              "path": "photomechanic:PMVersion",
+              "value": "PM5"
+            },
+            {
+              "path": "aux:ImageNumber",
+              "value": "0"
+            },
+            {
+              "path": "aux:SerialNumber",
+              "value": "072012000789"
+            },
+            {
+              "path": "aux:LensInfo",
+              "value": "16/1 35/1 0/0 0/0"
+            },
+            {
+              "path": "aux:Lens",
+              "value": "EF16-35mm f/2.8L II USM"
+            },
+            {
+              "path": "aux:LensID",
+              "value": "246"
+            },
+            {
+              "path": "aux:LensSerialNumber",
+              "value": "0000000000"
+            },
+            {
+              "path": "aux:ApproximateFocusDistance",
+              "value": "163/100"
+            },
+            {
+              "path": "aux:FlashCompensation",
+              "value": "0/1"
+            },
+            {
+              "path": "aux:Firmware",
+              "value": "2.0.3"
+            },
+            {
+              "path": "dc:format",
+              "value": "image/jpeg"
+            },
+            {
+              "path": "xmpMM:DocumentID",
+              "value": "xmp.did:c558a77b-5294-4b1b-ad7f-d70fa61bca49"
+            },
+            {
+              "path": "xmpMM:OriginalDocumentID",
+              "value": "6A89D3195BA404610A75FFBFA95AC7C6"
+            },
+            {
+              "path": "xmpMM:InstanceID",
+              "value": "xmp.iid:c558a77b-5294-4b1b-ad7f-d70fa61bca49"
+            },
+            {
+              "path": "dc:creator",
+              "value": "Brandon Wade"
+            },
+            {
+              "path": "dc:title",
+              "value": "AA LAX Thursday"
+            },
+            {
+              "path": "dc:rights",
+              "value": "Brandon Wade"
+            },
+            {
+              "path": "dc:description",
+              "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+            },
+            {
+              "path": "dc:subject",
+              "value": "AA"
+            },
+            {
+              "path": "dc:subject",
+              "value": "American Airlines"
+            },
+            {
+              "path": "dc:subject",
+              "value": "LAX"
+            },
+            {
+              "path": "dc:subject",
+              "value": "Los Angeles"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "derived"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "converted from image/x-canon-cr2 to image/jpeg, saved to new location"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:01964e5f-601d-448d-b0af-96c02084af91"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2015-09-17T14:43:06-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "converted"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "from image/jpeg to image/x-canon-cr2"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "derived"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "converted from image/x-canon-cr2 to image/jpeg, saved to new location"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:c558a77b-5294-4b1b-ad7f-d70fa61bca49"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2015-09-17T14:43:06-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:DerivedFrom/stRef:instanceID",
+              "value": "xmp.iid:01964e5f-601d-448d-b0af-96c02084af91"
+            },
+            {
+              "path": "xmpMM:DerivedFrom/stRef:documentID",
+              "value": "xmp.did:01964e5f-601d-448d-b0af-96c02084af91"
+            },
+            {
+              "path": "xmpMM:DerivedFrom/stRef:originalDocumentID",
+              "value": "6A89D3195BA404610A75FFBFA95AC7C6"
+            }
+          ],
+          "truncated": false,
+          "parse_error": null
+        },
+        "iptc": {
+          "present": true,
+          "byte_length": 591,
+          "coded_character_set_utf8": true,
+          "datasets": [
+            {
+              "record": 1,
+              "dataset": 90,
+              "name": "CodedCharacterSet",
+              "value": "1b 25 47"
+            },
+            {
+              "record": 2,
+              "dataset": 0,
+              "name": "ApplicationRecordVersion",
+              "value": 4
+            },
+            {
+              "record": 2,
+              "dataset": 5,
+              "name": "ObjectName",
+              "value": "AA LAX Thursday"
+            },
+            {
+              "record": 2,
+              "dataset": 15,
+              "name": "Category",
+              "value": "A"
+            },
+            {
+              "record": 2,
+              "dataset": 25,
+              "name": "Keywords",
+              "value": "AA"
+            },
+            {
+              "record": 2,
+              "dataset": 25,
+              "name": "Keywords",
+              "value": "American Airlines"
+            },
+            {
+              "record": 2,
+              "dataset": 25,
+              "name": "Keywords",
+              "value": "LAX"
+            },
+            {
+              "record": 2,
+              "dataset": 25,
+              "name": "Keywords",
+              "value": "Los Angeles"
+            },
+            {
+              "record": 2,
+              "dataset": 40,
+              "name": "SpecialInstructions",
+              "value": "Shot with a Canon EOS-1D X Canon camera on 8/27/15 at 3:57:30 PM with ISO of 640, white balance set to Auto, at 1/200 and aperture of 5, color mode of AdobeRGB and exposure compensation of 0.0, lens at 16, meter set to Manual, sharpening set at 0 and tone"
+            },
+            {
+              "record": 2,
+              "dataset": 55,
+              "name": "DateCreated",
+              "value": "20150827"
+            },
+            {
+              "record": 2,
+              "dataset": 60,
+              "name": "TimeCreated",
+              "value": "155730-0500"
+            },
+            {
+              "record": 2,
+              "dataset": 62,
+              "name": "DigitalCreationDate",
+              "value": "20150827"
+            },
+            {
+              "record": 2,
+              "dataset": 63,
+              "name": "DigitalCreationTime",
+              "value": "155730-0500"
+            },
+            {
+              "record": 2,
+              "dataset": 80,
+              "name": "By-line",
+              "value": "Brandon Wade"
+            },
+            {
+              "record": 2,
+              "dataset": 85,
+              "name": "By-lineTitle",
+              "value": "Freelance"
+            },
+            {
+              "record": 2,
+              "dataset": 90,
+              "name": "City",
+              "value": "Los Angeles"
+            },
+            {
+              "record": 2,
+              "dataset": 95,
+              "name": "Province-State",
+              "value": "Tx"
+            },
+            {
+              "record": 2,
+              "dataset": 101,
+              "name": "Country",
+              "value": "USA"
+            },
+            {
+              "record": 2,
+              "dataset": 110,
+              "name": "Credit",
+              "value": "Brandon Wade"
+            },
+            {
+              "record": 2,
+              "dataset": 116,
+              "name": "CopyrightNotice",
+              "value": "Brandon Wade"
+            },
+            {
+              "record": 2,
+              "dataset": 120,
+              "name": "Caption-Abstract",
+              "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+            },
+            {
+              "record": 2,
+              "dataset": 122,
+              "name": "Writer-Editor",
+              "value": "BW"
+            }
+          ]
+        },
+        "icc_profile": {
+          "byte_length": 560,
+          "version": "2.1.0",
+          "device_class": "mntr",
+          "color_space": "RGB",
+          "description": "Adobe RGB (1998)",
+          "copyright": "Copyright 1999 Adobe Systems Incorporated"
+        },
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [
+        {
+          "source": "EXIF.IFD0",
+          "field": "ImageDescription",
+          "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Make",
+          "value": "Canon"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Model",
+          "value": "Canon EOS-1D X"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "XResolution",
+          "value": "300/1"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "YResolution",
+          "value": "300/1"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Software",
+          "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "DateTime",
+          "value": "2015:09:17 14:43:06"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Artist",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Copyright",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExposureTime",
+          "value": "1/200"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FNumber",
+          "value": "5/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExifVersion",
+          "value": "0230"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "DateTimeOriginal",
+          "value": "2015:08:27 15:57:30"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "DateTimeDigitized",
+          "value": "2015:08:27 15:57:30"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ShutterSpeedValue",
+          "value": "7643856/1000000"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ApertureValue",
+          "value": "4643856/1000000"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExposureBiasValue",
+          "value": "0/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "MaxApertureValue",
+          "value": "3/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FocalLength",
+          "value": "16/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubSecTimeOriginal",
+          "value": "01"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubSecTimeDigitized",
+          "value": "01"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FocalPlaneXResolution",
+          "value": "47185920/32768"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FocalPlaneYResolution",
+          "value": "47185920/32768"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "BodySerialNumber",
+          "value": "072012000789"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "LensModel",
+          "value": "EF16-35mm f/2.8L II USM"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "LensSerialNumber",
+          "value": "0000000000"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:5 ObjectName",
+          "value": "AA LAX Thursday"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:15 Category",
+          "value": "A"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:25 Keywords",
+          "value": "AA"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:25 Keywords",
+          "value": "American Airlines"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:25 Keywords",
+          "value": "LAX"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:25 Keywords",
+          "value": "Los Angeles"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:40 SpecialInstructions",
+          "value": "Shot with a Canon EOS-1D X Canon camera on 8/27/15 at 3:57:30 PM with ISO of 640, white balance set to Auto, at 1/200 and aperture of 5, color mode of AdobeRGB and exposure compensation of 0.0, lens at 16, meter set to Manual, sharpening set at 0 and tone"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:55 DateCreated",
+          "value": "20150827"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:60 TimeCreated",
+          "value": "155730-0500"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:62 DigitalCreationDate",
+          "value": "20150827"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:63 DigitalCreationTime",
+          "value": "155730-0500"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:80 By-line",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:85 By-lineTitle",
+          "value": "Freelance"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:90 City",
+          "value": "Los Angeles"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:95 Province-State",
+          "value": "Tx"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:101 Country",
+          "value": "USA"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:110 Credit",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:116 CopyrightNotice",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:120 Caption-Abstract",
+          "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:122 Writer-Editor",
+          "value": "BW"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:City",
+          "value": "Los Angeles"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:State",
+          "value": "Tx"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:Country",
+          "value": "USA"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:Category",
+          "value": "A"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:AuthorsPosition",
+          "value": "Freelance"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:Credit",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CaptionWriter",
+          "value": "BW"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:Instructions",
+          "value": "Shot with a Canon EOS-1D X Canon camera on 8/27/15 at 3:57:30 PM with ISO of 640, white balance set to Auto, at 1/200 and aperture of 5, color mode of AdobeRGB and exposure compensation of 0.0, lens at 16, meter set to Manual, sharpening set at 0 and tone Compensation to -2."
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:DateCreated",
+          "value": "2015-08-27T15:57:30.01-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpRights:Marked",
+          "value": "True"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:CreateDate",
+          "value": "2015-08-27T15:57:30.01-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:ModifyDate",
+          "value": "2015-09-17T14:43:06-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:MetadataDate",
+          "value": "2015-09-17T14:43:06-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:CreatorTool",
+          "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:ColorClass",
+          "value": "0"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:Tagged",
+          "value": "False"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:Prefs",
+          "value": "0:0:0:005794"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:PMVersion",
+          "value": "PM5"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:ImageNumber",
+          "value": "0"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:SerialNumber",
+          "value": "072012000789"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:LensInfo",
+          "value": "16/1 35/1 0/0 0/0"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:Lens",
+          "value": "EF16-35mm f/2.8L II USM"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:LensID",
+          "value": "246"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:LensSerialNumber",
+          "value": "0000000000"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:ApproximateFocusDistance",
+          "value": "163/100"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:FlashCompensation",
+          "value": "0/1"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:Firmware",
+          "value": "2.0.3"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:format",
+          "value": "image/jpeg"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DocumentID",
+          "value": "xmp.did:c558a77b-5294-4b1b-ad7f-d70fa61bca49"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:OriginalDocumentID",
+          "value": "6A89D3195BA404610A75FFBFA95AC7C6"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:InstanceID",
+          "value": "xmp.iid:c558a77b-5294-4b1b-ad7f-d70fa61bca49"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:creator",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:title",
+          "value": "AA LAX Thursday"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:rights",
+          "value": "Brandon Wade"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:description",
+          "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:subject",
+          "value": "AA"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:subject",
+          "value": "American Airlines"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:subject",
+          "value": "LAX"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:subject",
+          "value": "Los Angeles"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "derived"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "converted from image/x-canon-cr2 to image/jpeg, saved to new location"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:01964e5f-601d-448d-b0af-96c02084af91"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2015-09-17T14:43:06-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "converted"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "from image/jpeg to image/x-canon-cr2"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "derived"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "converted from image/x-canon-cr2 to image/jpeg, saved to new location"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:c558a77b-5294-4b1b-ad7f-d70fa61bca49"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2015-09-17T14:43:06-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DerivedFrom/stRef:instanceID",
+          "value": "xmp.iid:01964e5f-601d-448d-b0af-96c02084af91"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DerivedFrom/stRef:documentID",
+          "value": "xmp.did:01964e5f-601d-448d-b0af-96c02084af91"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DerivedFrom/stRef:originalDocumentID",
+          "value": "6A89D3195BA404610A75FFBFA95AC7C6"
+        },
+        {
+          "source": "ICC",
+          "field": "profile description",
+          "value": "Adobe RGB (1998)"
+        },
+        {
+          "source": "ICC",
+          "field": "profile copyright",
+          "value": "Copyright 1999 Adobe Systems Incorporated"
+        }
+      ],
+      "key_fields": {
+        "creator": [
+          {
+            "field": "EXIF.IFD0:Artist",
+            "value": "Brandon Wade"
+          },
+          {
+            "field": "IPTC:2:80 By-line",
+            "value": "Brandon Wade"
+          },
+          {
+            "field": "IPTC:2:85 By-lineTitle",
+            "value": "Freelance"
+          },
+          {
+            "field": "IPTC:2:110 Credit",
+            "value": "Brandon Wade"
+          },
+          {
+            "field": "IPTC:2:122 Writer-Editor",
+            "value": "BW"
+          },
+          {
+            "field": "XMP:photoshop:AuthorsPosition",
+            "value": "Freelance"
+          },
+          {
+            "field": "XMP:photoshop:Credit",
+            "value": "Brandon Wade"
+          },
+          {
+            "field": "XMP:photoshop:CaptionWriter",
+            "value": "BW"
+          },
+          {
+            "field": "XMP:dc:creator",
+            "value": "Brandon Wade"
+          }
+        ],
+        "copyright": [
+          {
+            "field": "EXIF.IFD0:Copyright",
+            "value": "Brandon Wade"
+          },
+          {
+            "field": "IPTC:2:116 CopyrightNotice",
+            "value": "Brandon Wade"
+          },
+          {
+            "field": "XMP:xmpRights:Marked",
+            "value": "True"
+          },
+          {
+            "field": "XMP:dc:rights",
+            "value": "Brandon Wade"
+          }
+        ],
+        "description": [
+          {
+            "field": "EXIF.IFD0:ImageDescription",
+            "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+          },
+          {
+            "field": "IPTC:2:5 ObjectName",
+            "value": "AA LAX Thursday"
+          },
+          {
+            "field": "IPTC:2:120 Caption-Abstract",
+            "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+          },
+          {
+            "field": "XMP:dc:title",
+            "value": "AA LAX Thursday"
+          },
+          {
+            "field": "XMP:dc:description",
+            "value": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade"
+          }
+        ],
+        "keywords_and_subjects": [
+          {
+            "field": "IPTC:2:15 Category",
+            "value": "A"
+          },
+          {
+            "field": "IPTC:2:25 Keywords",
+            "value": "AA"
+          },
+          {
+            "field": "IPTC:2:25 Keywords",
+            "value": "American Airlines"
+          },
+          {
+            "field": "IPTC:2:25 Keywords",
+            "value": "LAX"
+          },
+          {
+            "field": "IPTC:2:25 Keywords",
+            "value": "Los Angeles"
+          },
+          {
+            "field": "XMP:photoshop:Category",
+            "value": "A"
+          },
+          {
+            "field": "XMP:dc:subject",
+            "value": "AA"
+          },
+          {
+            "field": "XMP:dc:subject",
+            "value": "American Airlines"
+          },
+          {
+            "field": "XMP:dc:subject",
+            "value": "LAX"
+          },
+          {
+            "field": "XMP:dc:subject",
+            "value": "Los Angeles"
+          }
+        ],
+        "location": [
+          {
+            "field": "IPTC:2:90 City",
+            "value": "Los Angeles"
+          },
+          {
+            "field": "IPTC:2:95 Province-State",
+            "value": "Tx"
+          },
+          {
+            "field": "IPTC:2:101 Country",
+            "value": "USA"
+          },
+          {
+            "field": "XMP:photoshop:City",
+            "value": "Los Angeles"
+          },
+          {
+            "field": "XMP:photoshop:State",
+            "value": "Tx"
+          },
+          {
+            "field": "XMP:photoshop:Country",
+            "value": "USA"
+          }
+        ],
+        "source_and_instructions": [
+          {
+            "field": "IPTC:2:40 SpecialInstructions",
+            "value": "Shot with a Canon EOS-1D X Canon camera on 8/27/15 at 3:57:30 PM with ISO of 640, white balance set to Auto, at 1/200 and aperture of 5, color mode of AdobeRGB and exposure compensation of 0.0, lens at 16, meter set to Manual, sharpening set at 0 and tone"
+          },
+          {
+            "field": "XMP:photoshop:Instructions",
+            "value": "Shot with a Canon EOS-1D X Canon camera on 8/27/15 at 3:57:30 PM with ISO of 640, white balance set to Auto, at 1/200 and aperture of 5, color mode of AdobeRGB and exposure compensation of 0.0, lens at 16, meter set to Manual, sharpening set at 0 and tone Compensation to -2."
+          }
+        ],
+        "software": [
+          {
+            "field": "EXIF.IFD0:Software",
+            "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+          },
+          {
+            "field": "XMP:xmp:CreatorTool",
+            "value": "Adobe Photoshop Lightroom 6.0 (Macintosh)"
+          }
+        ],
+        "camera": [
+          {
+            "field": "EXIF.IFD0:Make",
+            "value": "Canon"
+          },
+          {
+            "field": "EXIF.IFD0:Model",
+            "value": "Canon EOS-1D X"
+          },
+          {
+            "field": "EXIF.Exif:LensModel",
+            "value": "EF16-35mm f/2.8L II USM"
+          },
+          {
+            "field": "XMP:aux:Lens",
+            "value": "EF16-35mm f/2.8L II USM"
+          }
+        ],
+        "dates": [
+          {
+            "field": "EXIF.IFD0:DateTime",
+            "value": "2015:09:17 14:43:06"
+          },
+          {
+            "field": "EXIF.Exif:DateTimeOriginal",
+            "value": "2015:08:27 15:57:30"
+          },
+          {
+            "field": "EXIF.Exif:DateTimeDigitized",
+            "value": "2015:08:27 15:57:30"
+          },
+          {
+            "field": "IPTC:2:55 DateCreated",
+            "value": "20150827"
+          },
+          {
+            "field": "IPTC:2:60 TimeCreated",
+            "value": "155730-0500"
+          },
+          {
+            "field": "IPTC:2:62 DigitalCreationDate",
+            "value": "20150827"
+          },
+          {
+            "field": "IPTC:2:63 DigitalCreationTime",
+            "value": "155730-0500"
+          },
+          {
+            "field": "XMP:photoshop:DateCreated",
+            "value": "2015-08-27T15:57:30.01-05:00"
+          },
+          {
+            "field": "XMP:xmp:CreateDate",
+            "value": "2015-08-27T15:57:30.01-05:00"
+          },
+          {
+            "field": "XMP:xmp:ModifyDate",
+            "value": "2015-09-17T14:43:06-05:00"
+          },
+          {
+            "field": "XMP:xmp:MetadataDate",
+            "value": "2015-09-17T14:43:06-05:00"
+          }
+        ]
+      },
+      "named_entity_hits_in_metadata": [
+        {
+          "name": "American Airlines",
+          "field": "IPTC:2:25 Keywords",
+          "value": "American Airlines"
+        },
+        {
+          "name": "American Airlines",
+          "field": "XMP:dc:subject",
+          "value": "American Airlines"
+        }
+      ],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 262144,
+        "hits": [
+          {
+            "name": "American Airlines",
+            "count": 2,
+            "first_offsets": [
+              1017,
+              5020
+            ]
+          }
+        ]
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 5184,
+          "height": 3456,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 300,
+          "is_progressive": false,
+          "chroma_subsampling": "4:4:4",
+          "compression": null,
+          "exif_bytes": 900,
+          "xmp_bytes": 8271,
+          "iptc_bytes": 688,
+          "icc_bytes": 560
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 106,
+        "descriptive_strings_excluding_icc": 104
+      },
+      "content_established_role": "camera photograph (per EXIF: Canon Canon EOS-1D X, 2015:08:27 15:57:30); reference image; embedded metadata names American Airlines (not Southwest); no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "EXIF Make/Model/DateTime",
+        "IPTC/XMP keywords"
+      ],
+      "filename_hint": {
+        "text": "forward galley flight deck",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "rear galley.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 143251,
+      "sha256": "f9ea2338140eeb77565fd1cee857804ba8a68acef49b0d17106793a165b5ee8e",
+      "sha256_before_processing": "f9ea2338140eeb77565fd1cee857804ba8a68acef49b0d17106793a165b5ee8e",
+      "filesystem_modified_time": "2026-11-13T17:08:43.186Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000101010048",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 1920,
+      "pixel_height": 1281,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:4:4"
+      },
+      "image_structure": {
+        "process": "progressive DCT (SOF2)",
+        "progressive": true,
+        "jfif": {
+          "version": "1.01",
+          "density_units": "dots per inch",
+          "x_density": 72,
+          "y_density": 72
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "DQT": 2,
+          "SOF": 1,
+          "DHT": 10,
+          "SOS": 10
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 143249,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 143251,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 1920,
+          "height": 1281,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 72,
+          "is_progressive": true,
+          "chroma_subsampling": "4:4:4",
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 0,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "rear galley",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "recarro 2.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 77918,
+      "sha256": "58c8c019e04bc4ec32de62e667f2785e117f41623c60f7ee814b3e5b6f9e0c5d",
+      "sha256_before_processing": "58c8c019e04bc4ec32de62e667f2785e117f41623c60f7ee814b3e5b6f9e0c5d",
+      "filesystem_modified_time": "2026-11-13T17:05:30.233Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000101010060",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 1140,
+      "pixel_height": 641,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:2:0"
+      },
+      "image_structure": {
+        "process": "baseline DCT (SOF0)",
+        "progressive": false,
+        "jfif": {
+          "version": "1.01",
+          "density_units": "dots per inch",
+          "x_density": 96,
+          "y_density": 96
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "SOF": 1,
+          "DHT": 1,
+          "DQT": 1,
+          "SOS": 1
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 77916,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 77918,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 1140,
+          "height": 641,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 96,
+          "is_progressive": false,
+          "chroma_subsampling": "4:2:0",
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 0,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "recarro 2",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "seats 1.jpeg",
+      "group": "image",
+      "extension": ".jpeg",
+      "read_status": "ok",
+      "size_bytes": 43764,
+      "sha256": "d6c27a49eff8a74ae6a3104de1dca18560d2e01f4f874a9788b34be76fc00ad7",
+      "sha256_before_processing": "d6c27a49eff8a74ae6a3104de1dca18560d2e01f4f874a9788b34be76fc00ad7",
+      "filesystem_modified_time": "2026-11-13T17:02:56.316Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000101000001",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 736,
+      "pixel_height": 416,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:2:0"
+      },
+      "image_structure": {
+        "process": "baseline DCT (SOF0)",
+        "progressive": false,
+        "jfif": {
+          "version": "1.01",
+          "density_units": "aspect ratio (no units)",
+          "x_density": 1,
+          "y_density": 1
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "DQT": 1,
+          "SOF": 1,
+          "DHT": 4,
+          "SOS": 1
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 43762,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 43764,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 736,
+          "height": 416,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 72,
+          "is_progressive": false,
+          "chroma_subsampling": "4:2:0",
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 0,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "seats 1",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "seats 2 .jpeg",
+      "group": "image",
+      "extension": ".jpeg",
+      "read_status": "ok",
+      "size_bytes": 30894,
+      "sha256": "026cdd68f87a6cb60bc160b763de7404a701d0004c1fef78e1b792e550de4eac",
+      "sha256_before_processing": "026cdd68f87a6cb60bc160b763de7404a701d0004c1fef78e1b792e550de4eac",
+      "filesystem_modified_time": "2026-11-13T17:03:16.704Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000101000001",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 617,
+      "pixel_height": 324,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:2:0"
+      },
+      "image_structure": {
+        "process": "baseline DCT (SOF0)",
+        "progressive": false,
+        "jfif": {
+          "version": "1.01",
+          "density_units": "aspect ratio (no units)",
+          "x_density": 1,
+          "y_density": 1
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "DQT": 1,
+          "SOF": 1,
+          "DHT": 4,
+          "SOS": 1
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 30892,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 30894,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 617,
+          "height": 324,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 72,
+          "is_progressive": false,
+          "chroma_subsampling": "4:2:0",
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 0,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "seats 2 ",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "seats 3.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 410493,
+      "sha256": "29dae2e131d0a05db1eae3fb191c0478d65bd7a9ca71910495acee202919b29e",
+      "sha256_before_processing": "29dae2e131d0a05db1eae3fb191c0478d65bd7a9ca71910495acee202919b29e",
+      "filesystem_modified_time": "2026-11-13T17:03:35.141Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000102010048",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 1440,
+      "pixel_height": 480,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:4:4"
+      },
+      "image_structure": {
+        "process": "baseline DCT (SOF0)",
+        "progressive": false,
+        "jfif": {
+          "version": "1.02",
+          "density_units": "dots per inch",
+          "x_density": 72,
+          "y_density": 72
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "DQT": 2,
+          "SOF": 1,
+          "DHT": 4,
+          "SOS": 1
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 410491,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 262144,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 1440,
+          "height": 480,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 72,
+          "is_progressive": false,
+          "chroma_subsampling": "4:4:4",
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 0,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "seats 3",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "seats 4.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 3323626,
+      "sha256": "b108b845381296b523ba3bea5d13414e7dc885e7d40e4ed3b87cf4d8016d9bab",
+      "sha256_before_processing": "b108b845381296b523ba3bea5d13414e7dc885e7d40e4ed3b87cf4d8016d9bab",
+      "filesystem_modified_time": "2026-11-13T17:03:46.299Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe11d1c45786966000049492a00",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 2500,
+      "pixel_height": 1667,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:4:4"
+      },
+      "image_structure": {
+        "process": "progressive DCT (SOF2)",
+        "progressive": true,
+        "jfif": null,
+        "adobe_app14": {
+          "dct_version": 100,
+          "color_transform": 1,
+          "color_transform_name": "YCbCr"
+        },
+        "segment_summary": {
+          "APP1:Exif": 1,
+          "APP13:Photoshop 3.0 (8BIM resources)": 1,
+          "APP1:XMP": 1,
+          "APP1:ExtendedXMP": 3,
+          "APP2:ICC_PROFILE": 1,
+          "APP14:Adobe": 1,
+          "DQT": 1,
+          "SOF": 1,
+          "DHT": 1,
+          "SOS": 7
+        },
+        "comments": [],
+        "extended_xmp": {
+          "guid": "D44ACB165FBD966235045B49D9E037EC",
+          "declared_full_length": 137964,
+          "chunks": 3,
+          "bytes_present": 137964
+        },
+        "mpf_present": false,
+        "photoshop_resource_ids": [
+          {
+            "id": "0x0404",
+            "size": 73
+          },
+          {
+            "id": "0x0425",
+            "size": 16
+          },
+          {
+            "id": "0x043a",
+            "size": 229
+          },
+          {
+            "id": "0x043b",
+            "size": 557
+          },
+          {
+            "id": "0x03ed",
+            "size": 16
+          },
+          {
+            "id": "0x0426",
+            "size": 14
+          },
+          {
+            "id": "0x03f2",
+            "size": 10
+          },
+          {
+            "id": "0x040d",
+            "size": 4
+          },
+          {
+            "id": "0x0419",
+            "size": 4
+          },
+          {
+            "id": "0x03f3",
+            "size": 9
+          },
+          {
+            "id": "0x2710",
+            "size": 10
+          },
+          {
+            "id": "0x03f5",
+            "size": 72
+          },
+          {
+            "id": "0x03f8",
+            "size": 112
+          },
+          {
+            "id": "0x0408",
+            "size": 16
+          },
+          {
+            "id": "0x0444",
+            "size": 16
+          },
+          {
+            "id": "0x041e",
+            "size": 4
+          },
+          {
+            "id": "0x041a",
+            "size": 851
+          },
+          {
+            "id": "0x0428",
+            "size": 12
+          },
+          {
+            "id": "0x0414",
+            "size": 4
+          },
+          {
+            "id": "0x040c",
+            "size": 6430
+          },
+          {
+            "id": "0x0421",
+            "size": 87
+          },
+          {
+            "id": "0x0406",
+            "size": 7
+          }
+        ],
+        "eoi_offset": 3323624,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": true,
+          "byte_length": 7444,
+          "byte_order": "little-endian (II)",
+          "ifd0": {
+            "ImageWidth": 8192,
+            "ImageLength": 5464,
+            "BitsPerSample": [
+              8,
+              8,
+              8
+            ],
+            "Compression": 1,
+            "PhotometricInterpretation": 2,
+            "Make": "Canon",
+            "Model": "Canon EOS R5m2",
+            "Orientation": 1,
+            "SamplesPerPixel": 3,
+            "XResolution": "720000/10000",
+            "YResolution": "720000/10000",
+            "PlanarConfiguration": 1,
+            "ResolutionUnit": 2,
+            "Software": "Adobe Photoshop 25.12 (Macintosh)",
+            "DateTime": "2024:09:23 22:41:05",
+            "ExifIFDPointer": 304
+          },
+          "exif": {
+            "ExposureTime": "1/125",
+            "FNumber": "32/10",
+            "ExposureProgram": 1,
+            "ISOSpeedRatings": 1600,
+            "SensitivityType": 2,
+            "RecommendedExposureIndex": 1600,
+            "ExifVersion": "0231",
+            "DateTimeOriginal": "2024:09:23 18:59:56",
+            "DateTimeDigitized": "2024:09:23 18:59:56",
+            "OffsetTime": "-05:00",
+            "OffsetTimeOriginal": "-06:00",
+            "OffsetTimeDigitized": "-06:00",
+            "ShutterSpeedValue": "6965784/1000000",
+            "ApertureValue": "3356144/1000000",
+            "ExposureBiasValue": "0/1",
+            "MaxApertureValue": "3/1",
+            "MeteringMode": 5,
+            "Flash": 0,
+            "FocalLength": "15/1",
+            "SubSecTimeOriginal": "64",
+            "SubSecTimeDigitized": "64",
+            "ColorSpace": 1,
+            "PixelXDimension": 2500,
+            "PixelYDimension": 1667,
+            "FocalPlaneXResolution": "8192000/1419",
+            "FocalPlaneYResolution": "5464000/947",
+            "FocalPlaneResolutionUnit": 2,
+            "CustomRendered": 0,
+            "ExposureMode": 1,
+            "WhiteBalance": 0,
+            "SceneCaptureType": 0,
+            "BodySerialNumber": "142202100741",
+            "LensSpecification": [
+              "15/1",
+              "35/1",
+              "0/0",
+              "0/0"
+            ],
+            "LensModel": "RF15-35mm F2.8 L IS USM",
+            "LensSerialNumber": "2520000084"
+          },
+          "gps": {},
+          "interop": {},
+          "ifd1": {
+            "Compression": 6,
+            "XResolution": "72/1",
+            "YResolution": "72/1",
+            "ResolutionUnit": 2,
+            "JPEGInterchangeFormat": 1042,
+            "JPEGInterchangeFormatLength": 6402
+          },
+          "errors": []
+        },
+        "xmp": {
+          "present": true,
+          "byte_length": 8559,
+          "toolkit": "Adobe XMP Core 9.1-c002 79.a6a63968a, 2024/03/06-11:52:05        ",
+          "properties": [
+            {
+              "path": "photoshop:DateCreated",
+              "value": "2024-09-23T18:59:56.064-06:00"
+            },
+            {
+              "path": "photoshop:ColorMode",
+              "value": "3"
+            },
+            {
+              "path": "photoshop:ICCProfile",
+              "value": "sRGB IEC61966-2.1"
+            },
+            {
+              "path": "xmp:CreateDate",
+              "value": "2024-09-23T18:59:56"
+            },
+            {
+              "path": "xmp:Label",
+              "value": "Green"
+            },
+            {
+              "path": "xmp:ModifyDate",
+              "value": "2024-09-23T22:41:05-05:00"
+            },
+            {
+              "path": "xmp:CreatorTool",
+              "value": "Adobe Photoshop Lightroom Classic 13.5.1 (Macintosh)"
+            },
+            {
+              "path": "xmp:MetadataDate",
+              "value": "2024-09-23T22:41:05-05:00"
+            },
+            {
+              "path": "photomechanic:ColorClass",
+              "value": "3"
+            },
+            {
+              "path": "photomechanic:Tagged",
+              "value": "True"
+            },
+            {
+              "path": "photomechanic:Prefs",
+              "value": "1:3:0:001116"
+            },
+            {
+              "path": "photomechanic:PMVersion",
+              "value": "PM6"
+            },
+            {
+              "path": "aux:ImageNumber",
+              "value": "1116"
+            },
+            {
+              "path": "aux:SerialNumber",
+              "value": "142202100741"
+            },
+            {
+              "path": "aux:LensInfo",
+              "value": "15/1 35/1 0/0 0/0"
+            },
+            {
+              "path": "aux:Lens",
+              "value": "RF15-35mm F2.8 L IS USM"
+            },
+            {
+              "path": "aux:LensID",
+              "value": "61182"
+            },
+            {
+              "path": "aux:LensSerialNumber",
+              "value": "2520000084"
+            },
+            {
+              "path": "aux:ApproximateFocusDistance",
+              "value": "276/100"
+            },
+            {
+              "path": "aux:FlashCompensation",
+              "value": "0/1"
+            },
+            {
+              "path": "aux:Firmware",
+              "value": "1.0.0"
+            },
+            {
+              "path": "aux:DistortionCorrectionAlreadyApplied",
+              "value": "True"
+            },
+            {
+              "path": "aux:LateralChromaticAberrationCorrectionAlreadyApplied",
+              "value": "True"
+            },
+            {
+              "path": "aux:VignetteCorrectionAlreadyApplied",
+              "value": "True"
+            },
+            {
+              "path": "exifEX:LensModel",
+              "value": "RF15-35mm F2.8 L IS USM"
+            },
+            {
+              "path": "xmpMM:DocumentID",
+              "value": "adobe:docid:photoshop:c91d1c38-7644-0d4e-8cf9-4ddc2385a578"
+            },
+            {
+              "path": "xmpMM:PreservedFileName",
+              "value": "221A1116.CR3"
+            },
+            {
+              "path": "xmpMM:OriginalDocumentID",
+              "value": "2A9EF02CE141B099BB0227BAE1BF4FFD"
+            },
+            {
+              "path": "xmpMM:InstanceID",
+              "value": "xmp.iid:a80ba62a-47fb-4f85-b416-11b2891ae6d9"
+            },
+            {
+              "path": "dc:format",
+              "value": "image/jpeg"
+            },
+            {
+              "path": "xmpDM:pick",
+              "value": "0"
+            },
+            {
+              "path": "xmpNote:HasExtendedXMP",
+              "value": "D44ACB165FBD966235045B49D9E037EC"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:Author",
+              "value": "Adobe"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:Make",
+              "value": "Canon"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:Model",
+              "value": "Canon EOS R5m2"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:UniqueCameraModel",
+              "value": "Canon EOS R5 Mark II"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:CameraRawProfile",
+              "value": "True"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:AutoScale",
+              "value": "False"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:Lens",
+              "value": "RF15-35mm F2.8 L IS USM"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:CameraPrettyName",
+              "value": "Canon EOS R5 Mark II"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:LensPrettyName",
+              "value": "RF15-35mm F2.8 L IS USM"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:ProfileName",
+              "value": "Camera Settings"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:SensorFormatFactor",
+              "value": "1.001926"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:FocalLength",
+              "value": "15"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:FocusDistance",
+              "value": "10000"
+            },
+            {
+              "path": "photoshop:CameraProfiles/stCamera:ApertureValue",
+              "value": "3.356144"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:Version",
+              "value": "2"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:ImageXCenter",
+              "value": "0.499878"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:ImageYCenter",
+              "value": "0.500364"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:ScaleFactor",
+              "value": "0.997631"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:RadialDistortParam1",
+              "value": "-0.050994"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:RadialDistortParam2",
+              "value": "0.022946"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:RadialDistortParam3",
+              "value": "-0.003273"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelParam1",
+              "value": "1"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.000000, 1.000000"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.107137, 0.996460"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.214274, 0.984495"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.321411, 0.964717"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.428194, 0.937248"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.535331, 0.902454"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.642468, 0.860701"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.749605, 0.810035"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.856742, 0.748138"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "0.963879, 0.672079"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "1.070662, 0.591625"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "1.177799, 0.470761"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "1.284936, 0.350018"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "1.392073, 0.245635"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "1.499210, 0.172873"
+            },
+            {
+              "path": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+              "value": "1.606347, 0.099988"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "derived"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "converted from image/x-canon-cr3 to image/tiff, saved to new location"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:c26607ff-d346-4d3a-bc18-cff3b4614384"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2024-09-23T22:01:50-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop Lightroom Classic 13.5.1 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:63a21e16-bc8f-44da-9a82-45a1f21125be"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2024-09-23T22:37:03-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop 25.12 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "converted"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "from image/tiff to application/vnd.adobe.photoshop"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "derived"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "converted from image/tiff to application/vnd.adobe.photoshop"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:a832128b-686c-40d1-8426-faffaa246c97"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2024-09-23T22:37:03-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop 25.12 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:1a1a3723-0bf3-47b1-bc4a-ce8ed9539512"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2024-09-23T22:37:19-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop 25.12 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "converted"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "from application/vnd.adobe.photoshop to image/tiff"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "derived"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "converted from application/vnd.adobe.photoshop to image/tiff"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:6bd5f7be-400c-431c-b598-24165c3d6fdc"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2024-09-23T22:37:19-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop 25.12 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:179341bc-d9a4-40a0-8cce-937e2f83060d"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2024-09-23T22:41:05-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop 25.12 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "converted"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "from image/tiff to image/jpeg"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "derived"
+            },
+            {
+              "path": "xmpMM:History/stEvt:parameters",
+              "value": "converted from image/tiff to image/jpeg"
+            },
+            {
+              "path": "xmpMM:History/stEvt:action",
+              "value": "saved"
+            },
+            {
+              "path": "xmpMM:History/stEvt:instanceID",
+              "value": "xmp.iid:a80ba62a-47fb-4f85-b416-11b2891ae6d9"
+            },
+            {
+              "path": "xmpMM:History/stEvt:when",
+              "value": "2024-09-23T22:41:05-05:00"
+            },
+            {
+              "path": "xmpMM:History/stEvt:softwareAgent",
+              "value": "Adobe Photoshop 25.12 (Macintosh)"
+            },
+            {
+              "path": "xmpMM:History/stEvt:changed",
+              "value": "/"
+            },
+            {
+              "path": "xmpMM:DerivedFrom/stRef:instanceID",
+              "value": "xmp.iid:179341bc-d9a4-40a0-8cce-937e2f83060d"
+            },
+            {
+              "path": "xmpMM:DerivedFrom/stRef:documentID",
+              "value": "adobe:docid:photoshop:0b44414f-9858-a140-bd53-05bc7517fade"
+            },
+            {
+              "path": "xmpMM:DerivedFrom/stRef:originalDocumentID",
+              "value": "2A9EF02CE141B099BB0227BAE1BF4FFD"
+            }
+          ],
+          "truncated": false,
+          "parse_error": null
+        },
+        "iptc": {
+          "present": true,
+          "byte_length": 73,
+          "coded_character_set_utf8": true,
+          "datasets": [
+            {
+              "record": 1,
+              "dataset": 90,
+              "name": "CodedCharacterSet",
+              "value": "1b 25 47"
+            },
+            {
+              "record": 2,
+              "dataset": 0,
+              "name": "ApplicationRecordVersion",
+              "value": 4
+            },
+            {
+              "record": 2,
+              "dataset": 55,
+              "name": "DateCreated",
+              "value": "20240923"
+            },
+            {
+              "record": 2,
+              "dataset": 60,
+              "name": "TimeCreated",
+              "value": "185956-0600"
+            },
+            {
+              "record": 2,
+              "dataset": 62,
+              "name": "DigitalCreationDate",
+              "value": "20240923"
+            },
+            {
+              "record": 2,
+              "dataset": 63,
+              "name": "DigitalCreationTime",
+              "value": "185956-0600"
+            }
+          ]
+        },
+        "icc_profile": {
+          "byte_length": 3144,
+          "version": "2.1.0",
+          "device_class": "mntr",
+          "color_space": "RGB",
+          "description": "sRGB IEC61966-2.1",
+          "copyright": "Copyright (c) 1998 Hewlett-Packard Company"
+        },
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [
+          {
+            "source": "EXIF PixelXDimension/PixelYDimension",
+            "width": 2500,
+            "height": 1667,
+            "matches_encoded_image": true
+          },
+          {
+            "source": "EXIF IFD0 ImageWidth/ImageLength",
+            "width": 8192,
+            "height": 5464,
+            "matches_encoded_image": false
+          }
+        ],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [
+        {
+          "source": "EXIF.IFD0",
+          "field": "Make",
+          "value": "Canon"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Model",
+          "value": "Canon EOS R5m2"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "XResolution",
+          "value": "720000/10000"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "YResolution",
+          "value": "720000/10000"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "Software",
+          "value": "Adobe Photoshop 25.12 (Macintosh)"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "DateTime",
+          "value": "2024:09:23 22:41:05"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExposureTime",
+          "value": "1/125"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FNumber",
+          "value": "32/10"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExifVersion",
+          "value": "0231"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "DateTimeOriginal",
+          "value": "2024:09:23 18:59:56"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "DateTimeDigitized",
+          "value": "2024:09:23 18:59:56"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "OffsetTime",
+          "value": "-05:00"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "OffsetTimeOriginal",
+          "value": "-06:00"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "OffsetTimeDigitized",
+          "value": "-06:00"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ShutterSpeedValue",
+          "value": "6965784/1000000"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ApertureValue",
+          "value": "3356144/1000000"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExposureBiasValue",
+          "value": "0/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "MaxApertureValue",
+          "value": "3/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FocalLength",
+          "value": "15/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubSecTimeOriginal",
+          "value": "64"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "SubSecTimeDigitized",
+          "value": "64"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FocalPlaneXResolution",
+          "value": "8192000/1419"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FocalPlaneYResolution",
+          "value": "5464000/947"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "BodySerialNumber",
+          "value": "142202100741"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "LensModel",
+          "value": "RF15-35mm F2.8 L IS USM"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "LensSerialNumber",
+          "value": "2520000084"
+        },
+        {
+          "source": "EXIF.IFD1",
+          "field": "XResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.IFD1",
+          "field": "YResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:55 DateCreated",
+          "value": "20240923"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:60 TimeCreated",
+          "value": "185956-0600"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:62 DigitalCreationDate",
+          "value": "20240923"
+        },
+        {
+          "source": "IPTC",
+          "field": "2:63 DigitalCreationTime",
+          "value": "185956-0600"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:DateCreated",
+          "value": "2024-09-23T18:59:56.064-06:00"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:ColorMode",
+          "value": "3"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:ICCProfile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:CreateDate",
+          "value": "2024-09-23T18:59:56"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:Label",
+          "value": "Green"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:ModifyDate",
+          "value": "2024-09-23T22:41:05-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:CreatorTool",
+          "value": "Adobe Photoshop Lightroom Classic 13.5.1 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmp:MetadataDate",
+          "value": "2024-09-23T22:41:05-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:ColorClass",
+          "value": "3"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:Tagged",
+          "value": "True"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:Prefs",
+          "value": "1:3:0:001116"
+        },
+        {
+          "source": "XMP",
+          "field": "photomechanic:PMVersion",
+          "value": "PM6"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:ImageNumber",
+          "value": "1116"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:SerialNumber",
+          "value": "142202100741"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:LensInfo",
+          "value": "15/1 35/1 0/0 0/0"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:Lens",
+          "value": "RF15-35mm F2.8 L IS USM"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:LensID",
+          "value": "61182"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:LensSerialNumber",
+          "value": "2520000084"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:ApproximateFocusDistance",
+          "value": "276/100"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:FlashCompensation",
+          "value": "0/1"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:Firmware",
+          "value": "1.0.0"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:DistortionCorrectionAlreadyApplied",
+          "value": "True"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:LateralChromaticAberrationCorrectionAlreadyApplied",
+          "value": "True"
+        },
+        {
+          "source": "XMP",
+          "field": "aux:VignetteCorrectionAlreadyApplied",
+          "value": "True"
+        },
+        {
+          "source": "XMP",
+          "field": "exifEX:LensModel",
+          "value": "RF15-35mm F2.8 L IS USM"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DocumentID",
+          "value": "adobe:docid:photoshop:c91d1c38-7644-0d4e-8cf9-4ddc2385a578"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:PreservedFileName",
+          "value": "221A1116.CR3"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:OriginalDocumentID",
+          "value": "2A9EF02CE141B099BB0227BAE1BF4FFD"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:InstanceID",
+          "value": "xmp.iid:a80ba62a-47fb-4f85-b416-11b2891ae6d9"
+        },
+        {
+          "source": "XMP",
+          "field": "dc:format",
+          "value": "image/jpeg"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpDM:pick",
+          "value": "0"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpNote:HasExtendedXMP",
+          "value": "D44ACB165FBD966235045B49D9E037EC"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:Author",
+          "value": "Adobe"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:Make",
+          "value": "Canon"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:Model",
+          "value": "Canon EOS R5m2"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:UniqueCameraModel",
+          "value": "Canon EOS R5 Mark II"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:CameraRawProfile",
+          "value": "True"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:AutoScale",
+          "value": "False"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:Lens",
+          "value": "RF15-35mm F2.8 L IS USM"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:CameraPrettyName",
+          "value": "Canon EOS R5 Mark II"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:LensPrettyName",
+          "value": "RF15-35mm F2.8 L IS USM"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:ProfileName",
+          "value": "Camera Settings"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:SensorFormatFactor",
+          "value": "1.001926"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:FocalLength",
+          "value": "15"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:FocusDistance",
+          "value": "10000"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/stCamera:ApertureValue",
+          "value": "3.356144"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:Version",
+          "value": "2"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:ImageXCenter",
+          "value": "0.499878"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:ImageYCenter",
+          "value": "0.500364"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:ScaleFactor",
+          "value": "0.997631"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:RadialDistortParam1",
+          "value": "-0.050994"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:RadialDistortParam2",
+          "value": "0.022946"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/stCamera:RadialDistortParam3",
+          "value": "-0.003273"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelParam1",
+          "value": "1"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.000000, 1.000000"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.107137, 0.996460"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.214274, 0.984495"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.321411, 0.964717"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.428194, 0.937248"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.535331, 0.902454"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.642468, 0.860701"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.749605, 0.810035"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.856742, 0.748138"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "0.963879, 0.672079"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "1.070662, 0.591625"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "1.177799, 0.470761"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "1.284936, 0.350018"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "1.392073, 0.245635"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "1.499210, 0.172873"
+        },
+        {
+          "source": "XMP",
+          "field": "photoshop:CameraProfiles/crlcp:PerspectiveModel/crlcp:VignetteModel/stCamera:VignetteModelPiecewiseParam",
+          "value": "1.606347, 0.099988"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "derived"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "converted from image/x-canon-cr3 to image/tiff, saved to new location"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:c26607ff-d346-4d3a-bc18-cff3b4614384"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2024-09-23T22:01:50-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop Lightroom Classic 13.5.1 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:63a21e16-bc8f-44da-9a82-45a1f21125be"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2024-09-23T22:37:03-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop 25.12 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "converted"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "from image/tiff to application/vnd.adobe.photoshop"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "derived"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "converted from image/tiff to application/vnd.adobe.photoshop"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:a832128b-686c-40d1-8426-faffaa246c97"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2024-09-23T22:37:03-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop 25.12 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:1a1a3723-0bf3-47b1-bc4a-ce8ed9539512"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2024-09-23T22:37:19-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop 25.12 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "converted"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "from application/vnd.adobe.photoshop to image/tiff"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "derived"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "converted from application/vnd.adobe.photoshop to image/tiff"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:6bd5f7be-400c-431c-b598-24165c3d6fdc"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2024-09-23T22:37:19-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop 25.12 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:179341bc-d9a4-40a0-8cce-937e2f83060d"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2024-09-23T22:41:05-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop 25.12 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "converted"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "from image/tiff to image/jpeg"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "derived"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:parameters",
+          "value": "converted from image/tiff to image/jpeg"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:action",
+          "value": "saved"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:instanceID",
+          "value": "xmp.iid:a80ba62a-47fb-4f85-b416-11b2891ae6d9"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:when",
+          "value": "2024-09-23T22:41:05-05:00"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:softwareAgent",
+          "value": "Adobe Photoshop 25.12 (Macintosh)"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:History/stEvt:changed",
+          "value": "/"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DerivedFrom/stRef:instanceID",
+          "value": "xmp.iid:179341bc-d9a4-40a0-8cce-937e2f83060d"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DerivedFrom/stRef:documentID",
+          "value": "adobe:docid:photoshop:0b44414f-9858-a140-bd53-05bc7517fade"
+        },
+        {
+          "source": "XMP",
+          "field": "xmpMM:DerivedFrom/stRef:originalDocumentID",
+          "value": "2A9EF02CE141B099BB0227BAE1BF4FFD"
+        },
+        {
+          "source": "ICC",
+          "field": "profile description",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "source": "ICC",
+          "field": "profile copyright",
+          "value": "Copyright (c) 1998 Hewlett-Packard Company"
+        }
+      ],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [
+          {
+            "field": "EXIF.IFD0:Software",
+            "value": "Adobe Photoshop 25.12 (Macintosh)"
+          },
+          {
+            "field": "XMP:xmp:CreatorTool",
+            "value": "Adobe Photoshop Lightroom Classic 13.5.1 (Macintosh)"
+          }
+        ],
+        "camera": [
+          {
+            "field": "EXIF.IFD0:Make",
+            "value": "Canon"
+          },
+          {
+            "field": "EXIF.IFD0:Model",
+            "value": "Canon EOS R5m2"
+          },
+          {
+            "field": "EXIF.Exif:LensModel",
+            "value": "RF15-35mm F2.8 L IS USM"
+          },
+          {
+            "field": "XMP:aux:Lens",
+            "value": "RF15-35mm F2.8 L IS USM"
+          },
+          {
+            "field": "XMP:exifEX:LensModel",
+            "value": "RF15-35mm F2.8 L IS USM"
+          },
+          {
+            "field": "XMP:photoshop:CameraProfiles/stCamera:Make",
+            "value": "Canon"
+          },
+          {
+            "field": "XMP:photoshop:CameraProfiles/stCamera:Model",
+            "value": "Canon EOS R5m2"
+          },
+          {
+            "field": "XMP:photoshop:CameraProfiles/stCamera:Lens",
+            "value": "RF15-35mm F2.8 L IS USM"
+          }
+        ],
+        "dates": [
+          {
+            "field": "EXIF.IFD0:DateTime",
+            "value": "2024:09:23 22:41:05"
+          },
+          {
+            "field": "EXIF.Exif:DateTimeOriginal",
+            "value": "2024:09:23 18:59:56"
+          },
+          {
+            "field": "EXIF.Exif:DateTimeDigitized",
+            "value": "2024:09:23 18:59:56"
+          },
+          {
+            "field": "EXIF.Exif:OffsetTime",
+            "value": "-05:00"
+          },
+          {
+            "field": "EXIF.Exif:OffsetTimeOriginal",
+            "value": "-06:00"
+          },
+          {
+            "field": "EXIF.Exif:OffsetTimeDigitized",
+            "value": "-06:00"
+          },
+          {
+            "field": "IPTC:2:55 DateCreated",
+            "value": "20240923"
+          },
+          {
+            "field": "IPTC:2:60 TimeCreated",
+            "value": "185956-0600"
+          },
+          {
+            "field": "IPTC:2:62 DigitalCreationDate",
+            "value": "20240923"
+          },
+          {
+            "field": "IPTC:2:63 DigitalCreationTime",
+            "value": "185956-0600"
+          },
+          {
+            "field": "XMP:photoshop:DateCreated",
+            "value": "2024-09-23T18:59:56.064-06:00"
+          },
+          {
+            "field": "XMP:xmp:CreateDate",
+            "value": "2024-09-23T18:59:56"
+          },
+          {
+            "field": "XMP:xmp:ModifyDate",
+            "value": "2024-09-23T22:41:05-05:00"
+          },
+          {
+            "field": "XMP:xmp:MetadataDate",
+            "value": "2024-09-23T22:41:05-05:00"
+          }
+        ]
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 262144,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 2500,
+          "height": 1667,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": 1,
+          "density": 72,
+          "is_progressive": true,
+          "chroma_subsampling": "4:4:4",
+          "compression": null,
+          "exif_bytes": 7450,
+          "xmp_bytes": 8559,
+          "iptc_bytes": 8838,
+          "icc_bytes": 3144
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 156,
+        "descriptive_strings_excluding_icc": 154
+      },
+      "content_established_role": "camera photograph (per EXIF: Canon Canon EOS R5m2, 2024:09:23 18:59:56); reference image; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "EXIF Make/Model/DateTime"
+      ],
+      "filename_hint": {
+        "text": "seats 4",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "seats 5.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 443619,
+      "sha256": "49f16c78b6a8c4e3ac2883035b020b0c6dcf63a2102b6e7689c1eb5ef92ef9b6",
+      "sha256_before_processing": "49f16c78b6a8c4e3ac2883035b020b0c6dcf63a2102b6e7689c1eb5ef92ef9b6",
+      "filesystem_modified_time": "2026-11-13T17:04:24.516Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000101000001",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 4032,
+      "pixel_height": 3024,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:2:0"
+      },
+      "image_structure": {
+        "process": "progressive DCT (SOF2)",
+        "progressive": true,
+        "jfif": {
+          "version": "1.01",
+          "density_units": "aspect ratio (no units)",
+          "x_density": 1,
+          "y_density": 1
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "APP2:ICC_PROFILE": 1,
+          "DQT": 1,
+          "SOF": 1,
+          "DHT": 5,
+          "SOS": 5
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 443617,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": {
+          "byte_length": 536,
+          "version": "4.0.0",
+          "device_class": "mntr",
+          "color_space": "RGB",
+          "description": "Display P3",
+          "copyright": "Copyright Apple Inc., 2022"
+        },
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [
+        {
+          "source": "ICC",
+          "field": "profile description",
+          "value": "Display P3"
+        },
+        {
+          "source": "ICC",
+          "field": "profile copyright",
+          "value": "Copyright Apple Inc., 2022"
+        }
+      ],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 262144,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 4032,
+          "height": 3024,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 72,
+          "is_progressive": true,
+          "chroma_subsampling": "4:2:0",
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 536
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 2,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "seats 5",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "seats 6.avif",
+      "group": "image",
+      "extension": ".avif",
+      "read_status": "ok",
+      "size_bytes": 86337,
+      "sha256": "c7929bf7ac093e66fd8c949e120551de74e394b5ad630e2454034a85c5750dfe",
+      "sha256_before_processing": "c7929bf7ac093e66fd8c949e120551de74e394b5ad630e2454034a85c5750dfe",
+      "filesystem_modified_time": "2026-11-13T17:04:45.890Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "0000001c667479706176696600000000",
+      "magic_detection": "ISO-BMFF ftyp box, major brand \"avif\", compatible brands [avif, mif1, miaf]",
+      "actual_format": "AVIF",
+      "actual_format_family": "AVIF",
+      "mime_type": "image/avif",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 1920,
+      "pixel_height": 1080,
+      "color": {
+        "mode": "YUV (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:2:0",
+        "nclx": {
+          "colour_primaries": 1,
+          "transfer_characteristics": 13,
+          "matrix_coefficients": 6,
+          "full_range": true
+        }
+      },
+      "image_structure": {
+        "major_brand": "avif",
+        "compatible_brands": [
+          "avif",
+          "mif1",
+          "miaf"
+        ],
+        "top_level_boxes": [
+          {
+            "type": "ftyp",
+            "size": 28
+          },
+          {
+            "type": "meta",
+            "size": 299
+          },
+          {
+            "type": "mdat",
+            "size": 86010
+          }
+        ],
+        "primary_item_id": 1,
+        "items": [
+          {
+            "id": 1,
+            "type": "av01",
+            "name": "",
+            "content_type": null
+          },
+          {
+            "id": 2,
+            "type": "Exif",
+            "name": "",
+            "content_type": null
+          }
+        ],
+        "properties": [
+          {
+            "type": "colr",
+            "colour_type": "nclx",
+            "colour_primaries": 1,
+            "transfer_characteristics": 13,
+            "matrix_coefficients": 6,
+            "full_range": true
+          },
+          {
+            "type": "av1C",
+            "seq_profile": 0,
+            "seq_level_idx_0": 8,
+            "high_bitdepth": false,
+            "twelve_bit": false,
+            "monochrome": false,
+            "chroma_subsampling_x": 1,
+            "chroma_subsampling_y": 1
+          },
+          {
+            "type": "ispe",
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "type": "pixi",
+            "channels": 3,
+            "bits_per_channel": [
+              8,
+              8,
+              8
+            ]
+          }
+        ],
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": true,
+          "byte_length": 180,
+          "byte_order": "little-endian (II)",
+          "ifd0": {
+            "Orientation": 1,
+            "XResolution": "72/1",
+            "YResolution": "72/1",
+            "ResolutionUnit": 2,
+            "YCbCrPositioning": 1,
+            "ExifIFDPointer": 102
+          },
+          "exif": {
+            "ExifVersion": "0210",
+            "ComponentsConfiguration": [
+              1,
+              2,
+              3,
+              0
+            ],
+            "FlashpixVersion": "0100",
+            "ColorSpace": 65535,
+            "PixelXDimension": 1920,
+            "PixelYDimension": 1080
+          },
+          "gps": {},
+          "interop": {},
+          "ifd1": {},
+          "errors": []
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [
+          {
+            "source": "EXIF PixelXDimension/PixelYDimension",
+            "width": 1920,
+            "height": 1080,
+            "matches_encoded_image": true
+          }
+        ],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [
+        {
+          "source": "EXIF.IFD0",
+          "field": "XResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.IFD0",
+          "field": "YResolution",
+          "value": "72/1"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "ExifVersion",
+          "value": "0210"
+        },
+        {
+          "source": "EXIF.Exif",
+          "field": "FlashpixVersion",
+          "value": "0100"
+        }
+      ],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 86337,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "heif",
+          "width": 1920,
+          "height": 1080,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": null,
+          "is_progressive": false,
+          "chroma_subsampling": null,
+          "compression": "av1",
+          "exif_bytes": 186,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 4,
+        "descriptive_strings_excluding_icc": 4
+      },
+      "content_established_role": "raster image with minimal technical metadata only; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "technical EXIF only"
+      ],
+      "filename_hint": {
+        "text": "seats 6",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "seats 8.jpg",
+      "group": "image",
+      "extension": ".jpg",
+      "read_status": "ok",
+      "size_bytes": 102063,
+      "sha256": "94985372ea11685c4a37ff023fe736e9367237a5ecad5547daee57862f72d92c",
+      "sha256_before_processing": "94985372ea11685c4a37ff023fe736e9367237a5ecad5547daee57862f72d92c",
+      "filesystem_modified_time": "2026-11-13T17:06:24.141Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "ffd8ffe000104a464946000101000001",
+      "magic_detection": "JPEG SOI FF D8 FF",
+      "actual_format": "JPEG",
+      "actual_format_family": "JPEG",
+      "mime_type": "image/jpeg",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 1280,
+      "pixel_height": 720,
+      "color": {
+        "mode": "YCbCr (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false,
+        "chroma_subsampling": "4:2:0"
+      },
+      "image_structure": {
+        "process": "baseline DCT (SOF0)",
+        "progressive": false,
+        "jfif": {
+          "version": "1.01",
+          "density_units": "aspect ratio (no units)",
+          "x_density": 1,
+          "y_density": 1
+        },
+        "adobe_app14": null,
+        "segment_summary": {
+          "APP0:JFIF": 1,
+          "DQT": 1,
+          "SOF": 1,
+          "DHT": 4,
+          "SOS": 1
+        },
+        "comments": [],
+        "extended_xmp": null,
+        "mpf_present": false,
+        "photoshop_resource_ids": [],
+        "eoi_offset": 102061,
+        "trailing_bytes_after_eoi": 0,
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 102063,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "jpeg",
+          "width": 1280,
+          "height": 720,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": 72,
+          "is_progressive": false,
+          "chroma_subsampling": "4:2:0",
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 0,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "seats 8",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    },
+    {
+      "relative_path": "southwest seats-7.webp",
+      "group": "image",
+      "extension": ".webp",
+      "read_status": "ok",
+      "size_bytes": 215456,
+      "sha256": "a0feb22156a758b51db8ef0ea2701156e945b91db4d558782e5880f9d3d7f574",
+      "sha256_before_processing": "a0feb22156a758b51db8ef0ea2701156e945b91db4d558782e5880f9d3d7f574",
+      "filesystem_modified_time": "2026-11-13T17:05:47.934Z",
+      "filesystem_modified_time_note": "file-system attribute, not stored inside the file",
+      "magic_bytes_hex": "52494646984903005745425056503820",
+      "magic_detection": "RIFF....WEBP container",
+      "actual_format": "WebP",
+      "actual_format_family": "WebP",
+      "mime_type": "image/webp",
+      "parse_status": "ok",
+      "parse_error": null,
+      "pixel_width": 1600,
+      "pixel_height": 1067,
+      "color": {
+        "mode": "YUV 4:2:0 (decodes to RGB)",
+        "channels": 3,
+        "bits_per_channel": 8,
+        "has_alpha": false
+      },
+      "image_structure": {
+        "riff_declared_size": 215448,
+        "chunks": [
+          {
+            "fourcc": "VP8 ",
+            "size": 215436
+          }
+        ],
+        "vp8x": null,
+        "bitstream": {
+          "codec": "VP8 lossy (YUV 4:2:0)",
+          "width": 1600,
+          "height": 1067
+        },
+        "errors": []
+      },
+      "internal_metadata": {
+        "exif": {
+          "present": false
+        },
+        "xmp": {
+          "present": false
+        },
+        "iptc": {
+          "present": false
+        },
+        "icc_profile": null,
+        "png_text_chunks": null,
+        "metadata_declared_dimensions": [],
+        "gps_data_present": false,
+        "gps_values_withheld": null
+      },
+      "embedded_text_metadata": [],
+      "key_fields": {
+        "creator": [],
+        "copyright": [],
+        "description": [],
+        "keywords_and_subjects": [],
+        "location": [],
+        "source_and_instructions": [],
+        "software": [],
+        "camera": [],
+        "dates": []
+      },
+      "named_entity_hits_in_metadata": [],
+      "raw_byte_name_scan": {
+        "scanned_bytes": 215456,
+        "hits": []
+      },
+      "decoder_cross_check": {
+        "library": "sharp 0.34.5 / libvips 8.17.3",
+        "metadata": {
+          "format": "webp",
+          "width": 1600,
+          "height": 1067,
+          "space": "srgb",
+          "channels": 3,
+          "depth": "uchar",
+          "has_alpha": false,
+          "orientation": null,
+          "density": null,
+          "is_progressive": false,
+          "chroma_subsampling": null,
+          "compression": null,
+          "exif_bytes": 0,
+          "xmp_bytes": 0,
+          "iptc_bytes": 0,
+          "icc_bytes": 0
+        },
+        "full_decode": {
+          "ok": true,
+          "channels_decoded": 3,
+          "is_opaque": true
+        },
+        "dimensions_agree": true
+      },
+      "counts": {
+        "embedded_text_metadata_strings": 0,
+        "descriptive_strings_excluding_icc": 0
+      },
+      "content_established_role": "raster image with no descriptive embedded metadata; reference image whose subject is not established from the bytes; no link to any layout, tail, row or seat in the metadata",
+      "role_basis": [
+        "no EXIF/XMP/IPTC/text chunks"
+      ],
+      "filename_hint": {
+        "text": "southwest seats-7",
+        "note": "A file name is a label chosen by whoever saved the file; it is not evidence of what the image shows."
+      },
+      "pixel_content_reviewed": false,
+      "extension_matches_content": true
+    }
+  ]
+}

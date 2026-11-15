@@ -1,0 +1,148 @@
+# Fixture facts read from inspection/disposable/probe-reference.sqlite3 (seeded by the COPY's seeder). 2026-11-14T20:32:43-0600
+$ .venv/bin/python -B ../tools/fixture_facts.py ../disposable/probe-reference.sqlite3
+== table row counts ==
+metadata: 1
+aircraft: 15
+variant: 11
+source_doc: 5
+tail_config: 15
+position: 58
+variant_position: 572
+part_rule: 573
+substitute: 1
+substitute_panel: 4
+
+== source documents ==
+{'id': 'DOC-A', 'type': 'EO', 'rev': 'A', 'title': 'Fictional seat and bin applicability', 'owner': 'Demo engineering desk', 'eff_from': '2020-01-01', 'expires': None}
+{'id': 'DOC-B', 'type': 'ENG', 'rev': '-', 'title': 'Fictional carpet applicability', 'owner': 'Demo engineering desk', 'eff_from': '2020-01-01', 'expires': None}
+{'id': 'DOC-C', 'type': 'ENG', 'rev': 'B', 'title': 'Fictional retrofit and seam change', 'owner': 'Demo engineering desk', 'eff_from': '2020-01-01', 'expires': None}
+{'id': 'DOC-CONFIG', 'type': 'DEMO', 'rev': '1', 'title': 'Fictional layout and tail configuration', 'owner': 'Demo engineering desk', 'eff_from': '2020-01-01', 'expires': None}
+{'id': 'DOC-DEV', 'type': 'DEVIATION_EA', 'rev': '-', 'title': 'Fictional substitute kit approval', 'owner': 'Demo engineering desk', 'eff_from': '2020-01-01', 'expires': '2026-12-31'}
+
+== variants: seat sets ==
+V01 subfleet=MAX8 seat_mfr=Recaro elr=Post-ELR layout=Final power=1 cabin_height=Full status='Active' released=1
+   seats=176 rows=1..30 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 138, 'EXIT': 8} seat_groups={'TRIPLE': 168, 'DOUBLE': 8} last_row_ids=['30A', '30B', '30C', '30D', '30E', '30F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=58
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V02 subfleet=MAX8 seat_mfr=Meridian elr=Post-ELR layout=Final power=1 cabin_height=Full status='Active' released=1
+   seats=176 rows=1..30 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 138, 'EXIT': 8} seat_groups={'TRIPLE': 168, 'DOUBLE': 8} last_row_ids=['30A', '30B', '30C', '30D', '30E', '30F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=58
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V03 subfleet=MAX8 seat_mfr=Meridian elr=Post-ELR layout=Temporary power=1 cabin_height=Full status='Being retired' released=1
+   seats=170 rows=1..29 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 132, 'EXIT': 8} seat_groups={'TRIPLE': 162, 'DOUBLE': 8} last_row_ids=['29A', '29B', '29C', '29D', '29E', '29F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=58
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V04 subfleet=800 seat_mfr=Recaro elr=Post-ELR layout=Final power=1 cabin_height=Full status='Retrofit in progress' released=1
+   seats=176 rows=1..30 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 138, 'EXIT': 8} seat_groups={'TRIPLE': 168, 'DOUBLE': 8} last_row_ids=['30A', '30B', '30C', '30D', '30E', '30F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=59
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V05 subfleet=800 seat_mfr=Meridian elr=Post-ELR layout=Final power=1 cabin_height=Full status='Active' released=1
+   seats=176 rows=1..30 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 138, 'EXIT': 8} seat_groups={'TRIPLE': 168, 'DOUBLE': 8} last_row_ids=['30A', '30B', '30C', '30D', '30E', '30F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=58
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V06 subfleet=800 seat_mfr=Meridian elr=Post-ELR layout=Final power=1 cabin_height=Half status='Active' released=1
+   seats=176 rows=1..30 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 138, 'EXIT': 8} seat_groups={'TRIPLE': 168, 'DOUBLE': 8} last_row_ids=['30A', '30B', '30C', '30D', '30E', '30F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=58
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V07 subfleet=800 seat_mfr=Meridian elr=Post-ELR layout=Final power=0 cabin_height=None status='Active' released=1
+   seats=176 rows=1..30 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 138, 'EXIT': 8} seat_groups={'TRIPLE': 168, 'DOUBLE': 8} last_row_ids=['30A', '30B', '30C', '30D', '30E', '30F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=58
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V08 subfleet=800 seat_mfr=Innovator elr=ELR layout=No designators power=0 cabin_height=None status='Small group' released=1
+   seats=176 rows=1..30 exit_rows=[14, 15] exit_letters=ACDF omitted=['14B', '14E', '15B', '15E']
+   zones={'ELR': 30, 'STD': 138, 'EXIT': 8} seat_groups={'TRIPLE': 168, 'DOUBLE': 8} last_row_ids=['30A', '30B', '30C', '30D', '30E', '30F']
+   positions=58 {'BIN': 20, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=58
+   seat positions no seat can match (4): ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V09 subfleet=700 seat_mfr=Innovator elr=Standard layout=137 seats power=0 cabin_height=n/a status='Exiting fleet' released=1
+   seats=137 rows=1..23 exit_rows=[12] exit_letters=ABCDEF omitted=['23C']
+   zones={'ELR': 30, 'STD': 101, 'EXIT': 6} seat_groups={'TRIPLE': 135, 'DOUBLE': 2} last_row_ids=['23A', '23B', '23D', '23E', '23F']
+   positions=54 {'BIN': 16, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=54
+   seat positions no seat can match (0): []
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V10 subfleet=700 seat_mfr=Meridian / Recaro-look covers elr=Standard layout=138 seats power=1 cabin_height=n/a status='Retrofit in progress' released=1
+   seats=138 rows=1..23 exit_rows=[12] exit_letters=ABCDEF omitted=none
+   zones={'ELR': 30, 'STD': 102, 'EXIT': 6} seat_groups={'TRIPLE': 138} last_row_ids=['23A', '23B', '23C', '23D', '23E', '23F']
+   positions=54 {'BIN': 16, 'CARPET': 2, 'SEAT': 36} rules_selecting_variant=54
+   seat positions no seat can match (0): []
+   seats not covered by exactly one CUSHION + one BACKREST position: none
+V11 subfleet=MAX7 seat_mfr=None elr=None layout=None power=None cabin_height=None status='Planned' released=0
+   seats=0 (no layout)
+total unreachable seat-position rules across variants: 32
+
+== aircraft and dated tail configurations ==
+{'tail': 'N000TL', 'subfleet': '800', 'etops': 0, 'variant_id': None, 'carpet': None, 'seam': None, 'cabin_height': None, 'eff_from': None, 'eff_to': None, 'doc_id': None}
+{'tail': 'N010TL', 'subfleet': 'MAX8', 'etops': 0, 'variant_id': 'V01', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N020TL', 'subfleet': 'MAX8', 'etops': 1, 'variant_id': 'V02', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N030TL', 'subfleet': 'MAX8', 'etops': 0, 'variant_id': 'V03', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N040TL', 'subfleet': '800', 'etops': 0, 'variant_id': 'V04', 'carpet': 'BOTANY', 'seam': 'POST', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N050TL', 'subfleet': '800', 'etops': 0, 'variant_id': 'V05', 'carpet': 'BOTANY', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N060TL', 'subfleet': '800', 'etops': 0, 'variant_id': 'V06', 'carpet': 'BOTANY', 'seam': 'POST', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N070TL', 'subfleet': '800', 'etops': 0, 'variant_id': 'V07', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': 'Half', 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N080TL', 'subfleet': '800', 'etops': 0, 'variant_id': 'V08', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N090TL', 'subfleet': '700', 'etops': 0, 'variant_id': 'V09', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N100TL', 'subfleet': 'MAX8', 'etops': 0, 'variant_id': 'V01', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2025-10-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N101TL', 'subfleet': '700', 'etops': 0, 'variant_id': 'V10', 'carpet': 'MOHAWK', 'seam': 'POST', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N110TL', 'subfleet': 'MAX7', 'etops': 0, 'variant_id': 'V11', 'carpet': 'MOHAWK', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N200TL', 'subfleet': '800', 'etops': 0, 'variant_id': 'V05', 'carpet': 'BOTANY', 'seam': 'PRE', 'cabin_height': None, 'eff_from': '2024-01-01', 'eff_to': '2026-06-30', 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N200TL', 'subfleet': '800', 'etops': 0, 'variant_id': 'V04', 'carpet': 'BOTANY', 'seam': 'POST', 'cabin_height': None, 'eff_from': '2026-07-01', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+{'tail': 'N300TL', 'subfleet': '700', 'etops': 0, 'variant_id': 'V10', 'carpet': 'MOHAWK', 'seam': 'POST', 'cabin_height': None, 'eff_from': '2026-03-15', 'eff_to': None, 'doc_id': 'DOC-CONFIG'}
+
+== positions: shape of the seat/bin/carpet patterns ==
+{'category': 'BIN', 'zone': 'OVERHEAD', 'component': 'BIN_DOOR', 'n': 20, 'rf': 1, 'rt': 30, 'pos': None, 'ex': '0', 'grp': 'NULL'}
+{'category': 'CARPET', 'zone': 'FLOOR', 'component': 'CARPET_KIT', 'n': 1, 'rf': None, 'rt': None, 'pos': None, 'ex': '0', 'grp': 'NULL'}
+{'category': 'CARPET', 'zone': 'FLOOR', 'component': 'CARPET_PANEL', 'n': 1, 'rf': None, 'rt': None, 'pos': None, 'ex': '0', 'grp': 'NULL'}
+{'category': 'SEAT', 'zone': 'ELR', 'component': 'BACKREST', 'n': 6, 'rf': 1, 'rt': 30, 'pos': 'A,B,C,D,E,F', 'ex': '0', 'grp': 'NULL'}
+{'category': 'SEAT', 'zone': 'ELR', 'component': 'CUSHION', 'n': 6, 'rf': 1, 'rt': 30, 'pos': 'A,B,C,D,E,F', 'ex': '0', 'grp': 'NULL'}
+{'category': 'SEAT', 'zone': 'EXIT', 'component': 'BACKREST', 'n': 6, 'rf': 1, 'rt': 30, 'pos': 'A,B,C,D,E,F', 'ex': '1', 'grp': 'NULL'}
+{'category': 'SEAT', 'zone': 'EXIT', 'component': 'CUSHION', 'n': 6, 'rf': 1, 'rt': 30, 'pos': 'A,B,C,D,E,F', 'ex': '1', 'grp': 'NULL'}
+{'category': 'SEAT', 'zone': 'STD', 'component': 'BACKREST', 'n': 6, 'rf': 1, 'rt': 30, 'pos': 'A,B,C,D,E,F', 'ex': '0', 'grp': 'NULL'}
+{'category': 'SEAT', 'zone': 'STD', 'component': 'CUSHION', 'n': 6, 'rf': 1, 'rt': 30, 'pos': 'A,B,C,D,E,F', 'ex': '0', 'grp': 'NULL'}
+{'id': 'P-BIN-L-01', 'row_from': 1, 'row_to': 3, 'panel_loc': 'BIN-L-01'}
+{'id': 'P-BIN-L-02', 'row_from': 4, 'row_to': 6, 'panel_loc': 'BIN-L-02'}
+{'id': 'P-BIN-L-03', 'row_from': 7, 'row_to': 9, 'panel_loc': 'BIN-L-03'}
+{'id': 'P-BIN-L-04', 'row_from': 10, 'row_to': 12, 'panel_loc': 'BIN-L-04'}
+{'id': 'P-BIN-L-05', 'row_from': 13, 'row_to': 15, 'panel_loc': 'BIN-L-05'}
+{'id': 'P-BIN-L-06', 'row_from': 16, 'row_to': 18, 'panel_loc': 'BIN-L-06'}
+{'id': 'P-BIN-L-07', 'row_from': 19, 'row_to': 21, 'panel_loc': 'BIN-L-07'}
+{'id': 'P-BIN-L-08', 'row_from': 22, 'row_to': 24, 'panel_loc': 'BIN-L-08'}
+{'id': 'P-BIN-L-09', 'row_from': 25, 'row_to': 27, 'panel_loc': 'BIN-L-09'}
+{'id': 'P-CARPET-KIT', 'row_from': None, 'row_to': None, 'panel_loc': 'FULL_CABIN'}
+{'id': 'P-FORWARD-PANEL', 'row_from': None, 'row_to': None, 'panel_loc': 'FORWARD'}
+
+== named (non-generated) part rules ==
+{'id': 'R-V01-P-CARPET-KIT', 'position_id': 'P-CARPET-KIT', 'selectors': '{"variant_id": "V01"}', 'part_no': 'FAKE-CK-2001', 'qty': 1, 'unit': 'KIT', 'eff_from': '2024-01-01', 'eff_to': None, 'pending_change': 0, 'change_note': None, 'doc_id': 'DOC-B'}
+{'id': 'R-V01-P-ELR-A-CUSHION', 'position_id': 'P-ELR-A-CUSHION', 'selectors': '{"variant_id": "V01"}', 'part_no': 'FAKE-SC-1001', 'qty': 1, 'unit': 'EA', 'eff_from': '2024-01-01', 'eff_to': None, 'pending_change': 0, 'change_note': None, 'doc_id': 'DOC-A'}
+{'id': 'R-V01-P-STD-A-CUSHION', 'position_id': 'P-STD-A-CUSHION', 'selectors': '{"variant_id": "V01"}', 'part_no': 'FAKE-SC-1002', 'qty': 1, 'unit': 'EA', 'eff_from': '2024-01-01', 'eff_to': None, 'pending_change': 0, 'change_note': None, 'doc_id': 'DOC-A'}
+{'id': 'R4', 'position_id': 'P-CARPET-KIT', 'selectors': '{"variant_id": "V04", "carpet": "BOTANY", "seam": "POST"}', 'part_no': 'FAKE-CK-2002', 'qty': 1, 'unit': 'KIT', 'eff_from': '2026-07-01', 'eff_to': None, 'pending_change': 1, 'change_note': 'Fictional STA 521 revision pending.', 'doc_id': 'DOC-C'}
+selector shapes: [{'selectors': '{"variant_id": "V08"}', 'n': 58}, {'selectors': '{"variant_id": "V07"}', 'n': 58}, {'selectors': '{"variant_id": "V06"}', 'n': 58}] …
+rule eff_from values: [{'eff_from': '2024-01-01', 'eff_to': None, 'n': 572}, {'eff_from': '2026-07-01', 'eff_to': None, 'n': 1}]
+rule docs: [{'doc_id': 'DOC-A', 'n': 552}, {'doc_id': 'DOC-B', 'n': 20}, {'doc_id': 'DOC-C', 'n': 1}]
+units: [{'unit': 'EA', 'n': 552}, {'unit': 'KIT', 'n': 11}, {'unit': 'PANEL', 'n': 10}]
+
+== substitutes and mandatory panels ==
+{'id': 'SUB-KIT-1', 'rule_id': 'R-V01-P-CARPET-KIT', 'alt_part_no': 'FAKE-CK-2000', 'qty': 1, 'unit': 'KIT', 'eff_from': '2025-07-22', 'eff_to': None, 'doc_id': 'DOC-DEV'}
+{'substitute_id': 'SUB-KIT-1', 'part_no': 'FAKE-P-39', 'qty': 2}
+{'substitute_id': 'SUB-KIT-1', 'part_no': 'FAKE-P-40', 'qty': 2}
+{'substitute_id': 'SUB-KIT-1', 'part_no': 'FAKE-P-41', 'qty': 1}
+{'substitute_id': 'SUB-KIT-1', 'part_no': 'FAKE-P-42', 'qty': 1}
+
+== schema guards present ==
+{'name': 'config_lookup', 'sql': 'CREATE INDEX config_lookup ON tail_config(tail,eff_from,eff_to)'}
+triggers: 0
+foreign_keys pragma on a fresh read connection: 0
+exit=0

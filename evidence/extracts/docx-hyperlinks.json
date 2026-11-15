@@ -1,0 +1,305 @@
+{
+  "file": "Current Aircraft Seat Configurations.docx",
+  "hyperlink_count": 13,
+  "distinct_target_count": 9,
+  "hyperlink_relationships_in_package": 13,
+  "unused_hyperlink_relationships": [],
+  "field_code_hyperlinks": [],
+  "by_access_class": {
+    "public": 4,
+    "private": 9
+  },
+  "distinct_targets": [
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/airplane-specifications",
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "occurrences": [
+        "H01"
+      ]
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "occurrences": [
+        "H02",
+        "H04",
+        "H09"
+      ]
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "occurrences": [
+        "H03",
+        "H05",
+        "H10"
+      ]
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?EntityRepresentationId=836f8c7d-37c0-4227-89f4-29f558c8a05e",
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "occurrences": [
+        "H06"
+      ]
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?web=1",
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "occurrences": [
+        "H07"
+      ]
+    },
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/assigned-seats",
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "occurrences": [
+        "H08"
+      ]
+    },
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/assigned-seat-selection",
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "occurrences": [
+        "H11"
+      ]
+    },
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/boarding-and-seating-benefits",
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "occurrences": [
+        "H12"
+      ]
+    },
+    {
+      "target_url": "https://outlook.office365.com/owa/?ItemID=AAMkAGI5NWY3ZGZiLTdmMWUtNDJiOS05M2ZmLTViN2YzYzA4MTc2ZgBGAAAAAAAKtYbiEss%2bRrIRqm4rHIFJBwDu9xYT3kgpRrBkyqMs%2flhIAAAAAAEMAADu9xYT3kgpRrBkyqMs%2flhIAAfWkm9%2bAAA%3d&exvsurl=1&viewmodel=ReadMessageItem",
+      "host": "outlook.office365.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "occurrences": [
+        "H13"
+      ]
+    }
+  ],
+  "hyperlinks": [
+    {
+      "locator": "H01",
+      "paragraph_locator": "P003",
+      "anchor_text": "[support.so...thwest.com]",
+      "target_url": "https://support.southwest.com/helpcenter/article/airplane-specifications",
+      "target_mode": "External",
+      "relationship_id": "rId5",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 200,
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "preceding_text": "eat immediately ahead, not the amount of unobstructed knee clearance. "
+    },
+    {
+      "locator": "H02",
+      "paragraph_locator": "P005",
+      "anchor_text": "Changes-and-Upcoming-Additions-to-Our-Fleet.aspx",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "target_mode": "External",
+      "relationship_id": "rId6",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 376,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "ded aircraft to be retired, sold or otherwise removed from the fleet. "
+    },
+    {
+      "locator": "H03",
+      "paragraph_locator": "P005",
+      "anchor_text": "[Changes an...Our Fleet | SharePoint]",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "target_mode": "External",
+      "relationship_id": "rId7",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 425,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "oved from the fleet. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx "
+    },
+    {
+      "locator": "H04",
+      "paragraph_locator": "P006",
+      "anchor_text": "Changes-and-Upcoming-Additions-to-Our-Fleet.aspx",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "target_mode": "External",
+      "relationship_id": "rId8",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 239,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "w becomes two seats per side, keeping the overall capacity unchanged. "
+    },
+    {
+      "locator": "H05",
+      "paragraph_locator": "P006",
+      "anchor_text": "[Changes an...Our Fleet | SharePoint]",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "target_mode": "External",
+      "relationship_id": "rId9",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 288,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": " capacity unchanged. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx "
+    },
+    {
+      "locator": "H06",
+      "paragraph_locator": "P007",
+      "anchor_text": "Revealed-Our-New-Elevated-Onboard-Experience.aspx",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?EntityRepresentationId=836f8c7d-37c0-4227-89f4-29f558c8a05e",
+      "target_mode": "External",
+      "relationship_id": "rId10",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 254,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "700s are also being converted as part of the standardization program. "
+    },
+    {
+      "locator": "H07",
+      "paragraph_locator": "P007",
+      "anchor_text": "[Revealed:...Experience | SharePoint]",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?web=1",
+      "target_mode": "External",
+      "relationship_id": "rId11",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 304,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "ardization program. Revealed-Our-New-Elevated-Onboard-Experience.aspx "
+    },
+    {
+      "locator": "H08",
+      "paragraph_locator": "P010",
+      "anchor_text": "[support.so...thwest.com]",
+      "target_url": "https://support.southwest.com/helpcenter/article/assigned-seats",
+      "target_mode": "External",
+      "relationship_id": "rId12",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 215,
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "preceding_text": "00/MAX 8. Preferred is a location upgrade, not a dimensional upgrade. "
+    },
+    {
+      "locator": "H09",
+      "paragraph_locator": "P012",
+      "anchor_text": "Changes-and-Upcoming-Additions-to-Our-Fleet.aspx",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "target_mode": "External",
+      "relationship_id": "rId13",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 328,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "e the physical pitch and commercial product designation do not match. "
+    },
+    {
+      "locator": "H10",
+      "paragraph_locator": "P012",
+      "anchor_text": "[Changes an...Our Fleet | SharePoint]",
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "target_mode": "External",
+      "relationship_id": "rId14",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 377,
+      "host": "wnco.sharepoint.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "nation do not match. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx "
+    },
+    {
+      "locator": "H11",
+      "paragraph_locator": "P019",
+      "anchor_text": "[support.so...thwest.com]",
+      "target_url": "https://support.southwest.com/helpcenter/article/assigned-seat-selection",
+      "target_mode": "External",
+      "relationship_id": "rId15",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 127,
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "preceding_text": "egroom upgrade available within 48 hours of departure when available. "
+    },
+    {
+      "locator": "H12",
+      "paragraph_locator": "P019",
+      "anchor_text": "[support.so...thwest.com]",
+      "target_url": "https://support.southwest.com/helpcenter/article/boarding-and-seating-benefits",
+      "target_mode": "External",
+      "relationship_id": "rId16",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 154,
+      "host": "support.southwest.com",
+      "scheme": "https:",
+      "access_class": "public",
+      "reason": "public web host with no tenant/authentication marker",
+      "preceding_text": "thin 48 hours of departure when available. [support.so...thwest.com], "
+    },
+    {
+      "locator": "H13",
+      "paragraph_locator": "P021",
+      "anchor_text": "[Know Befor...ifferences | Outlook]",
+      "target_url": "https://outlook.office365.com/owa/?ItemID=AAMkAGI5NWY3ZGZiLTdmMWUtNDJiOS05M2ZmLTViN2YzYzA4MTc2ZgBGAAAAAAAKtYbiEss%2bRrIRqm4rHIFJBwDu9xYT3kgpRrBkyqMs%2flhIAAAAAAEMAADu9xYT3kgpRrBkyqMs%2flhIAAfWkm9%2bAAA%3d&exvsurl=1&viewmodel=ReadMessageItem",
+      "target_mode": "External",
+      "relationship_id": "rId17",
+      "internal_anchor": null,
+      "char_offset_in_paragraph": 267,
+      "host": "outlook.office365.com",
+      "scheme": "https:",
+      "access_class": "private",
+      "reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "preceding_text": "s subject to change. Know Before Fix | 737 MAX-7 vs MAX-8 Differences "
+    }
+  ]
+}

@@ -1,0 +1,5702 @@
+{
+  "purpose": "RTF read with an own tokenizer; no fields or objects are executed.",
+  "file": "Southwest Cabin Configuration Standard.rtf",
+  "signature": "{\\rtf1",
+  "header": {
+    "rtf_version": 1,
+    "charset": "ansi",
+    "ansi_code_page": 1252,
+    "cocoartf": 2909,
+    "default_font": null,
+    "other": {
+      "cocoatextscaling": 0,
+      "cocoaplatform": 0,
+      "margl": 1440,
+      "margr": 1440,
+      "vieww": 11520,
+      "viewh": 8400,
+      "viewkind": 0
+    }
+  },
+  "generator_hint": "Apple Cocoa text system (\\cocoartf2909)",
+  "info_metadata": {
+    "info_group_present": false,
+    "fields": {},
+    "note": "The file has no \\info group: no title, author, creation or revision time is stored inside the RTF."
+  },
+  "fonts": {
+    "0": {
+      "name": "HelveticaNeue",
+      "family": "fnil",
+      "charset": 0
+    },
+    "1": {
+      "name": "HelveticaNeue-Bold",
+      "family": "fnil",
+      "charset": 0
+    },
+    "2": {
+      "name": ".AppleSystemUIFontMonospaced-Regular",
+      "family": "fnil",
+      "charset": 0
+    },
+    "3": {
+      "name": "Helvetica",
+      "family": "fswiss",
+      "charset": 0
+    },
+    "4": {
+      "name": "AppleSymbols",
+      "family": "fnil",
+      "charset": 0
+    },
+    "5": {
+      "name": "HelveticaNeue-Italic",
+      "family": "fnil",
+      "charset": 0
+    }
+  },
+  "escapes": {
+    "code_page": 1252,
+    "hex_escapes": [
+      {
+        "escape": "\\'96",
+        "count": 63,
+        "decoded": "–"
+      },
+      {
+        "escape": "\\'97",
+        "count": 17,
+        "decoded": "—"
+      }
+    ],
+    "unicode_escapes": [
+      {
+        "escape": "\\u9900",
+        "count": 41,
+        "decoded": "⚬"
+      }
+    ]
+  },
+  "counts": {
+    "paragraphs_non_empty": 57,
+    "paragraphs_empty_not_numbered": 19,
+    "heading_like_paragraphs": 9,
+    "list_item_paragraphs": 47,
+    "tables": 1,
+    "table_rows": 6,
+    "table_cells": 42,
+    "hyperlinks": 0,
+    "tokens": 3771
+  },
+  "heading_inference": "typographic only: paragraph entirely bold with a font size larger than the most common body size",
+  "body_font_size_half_points": 30,
+  "hyperlinks": [],
+  "raw_scan_for_links": {
+    "HYPERLINK_keyword_occurrences": 0,
+    "http_occurrences": 0,
+    "field_groups": 0,
+    "embedded_objects_or_pictures": 0
+  },
+  "secondary_cross_check": {
+    "tool": "/usr/bin/textutil -convert txt -stdout",
+    "available": true,
+    "comparison": "all text with whitespace removed (layout differs: textutil prints each table cell on its own line)",
+    "own_non_whitespace_chars": 5481,
+    "textutil_non_whitespace_chars": 5481,
+    "identical": true,
+    "difference": null
+  },
+  "sequence": [
+    {
+      "kind": "paragraph",
+      "locator": "P001"
+    },
+    {
+      "kind": "table",
+      "locator": "T01"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P002"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P003"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P004"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P005"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P006"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P007"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P008"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P009"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P010"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P011"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P012"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P013"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P014"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P015"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P016"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P017"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P018"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P019"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P020"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P021"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P022"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P023"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P024"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P025"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P026"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P027"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P028"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P029"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P030"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P031"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P032"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P033"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P034"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P035"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P036"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P037"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P038"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P039"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P040"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P041"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P042"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P043"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P044"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P045"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P046"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P047"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P048"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P049"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P050"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P051"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P052"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P053"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P054"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P055"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P056"
+    },
+    {
+      "kind": "paragraph",
+      "locator": "P057"
+    }
+  ],
+  "paragraphs": [
+    {
+      "locator": "P001",
+      "source_line": 10,
+      "text": "Across all 5 active Southwest Airlines cabin configurations (LOPAs), row numbering is standardized so that overwing emergency exits fall in the Row 14–16 band regardless of fuselage length. Every seat maps into three commercial tiers—Extra Legroom (ELR), Preferred, and Standard—with structural cutouts, windowless fuselage frames, and FAA-mandated recline locks varying by interior generation.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "Across all ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "5 active Southwest Airlines cabin configurations (LOPAs)",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", row numbering is standardized so that overwing emergency exits fall in the ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14–16",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " band regardless of fuselage length. Every seat maps into three commercial tiers—",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Extra Legroom (ELR)",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Preferred",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Standard",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "—with structural cutouts, windowless fuselage frames, and FAA-mandated recline locks varying by interior generation.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [],
+      "list_marker": null
+    },
+    {
+      "locator": "P002",
+      "source_line": 168,
+      "text": "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+      "all_bold": true,
+      "max_font_size_half_points": 38,
+      "runs": [
+        {
+          "text": "1. Boeing 737-700 (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        },
+        {
+          "text": "73G",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 38
+        },
+        {
+          "text": " — 137 Seats, 2026 Retrofit)",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        }
+      ],
+      "inferred_heading_level": 1,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)"
+      ],
+      "list_marker": {
+        "marker": "1.",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P003",
+      "source_line": 175,
+      "text": "The single-overwing-exit 737-700 skips Rows 10–13 entirely so that its single exit row aligns at Row 15.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "The single-overwing-exit ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "737-700",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " skips ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 10–13",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " entirely so that its single exit row aligns at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P004",
+      "source_line": 186,
+      "text": "Row-by-Row Tier Map",
+      "all_bold": true,
+      "max_font_size_half_points": 34,
+      "runs": [
+        {
+          "text": "Row-by-Row Tier Map",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        }
+      ],
+      "inferred_heading_level": 2,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P005",
+      "source_line": 191,
+      "text": "⚬     Rows 1–6 (Extra Legroom — 36 seats): Full 3-3 layout (A–F) pitched at 35\"–36\". Row 1 (1A–1F) is a dual-sided bulkhead with armrest-stowed tray tables and zero floor stowage during taxi, takeoff, and landing.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 1–6 (Extra Legroom — 36 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Full 3-3 layout (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "A–F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "35\"–36\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ". ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 1",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "1A–1F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") is a dual-sided bulkhead with armrest-stowed tray tables and zero floor stowage during taxi, takeoff, and landing.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P006",
+      "source_line": 205,
+      "text": "⚬     Rows 7–9 (Preferred — 18 seats): Full 3-3 layout pitched at 31\"–33\".",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 7–9 (Preferred — 18 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Full 3-3 layout pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "31\"–33\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P007",
+      "source_line": 213,
+      "text": "⚬     Rows 10–13 (Non-Existent — 0 seats): Omitted from cabin numbering.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 10–13 (Non-Existent — 0 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Omitted from cabin numbering.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P008",
+      "source_line": 219,
+      "text": "⚬     Row 14 (Preferred — 5 seats): Asymmetric layout (14B, 14C, 14D, 14E, 14F) at 31\"–33\" pitch; 14A does not exist to preserve clear access to the port-side overwing exit hatch.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14 (Preferred — 5 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Asymmetric layout (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "14B, 14C, 14D, 14E, 14F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "31\"–33\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " pitch; ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "14A does not exist",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " to preserve clear access to the port-side overwing exit hatch.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P009",
+      "source_line": 231,
+      "text": "⚬     Row 15 (Extra Legroom — 6 seats): Overwing exit row (15A–15F) pitched at 35\"–36\". Because 14A is missing, 15A has no seat directly in front of it, providing unobstructed legroom (with an armrest-stowed tray table).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15 (Extra Legroom — 6 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Overwing exit row (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15A–15F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "35\"–36\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ". Because ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "14A",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " is missing, ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15A has no seat directly in front of it",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", providing unobstructed legroom (with an armrest-stowed tray table).",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P010",
+      "source_line": 245,
+      "text": "⚬     Rows 16–27 (Standard — 72 seats): Full 3-3 layout (A–F) pitched at 31\"–33\".",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 16–27 (Standard — 72 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Full 3-3 layout (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "A–F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "31\"–33\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P011",
+      "source_line": 257,
+      "text": "Window & Recline Restrictions (73G)",
+      "all_bold": true,
+      "max_font_size_half_points": 34,
+      "runs": [
+        {
+          "text": "Window & Recline Restrictions (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        },
+        {
+          "text": "73G",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 34
+        },
+        {
+          "text": ")",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        }
+      ],
+      "inferred_heading_level": 2,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Window & Recline Restrictions (73G)"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P012",
+      "source_line": 264,
+      "text": "⚬     Missing / Obstructed Windows:",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Missing / Obstructed Windows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Window & Recline Restrictions (73G)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P013",
+      "source_line": 269,
+      "text": "    ⚬         7A and 7F: Flagged in Southwest's official seat-selection disclosure for limited/missing window visibility due to the air-conditioning riser duct frame.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "7A and 7F:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Flagged in Southwest's official seat-selection disclosure for ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "limited/missing window visibility",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " due to the air-conditioning riser duct frame.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Window & Recline Restrictions (73G)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P014",
+      "source_line": 278,
+      "text": "    ⚬         3A and 14F: Misaligned window frames positioned slightly behind the seatback.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "3A and 14F:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Misaligned window frames positioned slightly behind the seatback.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Window & Recline Restrictions (73G)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P015",
+      "source_line": 285,
+      "text": "⚬     Non-Reclining / Limited-Recline Rows:",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Non-Reclining / Limited-Recline Rows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Window & Recline Restrictions (73G)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P016",
+      "source_line": 290,
+      "text": "    ⚬         Row 14 (14B–14F): Locked / zero recline per FAA regulations because overwing exit Row 15 sits directly behind it.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14 (14B–14F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Locked / zero recline per FAA regulations because overwing exit ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " sits directly behind it.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Window & Recline Restrictions (73G)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P017",
+      "source_line": 299,
+      "text": "    ⚬         Row 27 (27A–27F): Limited or zero recline against the aft bulkhead and rear lavatory/galley wall.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 27 (27A–27F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Limited or zero recline against the aft bulkhead and rear lavatory/galley wall.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)",
+        "Window & Recline Restrictions (73G)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P018",
+      "source_line": 308,
+      "text": "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+      "all_bold": true,
+      "max_font_size_half_points": 38,
+      "runs": [
+        {
+          "text": "2. Boeing 737-800 (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        },
+        {
+          "text": "738",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 38
+        },
+        {
+          "text": ") & 737 MAX 8 (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        },
+        {
+          "text": "7M8-1",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 38
+        },
+        {
+          "text": ") — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        }
+      ],
+      "inferred_heading_level": 1,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)"
+      ],
+      "list_marker": {
+        "marker": "2.",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P019",
+      "source_line": 317,
+      "text": "Both the legacy 737-800 Heart retrofit and pre-October 2025 737 MAX 8 deliveries share an identical 46 ELR / 45 Preferred / 84 Standard seat distribution across Rows 1–30.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "Both the legacy ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "737-800",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Heart retrofit and pre-October 2025 ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "737 MAX 8",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " deliveries share an identical ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "46 ELR / 45 Preferred / 84 Standard",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " seat distribution across ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 1–30",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P020",
+      "source_line": 330,
+      "text": "Row-by-Row Tier Map",
+      "all_bold": true,
+      "max_font_size_half_points": 34,
+      "runs": [
+        {
+          "text": "Row-by-Row Tier Map",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        }
+      ],
+      "inferred_heading_level": 2,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P021",
+      "source_line": 335,
+      "text": "⚬     Row 1 (Extra Legroom — 3 seats): Starboard-only bulkhead (1D, 1E, 1F) pitched at 34\". 1A, 1B, and 1C do not exist because the forward lavatory and galley occupy the port-side entrance zone.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 1 (Extra Legroom — 3 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Starboard-only bulkhead (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "1D, 1E, 1F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "34\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ". ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "1A, 1B, and 1C do not exist",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " because the forward lavatory and galley occupy the port-side entrance zone.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P022",
+      "source_line": 347,
+      "text": "⚬     Rows 2–5 (Extra Legroom — 24 seats): Full 3-3 layout (A–F) pitched at 34\". 2A, 2B, 2C sit directly behind the port-side bulkhead wall (armrest tray tables, no floor stowage).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 2–5 (Extra Legroom — 24 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Full 3-3 layout (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "A–F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "34\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ". ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "2A, 2B, 2C",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " sit directly behind the port-side bulkhead wall (armrest tray tables, no floor stowage).",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P023",
+      "source_line": 359,
+      "text": "⚬     Row 6 (Split Row — 3 ELR / 3 Preferred):",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 6 (Split Row — 3 ELR / 3 Preferred):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P024",
+      "source_line": 364,
+      "text": "    ⚬         6A, 6B, 6C (Extra Legroom): Pitched at 34\".",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "6A, 6B, 6C (Extra Legroom):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "34\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P025",
+      "source_line": 373,
+      "text": "    ⚬         6D, 6E, 6F (Preferred): Pitched at 31\"–32\".",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "6D, 6E, 6F (Preferred):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "31\"–32\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P026",
+      "source_line": 382,
+      "text": "⚬     Rows 7–13 (Preferred — 42 seats): Full 3-3 layout (A–F) pitched at 31\"–32\".",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 7–13 (Preferred — 42 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Full 3-3 layout (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "A–F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "31\"–32\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P027",
+      "source_line": 392,
+      "text": "⚬     Rows 14–16 (Extra Legroom — 16 seats): Twin-overwing exit zone pitched at 34\":",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 14–16 (Extra Legroom — 16 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Twin-overwing exit zone pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "34\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ":",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P028",
+      "source_line": 400,
+      "text": "    ⚬         Row 14 (14A–14F): 6 seats.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14 (14A–14F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " 6 seats.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P029",
+      "source_line": 407,
+      "text": "    ⚬         Row 15 (15B, 15C, 15D, 15E): 4 seats; 15A and 15F are omitted at the aft overwing exit hatches.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15 (15B, 15C, 15D, 15E):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " 4 seats; ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15A and 15F are omitted",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " at the aft overwing exit hatches.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P030",
+      "source_line": 416,
+      "text": "    ⚬         Row 16 (16A–16F): 6 seats; because 15A and 15F are missing, 16A and 16F have unrestricted legroom with no seat directly ahead.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 16 (16A–16F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " 6 seats; because ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15A",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " are missing, ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "16A and 16F have unrestricted legroom",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " with no seat directly ahead.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P031",
+      "source_line": 429,
+      "text": "⚬     Rows 17–30 (Standard — 84 seats): Full 3-3 layout (A–F) across all 14 rows, pitched at 31\"–32\".",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 17–30 (Standard — 84 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Full 3-3 layout (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "A–F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") across all 14 rows, pitched at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "31\"–32\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Row-by-Row Tier Map"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P032",
+      "source_line": 441,
+      "text": "Window & Recline Restrictions (738 & 7M8-1)",
+      "all_bold": true,
+      "max_font_size_half_points": 34,
+      "runs": [
+        {
+          "text": "Window & Recline Restrictions (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        },
+        {
+          "text": "738",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 34
+        },
+        {
+          "text": " & ",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        },
+        {
+          "text": "7M8-1",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 34
+        },
+        {
+          "text": ")",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        }
+      ],
+      "inferred_heading_level": 2,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P033",
+      "source_line": 450,
+      "text": "⚬     Missing / Obstructed Windows:",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Missing / Obstructed Windows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P034",
+      "source_line": 455,
+      "text": "    ⚬         10A (Preferred): Completely windowless (blank cabin wall covering the environmental control ducting; also reduces shoulder width by ~2\" due to the missing window reveal).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "10A (Preferred):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Completely windowless",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (blank cabin wall covering the environmental control ducting; also reduces shoulder width by ~2\" due to the missing window reveal).",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P035",
+      "source_line": 464,
+      "text": "    ⚬         11A and 11F (Preferred): Officially disclosed as limited/obstructed window visibility (forward-offset window frame).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "11A and 11F (Preferred):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Officially disclosed as ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "limited/obstructed window visibility",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (forward-offset window frame).",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P036",
+      "source_line": 473,
+      "text": "    ⚬         Set-Back Windows: 7A/7F (Preferred), plus 16A/16F, 18A/18F, 20A/20F, and 24A/24F have windows positioned behind the headrest.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Set-Back Windows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "7A/7F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (Preferred), plus ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "16A/16F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "18A/18F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "20A/20F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "24A/24F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " have windows positioned behind the headrest.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P037",
+      "source_line": 490,
+      "text": "⚬     Non-Reclining / Limited-Recline Rows:",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Non-Reclining / Limited-Recline Rows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P038",
+      "source_line": 495,
+      "text": "    ⚬         Row 13 (13A–13F): Zero recline (Preferred row immediately forward of exit Row 14).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 13 (13A–13F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Zero recline",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (Preferred row immediately forward of exit ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ").",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P039",
+      "source_line": 506,
+      "text": "    ⚬         Row 14 (14A–14F): Zero recline (forward overwing exit row immediately ahead of exit Row 15).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14 (14A–14F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Zero recline",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (forward overwing exit row immediately ahead of exit ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ").",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P040",
+      "source_line": 517,
+      "text": "    ⚬         Row 15 (15B–15E): Zero / severely restricted recline (center overwing exit row). (Note: Row 16 reclines normally.)",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15 (15B–15E):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Zero / severely restricted recline",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (center overwing exit row). ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "(Note: Row 16 reclines normally.)",
+          "bold": false,
+          "italic": true,
+          "font_index": 5,
+          "font_name": "HelveticaNeue-Italic",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P041",
+      "source_line": 527,
+      "text": "    ⚬         Row 30 (30A–30F): Limited or zero recline against the twin aft lavatory bulkheads.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 30 (30A–30F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Limited or zero recline against the twin aft lavatory bulkheads.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — \"Heart\" / Pre-Oct 2025 Cabins (175 Seats)",
+        "Window & Recline Restrictions (738 & 7M8-1)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P042",
+      "source_line": 536,
+      "text": "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+      "all_bold": true,
+      "max_font_size_half_points": 38,
+      "runs": [
+        {
+          "text": "3. Boeing 737-800 (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        },
+        {
+          "text": "738-2",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 38
+        },
+        {
+          "text": ") & 737 MAX 8 (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        },
+        {
+          "text": "7M8-2",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 38
+        },
+        {
+          "text": ") — 2025 \"Elevate\" Cabins (175 Seats)",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 38
+        }
+      ],
+      "inferred_heading_level": 1,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)"
+      ],
+      "list_marker": {
+        "marker": "3.",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P043",
+      "source_line": 545,
+      "text": "Aircraft outfitted with the 2025 \"Elevate\" RECARO R2 interior (factory-delivered on MAX 8s from October 2025 onward and retrofitted across select 737-800 frames) maintain 175 total seats and identical Row 1–13 and Row 17–29 boundaries, but shift 2 seats from Standard to Extra Legroom (48 ELR / 45 Preferred / 82 Standard).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "Aircraft outfitted with the ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "2025 \"Elevate\" RECARO R2 interior",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (factory-delivered on MAX 8s from October 2025 onward and retrofitted across select ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "737-800",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " frames) maintain 175 total seats and identical ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 1–13",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 17–29",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " boundaries, but shift ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "2 seats from Standard to Extra Legroom",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "48 ELR / 45 Preferred / 82 Standard",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ").",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P044",
+      "source_line": 562,
+      "text": "Structural Deltas vs. the \"Heart\" Layout",
+      "all_bold": true,
+      "max_font_size_half_points": 34,
+      "runs": [
+        {
+          "text": "Structural Deltas vs. the \"Heart\" Layout",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        }
+      ],
+      "inferred_heading_level": 2,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Structural Deltas vs. the \"Heart\" Layout"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P045",
+      "source_line": 567,
+      "text": "1.     Row 15 Restored to 6 Seats (15A–15F): Unlike the Heart layout, 15A and 15F are present on Elevate cabins. Consequently, 16A and 16F no longer have an empty gap in front of them and offer standard ~34\" ELR pitch.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "1.     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15 Restored to 6 Seats (15A–15F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Unlike the Heart layout, ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15A",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " are present on Elevate cabins. Consequently, ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "16A and 16F no longer have an empty gap in front of them",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " and offer standard ~34\" ELR pitch.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Structural Deltas vs. the \"Heart\" Layout"
+      ],
+      "list_marker": {
+        "marker": "1.",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P046",
+      "source_line": 578,
+      "text": "2.     Row 14 Pitch Increase (~37\"): Row 14 (14A–14F) receives the deepest legroom on the aircraft at ~37\" pitch, while Rows 1–6, 15, and 16 measure ~33\"–34\".",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "2.     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14 Pitch Increase (~37\"):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "14A–14F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ") receives the deepest legroom on the aircraft at ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "~37\" pitch",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", while ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Rows 1–6",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "16",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " measure ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "~33\"–34\"",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Structural Deltas vs. the \"Heart\" Layout"
+      ],
+      "list_marker": {
+        "marker": "2.",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P047",
+      "source_line": 597,
+      "text": "3.     Row 30 Reduced to 4 Seats: To preserve the 175-seat cap after adding 15A and 15F, Row 30 drops two window-side positions to become a 4-seat rear row adjacent to the enlarged aft lavatory/galley complex.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "3.     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 30 Reduced to 4 Seats:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " To preserve the 175-seat cap after adding ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15A",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "15F",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 30",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " drops two window-side positions to become a ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "4-seat rear row",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " adjacent to the enlarged aft lavatory/galley complex.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Structural Deltas vs. the \"Heart\" Layout"
+      ],
+      "list_marker": {
+        "marker": "3.",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P048",
+      "source_line": 612,
+      "text": "Window & Recline Restrictions (738-2 & 7M8-2)",
+      "all_bold": true,
+      "max_font_size_half_points": 34,
+      "runs": [
+        {
+          "text": "Window & Recline Restrictions (",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        },
+        {
+          "text": "738-2",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 34
+        },
+        {
+          "text": " & ",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        },
+        {
+          "text": "7M8-2",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 34
+        },
+        {
+          "text": ")",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 34
+        }
+      ],
+      "inferred_heading_level": 2,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": null
+    },
+    {
+      "locator": "P049",
+      "source_line": 621,
+      "text": "⚬     Missing / Obstructed Windows:",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Missing / Obstructed Windows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P050",
+      "source_line": 626,
+      "text": "    ⚬         10A: Remains completely windowless due to fuselage structural ducting.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "10A:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Remains ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "completely windowless",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " due to fuselage structural ducting.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P051",
+      "source_line": 635,
+      "text": "    ⚬         11A and 11F: Remain limited/obstructed window visibility.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "11A and 11F:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Remain ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "limited/obstructed window visibility",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P052",
+      "source_line": 644,
+      "text": "    ⚬         Set-Back Windows: Shift slightly due to RECARO seat pitch geometry to 9A/9F, 13A/13F, 20A/20F, and 22A/22F.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Set-Back Windows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Shift slightly due to RECARO seat pitch geometry to ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "9A/9F",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "13A/13F",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "20A/20F",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ", and ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "22A/22F",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P053",
+      "source_line": 659,
+      "text": "⚬     Non-Reclining / Limited-Recline Rows:",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "     ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Non-Reclining / Limited-Recline Rows:",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 0
+      }
+    },
+    {
+      "locator": "P054",
+      "source_line": 664,
+      "text": "    ⚬         Row 13 (13A–13F): Zero recline (immediately forward of exit Row 14).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 13 (13A–13F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Zero recline",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (immediately forward of exit ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ").",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P055",
+      "source_line": 675,
+      "text": "    ⚬         Row 14 (14A–14F): Zero / restricted recline (immediately forward of exit Row 15).",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 14 (14A–14F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Zero / restricted recline",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (immediately forward of exit ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15",
+          "bold": false,
+          "italic": false,
+          "font_index": 2,
+          "font_name": ".AppleSystemUIFontMonospaced-Regular",
+          "monospace": true,
+          "font_size_half_points": 30
+        },
+        {
+          "text": ").",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P056",
+      "source_line": 686,
+      "text": "    ⚬         Row 15 (15A–15F): Zero / restricted recline (overwing exit row). (Note: Row 16 reclines normally.)",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 15 (15A–15F):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Zero / restricted recline",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " (overwing exit row). ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "(Note: Row 16 reclines normally.)",
+          "bold": false,
+          "italic": true,
+          "font_index": 5,
+          "font_name": "HelveticaNeue-Italic",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    },
+    {
+      "locator": "P057",
+      "source_line": 696,
+      "text": "    ⚬         Row 30 (4 seats): Limited or zero recline against the aft lavatory bulkhead.",
+      "all_bold": false,
+      "max_font_size_half_points": 30,
+      "runs": [
+        {
+          "text": "    ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "⚬",
+          "bold": false,
+          "italic": false,
+          "font_index": 4,
+          "font_name": "AppleSymbols",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "         ",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": "Row 30 (4 seats):",
+          "bold": true,
+          "italic": false,
+          "font_index": 1,
+          "font_name": "HelveticaNeue-Bold",
+          "monospace": false,
+          "font_size_half_points": 30
+        },
+        {
+          "text": " Limited or zero recline against the aft lavatory bulkhead.",
+          "bold": false,
+          "italic": false,
+          "font_index": 0,
+          "font_name": "HelveticaNeue",
+          "monospace": false,
+          "font_size_half_points": 30
+        }
+      ],
+      "inferred_heading_level": null,
+      "section_path": [
+        "3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 \"Elevate\" Cabins (175 Seats)",
+        "Window & Recline Restrictions (738-2 & 7M8-2)"
+      ],
+      "list_marker": {
+        "marker": "⚬",
+        "leading_spaces": 4
+      }
+    }
+  ],
+  "tables": [
+    {
+      "locator": "T01",
+      "preceding_paragraph_locator": "P001",
+      "row_count": 6,
+      "column_counts": [
+        7
+      ],
+      "first_row_all_bold": true,
+      "rows": [
+        {
+          "locator": "T01.R01",
+          "defined_cell_boundaries": 7,
+          "last_row_flag": false,
+          "cells": [
+            {
+              "locator": "T01.R01.C01",
+              "source_line": 34,
+              "text": "LOPA / Variant",
+              "all_bold": true,
+              "runs": [
+                {
+                  "text": "LOPA / Variant",
+                  "bold": true,
+                  "italic": false,
+                  "font_index": 1,
+                  "font_name": "HelveticaNeue-Bold",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R01.C02",
+              "source_line": 36,
+              "text": "Interior Generation",
+              "all_bold": true,
+              "runs": [
+                {
+                  "text": "Interior Generation",
+                  "bold": true,
+                  "italic": false,
+                  "font_index": 1,
+                  "font_name": "HelveticaNeue-Bold",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R01.C03",
+              "source_line": 38,
+              "text": "Total Seats",
+              "all_bold": true,
+              "runs": [
+                {
+                  "text": "Total Seats",
+                  "bold": true,
+                  "italic": false,
+                  "font_index": 1,
+                  "font_name": "HelveticaNeue-Bold",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R01.C04",
+              "source_line": 40,
+              "text": "Extra Legroom (ELR)",
+              "all_bold": true,
+              "runs": [
+                {
+                  "text": "Extra Legroom (ELR)",
+                  "bold": true,
+                  "italic": false,
+                  "font_index": 1,
+                  "font_name": "HelveticaNeue-Bold",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R01.C05",
+              "source_line": 42,
+              "text": "Preferred",
+              "all_bold": true,
+              "runs": [
+                {
+                  "text": "Preferred",
+                  "bold": true,
+                  "italic": false,
+                  "font_index": 1,
+                  "font_name": "HelveticaNeue-Bold",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R01.C06",
+              "source_line": 44,
+              "text": "Standard",
+              "all_bold": true,
+              "runs": [
+                {
+                  "text": "Standard",
+                  "bold": true,
+                  "italic": false,
+                  "font_index": 1,
+                  "font_name": "HelveticaNeue-Bold",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R01.C07",
+              "source_line": 46,
+              "text": "Omitted Seat Positions",
+              "all_bold": true,
+              "runs": [
+                {
+                  "text": "Omitted Seat Positions",
+                  "bold": true,
+                  "italic": false,
+                  "font_index": 1,
+                  "font_name": "HelveticaNeue-Bold",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R02",
+          "defined_cell_boundaries": 7,
+          "last_row_flag": false,
+          "cells": [
+            {
+              "locator": "T01.R02.C01",
+              "source_line": 58,
+              "text": "73G (737-700)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "73G (737-700)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R02.C02",
+              "source_line": 60,
+              "text": "2026 Cabin Retrofit",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "2026 Cabin Retrofit",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R02.C03",
+              "source_line": 62,
+              "text": "137",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "137",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R02.C04",
+              "source_line": 64,
+              "text": "42 (Rows 1–6, 15)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "42 (Rows 1–6, 15)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R02.C05",
+              "source_line": 66,
+              "text": "23 (Rows 7–9, 14)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "23 (Rows 7–9, 14)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R02.C06",
+              "source_line": 68,
+              "text": "72 (Rows 16–27)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "72 (Rows 16–27)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R02.C07",
+              "source_line": 70,
+              "text": "Rows 10–13 (skipped), 14A",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "Rows 10–13 (skipped), 14A",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R03",
+          "defined_cell_boundaries": 7,
+          "last_row_flag": false,
+          "cells": [
+            {
+              "locator": "T01.R03.C01",
+              "source_line": 81,
+              "text": "738 (737-800)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "738 (737-800)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R03.C02",
+              "source_line": 83,
+              "text": "Legacy \"Heart\" Cabin",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "Legacy \"Heart\" Cabin",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R03.C03",
+              "source_line": 85,
+              "text": "175",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "175",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R03.C04",
+              "source_line": 87,
+              "text": "46 (1D–6C, 14–16)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "46 (1D–6C, 14–16)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R03.C05",
+              "source_line": 89,
+              "text": "45 (6D–13F)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "45 (6D–13F)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R03.C06",
+              "source_line": 91,
+              "text": "84 (Rows 17–30)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "84 (Rows 17–30)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R03.C07",
+              "source_line": 93,
+              "text": "1A, 1B, 1C, 15A, 15F",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "1A, 1B, 1C, 15A, 15F",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R04",
+          "defined_cell_boundaries": 7,
+          "last_row_flag": false,
+          "cells": [
+            {
+              "locator": "T01.R04.C01",
+              "source_line": 104,
+              "text": "7M8-1 (MAX 8)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "7M8-1 (MAX 8)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R04.C02",
+              "source_line": 106,
+              "text": "Pre-Oct 2025 Sky/Heart",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "Pre-Oct 2025 Sky/Heart",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R04.C03",
+              "source_line": 108,
+              "text": "175",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "175",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R04.C04",
+              "source_line": 110,
+              "text": "46 (1D–6C, 14–16)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "46 (1D–6C, 14–16)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R04.C05",
+              "source_line": 112,
+              "text": "45 (6D–13F)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "45 (6D–13F)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R04.C06",
+              "source_line": 114,
+              "text": "84 (Rows 17–30)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "84 (Rows 17–30)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R04.C07",
+              "source_line": 116,
+              "text": "1A, 1B, 1C, 15A, 15F",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "1A, 1B, 1C, 15A, 15F",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R05",
+          "defined_cell_boundaries": 7,
+          "last_row_flag": false,
+          "cells": [
+            {
+              "locator": "T01.R05.C01",
+              "source_line": 127,
+              "text": "738-2 (737-800)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "738-2 (737-800)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R05.C02",
+              "source_line": 129,
+              "text": "2025 \"Elevate\" (RECARO R2)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "2025 \"Elevate\" (RECARO R2)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R05.C03",
+              "source_line": 131,
+              "text": "175",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "175",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R05.C04",
+              "source_line": 133,
+              "text": "48 (1D–6C, 14–16)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "48 (1D–6C, 14–16)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R05.C05",
+              "source_line": 135,
+              "text": "45 (6D–13F)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "45 (6D–13F)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R05.C06",
+              "source_line": 137,
+              "text": "82 (Rows 17–30)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "82 (Rows 17–30)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R05.C07",
+              "source_line": 139,
+              "text": "1A, 1B, 1C, 2 seats in Row 30",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "1A, 1B, 1C, 2 seats in Row 30",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "locator": "T01.R06",
+          "defined_cell_boundaries": 7,
+          "last_row_flag": true,
+          "cells": [
+            {
+              "locator": "T01.R06.C01",
+              "source_line": 150,
+              "text": "7M8-2 (MAX 8)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "7M8-2 (MAX 8)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R06.C02",
+              "source_line": 152,
+              "text": "2025 \"Elevate\" Factory",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "2025 \"Elevate\" Factory",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R06.C03",
+              "source_line": 154,
+              "text": "175",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "175",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R06.C04",
+              "source_line": 156,
+              "text": "48 (1D–6C, 14–16)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "48 (1D–6C, 14–16)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R06.C05",
+              "source_line": 158,
+              "text": "45 (6D–13F)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "45 (6D–13F)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R06.C06",
+              "source_line": 160,
+              "text": "82 (Rows 17–30)",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "82 (Rows 17–30)",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            },
+            {
+              "locator": "T01.R06.C07",
+              "source_line": 162,
+              "text": "1A, 1B, 1C, 2 seats in Row 30",
+              "all_bold": false,
+              "runs": [
+                {
+                  "text": "1A, 1B, 1C, 2 seats in Row 30",
+                  "bold": false,
+                  "italic": false,
+                  "font_index": 0,
+                  "font_name": "HelveticaNeue",
+                  "monospace": false,
+                  "font_size_half_points": 30
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "root": "/Users/joe/DevProjects/Cabin Config/cabin-config",
+  "recorded_at": "2026-11-14T20:40:17-06:00",
+  "algorithm": "sha256",
+  "scope": [
+    "app/**",
+    "tests/**",
+    "README.md",
+    "pyproject.toml",
+    "uv.lock"
+  ],
+  "file_count": 23,
+  "files": {
+    "README.md": {
+      "sha256": "b669f848851aa383037206139cdd49d90929a9aae5e4b7e8dcf5c8ad17a95d83",
+      "bytes": 5344
+    },
+    "app/__init__.py": {
+      "sha256": "20ec5a7f6bbe50cc2aa4e1cd519bb11aa4a3ce36407e11ab5e9aacc553f9f52f",
+      "bytes": 69
+    },
+    "app/lookup.py": {
+      "sha256": "b6bff14f22bef60682eb7de47be63b58c6fe72c22b4d9557fb82dda12e6d6ad2",
+      "bytes": 4255
+    },
+    "app/main.py": {
+      "sha256": "eaa0f58ae5542c0b46c6b10aa2506b117b3b70fa2072c4af7851e6ffd7b9bb3f",
+      "bytes": 3968
+    },
+    "app/repository.py": {
+      "sha256": "69189b9307b4aed4348a90786f7615c9520cf104d5f8bd202abafe9f921dfed8",
+      "bytes": 2721
+    },
+    "app/schema.sql": {
+      "sha256": "3b69154db8da46a2d9f3afadb0c5359b8ada46242da4e1d4e73312a7861e14db",
+      "bytes": 2317
+    },
+    "app/seed.py": {
+      "sha256": "05113b9a498668f786580ccfb20be2512b23e2cad23d84ed60edf55ce8b6c93c",
+      "bytes": 9109
+    },
+    "app/static/app.js": {
+      "sha256": "a9af7371eaa35d72686d4ee4d5d12c6aaab6eabc910de1be7abc95cccec2a812",
+      "bytes": 19141
+    },
+    "app/static/cabin3d.js": {
+      "sha256": "caa20d0cbed8fefc1389ca0a6079985712289f8fcdc88db67089a09057a6a876",
+      "bytes": 8562
+    },
+    "app/static/index.html": {
+      "sha256": "0eb8a6fc93cbbc94093449f75484217950cae8e65f2dab70c37d97707af06032",
+      "bytes": 6228
+    },
+    "app/static/styles.css": {
+      "sha256": "3ec914d081c9802f3743bc0ebbbd10dfdd1607248d615f09091868690a33d951",
+      "bytes": 14819
+    },
+    "app/static/vendor/OrbitControls.js": {
+      "sha256": "b97879c748170baadeb3fb84cea1ffdf4674e283dc06042f34e2acb95a76042c",
+      "bytes": 38703
+    },
+    "app/static/vendor/RoundedBoxGeometry.js": {
+      "sha256": "c1b7c9bd2cddff2e3f3a0723f618a3d364a47450e3d25771d21faed88410bec8",
+      "bytes": 6476
+    },
+    "app/static/vendor/THREE-LICENSE.txt": {
+      "sha256": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601",
+      "bytes": 1081
+    },
+    "app/static/vendor/three.core.js": {
+      "sha256": "eb077d2417f61d3e6d9264c317cabc4ea35769ed6b0ab533067292a550784c20",
+      "bytes": 1403455
+    },
+    "app/static/vendor/three.module.js": {
+      "sha256": "c8211c69345d2e9949dc7a8ac969380497aa0600a5a8ac6a459c8cd02dd9cb8a",
+      "bytes": 603113
+    },
+    "app/visits.py": {
+      "sha256": "abbe0a9c5917613f4d5367f0c947a4e6164dd6d7317e4fce7ff0a5981c6efbb5",
+      "bytes": 6971
+    },
+    "pyproject.toml": {
+      "sha256": "505602cd470e4eabdadf70880d9460611abb69ac8cf23b236a17b08b526097a1",
+      "bytes": 399
+    },
+    "tests/browser_smoke.py": {
+      "sha256": "fe491b2cea3b577718b229e0f77d76a932419561eaac3c8831d6210a761ee0f4",
+      "bytes": 5970
+    },
+    "tests/conftest.py": {
+      "sha256": "42c0cfca68499a42658a159cd66651fe65aaf57dab727ddad64d03153eb734d3",
+      "bytes": 694
+    },
+    "tests/test_lookup.py": {
+      "sha256": "d513d38c4a614dcc2431bb078997cf443348eb3fc8ef77b383264689a3f73309",
+      "bytes": 4306
+    },
+    "tests/test_visits.py": {
+      "sha256": "91b15c956f9b75ed1d99a7aac6cbcce18a1898607817b45138d50d57d5dbf336",
+      "bytes": 5276
+    },
+    "uv.lock": {
+      "sha256": "b363bad23a82c11ac776b7fa9188ddf7735282250a5f003b97406d88544627c5",
+      "bytes": 90388
+    }
+  },
+  "comparison": {
+    "against": "baseline-original-sha256.json",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "all_unchanged": true
+  }
+}

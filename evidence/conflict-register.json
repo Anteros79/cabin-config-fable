@@ -1,0 +1,3263 @@
+{
+  "purpose": "Register of conflicts, ambiguities, representation differences, gaps and assumptions found in the supplied evidence.",
+  "rules": [
+    "No source precedence: no entry is decided by \"JSON wins\", \"RTF wins\" or \"newest wins\".",
+    "Every decision is a non-destructive handling: both/all raw claims are kept and marked unresolved unless the entry is a pure representation rule.",
+    "Quotes are verbatim substrings located in the originals at build time; counts are measured."
+  ],
+  "summary": {
+    "entries": 23,
+    "by_type": {
+      "substantive conflict + grain/crosswalk issue": 1,
+      "substantive conflict (commercial tier vs physical space)": 1,
+      "substantive conflict": 1,
+      "substantive conflict (internal to one document)": 1,
+      "ambiguity": 6,
+      "representation difference with loss of a qualifier (substantive risk of false precision)": 1,
+      "substantive conflict (different measurement kinds in one field)": 1,
+      "gap (not supplied)": 1,
+      "representation difference": 2,
+      "substantive conflict (unexplained) + representation difference": 1,
+      "ambiguity (naming / crosswalk)": 1,
+      "representation difference (artifact role)": 1,
+      "ambiguity (minor, internal to one document)": 1,
+      "assumption": 2,
+      "ambiguity (provenance) + gap (not supplied)": 1,
+      "assumption (scope)": 1
+    },
+    "brief_expected_findings": 11,
+    "brief_expected_findings_confirmed": 11,
+    "entries_with_unlocated_quotes": [],
+    "entries_with_failed_checks": [],
+    "build_problems": []
+  },
+  "entries": [
+    {
+      "id": "C01",
+      "title": "Layout grain: DOCX layout categories vs registry model/interior IDs; upgraded 138-seat 737-700 has no registry record",
+      "type": "substantive conflict + grain/crosswalk issue",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P002"
+          ],
+          "quote": "four active seating layouts",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R02.C01"
+          ],
+          "quote": "737-700, 137-seat LOPA",
+          "found": true,
+          "occurrences": 1,
+          "note": "capacity cell: 137"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R03.C01"
+          ],
+          "quote": "737-700, upgraded 138-seat LOPA",
+          "found": true,
+          "occurrences": 1,
+          "note": "capacity cell: 138"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C01"
+          ],
+          "quote": "737-800 / MAX 8, temporary LOPA",
+          "found": true,
+          "occurrences": 1,
+          "note": "capacity cell: 175"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R05.C01"
+          ],
+          "quote": "737-800 / MAX 8, final LOPA",
+          "found": true,
+          "occurrences": 1,
+          "note": "capacity cell: 175"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R03.C03"
+          ],
+          "quote": "Single cabin, 3-3 seating; exit row changed from two seats to three on the affected side",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P005"
+          ],
+          "quote": "The 137-seat and 138-seat 737-700 layouts are both in circulation while 170 selected -700s are upgraded.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P001"
+          ],
+          "quote": "5 active Southwest Airlines cabin configurations (LOPAs)",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/*/lopa_id"
+          ],
+          "quote": "73G, 738, 7M8-1, 738-2, 7M8-2",
+          "found": true,
+          "measured": true,
+          "subject": "registry lopa_id values"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/*/total_seats"
+          ],
+          "quote": "137, 175, 175, 175, 175",
+          "found": true,
+          "measured": true,
+          "subject": "registry total_seats values"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "whole-file text search"
+          ],
+          "quote": "0 / 0",
+          "found": true,
+          "measured": true,
+          "subject": "occurrences of the token \"138\" as a whole number in registry JSON text / RTF text"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/total_seats",
+            "southwest_737_lopa_configurations.csv:L2:I(total_seats)"
+          ],
+          "quote": "137",
+          "json_value": 137,
+          "found": true,
+          "subject": "lopa_configurations[73G].total_seats"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/configuration_name",
+            "southwest_737_lopa_configurations.csv:L2:E(configuration_name)"
+          ],
+          "quote": "2026 Cabin Iteration (Retrofitted)",
+          "json_value": "2026 Cabin Iteration (Retrofitted)",
+          "found": true,
+          "subject": "lopa_configurations[73G].configuration_name"
+        }
+      ],
+      "claim_scope": "Layout / LayoutRevision identity for all aircraft; specifically the 737-700.",
+      "why_conflict_or_ambiguity": "The DOCX layout table has 4 category rows (two 737-700 categories by capacity, two shared 737-800/MAX 8 categories by programme stage); the registry has 5 records keyed by model + interior (73G, 738, 7M8-1, 738-2, 7M8-2). This is partly a grain difference (representation of the same fleet at different granularity) and partly substantive: the DOCX category with capacity 138 has no registry record (registry totals: 137, 175), and the DOCX gives no seat-by-seat list for it — only an arrangement sentence and the seats named in C02.",
+      "impact_on_application": "No candidate seat set exists for a 138-seat 737-700. A visit on such an aircraft cannot be served by any supplied seat map; silently using 73G would show a wrong seat count.",
+      "decision_for_software": "Keep every registry lopa_id as its own candidate LayoutRevision. Record the DOCX categories as separate layout-category claims. Link the two through an explicit crosswalk table whose rows are marked \"assumed, unverified\" (see C22). Create the 138-seat category as a placeholder Layout with status \"no seat set supplied\" that cannot be selected for seat-level work. Never synthesise a 138-seat set by adding a seat to 73G. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "An approved LOPA / seat list for the 138-seat 737-700, and an authoritative mapping between layout categories and model/interior identifiers.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "DOCX layout table has four category rows",
+            "pass": true
+          },
+          {
+            "description": "a DOCX category row has capacity 138",
+            "pass": true
+          },
+          {
+            "description": "registry has five configuration records",
+            "pass": true
+          },
+          {
+            "description": "no registry configuration declares 138 seats",
+            "pass": true
+          },
+          {
+            "description": "DOCX names at most a handful of seat codes for the 138-seat layout (no full seat list)",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "The later DOCX describes four physical-layout categories, including an upgraded 138-seat 737-700 that is absent from the 5-record registry; the DOCX does not supply a complete 138-seat seat set.",
+        "status": "CONFIRMED"
+      },
+      "extra": {
+        "docx_seat_codes_mentioned_anywhere": [
+          "7D",
+          "7E",
+          "7F",
+          "15B",
+          "15C"
+        ]
+      }
+    },
+    {
+      "id": "C02",
+      "title": "138-seat 737-700: seats 7D/7E/7F/15B/15C have Extra Legroom spacing but are sold as Preferred",
+      "type": "substantive conflict (commercial tier vs physical space)",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P012"
+          ],
+          "quote": "On the upgraded 138-seat -700 layout, seats 7D, 7E, 7F, 15B and 15C physically have Extra Legroom spacing but are sold as Preferred, not Extra Legroom.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P012"
+          ],
+          "quote": "the physical pitch and commercial product designation do not match",
+          "found": true,
+          "occurrences": 1,
+          "note": "Document content recorded as a claim; it is not treated as an instruction."
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T02.R03.C03"
+          ],
+          "quote": "Same pitch and width range as Standard for the aircraft type",
+          "found": true,
+          "occurrences": 1,
+          "note": "General DOCX statement about Preferred, to which the 138-seat seats are an exception."
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P010"
+          ],
+          "quote": "Preferred is a location upgrade, not a dimensional upgrade.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/39/commercial_tier",
+            "southwest_737_lopa_seats.csv:L41:F(commercial_tier)"
+          ],
+          "quote": "Preferred",
+          "json_value": "Preferred",
+          "found": true,
+          "subject": "lopa_seats[73G, 7D].commercial_tier",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/39/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L41:G(pitch_range_inches)"
+          ],
+          "quote": "31-33",
+          "json_value": "31-33",
+          "found": true,
+          "subject": "lopa_seats[73G, 7D].pitch_range_inches",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/40/commercial_tier",
+            "southwest_737_lopa_seats.csv:L42:F(commercial_tier)"
+          ],
+          "quote": "Preferred",
+          "json_value": "Preferred",
+          "found": true,
+          "subject": "lopa_seats[73G, 7E].commercial_tier",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/40/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L42:G(pitch_range_inches)"
+          ],
+          "quote": "31-33",
+          "json_value": "31-33",
+          "found": true,
+          "subject": "lopa_seats[73G, 7E].pitch_range_inches",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/41/commercial_tier",
+            "southwest_737_lopa_seats.csv:L43:F(commercial_tier)"
+          ],
+          "quote": "Preferred",
+          "json_value": "Preferred",
+          "found": true,
+          "subject": "lopa_seats[73G, 7F].commercial_tier",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/41/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L43:G(pitch_range_inches)"
+          ],
+          "quote": "31-33",
+          "json_value": "31-33",
+          "found": true,
+          "subject": "lopa_seats[73G, 7F].pitch_range_inches",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/60/commercial_tier",
+            "southwest_737_lopa_seats.csv:L62:F(commercial_tier)"
+          ],
+          "quote": "Extra Legroom",
+          "json_value": "Extra Legroom",
+          "found": true,
+          "subject": "lopa_seats[73G, 15B].commercial_tier",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/60/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L62:G(pitch_range_inches)"
+          ],
+          "quote": "35-36",
+          "json_value": "35-36",
+          "found": true,
+          "subject": "lopa_seats[73G, 15B].pitch_range_inches",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/61/commercial_tier",
+            "southwest_737_lopa_seats.csv:L63:F(commercial_tier)"
+          ],
+          "quote": "Extra Legroom",
+          "json_value": "Extra Legroom",
+          "found": true,
+          "subject": "lopa_seats[73G, 15C].commercial_tier",
+          "note": "registry 73G (137 seats) — a different layout"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/61/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L63:G(pitch_range_inches)"
+          ],
+          "quote": "35-36",
+          "json_value": "35-36",
+          "found": true,
+          "subject": "lopa_seats[73G, 15C].pitch_range_inches",
+          "note": "registry 73G (137 seats) — a different layout"
+        }
+      ],
+      "claim_scope": "Only the layout the DOCX calls \"upgraded 138-seat -700\". Not the 137-seat 73G registry record.",
+      "why_conflict_or_ambiguity": "Substantive: for 5 named seats the commercial tier (Preferred) and the physical spacing (Extra Legroom) differ, and the DOCX's own general description of Preferred (\"Same pitch and width range as Standard\") does not hold for them. In the registry's 73G record the same seat codes read: 7D = Preferred / 31-33; 7E = Preferred / 31-33; 7F = Preferred / 31-33; 15B = Extra Legroom / 35-36; 15C = Extra Legroom / 35-36 — so the DOCX statement cannot be transferred to 73G without contradicting it.",
+      "impact_on_application": "If tier were used as a proxy for pitch (or the reverse), appearance checks and seat-map colouring would be wrong for these seats.",
+      "decision_for_software": "Store commercial tier (SeatCommercialAttributes) and physical pitch claim (SeatPhysicalAttributes) as independent attributes; never derive one from the other. Attach the DOCX statement as a raw claim scoped to the 138-seat placeholder layout only. Leave every 73G seat record exactly as supplied. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Seat list for the 138-seat layout with per-seat pitch and commercial tier.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "registry 73G declares 137 seats (not 138)",
+            "pass": true
+          },
+          {
+            "description": "registry 73G seats 7D/7E/7F are Preferred with a non-Extra-Legroom pitch claim",
+            "pass": true
+          },
+          {
+            "description": "registry 73G seats 15B/15C are Extra Legroom (differs from the DOCX 138-seat claim)",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "The DOCX says that in the 138-seat layout seats 7D/7E/7F/15B/15C have physical Extra Legroom spacing but are commercially Preferred; must not be applied to the 137-seat 73G.",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C03",
+      "title": "Extra Legroom pitch on 737-800 / MAX 8: DOCX \"34 in.\" vs registry Elevate \"33-37 (Row 14 ~37\")\"",
+      "type": "substantive conflict",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C04",
+            "Current Aircraft Seat Configurations.docx#T01.R05.C04"
+          ],
+          "quote": "34 in.",
+          "found": true,
+          "occurrences": 2,
+          "note": "Extra Legroom pitch cells of both the temporary and the final 737-800 / MAX 8 rows."
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T02.R02.C03"
+          ],
+          "quote": "737-800/MAX 8: 34-inch pitch, approximately three inches more than standard",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/elr_pitch_inches",
+            "southwest_737_lopa_configurations.csv:L3:N(elr_pitch_inches)"
+          ],
+          "quote": "34",
+          "json_value": "34",
+          "found": true,
+          "subject": "lopa_configurations[738].elr_pitch_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/elr_pitch_inches",
+            "southwest_737_lopa_configurations.csv:L4:N(elr_pitch_inches)"
+          ],
+          "quote": "34",
+          "json_value": "34",
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].elr_pitch_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/elr_pitch_inches",
+            "southwest_737_lopa_configurations.csv:L5:N(elr_pitch_inches)"
+          ],
+          "quote": "33-37 (Row 14 ~37\")",
+          "json_value": "33-37 (Row 14 ~37\")",
+          "found": true,
+          "subject": "lopa_configurations[738-2].elr_pitch_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/elr_pitch_inches",
+            "southwest_737_lopa_configurations.csv:L6:N(elr_pitch_inches)"
+          ],
+          "quote": "33-37 (Row 14 ~37\")",
+          "json_value": "33-37 (Row 14 ~37\")",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].elr_pitch_inches"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P046"
+          ],
+          "quote": "receives the deepest legroom on the aircraft at ~37\" pitch, while Rows 1–6, 15, and 16 measure ~33\"–34\".",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats (lopa_id=738-2)"
+          ],
+          "quote": "{\"37\":6,\"33-34\":42,\"31-32\":127}",
+          "found": true,
+          "measured": true,
+          "subject": "per-seat pitch_range_inches distribution, 738-2"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats (lopa_id=7M8-2)"
+          ],
+          "quote": "{\"37\":6,\"33-34\":42,\"31-32\":127}",
+          "found": true,
+          "measured": true,
+          "subject": "per-seat pitch_range_inches distribution, 7M8-2"
+        }
+      ],
+      "claim_scope": "Extra Legroom seats on 737-800 / MAX 8; DOCX \"temporary\" and \"final\" categories vs registry records 738, 7M8-1, 738-2, 7M8-2.",
+      "why_conflict_or_ambiguity": "Substantive: the DOCX gives a single 34-inch value for both larger-aircraft categories, while the registry (and the RTF) give the Elevate records a 33–37 band with Row 14 at about 37 inches. The two cannot both be exact. Which registry records correspond to the DOCX \"final\" category is itself an assumption (C22).",
+      "impact_on_application": "Any pitch shown or used for an Extra Legroom seat on the newer interior depends on which source is read.",
+      "decision_for_software": "Keep all three as separate raw pitch claims, each with its source, scope (layout-level vs per-seat) and qualifier. Show \"sources differ — unverified\" wherever they are displayed together. No numeric pitch is used in application logic. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "LOPA drawing or seat-track data giving pitch per row for each layout.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "both DOCX larger-aircraft rows carry exactly \"34 in.\"",
+            "pass": true
+          },
+          {
+            "description": "registry Elevate records carry exactly 33-37 (Row 14 ~37\")",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "DOCX 34-inch larger-aircraft Extra Legroom pitch vs the registry's Elevate \"33-37 (Row 14 ~37\")\" claim.",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C04",
+      "title": "RTF contradicts its own split Row 6 pitch",
+      "type": "substantive conflict (internal to one document)",
+      "claims": [
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P023"
+          ],
+          "quote": "Row 6 (Split Row — 3 ELR / 3 Preferred):",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P024"
+          ],
+          "quote": "6A, 6B, 6C (Extra Legroom): Pitched at 34\".",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P025"
+          ],
+          "quote": "6D, 6E, 6F (Preferred): Pitched at 31\"–32\".",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#T01.R05.C04",
+            "Southwest Cabin Configuration Standard.rtf#T01.R06.C04"
+          ],
+          "quote": "48 (1D–6C, 14–16)",
+          "found": true,
+          "occurrences": 2,
+          "note": "Elevate summary rows: Extra Legroom ends at 6C."
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#T01.R03.C05",
+            "Southwest Cabin Configuration Standard.rtf#T01.R04.C05",
+            "Southwest Cabin Configuration Standard.rtf#T01.R05.C05",
+            "Southwest Cabin Configuration Standard.rtf#T01.R06.C05"
+          ],
+          "quote": "45 (6D–13F)",
+          "found": true,
+          "occurrences": 4,
+          "note": "Preferred starts at 6D in every larger-aircraft summary row."
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P043"
+          ],
+          "quote": "identical Row 1–13 and Row 17–29 boundaries",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P046"
+          ],
+          "quote": "Rows 1–6, 15, and 16 measure ~33\"–34\".",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/92/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J94"
+          ],
+          "quote": "Split tier row: 6A-6C Extra Legroom (33-34\"), 6D-6F Preferred (31-32\")",
+          "json_value": "Split tier row: 6A-6C Extra Legroom (33-34\"), 6D-6F Preferred (31-32\")",
+          "xlsx_raw": "Split tier row: 6A-6C Extra Legroom (33-34\"), 6D-6F Preferred (31-32\")",
+          "found": true,
+          "subject": "lopa_rows[738-2, row 6].row_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/514/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L516:G(pitch_range_inches)"
+          ],
+          "quote": "33-34",
+          "json_value": "33-34",
+          "found": true,
+          "subject": "lopa_seats[738-2, 6A].pitch_range_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/517/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L519:G(pitch_range_inches)"
+          ],
+          "quote": "31-32",
+          "json_value": "31-32",
+          "found": true,
+          "subject": "lopa_seats[738-2, 6D].pitch_range_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/122/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J124"
+          ],
+          "quote": "Split tier row: 6A-6C Extra Legroom (33-34\"), 6D-6F Preferred (31-32\")",
+          "json_value": "Split tier row: 6A-6C Extra Legroom (33-34\"), 6D-6F Preferred (31-32\")",
+          "xlsx_raw": "Split tier row: 6A-6C Extra Legroom (33-34\"), 6D-6F Preferred (31-32\")",
+          "found": true,
+          "subject": "lopa_rows[7M8-2, row 6].row_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/689/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L691:G(pitch_range_inches)"
+          ],
+          "quote": "33-34",
+          "json_value": "33-34",
+          "found": true,
+          "subject": "lopa_seats[7M8-2, 6A].pitch_range_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/692/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L694:G(pitch_range_inches)"
+          ],
+          "quote": "31-32",
+          "json_value": "31-32",
+          "found": true,
+          "subject": "lopa_seats[7M8-2, 6D].pitch_range_inches"
+        }
+      ],
+      "claim_scope": "Row 6 on the 737-800 / MAX 8 layouts, especially the Elevate records.",
+      "why_conflict_or_ambiguity": "The RTF defines Row 6 as split (A–C Extra Legroom, D–F Preferred at 31\"–32\"), says the Elevate cabins keep identical Row 1–13 boundaries, and keeps Preferred starting at 6D in its summary table — yet its Elevate section states that \"Rows 1–6 … measure ~33\"–34\"\" without excluding 6D–6F. Read literally the last sentence contradicts the split; read loosely it is imprecise wording. Either way a row-level pitch statement is unsafe.",
+      "impact_on_application": "A row-level pitch for Row 6 would be wrong for half the row.",
+      "decision_for_software": "Pitch is stored per seat as a raw claim; no row-level pitch value is stored or inferred. The RTF sentence is kept as a raw narrative claim flagged \"internally inconsistent with the split-row statements\". Rows whose A/B/C and D/E/F blocks differ are flagged in the seat sets. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Pitch per seat block for Row 6 from a LOPA drawing.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "registry per-seat pitch for 6A and 6D differs on every larger-aircraft record",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "RTF contradicting its own split Row 6 pitch.",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C05",
+      "title": "Row-level bulkhead flag is ambiguous when only one side is behind a bulkhead",
+      "type": "ambiguity",
+      "claims": [
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/27/is_bulkhead_row",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!G29"
+          ],
+          "quote": "true",
+          "json_value": true,
+          "xlsx_raw": true,
+          "found": true,
+          "subject": "lopa_rows[738, row 1].is_bulkhead_row"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/27/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J29"
+          ],
+          "quote": "Starboard-only bulkhead (1D-1F); 1A-1C omitted for forward lavatory/galley",
+          "json_value": "Starboard-only bulkhead (1D-1F); 1A-1C omitted for forward lavatory/galley",
+          "xlsx_raw": "Starboard-only bulkhead (1D-1F); 1A-1C omitted for forward lavatory/galley",
+          "found": true,
+          "subject": "lopa_rows[738, row 1].row_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/27/omitted_seat_letters",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!E29"
+          ],
+          "quote": "A,B,C",
+          "json_value": "A,B,C",
+          "xlsx_raw": "A,B,C",
+          "found": true,
+          "subject": "lopa_rows[738, row 1].omitted_seat_letters"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/28/is_bulkhead_row",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!G30"
+          ],
+          "quote": "false",
+          "json_value": false,
+          "xlsx_raw": false,
+          "found": true,
+          "subject": "lopa_rows[738, row 2].is_bulkhead_row"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/28/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J30"
+          ],
+          "quote": "2A-2C sit directly behind port-side bulkhead wall (armrest tray tables, no floor stowage)",
+          "json_value": "2A-2C sit directly behind port-side bulkhead wall (armrest tray tables, no floor stowage)",
+          "xlsx_raw": "2A-2C sit directly behind port-side bulkhead wall (armrest tray tables, no floor stowage)",
+          "found": true,
+          "subject": "lopa_rows[738, row 2].row_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/140/is_bulkhead_seat",
+            "southwest_737_lopa_seats.csv:L142:M(is_bulkhead_seat)"
+          ],
+          "quote": "True",
+          "json_value": true,
+          "found": true,
+          "subject": "lopa_seats[738, 2A].is_bulkhead_seat"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/143/is_bulkhead_seat",
+            "southwest_737_lopa_seats.csv:L145:M(is_bulkhead_seat)"
+          ],
+          "quote": "False",
+          "json_value": false,
+          "found": true,
+          "subject": "lopa_seats[738, 2D].is_bulkhead_seat"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/0/is_bulkhead_row",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!G2"
+          ],
+          "quote": "true",
+          "json_value": true,
+          "xlsx_raw": true,
+          "found": true,
+          "subject": "lopa_rows[73G, row 1].is_bulkhead_row"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/0/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J2"
+          ],
+          "quote": "Dual-sided forward bulkhead; armrest tray tables; no underseat floor stowage",
+          "json_value": "Dual-sided forward bulkhead; armrest tray tables; no underseat floor stowage",
+          "xlsx_raw": "Dual-sided forward bulkhead; armrest tray tables; no underseat floor stowage",
+          "found": true,
+          "subject": "lopa_rows[73G, row 1].row_notes"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P021"
+          ],
+          "quote": "Starboard-only bulkhead (1D, 1E, 1F)",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P022"
+          ],
+          "quote": "2A, 2B, 2C sit directly behind the port-side bulkhead wall",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P005"
+          ],
+          "quote": "is a dual-sided bulkhead",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows + #/lopa_seats"
+          ],
+          "quote": "{\"738\":[{\"row\":1,\"row_flag\":true,\"bulkhead_seats\":3,\"seats\":3},{\"row\":2,\"row_flag\":false,\"bulkhead_seats\":3,\"seats\":6}],\"73G\":[{\"row\":1,\"row_flag\":true,\"bulkhead_seats\":6,\"seats\":6}],\"7M8-1\":[{\"row\":1,\"row_flag\":true,\"bulkhead_seats\":3,\"seats\":3},{\"row\":2,\"row_flag\":false,\"bulkhead_seats\":3,\"seats\":6}],\"738-2\":[{\"row\":1,\"row_flag\":true,\"bulkhead_seats\":3,\"seats\":3},{\"row\":2,\"row_flag\":false,\"bulkhead_seats\":3,\"seats\":6}],\"7M8-2\":[{\"row\":1,\"row_flag\":true,\"bulkhead_seats\":3,\"seats\":3},{\"row\":2,\"row_flag\":false,\"bulkhead_seats\":3,\"seats\":6}]}",
+          "found": true,
+          "measured": true,
+          "subject": "rows with a bulkhead row flag or any bulkhead seat, per lopa_id (row, row_flag, bulkhead_seats / seats)"
+        }
+      ],
+      "claim_scope": "Rows 1 and 2 of every 737-800 / MAX 8 record; Row 1 of 73G for contrast.",
+      "why_conflict_or_ambiguity": "On the larger aircraft the row flag is true for Row 1, where only D/E/F exist, and false for Row 2, where 3 of 6 seats (A/B/C) are flagged as bulkhead seats. A single row boolean cannot say which side is behind a bulkhead, and it disagrees with the seat flags for Row 2.",
+      "impact_on_application": "Deriving bulkhead treatment (tray table, stowage, appearance items) from the row flag would miss 2A–2C and could over-apply to seats that are not behind a bulkhead.",
+      "decision_for_software": "Seat-level is_bulkhead_seat is stored per seat; the row-level flag is stored as a separate raw row claim. The application never derives a seat's bulkhead status from the row flag and shows both when they differ. Unresolved (neither flag is verified).",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "LOPA showing monument and bulkhead positions per side.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "some existing row has is_bulkhead_row=false while some of its seats have is_bulkhead_seat=true",
+            "pass": true
+          },
+          {
+            "description": "some row has bulkhead seats on only part of the row",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "Row bulkhead flags with partial-side ambiguity (row-level flag vs seat-level flags when only one side is behind a bulkhead).",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C06",
+      "title": "Approximate pitch statements appear as exact strings in per-seat fields",
+      "type": "representation difference with loss of a qualifier (substantive risk of false precision)",
+      "claims": [
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P046"
+          ],
+          "quote": "Row 14 Pitch Increase (~37\"):",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P045"
+          ],
+          "quote": "offer standard ~34\" ELR pitch",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P046"
+          ],
+          "quote": "Rows 1–6, 15, and 16 measure ~33\"–34\".",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/elr_pitch_inches",
+            "southwest_737_lopa_configurations.csv:L5:N(elr_pitch_inches)"
+          ],
+          "quote": "33-37 (Row 14 ~37\")",
+          "json_value": "33-37 (Row 14 ~37\")",
+          "found": true,
+          "subject": "lopa_configurations[738-2].elr_pitch_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/100/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J102"
+          ],
+          "quote": "Deepest legroom row on aircraft (~37\" pitch)",
+          "json_value": "Deepest legroom row on aircraft (~37\" pitch)",
+          "xlsx_raw": "Deepest legroom row on aircraft (~37\" pitch)",
+          "found": true,
+          "subject": "lopa_rows[738-2, row 14].row_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/562/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L564:G(pitch_range_inches)"
+          ],
+          "quote": "37",
+          "json_value": "37",
+          "found": true,
+          "subject": "lopa_seats[738-2, 14A].pitch_range_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/562/special_notes",
+            "southwest_737_lopa_seats.csv:L564:R(special_notes)"
+          ],
+          "quote": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply",
+          "json_value": "Maximum cabin pitch (~37\"); Overwing exit zone; FAA exit seating criteria apply",
+          "found": true,
+          "subject": "lopa_seats[738-2, 14A].special_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/574/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L576:G(pitch_range_inches)"
+          ],
+          "quote": "33-34",
+          "json_value": "33-34",
+          "found": true,
+          "subject": "lopa_seats[738-2, 16A].pitch_range_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/490/pitch_range_inches",
+            "southwest_737_lopa_seats.csv:L492:G(pitch_range_inches)"
+          ],
+          "quote": "33-34",
+          "json_value": "33-34",
+          "found": true,
+          "subject": "lopa_seats[738-2, 2A].pitch_range_inches"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/*/pitch_range_inches"
+          ],
+          "quote": "104",
+          "found": true,
+          "measured": true,
+          "subject": "seat records whose pitch_range_inches is a single number (no range, no \"~\")"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/*/pitch_range_inches"
+          ],
+          "quote": "12",
+          "found": true,
+          "measured": true,
+          "subject": "seat records with pitch_range_inches exactly \"37\""
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/*/pitch_range_inches"
+          ],
+          "quote": "0",
+          "found": true,
+          "measured": true,
+          "subject": "seat records whose pitch_range_inches contains \"~\""
+        }
+      ],
+      "claim_scope": "Per-seat pitch_range_inches on the Elevate records; the field in general.",
+      "why_conflict_or_ambiguity": "The narrative, the configuration record and the row/seat notes all qualify these values with \"~\" (about 37, about 33–34, about 34). The per-seat field holds the bare strings \"37\" and \"33-34\". The qualifier is lost in the per-seat representation, and a field named \"range\" holds single numbers.",
+      "impact_on_application": "An exact-looking pitch could be mistaken for a measured dimension or compared numerically.",
+      "decision_for_software": "Store the per-seat string verbatim plus a flag \"approximate in sibling claims\" where the configuration, row note, seat note or narrative marks the same value with \"~\". Display with that flag; never present as a measurement; never compute with it. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Measured or drawing-based pitch with stated tolerance.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "per-seat field holds \"37\" with no \"~\" while the same seat's special_notes says ~37\"",
+            "pass": true
+          },
+          {
+            "description": "no per-seat pitch string carries a \"~\"",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "Approximate pitches turned into falsely exact strings.",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C07",
+      "title": "Shoulder clearance and seat width are conflated in the width fields",
+      "type": "substantive conflict (different measurement kinds in one field)",
+      "claims": [
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/188/effective_width_inches",
+            "southwest_737_lopa_seats.csv:L190:H(effective_width_inches)"
+          ],
+          "quote": "15.8",
+          "json_value": 15.8,
+          "found": true,
+          "subject": "lopa_seats[738, 10A].effective_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/188/window_notes",
+            "southwest_737_lopa_seats.csv:L190:K(window_notes)"
+          ],
+          "quote": "Completely windowless blank wall covering environmental control ducting (~2\" narrower shoulder clearance)",
+          "json_value": "Completely windowless blank wall covering environmental control ducting (~2\" narrower shoulder clearance)",
+          "found": true,
+          "subject": "lopa_seats[738, 10A].window_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/max_seat_width_inches",
+            "southwest_737_lopa_configurations.csv:L3:P(max_seat_width_inches)"
+          ],
+          "quote": "17.8",
+          "json_value": 17.8,
+          "found": true,
+          "subject": "lopa_configurations[738].max_seat_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/189/effective_width_inches",
+            "southwest_737_lopa_seats.csv:L191:H(effective_width_inches)"
+          ],
+          "quote": "17.8",
+          "json_value": 17.8,
+          "found": true,
+          "subject": "lopa_seats[738, 10B].effective_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/137/effective_width_inches",
+            "southwest_737_lopa_seats.csv:L139:H(effective_width_inches)"
+          ],
+          "quote": "15.5",
+          "json_value": 15.5,
+          "found": true,
+          "subject": "lopa_seats[738, 1D].effective_width_inches",
+          "note": "bulkhead seat"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P034"
+          ],
+          "quote": "also reduces shoulder width by ~2\" due to the missing window reveal",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/538/effective_width_inches",
+            "southwest_737_lopa_seats.csv:L540:H(effective_width_inches)"
+          ],
+          "quote": "17.8",
+          "json_value": 17.8,
+          "found": true,
+          "subject": "lopa_seats[738-2, 10A].effective_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/538/window_notes",
+            "southwest_737_lopa_seats.csv:L540:K(window_notes)"
+          ],
+          "quote": "Completely windowless blank wall covering environmental control ducting",
+          "json_value": "Completely windowless blank wall covering environmental control ducting",
+          "found": true,
+          "subject": "lopa_seats[738-2, 10A].window_notes"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P050"
+          ],
+          "quote": "10A: Remains completely windowless due to fuselage structural ducting.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R01.C06"
+          ],
+          "quote": "Seat width",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C06",
+            "Current Aircraft Seat Configurations.docx#T01.R05.C06"
+          ],
+          "quote": "15.5-17.8 in.",
+          "found": true,
+          "occurrences": 2
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T02.R03.C04"
+          ],
+          "quote": "it is not a wider seat",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/*/effective_width_inches"
+          ],
+          "quote": "{\"738\":{\"15.5\":6,\"17.8\":168,\"15.8\":1},\"73G\":{\"17\":131,\"15.5\":6},\"7M8-1\":{\"15.5\":6,\"17.8\":168,\"15.8\":1},\"738-2\":{\"15.5\":6,\"17.8\":169},\"7M8-2\":{\"15.5\":6,\"17.3\":169}}",
+          "found": true,
+          "measured": true,
+          "subject": "effective_width_inches distribution per lopa_id"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "computed from the two located values"
+          ],
+          "quote": "2 / 2",
+          "found": true,
+          "measured": true,
+          "subject": "difference between max_seat_width_inches and 10A effective_width_inches on 738 / 7M8-1"
+        }
+      ],
+      "claim_scope": "Seat 10A on the non-Elevate larger-aircraft records; the meaning of max_seat_width_inches / effective_width_inches / DOCX \"Seat width\" generally.",
+      "why_conflict_or_ambiguity": "On the non-Elevate records the registry lowers 10A's \"effective width\" by the approximate shoulder-clearance loss the RTF describes at the windowless sidewall, turning \"~2 inches narrower shoulder clearance\" into an exact seat-width number. Shoulder clearance at the wall and seat width are different measurements. The same windowless seat on the Elevate records keeps the full width value. No source defines what \"seat width\", \"max seat width\" or \"effective width\" measures.",
+      "impact_on_application": "Width could be shown as a seat dimension when it is partly a sidewall-clearance statement; the two interiors are treated inconsistently for the same seat.",
+      "decision_for_software": "Store each width value as a raw claim with measurement_kind = \"unspecified by source\" and the source field name. Keep the shoulder-clearance statement as its own sidewall/window note. Do not recompute or \"correct\" 10A. Flag 10A on all four larger-aircraft records. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Seat supplier dimensional data and a definition of the width measurement used.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "10A effective width is lower than the neighbouring seat on the non-Elevate records and its note cites shoulder clearance",
+            "pass": true
+          },
+          {
+            "description": "10A keeps the full width on the Elevate records",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "Shoulder clearance vs seat width conflated in the width field(s).",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C08",
+      "title": "DOCX temporary-layout wording about the rear row does not identify a seat",
+      "type": "ambiguity",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C01"
+          ],
+          "quote": "737-800 / MAX 8, temporary LOPA",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C03"
+          ],
+          "quote": "Single cabin, 3-3 seating; reduced seating at part of the exit-row and rear-row areas",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R05.C03"
+          ],
+          "quote": "Single cabin, 3-3 seating; three seats on both sides of the exit row and two seats on both sides of the last row",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P006"
+          ],
+          "quote": "The final layout adds one Extra Legroom seat on each side of the exit row, while the last row becomes two seats per side, keeping the overall capacity unchanged.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/41/omitted_seat_letters",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!E43"
+          ],
+          "quote": "A,F",
+          "json_value": "A,F",
+          "xlsx_raw": "A,F",
+          "found": true,
+          "subject": "lopa_rows[738, row 15].omitted_seat_letters"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/56/active_seat_count",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!D58"
+          ],
+          "quote": "6",
+          "json_value": 6,
+          "xlsx_raw": 6,
+          "found": true,
+          "subject": "lopa_rows[738, row 30].active_seat_count"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/56/omitted_seat_letters",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!E58"
+          ],
+          "quote": "",
+          "json_value": "",
+          "xlsx_raw": "(absent cell)",
+          "found": true,
+          "subject": "lopa_rows[738, row 30].omitted_seat_letters"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/total_seats",
+            "southwest_737_lopa_configurations.csv:L3:I(total_seats)"
+          ],
+          "quote": "175",
+          "json_value": 175,
+          "found": true,
+          "subject": "lopa_configurations[738].total_seats"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/116/omitted_seat_letters",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!E118"
+          ],
+          "quote": "A,F",
+          "json_value": "A,F",
+          "xlsx_raw": "A,F",
+          "found": true,
+          "subject": "lopa_rows[738-2, row 30].omitted_seat_letters"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/116/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J118"
+          ],
+          "quote": "4-seat aft row (30B-30E); 2 window-side positions omitted adjacent to enlarged aft lavatory/galley",
+          "json_value": "4-seat aft row (30B-30E); 2 window-side positions omitted adjacent to enlarged aft lavatory/galley",
+          "xlsx_raw": "4-seat aft row (30B-30E); 2 window-side positions omitted adjacent to enlarged aft lavatory/galley",
+          "found": true,
+          "subject": "lopa_rows[738-2, row 30].row_notes"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P031"
+          ],
+          "quote": "Full 3-3 layout (A–F) across all 14 rows",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#T01.R05.C07",
+            "Southwest Cabin Configuration Standard.rtf#T01.R06.C07"
+          ],
+          "quote": "1A, 1B, 1C, 2 seats in Row 30",
+          "found": true,
+          "occurrences": 2
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P047"
+          ],
+          "quote": "Row 30 drops two window-side positions to become a 4-seat rear row",
+          "found": true,
+          "occurrences": 1
+        }
+      ],
+      "claim_scope": "Last row (and exit row) of the 737-800 / MAX 8 \"temporary\" category; registry records 738, 7M8-1 if the C22 crosswalk assumption holds.",
+      "why_conflict_or_ambiguity": "The DOCX says the temporary layout has \"reduced seating at part of the exit-row and rear-row areas\" but names no seat. The registry's non-Elevate records show a reduced exit row and a full 6-seat last row at the same declared total. The DOCX also describes the final last row only as \"two seats on both sides\" without letters, while the RTF summary says \"2 seats in Row 30\" and only its narrative and the registry say which positions are absent.",
+      "impact_on_application": "There is no basis for removing any particular rear-row seat from a temporary-layout seat map.",
+      "decision_for_software": "Do not add or remove any rear-row seat in any candidate seat set. Keep the DOCX sentence as a raw layout-level claim. Mark the last row of the linked candidate sets \"DOCX claims reduced rear-row seating; seat not identified; unresolved\" and surface that as a warning. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "LOPA for the temporary layout showing the last row.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "the DOCX temporary-layout arrangement cell contains no seat code",
+            "pass": true
+          },
+          {
+            "description": "registry non-Elevate last row has six seats and no omitted letters",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "Temporary-layout rear-row wording that does not identify a specific seat to remove.",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C09",
+      "title": "Not supplied: dated tail assignments, parts / applicability / substitute catalogue, floor or bin map, coordinate frame, cabin height, image-to-layout mapping",
+      "type": "gap (not supplied)",
+      "claims": [
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/field-crosswalk.json#/absence_checks"
+          ],
+          "quote": "{\"tail registration token (N-number)\":1,\"part number / manual reference\":0,\"carpet\":0,\"seam\":0,\"upholstery / leather / fabric / dress cover\":0,\"colour\":0,\"overhead bin\":0,\"floor\":37,\"coordinate / station / datum\":0,\"height / ceiling\":0,\"applicability / effectivity\":0,\"substitute / alternate / interchangeable\":0,\"approval / approved / authorised\":0,\"metric length unit\":0}",
+          "found": true,
+          "measured": true,
+          "subject": "keyword mentions across registry, schema CSV, RTF and DOCX (text units)"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/wifi_system",
+            "southwest_737_lopa_configurations.csv:L4:R(wifi_system)"
+          ],
+          "quote": "Anuvu Ku-band / Viasat Ka-band (N8849Q+)",
+          "json_value": "Anuvu Ku-band / Viasat Ka-band (N8849Q+)",
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].wifi_system",
+          "note": "the only tail-like token in any source; it sits inside free text"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/lavatory_count_aft",
+            "southwest_737_lopa_configurations.csv:L3:T(lavatory_count_aft)"
+          ],
+          "quote": "2",
+          "json_value": 2,
+          "found": true,
+          "subject": "lopa_configurations[738].lavatory_count_aft",
+          "note": "a count, not a floor map"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/schema_metadata"
+          ],
+          "quote": "2026.1 / 2026-11-13T16:29:49Z",
+          "found": true,
+          "measured": true,
+          "subject": "registry schema_metadata.schema_version / generated_at_utc"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#docProps/core.xml"
+          ],
+          "quote": "Document / Un-named / 2026-11-13T17:37:00Z",
+          "found": true,
+          "measured": true,
+          "subject": "DOCX core properties title / creator / created"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P002"
+          ],
+          "quote": "As of November 13, 2026",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf (header)"
+          ],
+          "quote": "false",
+          "found": true,
+          "measured": true,
+          "subject": "RTF \\info group present"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/inventory.json (image metadata)"
+          ],
+          "quote": "0",
+          "found": true,
+          "measured": true,
+          "subject": "images whose embedded metadata mentions a layout id, LOPA, row or seat"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L2:H(est_active_aircraft)"
+          ],
+          "quote": "~277",
+          "json_value": "~277",
+          "found": true,
+          "subject": "lopa_configurations[73G].est_active_aircraft",
+          "note": "an estimate, not a tail list"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L3:H(est_active_aircraft)"
+          ],
+          "quote": "~204",
+          "json_value": "~204",
+          "found": true,
+          "subject": "lopa_configurations[738].est_active_aircraft",
+          "note": "an estimate, not a tail list"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L4:H(est_active_aircraft)"
+          ],
+          "quote": "~315",
+          "json_value": "~315",
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].est_active_aircraft",
+          "note": "an estimate, not a tail list"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L5:H(est_active_aircraft)"
+          ],
+          "quote": "~46+ (expanding)",
+          "json_value": "~46+ (expanding)",
+          "found": true,
+          "subject": "lopa_configurations[738-2].est_active_aircraft",
+          "note": "an estimate, not a tail list"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L6:H(est_active_aircraft)"
+          ],
+          "quote": "New deliveries (Oct 2025+)",
+          "json_value": "New deliveries (Oct 2025+)",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].est_active_aircraft",
+          "note": "an estimate, not a tail list"
+        }
+      ],
+      "claim_scope": "Aircraft(tail), TailAssignment, Part, Component, ApplicabilityRule, SubstituteApproval, KitChild, FloorArea, BinModule, MaterialProfile, coordinates, cabin height, image mapping, ValidationRelease.",
+      "why_conflict_or_ambiguity": "None of these data sets exists in the supplied files. Mentions that look related are free text: 1 text unit(s) with a tail-like token inside a Wi-Fi description, qualified fleet-size estimates, lavatory counts, and \"floor stowage\" notes. The registry version string and generation timestamp, the DOCX \"As of\" date and the generic document title are metadata about files, not approvals, and do not fill any of these gaps.",
+      "impact_on_application": "The application cannot truthfully resolve a tail to a layout, list parts or kits for a seat, place anything on a floor/bin map, draw to scale, or tie a photo to a layout from the supplied evidence.",
+      "decision_for_software": "Mark each of these entities \"not supplied\" in the model. Anything the application needs for them must come from clearly labelled demo fixtures kept apart from source-derived claims, and every screen/report using them states that. Timestamps, versions and titles are stored only as SourceArtifact metadata and are never promoted to a ValidationRelease. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Approved dated tail-to-layout assignments; parts/kit catalogue with applicability and substitute approvals; floor and bin maps; a coordinate frame with stations; cabin cross-section dimensions; a catalogued image set with layout references; an actual validation/approval record.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "no part-number / manual reference mentions",
+            "pass": true
+          },
+          {
+            "description": "no substitute / alternate mentions",
+            "pass": true
+          },
+          {
+            "description": "no coordinate / station / datum mentions",
+            "pass": true
+          },
+          {
+            "description": "no height / ceiling mentions",
+            "pass": true
+          },
+          {
+            "description": "no overhead-bin mentions",
+            "pass": true
+          },
+          {
+            "description": "no approval / authorisation mentions",
+            "pass": true
+          },
+          {
+            "description": "at most one text unit contains a tail-like token, and no tail list exists",
+            "pass": true
+          },
+          {
+            "description": "no image metadata references a layout, row or seat",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "No approved dated tail assignment, parts/applicability/substitute catalog, exact floor/bin map, coordinate frame, exact cabin height, or image-to-layout mapping is supplied; generated timestamps and titles do not fill those gaps.",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C10",
+      "title": "Row count wording: row records vs printed labels vs physical rows",
+      "type": "representation difference",
+      "claims": [
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/schema_metadata/entities/lopa_rows/record_count"
+          ],
+          "quote": "147",
+          "found": true,
+          "measured": true,
+          "subject": "registry schema_metadata lopa_rows.record_count"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "cabin schema architecture.csv:L3:Row Count"
+          ],
+          "quote": "147",
+          "found": true,
+          "measured": true,
+          "subject": "schema CSV \"Row Count\" for lopa_rows (raw)"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/*/row_exists"
+          ],
+          "quote": "143 / 4",
+          "found": true,
+          "measured": true,
+          "subject": "row records with row_exists=true / row_exists=false"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows (lopa_id=73G)"
+          ],
+          "quote": "27 / 23 / 27",
+          "found": true,
+          "measured": true,
+          "subject": "73G: row records / existing rows / highest printed label"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/numbered_row_range",
+            "southwest_737_lopa_configurations.csv:L2:M(numbered_row_range)"
+          ],
+          "quote": "1-9, 14-27 (skips 10-13)",
+          "json_value": "1-9, 14-27 (skips 10-13)",
+          "found": true,
+          "subject": "lopa_configurations[73G].numbered_row_range"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/9/row_exists",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!C11"
+          ],
+          "quote": "false",
+          "json_value": false,
+          "xlsx_raw": false,
+          "found": true,
+          "subject": "lopa_rows[73G, row 10].row_exists"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/9/recline_status",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!H11"
+          ],
+          "quote": "N/A",
+          "json_value": "N/A",
+          "xlsx_raw": "N/A",
+          "found": true,
+          "subject": "lopa_rows[73G, row 10].recline_status"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/9/omitted_seat_letters",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!E11"
+          ],
+          "quote": "A,B,C,D,E,F",
+          "json_value": "A,B,C,D,E,F",
+          "xlsx_raw": "A,B,C,D,E,F",
+          "found": true,
+          "subject": "lopa_rows[73G, row 10].omitted_seat_letters"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P003"
+          ],
+          "quote": "skips Rows 10–13 entirely",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P007"
+          ],
+          "quote": "Rows 10–13 (Non-Existent — 0 seats):",
+          "found": true,
+          "occurrences": 1
+        }
+      ],
+      "claim_scope": "RowLabel for every layout; 73G in particular.",
+      "why_conflict_or_ambiguity": "The \"row count\" in the registry metadata and the schema summary counts row records, including placeholder records for printed labels that do not exist in the cabin. On 73G the highest printed label is larger than the number of physical rows. This is a representation matter, but counting or ordering rows by label would be wrong.",
+      "impact_on_application": "Row counts, \"row n of m\" displays and forward/aft ordering go wrong if printed labels are treated as physical indices.",
+      "decision_for_software": "RowLabel stores printed_label (string), exists (boolean) and a separately derived physical_order. Non-existent labels are kept as records with exists=false and are never rendered as rows. Every count states whether it counts records, printed labels or physical rows. The physical order itself remains an assumption (ascending label).",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Drawing confirming physical row order and the skipped labels.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "row records exceed existing rows",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C11",
+      "title": "Exit-row flag semantics differ between configurations and from the DOCX description",
+      "type": "ambiguity",
+      "claims": [
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P001"
+          ],
+          "quote": "overwing emergency exits fall in the Row 14–16 band",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P027"
+          ],
+          "quote": "Twin-overwing exit zone pitched at 34\"",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/*/is_exit_row"
+          ],
+          "quote": "{\"738\":[14,15,16],\"73G\":[15],\"7M8-1\":[14,15,16],\"738-2\":[14,15,16],\"7M8-2\":[14,15,16]}",
+          "found": true,
+          "measured": true,
+          "subject": "rows with is_exit_row=true per lopa_id"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/40/recline_restriction_reason",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!I42"
+          ],
+          "quote": "FAA regulation: forward overwing exit row immediately ahead of exit Row 15",
+          "json_value": "FAA regulation: forward overwing exit row immediately ahead of exit Row 15",
+          "xlsx_raw": "FAA regulation: forward overwing exit row immediately ahead of exit Row 15",
+          "found": true,
+          "subject": "lopa_rows[738, row 14].recline_restriction_reason"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/41/recline_restriction_reason",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!I43"
+          ],
+          "quote": "FAA regulation: center overwing exit row",
+          "json_value": "FAA regulation: center overwing exit row",
+          "xlsx_raw": "FAA regulation: center overwing exit row",
+          "found": true,
+          "subject": "lopa_rows[738, row 15].recline_restriction_reason"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/42/is_exit_row",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!F44"
+          ],
+          "quote": "true",
+          "json_value": true,
+          "xlsx_raw": true,
+          "found": true,
+          "subject": "lopa_rows[738, row 16].is_exit_row"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/42/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J44"
+          ],
+          "quote": "16A and 16F have unobstructed legroom (no seat directly ahead); Row 16 reclines normally",
+          "json_value": "16A and 16F have unobstructed legroom (no seat directly ahead); Row 16 reclines normally",
+          "xlsx_raw": "16A and 16F have unobstructed legroom (no seat directly ahead); Row 16 reclines normally",
+          "found": true,
+          "subject": "lopa_rows[738, row 16].row_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/223/special_notes",
+            "southwest_737_lopa_seats.csv:L225:R(special_notes)"
+          ],
+          "quote": "Overwing exit zone; FAA exit seating criteria apply",
+          "json_value": "Overwing exit zone; FAA exit seating criteria apply",
+          "found": true,
+          "subject": "lopa_seats[738, 16B].special_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/13/is_exit_row",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!F15"
+          ],
+          "quote": "false",
+          "json_value": false,
+          "xlsx_raw": false,
+          "found": true,
+          "subject": "lopa_rows[73G, row 14].is_exit_row"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/13/row_notes",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!J15"
+          ],
+          "quote": "14A omitted to preserve clear access to port-side overwing exit hatch",
+          "json_value": "14A omitted to preserve clear access to port-side overwing exit hatch",
+          "xlsx_raw": "14A omitted to preserve clear access to port-side overwing exit hatch",
+          "found": true,
+          "subject": "lopa_rows[73G, row 14].row_notes"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/13/active_seat_count",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!D15"
+          ],
+          "quote": "5",
+          "json_value": 5,
+          "xlsx_raw": 5,
+          "found": true,
+          "subject": "lopa_rows[73G, row 14].active_seat_count"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/14/is_exit_row",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!F16"
+          ],
+          "quote": "true",
+          "json_value": true,
+          "xlsx_raw": true,
+          "found": true,
+          "subject": "lopa_rows[73G, row 15].is_exit_row"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/14/active_seat_count",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!D16"
+          ],
+          "quote": "6",
+          "json_value": 6,
+          "xlsx_raw": 6,
+          "found": true,
+          "subject": "lopa_rows[73G, row 15].active_seat_count"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R02.C03"
+          ],
+          "quote": "Single cabin, 3-3 seating; one double-seat exit-row section",
+          "found": true,
+          "occurrences": 1
+        }
+      ],
+      "claim_scope": "is_exit_row / is_exit_seat on every record; the 137-seat 737-700 exit area.",
+      "why_conflict_or_ambiguity": "On the larger aircraft 3 rows (14, 15, 16) are flagged as exit rows although the text describes twin overwing exits and calls one of them a row that \"reclines normally\" in an \"exit zone\". On 73G the 5-seat row whose missing seat is explained by exit access is not flagged, and the flagged exit row has 6 seats — while the DOCX describes the 137-seat aircraft as having \"one double-seat exit-row section\". \"Exit row\" therefore means different things (next to a hatch, inside an exit zone, subject to seating criteria) and the sources do not say which.",
+      "impact_on_application": "Exit-related appearance items or placards could be assigned to the wrong rows; the flags must not be read as a regulatory determination.",
+      "decision_for_software": "Store is_exit_row and is_exit_seat as separate raw claims labelled \"exit-zone claim (source)\". Keep the DOCX arrangement sentence as a raw claim on the 137-seat category, flagged as not matching the registry row flags. No regulatory meaning is attached. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "LOPA showing exit locations per side and the rows adjacent to them.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "73G row with an omitted seat (14) is not flagged as exit row while row 15 is",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C12",
+      "title": "Seat width differs between configurations with the same hardware label and from the DOCX ranges",
+      "type": "substantive conflict (unexplained) + representation difference",
+      "claims": [
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/max_seat_width_inches",
+            "southwest_737_lopa_configurations.csv:L2:P(max_seat_width_inches)"
+          ],
+          "quote": "17.0",
+          "json_value": 17,
+          "found": true,
+          "subject": "lopa_configurations[73G].max_seat_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/max_seat_width_inches",
+            "southwest_737_lopa_configurations.csv:L3:P(max_seat_width_inches)"
+          ],
+          "quote": "17.8",
+          "json_value": 17.8,
+          "found": true,
+          "subject": "lopa_configurations[738].max_seat_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/max_seat_width_inches",
+            "southwest_737_lopa_configurations.csv:L4:P(max_seat_width_inches)"
+          ],
+          "quote": "17.8",
+          "json_value": 17.8,
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].max_seat_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/max_seat_width_inches",
+            "southwest_737_lopa_configurations.csv:L5:P(max_seat_width_inches)"
+          ],
+          "quote": "17.8",
+          "json_value": 17.8,
+          "found": true,
+          "subject": "lopa_configurations[738-2].max_seat_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/max_seat_width_inches",
+            "southwest_737_lopa_configurations.csv:L6:P(max_seat_width_inches)"
+          ],
+          "quote": "17.3",
+          "json_value": 17.3,
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].max_seat_width_inches"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/seat_hardware_model",
+            "southwest_737_lopa_configurations.csv:L5:G(seat_hardware_model)"
+          ],
+          "quote": "RECARO R2",
+          "json_value": "RECARO R2",
+          "found": true,
+          "subject": "lopa_configurations[738-2].seat_hardware_model"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/seat_hardware_model",
+            "southwest_737_lopa_configurations.csv:L6:G(seat_hardware_model)"
+          ],
+          "quote": "RECARO R2",
+          "json_value": "RECARO R2",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].seat_hardware_model"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R02.C06",
+            "Current Aircraft Seat Configurations.docx#T01.R03.C06"
+          ],
+          "quote": "15.5-17.0 in.",
+          "found": true,
+          "occurrences": 2
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C06",
+            "Current Aircraft Seat Configurations.docx#T01.R05.C06"
+          ],
+          "quote": "15.5-17.8 in.",
+          "found": true,
+          "occurrences": 2
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/cross-format-comparison.json#/totals/explicit_conversions"
+          ],
+          "quote": "132",
+          "found": true,
+          "measured": true,
+          "subject": "numeric values whose CSV text differs lexically from the JSON number (e.g. \"17.0\" vs 17)"
+        }
+      ],
+      "claim_scope": "max_seat_width_inches (layout level) and effective_width_inches (seat level); DOCX \"Seat width\" ranges.",
+      "why_conflict_or_ambiguity": "2 registry records share the hardware label `RECARO R2` but declare different maximum widths (738-2: 17.8, 7M8-2: 17.3); the DOCX gives one range for both larger-aircraft categories. Separately, the same number is written with a trailing zero in CSV and without in JSON — a pure representation difference.",
+      "impact_on_application": "A width shown for a seat depends on the record chosen; numeric round-tripping silently changes the written form.",
+      "decision_for_software": "Store widths as raw claims per source and level with measurement_kind \"unspecified by source\". Keep the CSV decimal text beside the JSON number. No normalisation across records. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Seat supplier data per hardware model and installation.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "the two Elevate records declare different max_seat_width_inches",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C13",
+      "title": "Estimated fleet counts are qualified free text and cannot be reconciled with the DOCX fleet numbers",
+      "type": "ambiguity",
+      "claims": [
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L2:H(est_active_aircraft)"
+          ],
+          "quote": "~277",
+          "json_value": "~277",
+          "found": true,
+          "subject": "lopa_configurations[73G].est_active_aircraft"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L3:H(est_active_aircraft)"
+          ],
+          "quote": "~204",
+          "json_value": "~204",
+          "found": true,
+          "subject": "lopa_configurations[738].est_active_aircraft"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L4:H(est_active_aircraft)"
+          ],
+          "quote": "~315",
+          "json_value": "~315",
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].est_active_aircraft"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L5:H(est_active_aircraft)"
+          ],
+          "quote": "~46+ (expanding)",
+          "json_value": "~46+ (expanding)",
+          "found": true,
+          "subject": "lopa_configurations[738-2].est_active_aircraft"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/est_active_aircraft",
+            "southwest_737_lopa_configurations.csv:L6:H(est_active_aircraft)"
+          ],
+          "quote": "New deliveries (Oct 2025+)",
+          "json_value": "New deliveries (Oct 2025+)",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].est_active_aircraft"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P005"
+          ],
+          "quote": "170 selected -700s are upgraded",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P005"
+          ],
+          "quote": "Southwest expects the remaining non-upgraded aircraft to be retired, sold or otherwise removed from the fleet.",
+          "found": true,
+          "occurrences": 1
+        }
+      ],
+      "claim_scope": "Layout.estimated_fleet_count_claim; anything resembling fleet size per layout.",
+      "why_conflict_or_ambiguity": "The registry values are approximations (\"~\"), open-ended (\"+ (expanding)\") or not numbers at all. The DOCX gives a different kind of number (aircraft selected for an upgrade to a layout the registry does not contain). Neither is a list of aircraft.",
+      "impact_on_application": "No fleet size, percentage or tail population can be computed.",
+      "decision_for_software": "Keep each string verbatim as an estimate claim; never parse it into a number; never create Aircraft or TailAssignment records from it. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "A dated fleet list with tail numbers and installed layout.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "no est_active_aircraft value is a plain number",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C14",
+      "title": "Seat hardware and interior names differ between sources",
+      "type": "ambiguity (naming / crosswalk)",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P005"
+          ],
+          "quote": "The 138-seat version replaces Innovator seats with Meridian seats, adds in-seat power and converts the affected exit-row position to a triple-seat arrangement.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P007"
+          ],
+          "quote": "Existing aircraft can have Innovator, Collins Meridian or RECARO R2 seating, depending on the aircraft and retrofit status.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#T01.R06.C02"
+          ],
+          "quote": "2025 \"Elevate\" Factory",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/seat_hardware_model",
+            "southwest_737_lopa_configurations.csv:L2:G(seat_hardware_model)"
+          ],
+          "quote": "Legacy Slimline (Retrofitted)",
+          "json_value": "Legacy Slimline (Retrofitted)",
+          "found": true,
+          "subject": "lopa_configurations[73G].seat_hardware_model"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/seat_hardware_model",
+            "southwest_737_lopa_configurations.csv:L3:G(seat_hardware_model)"
+          ],
+          "quote": "Collins / BE Aerospace Heart Slimline",
+          "json_value": "Collins / BE Aerospace Heart Slimline",
+          "found": true,
+          "subject": "lopa_configurations[738].seat_hardware_model"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/seat_hardware_model",
+            "southwest_737_lopa_configurations.csv:L4:G(seat_hardware_model)"
+          ],
+          "quote": "Pre-Oct 2025 Boeing Sky Interior Slimline",
+          "json_value": "Pre-Oct 2025 Boeing Sky Interior Slimline",
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].seat_hardware_model"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/seat_hardware_model",
+            "southwest_737_lopa_configurations.csv:L5:G(seat_hardware_model)"
+          ],
+          "quote": "RECARO R2",
+          "json_value": "RECARO R2",
+          "found": true,
+          "subject": "lopa_configurations[738-2].seat_hardware_model"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/seat_hardware_model",
+            "southwest_737_lopa_configurations.csv:L6:G(seat_hardware_model)"
+          ],
+          "quote": "RECARO R2",
+          "json_value": "RECARO R2",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].seat_hardware_model"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/configuration_name",
+            "southwest_737_lopa_configurations.csv:L5:E(configuration_name)"
+          ],
+          "quote": "2025 \"Elevated\" Retrofit Cabin",
+          "json_value": "2025 \"Elevated\" Retrofit Cabin",
+          "found": true,
+          "subject": "lopa_configurations[738-2].configuration_name"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/configuration_name",
+            "southwest_737_lopa_configurations.csv:L6:E(configuration_name)"
+          ],
+          "quote": "2025 \"Elevated\" Factory Cabin",
+          "json_value": "2025 \"Elevated\" Factory Cabin",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].configuration_name"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/interior_generation",
+            "southwest_737_lopa_configurations.csv:L2:F(interior_generation)"
+          ],
+          "quote": "2026 Cabin Retrofit",
+          "json_value": "2026 Cabin Retrofit",
+          "found": true,
+          "subject": "lopa_configurations[73G].interior_generation"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/interior_generation",
+            "southwest_737_lopa_configurations.csv:L3:F(interior_generation)"
+          ],
+          "quote": "Legacy \"Heart\" Cabin",
+          "json_value": "Legacy \"Heart\" Cabin",
+          "found": true,
+          "subject": "lopa_configurations[738].interior_generation"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/interior_generation",
+            "southwest_737_lopa_configurations.csv:L4:F(interior_generation)"
+          ],
+          "quote": "Pre-Oct 2025 Sky/Heart",
+          "json_value": "Pre-Oct 2025 Sky/Heart",
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].interior_generation"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/interior_generation",
+            "southwest_737_lopa_configurations.csv:L5:F(interior_generation)"
+          ],
+          "quote": "2025 \"Elevate\" (RECARO R2)",
+          "json_value": "2025 \"Elevate\" (RECARO R2)",
+          "found": true,
+          "subject": "lopa_configurations[738-2].interior_generation"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/interior_generation",
+            "southwest_737_lopa_configurations.csv:L6:F(interior_generation)"
+          ],
+          "quote": "2025 \"Elevate\" Factory (RECARO R2)",
+          "json_value": "2025 \"Elevate\" Factory (RECARO R2)",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].interior_generation"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "whole-file text search"
+          ],
+          "quote": "registry 0 / 0; RTF 0 / 0",
+          "found": true,
+          "measured": true,
+          "subject": "occurrences of \"Innovator\" / \"Meridian\" in registry JSON text and in RTF text"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations"
+          ],
+          "quote": "2 vs 3",
+          "found": true,
+          "measured": true,
+          "subject": "occurrences of \"Elevated\" vs \"Elevate\" (not followed by d) in registry configuration records"
+        }
+      ],
+      "claim_scope": "MaintenanceVariant and SeatHardware labels.",
+      "why_conflict_or_ambiguity": "The DOCX names seat products that never appear in the registry or the RTF, while the registry uses other labels. Within the registry the same interior is written two ways in different fields, and the 737-700 record is described as both \"Legacy\" hardware and a \"Retrofit\" generation while the DOCX associates the 137-seat layout with aircraft that are not upgraded. No source maps one naming scheme to the other.",
+      "impact_on_application": "Hardware-dependent appearance rules cannot be keyed reliably; synonyms might be merged wrongly.",
+      "decision_for_software": "Store every label verbatim with its source. No synonym merging. Any MaintenanceVariant / SeatHardware crosswalk is an explicit table with status \"assumed, unverified\". Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Authoritative seat model per layout (and per tail), with part numbers.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "DOCX seat product names \"Innovator\" and \"Meridian\" do not occur in the registry",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C15",
+      "title": "In-seat power claims are airframe-dependent alternatives copied to every seat",
+      "type": "ambiguity",
+      "claims": [
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/in_seat_power",
+            "southwest_737_lopa_configurations.csv:L2:Q(in_seat_power)"
+          ],
+          "quote": "None (legacy) / USB-C on select retrofits",
+          "json_value": "None (legacy) / USB-C on select retrofits",
+          "found": true,
+          "subject": "lopa_configurations[73G].in_seat_power"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/0/power_type",
+            "southwest_737_lopa_seats.csv:L2:Q(power_type)"
+          ],
+          "quote": "None / Select USB-C",
+          "json_value": "None / Select USB-C",
+          "found": true,
+          "subject": "lopa_seats[73G, 1A].power_type"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/in_seat_power",
+            "southwest_737_lopa_configurations.csv:L3:Q(in_seat_power)"
+          ],
+          "quote": "None (most airframes)",
+          "json_value": "None (most airframes)",
+          "found": true,
+          "subject": "lopa_configurations[738].in_seat_power"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/137/power_type",
+            "southwest_737_lopa_seats.csv:L139:Q(power_type)"
+          ],
+          "quote": "None (most airframes)",
+          "json_value": "None (most airframes)",
+          "found": true,
+          "subject": "lopa_seats[738, 1D].power_type"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/2/in_seat_power",
+            "southwest_737_lopa_configurations.csv:L4:Q(in_seat_power)"
+          ],
+          "quote": "None (early deliveries) / USB on newer frames",
+          "json_value": "None (early deliveries) / USB on newer frames",
+          "found": true,
+          "subject": "lopa_configurations[7M8-1].in_seat_power"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/312/power_type",
+            "southwest_737_lopa_seats.csv:L314:Q(power_type)"
+          ],
+          "quote": "None (early deliveries) / USB on newer frames",
+          "json_value": "None (early deliveries) / USB on newer frames",
+          "found": true,
+          "subject": "lopa_seats[7M8-1, 1D].power_type"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/3/in_seat_power",
+            "southwest_737_lopa_configurations.csv:L5:Q(in_seat_power)"
+          ],
+          "quote": "USB-A & USB-C at every seat",
+          "json_value": "USB-A & USB-C at every seat",
+          "found": true,
+          "subject": "lopa_configurations[738-2].in_seat_power"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/487/power_type",
+            "southwest_737_lopa_seats.csv:L489:Q(power_type)"
+          ],
+          "quote": "USB-A & USB-C",
+          "json_value": "USB-A & USB-C",
+          "found": true,
+          "subject": "lopa_seats[738-2, 1D].power_type"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/4/in_seat_power",
+            "southwest_737_lopa_configurations.csv:L6:Q(in_seat_power)"
+          ],
+          "quote": "USB-A & USB-C at every seat",
+          "json_value": "USB-A & USB-C at every seat",
+          "found": true,
+          "subject": "lopa_configurations[7M8-2].in_seat_power"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_seats.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/662/power_type",
+            "southwest_737_lopa_seats.csv:L664:Q(power_type)"
+          ],
+          "quote": "USB-A & USB-C",
+          "json_value": "USB-A & USB-C",
+          "found": true,
+          "subject": "lopa_seats[7M8-2, 1D].power_type"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P005"
+          ],
+          "quote": "adds in-seat power",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/*/power_type"
+          ],
+          "quote": "{\"738\":[\"None (most airframes)\"],\"73G\":[\"None / Select USB-C\"],\"7M8-1\":[\"None (early deliveries) / USB on newer frames\"],\"738-2\":[\"USB-A & USB-C\"],\"7M8-2\":[\"USB-A & USB-C\"]}",
+          "found": true,
+          "measured": true,
+          "subject": "distinct power_type values per lopa_id"
+        }
+      ],
+      "claim_scope": "SeatPhysicalAttributes.power at layout and seat level.",
+      "why_conflict_or_ambiguity": "Configuration-level and seat-level strings word the same claim differently, several state alternatives that depend on the individual airframe (\"select retrofits\", \"newer frames\", \"most airframes\"), and each configuration repeats one string on all of its seats. The DOCX ties in-seat power to the upgraded layout that has no registry record.",
+      "impact_on_application": "Whether a given seat on a given aircraft has power cannot be stated.",
+      "decision_for_software": "Keep both strings verbatim at their own level. Power is shown as \"source claim, airframe-dependent\"; it is never asserted for a specific aircraft without tail-level evidence. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Per-tail modification status.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "each configuration uses exactly one power_type string for all of its seats",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C16",
+      "title": "Compound enumeration values and unverified regulatory attributions",
+      "type": "ambiguity",
+      "claims": [
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/*/recline_status"
+          ],
+          "quote": "{\"Standard\":125,\"N/A\":4,\"None\":7,\"None/Limited\":5,\"None/Restricted\":6}",
+          "found": true,
+          "measured": true,
+          "subject": "distinct recline_status values (rows)"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_seats/*/window_status"
+          ],
+          "quote": "{\"Standard\":221,\"N/A\":564,\"Misaligned/Set-Back\":38,\"Limited/Missing\":2,\"Missing\":4,\"Limited/Obstructed\":8}",
+          "found": true,
+          "measured": true,
+          "subject": "distinct window_status values (seats)"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "cabin schema architecture.csv:L4:Grain & Purpose"
+          ],
+          "quote": "window_status (Standard/Missing/Limited/Obstructed/Misaligned/Set-Back/N/A)",
+          "found": true,
+          "measured": true,
+          "subject": "schema CSV wording for window_status"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P041"
+          ],
+          "quote": "Limited or zero recline against the twin aft lavatory bulkheads.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P040"
+          ],
+          "quote": "Zero / severely restricted recline (center overwing exit row).",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/41/recline_status",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!H43"
+          ],
+          "quote": "None/Restricted",
+          "json_value": "None/Restricted",
+          "xlsx_raw": "None/Restricted",
+          "found": true,
+          "subject": "lopa_rows[738, row 15].recline_status"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P016"
+          ],
+          "quote": "Locked / zero recline per FAA regulations",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/13/recline_restriction_reason",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!I15"
+          ],
+          "quote": "FAA regulation: immediately forward of overwing exit Row 15",
+          "json_value": "FAA regulation: immediately forward of overwing exit Row 15",
+          "xlsx_raw": "FAA regulation: immediately forward of overwing exit Row 15",
+          "found": true,
+          "subject": "lopa_rows[73G, row 14].recline_restriction_reason"
+        },
+        {
+          "source_file": "Southwest Cabin Configuration Standard.rtf",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf#P013"
+          ],
+          "quote": "Flagged in Southwest's official seat-selection disclosure",
+          "found": true,
+          "occurrences": 1
+        }
+      ],
+      "claim_scope": "recline_status, window_status and their reason/notes fields.",
+      "why_conflict_or_ambiguity": "Values such as \"None/Limited\", \"None/Restricted\", \"Limited/Missing\" and \"Misaligned/Set-Back\" state alternatives rather than one condition. The schema summary lists window statuses as one slash-separated string that can be read as separate values, while the data uses compound values. Reasons citing regulation or an \"official disclosure\" are attributions with no reference supplied.",
+      "impact_on_application": "Filtering or rule logic on these values would need an interpretation the sources do not give.",
+      "decision_for_software": "Store the enumeration strings exactly as supplied (no splitting, no mapping to a stricter enum). Show reason text as \"source note\". No rule is derived from a regulatory attribution. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Definitions of each status; the cited disclosure or regulatory basis.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "at least one status value contains a \"/\" alternative",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C17",
+      "title": "Workbook stores one identifier as a number and blanks as absent cells",
+      "type": "representation difference",
+      "claims": [
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!A29 … southwest_737_lopa_rows!A58"
+          ],
+          "quote": "30",
+          "found": true,
+          "measured": true,
+          "subject": "lopa_id cells stored as numbers in the workbook"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!A29"
+          ],
+          "quote": "738 / number",
+          "found": true,
+          "measured": true,
+          "subject": "first such cell: raw value / type"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/1/lopa_id",
+            "southwest_737_lopa_configurations.csv:L3:A(lopa_id)"
+          ],
+          "quote": "738",
+          "json_value": "738",
+          "found": true,
+          "subject": "lopa_configurations[738].lopa_id"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/extracts/workbook.json#/normalization"
+          ],
+          "quote": "377",
+          "found": true,
+          "measured": true,
+          "subject": "cells absent from the sheet XML where the JSON holds an empty string"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest_737_lopa_rows.xlsx#docProps/app.xml, xl/workbook.xml"
+          ],
+          "quote": "Microsoft Macintosh Excel / /Users/joe/Downloads/",
+          "found": true,
+          "measured": true,
+          "subject": "workbook application / recorded authoring path"
+        }
+      ],
+      "claim_scope": "southwest_737_lopa_rows.xlsx only.",
+      "why_conflict_or_ambiguity": "Pure representation: the spreadsheet typed the all-digit identifier as a number and omits empty cells. After two explicit conversions every value agrees with the JSON (see cross-format comparison).",
+      "impact_on_application": "A naive import would produce a numeric key that fails to join to the string key in the other files, and nulls instead of empty strings.",
+      "decision_for_software": "Import treats lopa_id as a string and records the numeric-to-string conversion per cell; absent cells become \"\" with the conversion recorded. No other coercion is applied anywhere. Resolved as a representation rule (the underlying claims stay unverified).",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "None for the representation; the claims themselves still need independent verification.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "conversions leave zero mismatches against the JSON",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C18",
+      "title": "Two byte-identical JSON-named files are invalid templates, one named almost like the populated registry",
+      "type": "representation difference (artifact role)",
+      "claims": [
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest 737 lopa normalized.json (whole file)"
+          ],
+          "quote": "548 / 881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d / false",
+          "found": true,
+          "measured": true,
+          "subject": "southwest 737 lopa normalized.json: size / sha256 / parses"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "gemini-code-1794587815855.json (whole file)"
+          ],
+          "quote": "548 / 881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d / false",
+          "found": true,
+          "measured": true,
+          "subject": "gemini-code-1794587815855.json: size / sha256 / parses"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/extracts/json-compare.json#/pairwise"
+          ],
+          "quote": "true",
+          "found": true,
+          "measured": true,
+          "subject": "byte-identical"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest 737 lopa normalized.json@byte 492"
+          ],
+          "quote": "492, 12:28, \".\"",
+          "found": true,
+          "measured": true,
+          "subject": "first syntax error (offset, line:column, found)"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "southwest 737 lopa normalized.json@bytes 490, 514, 539"
+          ],
+          "quote": "3",
+          "found": true,
+          "measured": true,
+          "subject": "literal \"[ ... ]\" placeholders"
+        }
+      ],
+      "claim_scope": "SourceArtifact roles for the three JSON-named files.",
+      "why_conflict_or_ambiguity": "The space-named file and the generated-code file are the same bytes: an envelope with a metadata header and elided arrays. It is not valid JSON and holds no records. Its name differs from the populated registry only by spaces vs underscores, so file-name based selection is unsafe.",
+      "impact_on_application": "Importing by name could pick the template; \"repairing\" it would invent content.",
+      "decision_for_software": "Both are inventoried as invalid template artifacts, excluded from import and never repaired. The populated registry is recognised by content (valid JSON with populated arrays and its SHA-256), not by file name.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "None.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "both files are 548 bytes",
+            "pass": true
+          },
+          {
+            "description": "byte-identical",
+            "pass": true
+          },
+          {
+            "description": "neither parses as JSON",
+            "pass": true
+          },
+          {
+            "description": "contains the literal \"[ ... ]\"",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "The 548-byte space-named JSON and gemini JSON are byte-identical invalid templates containing literal \"[ ... ]\".",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C19",
+      "title": "DOCX wording of the extra pitch (\"up to five\" / \"approximately three\" vs \"five\" / \"three\")",
+      "type": "ambiguity (minor, internal to one document)",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T02.R02.C03"
+          ],
+          "quote": "737-700: 35-36-inch pitch, up to five inches more than standard. 737-800/MAX 8: 34-inch pitch, approximately three inches more than standard",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P010"
+          ],
+          "quote": "five inches on the 737-700 and three inches on the 737-800/MAX 8",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R02.C04",
+            "Current Aircraft Seat Configurations.docx#T01.R03.C04"
+          ],
+          "quote": "35-36 in.",
+          "found": true,
+          "occurrences": 2
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R02.C05",
+            "Current Aircraft Seat Configurations.docx#T01.R03.C05"
+          ],
+          "quote": "31-33 in.",
+          "found": true,
+          "occurrences": 2
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C05",
+            "Current Aircraft Seat Configurations.docx#T01.R05.C05"
+          ],
+          "quote": "31-32 in.",
+          "found": true,
+          "occurrences": 2
+        }
+      ],
+      "claim_scope": "Any derived \"extra legroom inches\" figure.",
+      "why_conflict_or_ambiguity": "The table qualifies the extra pitch (\"up to\", \"approximately\"); the following paragraph states it without qualifiers. With the document's own ranges the difference is a span, not one number.",
+      "impact_on_application": "A single \"extra inches\" figure would overstate precision.",
+      "decision_for_software": "No derived \"extra inches\" attribute is created. Both sentences are kept as raw claims.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "None beyond the pitch evidence in C03.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "both wordings are present",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C20",
+      "title": "Cited sources cannot be verified from the supplied files",
+      "type": "assumption",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P003"
+          ],
+          "quote": "The measurements above are Southwest’s published ranges.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P021"
+          ],
+          "quote": "Recent Tech Ops communication identifies a planned",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/extracts/docx-hyperlinks.json, evidence/extracts/hyperlinks-check.json"
+          ],
+          "quote": "13 / 9 / 5 / 4",
+          "found": true,
+          "measured": true,
+          "subject": "DOCX hyperlinks: total / distinct targets / private (not accessed) / public requested"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/extracts/hyperlinks-check.json#/summary/status_codes"
+          ],
+          "quote": "200, 200, 200, 200",
+          "found": true,
+          "measured": true,
+          "subject": "public link reachability (final HTTP status per URL)"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#docMetadata/LabelInfo.xml"
+          ],
+          "quote": "1",
+          "found": true,
+          "measured": true,
+          "subject": "DOCX sensitivity-label references"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "Southwest Cabin Configuration Standard.rtf"
+          ],
+          "quote": "0",
+          "found": true,
+          "measured": true,
+          "subject": "RTF hyperlinks"
+        }
+      ],
+      "claim_scope": "Every DOCX statement that rests on a cited page or message; all RTF statements (which cite nothing).",
+      "why_conflict_or_ambiguity": "The DOCX attributes its figures to published ranges and to intranet pages and a mail item. The private targets were deliberately not accessed, and a status code from a public page says nothing about what the page states or whether it is current. The RTF contains no citations at all.",
+      "impact_on_application": "No narrative claim can be treated as verified.",
+      "decision_for_software": "Store each hyperlink as a cited reference with its access class and reachability note. No claim is promoted to \"verified\" on the strength of a link. All narrative claims remain \"unverified source claim\".",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "Copies of the cited pages/messages supplied through an approved channel, or the underlying controlled documents.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "no private host was requested",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C21",
+      "title": "Reference images: third-party metadata, another airline named, no link to any layout",
+      "type": "ambiguity (provenance) + gap (not supplied)",
+      "claims": [
+        {
+          "source_file": "forward galley flight deck.jpg",
+          "locators": [
+            "forward galley flight deck.jpg#IPTC:2:25 Keywords"
+          ],
+          "quote": "American Airlines",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "forward galley flight deck.jpg",
+          "locators": [
+            "forward galley flight deck.jpg#XMP:dc:subject"
+          ],
+          "quote": "American Airlines",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "forward galley flight deck.jpg",
+          "locators": [
+            "forward galley flight deck.jpg#IPTC:2:5 ObjectName"
+          ],
+          "quote": "AA LAX Thursday",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "forward galley flight deck.jpg",
+          "locators": [
+            "forward galley flight deck.jpg#IPTC:2:116 CopyrightNotice"
+          ],
+          "quote": "Brandon Wade",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "forward galley flight deck.jpg",
+          "locators": [
+            "forward galley flight deck.jpg#IPTC:2:120 Caption-Abstract"
+          ],
+          "quote": "at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "forward galley flight deck.jpg",
+          "locators": [
+            "forward galley flight deck.jpg#EXIF.IFD0:DateTime"
+          ],
+          "quote": "2015:09:17 14:43:06",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "forward galley flight deck.jpg",
+          "locators": [
+            "forward galley flight deck.jpg#EXIF.IFD0:Copyright"
+          ],
+          "quote": "Brandon Wade",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png",
+          "locators": [
+            "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png#EXIF.Exif:UserComment"
+          ],
+          "quote": "Screenshot",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png#IHDR / XMP"
+          ],
+          "quote": "970x521 vs 1920x1200",
+          "found": true,
+          "measured": true,
+          "subject": "PNG: encoded size vs size declared in its XMP"
+        },
+        {
+          "source_file": "carpet.jpg",
+          "locators": [
+            "carpet.jpg#EXIF.IFD0:Make"
+          ],
+          "quote": "Google",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "carpet.jpg",
+          "locators": [
+            "carpet.jpg#EXIF.IFD0:Model"
+          ],
+          "quote": "Pixel 6a",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "carpet.jpg",
+          "locators": [
+            "carpet.jpg#EXIF.IFD0:DateTime"
+          ],
+          "quote": "2024:09:26 15:37:12",
+          "found": true,
+          "subject": "embedded image metadata"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "carpet.jpg#EXIF.GPS"
+          ],
+          "quote": "true",
+          "found": true,
+          "measured": true,
+          "subject": "carpet.jpg GPS data present in EXIF"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/inventory.json"
+          ],
+          "quote": "9 of 14",
+          "found": true,
+          "measured": true,
+          "subject": "images with no descriptive text metadata at all (ICC profile text excluded)"
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "evidence/inventory.json"
+          ],
+          "quote": "0",
+          "found": true,
+          "measured": true,
+          "subject": "images whose metadata mentions a layout id, LOPA, row or seat"
+        }
+      ],
+      "claim_scope": "All supplied images as possible MaterialProfile / visual references.",
+      "why_conflict_or_ambiguity": "The forward-galley photograph's embedded keywords name another airline, its capture date is 2015:08:27 15:57:30, and it carries a photographer credit and copyright; one image declares itself a screenshot whose stated source size differs from the file; 9 of 14 images carry no descriptive metadata. File names are the only hint of subject, and no image is tied to a layout, tail, row, seat or material specification.",
+      "impact_on_application": "Using an image as the expected appearance for a Southwest layout would be unsupported; licence terms are unknown.",
+      "decision_for_software": "Images are stored as unverified reference media with their extracted metadata. None is bound to a Layout, tail or MaterialProfile. The forward-galley image is flagged \"metadata names another airline\" and is not offered as a Southwest visual reference unless a user links it explicitly with a recorded reason. Credit/copyright metadata is preserved and shown; use is limited to the local demo. Unresolved.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "A catalogued, licensed image set with layout/tail/date for each image.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "forward-galley photo metadata contains an airline name other than Southwest",
+            "pass": true
+          },
+          {
+            "description": "forward-galley photo metadata does not mention Southwest",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": {
+        "expectation": "One forward-galley photo is expected to carry another airline's name in its metadata.",
+        "status": "CONFIRMED"
+      }
+    },
+    {
+      "id": "C22",
+      "title": "Crosswalk assumption: DOCX categories ↔ registry records",
+      "type": "assumption",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R05.C03"
+          ],
+          "quote": "Single cabin, 3-3 seating; three seats on both sides of the exit row and two seats on both sides of the last row",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/101/active_seat_count",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!D103"
+          ],
+          "quote": "6",
+          "json_value": 6,
+          "xlsx_raw": 6,
+          "found": true,
+          "subject": "lopa_rows[738-2, row 15].active_seat_count"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/116/active_seat_count",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!D118"
+          ],
+          "quote": "4",
+          "json_value": 4,
+          "xlsx_raw": 4,
+          "found": true,
+          "subject": "lopa_rows[738-2, row 30].active_seat_count"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/116/omitted_seat_letters",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!E118"
+          ],
+          "quote": "A,F",
+          "json_value": "A,F",
+          "xlsx_raw": "A,F",
+          "found": true,
+          "subject": "lopa_rows[738-2, row 30].omitted_seat_letters"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R04.C03"
+          ],
+          "quote": "Single cabin, 3-3 seating; reduced seating at part of the exit-row and rear-row areas",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/41/active_seat_count",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!D43"
+          ],
+          "quote": "4",
+          "json_value": 4,
+          "xlsx_raw": 4,
+          "found": true,
+          "subject": "lopa_rows[738, row 15].active_seat_count"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_rows.xlsx",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_rows/56/active_seat_count",
+            "southwest_737_lopa_rows.xlsx#southwest_737_lopa_rows!D58"
+          ],
+          "quote": "6",
+          "json_value": 6,
+          "xlsx_raw": 6,
+          "found": true,
+          "subject": "lopa_rows[738, row 30].active_seat_count"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#T01.R02.C01"
+          ],
+          "quote": "737-700, 137-seat LOPA",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/total_seats",
+            "southwest_737_lopa_configurations.csv:L2:I(total_seats)"
+          ],
+          "quote": "137",
+          "json_value": 137,
+          "found": true,
+          "subject": "lopa_configurations[73G].total_seats"
+        },
+        {
+          "source_file": "southwest_737_lopa_normalized.json + southwest_737_lopa_configurations.csv",
+          "locators": [
+            "southwest_737_lopa_normalized.json#/lopa_configurations/0/interior_generation",
+            "southwest_737_lopa_configurations.csv:L2:F(interior_generation)"
+          ],
+          "quote": "2026 Cabin Retrofit",
+          "json_value": "2026 Cabin Retrofit",
+          "found": true,
+          "subject": "lopa_configurations[73G].interior_generation"
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P007"
+          ],
+          "quote": "New deliveries use the RECARO interior; selected -800s and -700s are also being converted as part of the standardization program.",
+          "found": true,
+          "occurrences": 1
+        }
+      ],
+      "claim_scope": "The link between DOCX categories (137-seat, 138-seat, temporary, final) and registry lopa_ids.",
+      "why_conflict_or_ambiguity": "No source states the mapping. The working assumption is: \"final\" ≈ 738-2 + 7M8-2 (exit row and last-row seat counts match the DOCX sentence), \"temporary\" ≈ 738 + 7M8-1 (exit row matches, rear row does not — C08), \"137-seat\" ≈ 73G (capacity matches; exit-area description and upgrade status do not obviously match — C11, C14), \"138-seat\" ≈ no record (C01).",
+      "impact_on_application": "Every DOCX claim attached to a registry record through this mapping inherits the assumption.",
+      "decision_for_software": "The mapping is stored as an explicit crosswalk table with status \"assumed, unverified\" and the reasons for and against each row. DOCX claims are stored against the DOCX category first and only shown on a registry record through the crosswalk, labelled as such. It can be changed without touching either source's claims.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "An authoritative statement of which model/interior records make up each layout category.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "registry Elevate rows 15 and 30 have six and four seats",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    },
+    {
+      "id": "C23",
+      "title": "A planned aircraft type is mentioned as not current",
+      "type": "assumption (scope)",
+      "claims": [
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P021"
+          ],
+          "quote": "The 737 MAX 7 is not yet a current revenue configuration.",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P021"
+          ],
+          "quote": "150-passenger",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "Current Aircraft Seat Configurations.docx",
+          "locators": [
+            "Current Aircraft Seat Configurations.docx#P021"
+          ],
+          "quote": "dates subject to change",
+          "found": true,
+          "occurrences": 1
+        },
+        {
+          "source_file": "(measured by tools/evidence)",
+          "locators": [
+            "whole-file text search"
+          ],
+          "quote": "0 / 0",
+          "found": true,
+          "measured": true,
+          "subject": "occurrences of \"MAX 7\" / \"MAX-7\" in registry JSON text and RTF text"
+        }
+      ],
+      "claim_scope": "Scope of layouts the application offers.",
+      "why_conflict_or_ambiguity": "The DOCX itself places this type outside the current configurations and gives only a planned capacity; no registry record or seat data exists.",
+      "impact_on_application": "None if kept out of scope; a made-up layout would be invention.",
+      "decision_for_software": "No Layout is created. The paragraph is retained as an out-of-scope source note.",
+      "decision_is_non_destructive": true,
+      "evidence_still_needed": "A released layout, if and when the type enters service.",
+      "verification": {
+        "all_quotes_located_verbatim": true,
+        "checks": [
+          {
+            "description": "the registry does not mention the type",
+            "pass": true
+          }
+        ],
+        "all_checks_pass": true
+      },
+      "brief_expected_finding": null
+    }
+  ]
+}

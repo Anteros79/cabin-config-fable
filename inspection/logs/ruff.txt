@@ -1,0 +1,754 @@
+# Baseline ruff run (copy only). 2026-11-14T20:27:58-0600
+# cwd: inspection/baseline-copy
+$ uv run --frozen ruff --version
+ruff 0.17.4
+$ uv run --frozen ruff check --config pyproject.toml app tests
+All checks passed!
+exit=0
+
+$ uv run --frozen ruff check --config pyproject.toml --statistics app tests
+exit=0
+
+# Supplementary (not part of the baseline's documented check): line-length rule explicitly selected
+$ uv run --frozen ruff check --config pyproject.toml --select E501 --statistics app tests
+52	E501	line-too-long
+Found 52 errors.
+exit=1
+
+$ uv run --frozen ruff format --check --config pyproject.toml app tests
+unformatted: File would be reformatted
+   --> app/lookup.py:2:1
+    |
+1   | """Date-aware rules; no guessing on missing or ambiguous applicability."""
+2   +
+3   | from datetime import date
+--------------------------------------------------------------------------------
+26  |     if len(configs) != 1:
+    -         return failure("AMBIGUOUS_CONFIG", "Overlapping configurations; engineering review is required.")
+27  +         return failure(
+28  +             "AMBIGUOUS_CONFIG", "Overlapping configurations; engineering review is required."
+29  +         )
+30  |     config = configs[0]
+31  |     variants = {v["id"]: v for v in db.variants()}
+32  |     variant = variants.get(config["variant_id"])
+33  |     if not variant or not variant["released"]:
+    -         return failure("NO_CONFIG", "This variant is planned; no released configuration is available.")
+34  +         return failure(
+35  +             "NO_CONFIG", "This variant is planned; no released configuration is available."
+36  +         )
+37  |     source = db.document(config["doc_id"])
+--------------------------------------------------------------------------------
+41  |         return failure("INVALID_CONFIG", "Aircraft and variant sub-fleets disagree.")
+    -     attrs = {**variant, **aircraft, "variant_id": variant["id"], "carpet": config["carpet"],
+    -              "seam": config["seam"], "cabin_height": config["cabin_height"] or variant["cabin_height"]}
+42  +     attrs = {
+43  +         **variant,
+44  +         **aircraft,
+45  +         "variant_id": variant["id"],
+46  +         "carpet": config["carpet"],
+47  +         "seam": config["seam"],
+48  +         "cabin_height": config["cabin_height"] or variant["cabin_height"],
+49  +     }
+50  |     result["configuration"] = {**config, "variant": variant, "attributes": attrs, "source": source}
+--------------------------------------------------------------------------------
+56  |         selectors = rule["selectors"]
+    -         if not selectors or not all(v is not None and attrs.get(k) == v for k, v in selectors.items()):
+57  +         if not selectors or not all(
+58  +             v is not None and attrs.get(k) == v for k, v in selectors.items()
+59  +         ):
+60  |             continue
+--------------------------------------------------------------------------------
+66  |             v = variants[selectors["variant_id"]]
+    -             implied = {k: v[k] for k in ("subfleet", "seat_mfr", "elr", "layout", "power", "cabin_height") if v[k] is not None}
+67  +             implied = {
+68  +                 k: v[k]
+69  +                 for k in ("subfleet", "seat_mfr", "elr", "layout", "power", "cabin_height")
+70  +                 if v[k] is not None
+71  +             }
+72  |             if config["cabin_height"] and config["cabin_height"] != v["cabin_height"]:
+--------------------------------------------------------------------------------
+76  |         matched = [r for r in candidates if r["position_id"] == position["id"]]
+    -         best = [r for r in matched if not any(set(r["constraints"].items()) < set(o["constraints"].items()) for o in matched)]
+77  +         best = [
+78  +             r
+79  +             for r in matched
+80  +             if not any(
+81  +                 set(r["constraints"].items()) < set(o["constraints"].items()) for o in matched
+82  +             )
+83  +         ]
+84  |         if len(best) != 1:
+    -             result["issues"].append({"position": position, "code": "AMBIGUOUS_RULE" if best else "NO_MATCH",
+    -                 "message": "Conflicting rules; no part selected." if best else "No effective approved rule matches this position.",
+    -                 "sources": [r["source"] for r in best]})
+85  +             result["issues"].append(
+86  +                 {
+87  +                     "position": position,
+88  +                     "code": "AMBIGUOUS_RULE" if best else "NO_MATCH",
+89  +                     "message": "Conflicting rules; no part selected."
+90  +                     if best
+91  +                     else "No effective approved rule matches this position.",
+92  +                     "sources": [r["source"] for r in best],
+93  +                 }
+94  +             )
+95  |             continue
+--------------------------------------------------------------------------------
+101 |                 substitutes.append({**sub, "source": doc})
+    -         result["lines"].append({k: v for k, v in rule.items() if k != "constraints"} | {"position": position, "substitutes": substitutes})
+102 +         result["lines"].append(
+103 +             {k: v for k, v in rule.items() if k != "constraints"}
+104 +             | {"position": position, "substitutes": substitutes}
+105 +         )
+106 |     result["status"] = ("PARTIAL" if result["lines"] else "NO_RULES") if result["issues"] else "OK"
+    -     result["message"] = {"OK": "Matching parts found for the configured demo positions.", "PARTIAL": "Some positions could not be resolved; review the gaps.", "NO_RULES": "No applicable parts were resolved."}[result["status"]]
+107 +     result["message"] = {
+108 +         "OK": "Matching parts found for the configured demo positions.",
+109 +         "PARTIAL": "Some positions could not be resolved; review the gaps.",
+110 +         "NO_RULES": "No applicable parts were resolved.",
+111 +     }[result["status"]]
+112 |     return result
+    |
+
+unformatted: File would be reformatted
+  --> app/main.py:34:24
+   |
+33 |     repo = SQLiteRepository(reference_path or Path(os.getenv("CABIN_DB_PATH", str(DEFAULT_DB))))
+   -     store = VisitStore(visits_path or Path(os.getenv("CABIN_VISITS_DB_PATH", str(ROOT / "data/visits.sqlite3"))))
+34 +     store = VisitStore(
+35 +         visits_path or Path(os.getenv("CABIN_VISITS_DB_PATH", str(ROOT / "data/visits.sqlite3")))
+36 +     )
+37 |
+--------------------------------------------------------------------------------
+50 |     async def db_error(request: Request, exc: sqlite3.Error):
+   -         return JSONResponse(status_code=503, content={"detail": "Database unavailable. Check local setup and seed the reference dataset."})
+51 +         return JSONResponse(
+52 +             status_code=503,
+53 +             content={
+54 +                 "detail": "Database unavailable. Check local setup and seed the reference dataset."
+55 +             },
+56 +         )
+57 |
+58 |     @app.middleware("http")
+59 |     async def local_write_protection(request: Request, call_next):
+60 |         origin = request.headers.get("origin")
+   -         if (request.method in ("POST", "PUT", "DELETE") and origin and origin != str(request.base_url).rstrip("/")):
+   -             return JSONResponse(status_code=403, content={"detail": "Cross-origin writes are not allowed."})
+61 +         if (
+62 +             request.method in ("POST", "PUT", "DELETE")
+63 +             and origin
+64 +             and origin != str(request.base_url).rstrip("/")
+65 +         ):
+66 +             return JSONResponse(
+67 +                 status_code=403, content={"detail": "Cross-origin writes are not allowed."}
+68 +             )
+69 |         response = await call_next(request)
+   |
+
+unformatted: File would be reformatted
+  --> app/repository.py:2:1
+   |
+1  | """Replaceable read-only adapter for a future approved configuration feed."""
+2  +
+3  | import json
+--------------------------------------------------------------------------------
+45 |     def configurations(self, tail, day):
+   -         return self._query("SELECT * FROM tail_config WHERE tail=? AND eff_from<=? AND (eff_to IS NULL OR eff_to>=?)", (tail, day, day))
+46 +         return self._query(
+47 +             "SELECT * FROM tail_config WHERE tail=? AND eff_from<=? AND (eff_to IS NULL OR eff_to>=?)",
+48 +             (tail, day, day),
+49 +         )
+50 |
+--------------------------------------------------------------------------------
+57 |     def positions(self, variant_id):
+   -         return self._query("SELECT p.* FROM position p JOIN variant_position v ON v.position_id=p.id WHERE v.variant_id=? ORDER BY p.id", (variant_id,))
+58 +         return self._query(
+59 +             "SELECT p.* FROM position p JOIN variant_position v ON v.position_id=p.id WHERE v.variant_id=? ORDER BY p.id",
+60 +             (variant_id,),
+61 +         )
+62 |
+--------------------------------------------------------------------------------
+75 |         for r in rows:
+   -             r["with_panels"] = self._query("SELECT part_no,qty FROM substitute_panel WHERE substitute_id=? ORDER BY part_no", (r["id"],))
+76 +             r["with_panels"] = self._query(
+77 +                 "SELECT part_no,qty FROM substitute_panel WHERE substitute_id=? ORDER BY part_no",
+78 +                 (r["id"],),
+79 +             )
+80 |         return rows
+   |
+
+unformatted: File would be reformatted
+   --> app/seed.py:2:1
+    |
+1   | """Deterministic fictional reference data. Rebuild: python -m app.seed --reset."""
+2   +
+3   | import argparse
+--------------------------------------------------------------------------------
+27  |             count = sum((x in "ABC") == (side == "L") for x in letters)
+    -             seats.append({"id": f"{row}{letter}", "row": row, "letter": letter,
+    -                 "side": side, "seat_pos": letter, "exit_row": exit_row,
+    -                 "seat_group": {2: "DOUBLE", 3: "TRIPLE"}[count],
+    -                 "zone": "EXIT" if exit_row else "ELR" if row <= 5 else "STD"})
+28  +             seats.append(
+29  +                 {
+30  +                     "id": f"{row}{letter}",
+31  +                     "row": row,
+32  +                     "letter": letter,
+33  +                     "side": side,
+34  +                     "seat_pos": letter,
+35  +                     "exit_row": exit_row,
+36  +                     "seat_group": {2: "DOUBLE", 3: "TRIPLE"}[count],
+37  +                     "zone": "EXIT" if exit_row else "ELR" if row <= 5 else "STD",
+38  +                 }
+39  +             )
+40  |     return seats
+--------------------------------------------------------------------------------
+49  |         with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+    -             if db.execute("SELECT value FROM metadata WHERE key='dataset'").fetchone() != ("fictional-cabin-kit",):
+50  +             if db.execute("SELECT value FROM metadata WHERE key='dataset'").fetchone() != (
+51  +                 "fictional-cabin-kit",
+52  +             ):
+53  |                 raise ValueError("Refusing to overwrite a database not owned by this seeder.")
+--------------------------------------------------------------------------------
+61  |             def insert(table, **row):
+    -                 db.execute(f"INSERT INTO {table} ({','.join(row)}) VALUES ({','.join('?' for _ in row)})", tuple(row.values()))
+62  +                 db.execute(
+63  +                     f"INSERT INTO {table} ({','.join(row)}) VALUES ({','.join('?' for _ in row)})",
+64  +                     tuple(row.values()),
+65  +                 )
+66  |
+--------------------------------------------------------------------------------
+73  |             ]:
+    -                 insert("source_doc", id=id_, type=kind, rev=rev, title=title,
+    -                        owner="Demo engineering desk", eff_from="2020-01-01", expires=expires)
+74  +                 insert(
+75  +                     "source_doc",
+76  +                     id=id_,
+77  +                     type=kind,
+78  +                     rev=rev,
+79  +                     title=title,
+80  +                     owner="Demo engineering desk",
+81  +                     eff_from="2020-01-01",
+82  +                     expires=expires,
+83  +                 )
+84  |             specs = [
+--------------------------------------------------------------------------------
+93  |                 ("700", "Innovator", "Standard", "137 seats", 0, "n/a", "Exiting fleet"),
+    -                 ("700", "Meridian / Recaro-look covers", "Standard", "138 seats", 1, "n/a", "Retrofit in progress"),
+94  +                 (
+95  +                     "700",
+96  +                     "Meridian / Recaro-look covers",
+97  +                     "Standard",
+98  +                     "138 seats",
+99  +                     1,
+100 +                     "n/a",
+101 +                     "Retrofit in progress",
+102 +                 ),
+103 |                 ("MAX7", None, None, None, None, None, "Planned"),
+104 |             ]
+105 |             for n, (fleet, maker, elr, layout, power, height, status) in enumerate(specs, 1):
+106 |                 variant = f"V{n:02}"
+    -                 insert("variant", id=variant, name=f"{fleet} / {maker or 'TBD'}", subfleet=fleet,
+    -                        seat_mfr=maker, elr=elr, layout=layout, power=power, cabin_height=height,
+    -                        status=status, released=n != 11, seats=json.dumps(demo_seats(n)))
+107 +                 insert(
+108 +                     "variant",
+109 +                     id=variant,
+110 +                     name=f"{fleet} / {maker or 'TBD'}",
+111 +                     subfleet=fleet,
+112 +                     seat_mfr=maker,
+113 +                     elr=elr,
+114 +                     layout=layout,
+115 +                     power=power,
+116 +                     cabin_height=height,
+117 +                     status=status,
+118 +                     released=n != 11,
+119 +                     seats=json.dumps(demo_seats(n)),
+120 +                 )
+121 |                 tail = "N101TL" if n == 10 else f"N{n:02}0TL"
+122 |                 insert("aircraft", tail=tail, subfleet=fleet, etops=n == 2)
+    -                 insert("tail_config", tail=tail, variant_id=variant,
+    -                        carpet="BOTANY" if n in (4, 5, 6) else "MOHAWK",
+    -                        seam="POST" if n in (4, 6, 10) else "PRE",
+    -                        cabin_height="Half" if n == 7 else None, eff_from="2024-01-01",
+    -                        eff_to=None, doc_id="DOC-CONFIG")
+    -             for tail, fleet in [("N100TL", "MAX8"), ("N200TL", "800"), ("N300TL", "700"), ("N000TL", "800")]:
+123 +                 insert(
+124 +                     "tail_config",
+125 +                     tail=tail,
+126 +                     variant_id=variant,
+127 +                     carpet="BOTANY" if n in (4, 5, 6) else "MOHAWK",
+128 +                     seam="POST" if n in (4, 6, 10) else "PRE",
+129 +                     cabin_height="Half" if n == 7 else None,
+130 +                     eff_from="2024-01-01",
+131 +                     eff_to=None,
+132 +                     doc_id="DOC-CONFIG",
+133 +                 )
+134 +             for tail, fleet in [
+135 +                 ("N100TL", "MAX8"),
+136 +                 ("N200TL", "800"),
+137 +                 ("N300TL", "700"),
+138 +                 ("N000TL", "800"),
+139 +             ]:
+140 |                 insert("aircraft", tail=tail, subfleet=fleet, etops=False)
+--------------------------------------------------------------------------------
+146 |             ]:
+    -                 insert("tail_config", tail=tail, variant_id=variant, carpet=carpet, seam=seam,
+    -                        eff_from=start, eff_to=end, doc_id="DOC-CONFIG")
+147 +                 insert(
+148 +                     "tail_config",
+149 +                     tail=tail,
+150 +                     variant_id=variant,
+151 +                     carpet=carpet,
+152 +                     seam=seam,
+153 +                     eff_from=start,
+154 +                     eff_to=end,
+155 +                     doc_id="DOC-CONFIG",
+156 +                 )
+157 |             positions = []
+--------------------------------------------------------------------------------
+162 |                         positions.append(id_)
+    -                         insert("position", id=id_, label=f"{zone} · {letter} · {component.title()} cover",
+    -                                category="SEAT", zone=zone, component=component, row_from=1, row_to=30,
+    -                                side="L" if letter in "ABC" else "R", seat_pos=letter, exit_row=zone == "EXIT")
+163 +                         insert(
+164 +                             "position",
+165 +                             id=id_,
+166 +                             label=f"{zone} · {letter} · {component.title()} cover",
+167 +                             category="SEAT",
+168 +                             zone=zone,
+169 +                             component=component,
+170 +                             row_from=1,
+171 +                             row_to=30,
+172 +                             side="L" if letter in "ABC" else "R",
+173 +                             seat_pos=letter,
+174 +                             exit_row=zone == "EXIT",
+175 +                         )
+176 |             for id_, label, location, component in [
+--------------------------------------------------------------------------------
+180 |                 positions.append(id_)
+    -                 insert("position", id=id_, label=label, category="CARPET", zone="FLOOR",
+    -                        component=component, panel_loc=location)
+181 +                 insert(
+182 +                     "position",
+183 +                     id=id_,
+184 +                     label=label,
+185 +                     category="CARPET",
+186 +                     zone="FLOOR",
+187 +                     component=component,
+188 +                     panel_loc=location,
+189 +                 )
+190 |             for side in ("L", "R"):
+--------------------------------------------------------------------------------
+194 |                     positions.append(id_)
+    -                     insert("position", id=id_, label=f"Overhead bin {side}{module:02} door",
+    -                            category="BIN", zone="OVERHEAD", component="BIN_DOOR", side=side,
+    -                            row_from=(module-1)*3+1, row_to=module*3, panel_loc=location)
+195 +                     insert(
+196 +                         "position",
+197 +                         id=id_,
+198 +                         label=f"Overhead bin {side}{module:02} door",
+199 +                         category="BIN",
+200 +                         zone="OVERHEAD",
+201 +                         component="BIN_DOOR",
+202 +                         side=side,
+203 +                         row_from=(module - 1) * 3 + 1,
+204 +                         row_to=module * 3,
+205 +                         panel_loc=location,
+206 +                     )
+207 |             for n in range(1, 11):
+208 |                 for pos in positions:
+    -                     if "BIN" in pos and int(pos[-2:]) > (max(s['row'] for s in demo_seats(n))+2)//3:
+209 +                     if (
+210 +                         "BIN" in pos
+211 +                         and int(pos[-2:]) > (max(s["row"] for s in demo_seats(n)) + 2) // 3
+212 +                     ):
+213 |                         continue
+--------------------------------------------------------------------------------
+217 |                     if n == 1:
+    -                         part = {"P-ELR-A-CUSHION": "FAKE-SC-1001", "P-STD-A-CUSHION": "FAKE-SC-1002", "P-CARPET-KIT": "FAKE-CK-2001"}.get(pos, part)
+    -                     insert("part_rule", id=f"R-V{n:02}-{pos}", position_id=pos,
+    -                            selectors=json.dumps({"variant_id": f"V{n:02}"}), part_no=part,
+    -                            qty=1, unit="KIT" if pos == "P-CARPET-KIT" else "PANEL" if carpet else "EA",
+    -                            eff_from="2024-01-01", doc_id="DOC-B" if carpet else "DOC-A")
+    -             insert("part_rule", id="R4", position_id="P-CARPET-KIT",
+    -                    selectors=json.dumps({"variant_id": "V04", "carpet": "BOTANY", "seam": "POST"}),
+    -                    part_no="FAKE-CK-2002", qty=1, unit="KIT", eff_from="2026-07-01",
+    -                    pending_change=1, change_note="Fictional STA 521 revision pending.", doc_id="DOC-C")
+    -             insert("substitute", id="SUB-KIT-1", rule_id="R-V01-P-CARPET-KIT",
+    -                    alt_part_no="FAKE-CK-2000", qty=1, unit="KIT", eff_from="2025-07-22", doc_id="DOC-DEV")
+218 +                         part = {
+219 +                             "P-ELR-A-CUSHION": "FAKE-SC-1001",
+220 +                             "P-STD-A-CUSHION": "FAKE-SC-1002",
+221 +                             "P-CARPET-KIT": "FAKE-CK-2001",
+222 +                         }.get(pos, part)
+223 +                     insert(
+224 +                         "part_rule",
+225 +                         id=f"R-V{n:02}-{pos}",
+226 +                         position_id=pos,
+227 +                         selectors=json.dumps({"variant_id": f"V{n:02}"}),
+228 +                         part_no=part,
+229 +                         qty=1,
+230 +                         unit="KIT" if pos == "P-CARPET-KIT" else "PANEL" if carpet else "EA",
+231 +                         eff_from="2024-01-01",
+232 +                         doc_id="DOC-B" if carpet else "DOC-A",
+233 +                     )
+234 +             insert(
+235 +                 "part_rule",
+236 +                 id="R4",
+237 +                 position_id="P-CARPET-KIT",
+238 +                 selectors=json.dumps({"variant_id": "V04", "carpet": "BOTANY", "seam": "POST"}),
+239 +                 part_no="FAKE-CK-2002",
+240 +                 qty=1,
+241 +                 unit="KIT",
+242 +                 eff_from="2026-07-01",
+243 +                 pending_change=1,
+244 +                 change_note="Fictional STA 521 revision pending.",
+245 +                 doc_id="DOC-C",
+246 +             )
+247 +             insert(
+248 +                 "substitute",
+249 +                 id="SUB-KIT-1",
+250 +                 rule_id="R-V01-P-CARPET-KIT",
+251 +                 alt_part_no="FAKE-CK-2000",
+252 +                 qty=1,
+253 +                 unit="KIT",
+254 +                 eff_from="2025-07-22",
+255 +                 doc_id="DOC-DEV",
+256 +             )
+257 |             for panel, qty in [(39, 2), (40, 2), (41, 1), (42, 1)]:
+    -                 insert("substitute_panel", substitute_id="SUB-KIT-1", part_no=f"FAKE-P-{panel}", qty=qty)
+258 +                 insert(
+259 +                     "substitute_panel",
+260 +                     substitute_id="SUB-KIT-1",
+261 +                     part_no=f"FAKE-P-{panel}",
+262 +                     qty=qty,
+263 +                 )
+264 |         os.replace(temp, path)
+    |
+
+unformatted: File would be reformatted
+   --> app/visits.py:2:1
+    |
+1   | """Transactional appearance visits with immutable completed records."""
+2   +
+3   | import json
+--------------------------------------------------------------------------------
+20  | def applies(p, s):
+    -     return (p["category"] == "SEAT" and p["zone"] == s["zone"]
+    -         and p["row_from"] <= s["row"] <= p["row_to"] and p["side"] == s["side"]
+21  +     return (
+22  +         p["category"] == "SEAT"
+23  +         and p["zone"] == s["zone"]
+24  +         and p["row_from"] <= s["row"] <= p["row_to"]
+25  +         and p["side"] == s["side"]
+26  |         and p["seat_pos"] in (s["letter"], "ALL")
+27  |         and bool(p["exit_row"]) == bool(s["exit_row"])
+    -         and (not p["seat_group"] or p["seat_group"] == s["seat_group"]))
+28  +         and (not p["seat_group"] or p["seat_group"] == s["seat_group"])
+29  +     )
+30  |
+--------------------------------------------------------------------------------
+73  |         with self.connect() as db:
+    -             db.execute("INSERT INTO visits(id,tail,check_date,technician,created_at,snapshot) VALUES(?,?,?,?,?,?)",
+    -                        (id_, lookup["tail"], lookup["check_date"], technician.strip(), now(), json.dumps(lookup)))
+74  +             db.execute(
+75  +                 "INSERT INTO visits(id,tail,check_date,technician,created_at,snapshot) VALUES(?,?,?,?,?,?)",
+76  +                 (
+77  +                     id_,
+78  +                     lookup["tail"],
+79  +                     lookup["check_date"],
+80  +                     technician.strip(),
+81  +                     now(),
+82  +                     json.dumps(lookup),
+83  +                 ),
+84  +             )
+85  |         return self.get(id_)
+--------------------------------------------------------------------------------
+91  |             visit["snapshot"] = json.loads(visit["snapshot"])
+    -             visit["replacements"] = [json.loads(r["payload"]) | {"id": r["id"]} for r in db.execute("SELECT * FROM replacements WHERE visit_id=? ORDER BY rowid", (id_,))]
+92  +             visit["replacements"] = [
+93  +                 json.loads(r["payload"]) | {"id": r["id"]}
+94  +                 for r in db.execute(
+95  +                     "SELECT * FROM replacements WHERE visit_id=? ORDER BY rowid", (id_,)
+96  +                 )
+97  +             ]
+98  |         return visit
+99  |
+100 |     def list(self):
+101 |         with self.connect() as db:
+    -             return [dict(r) for r in db.execute("SELECT v.id,v.tail,v.check_date,v.technician,v.status,v.created_at,v.completed_at,(SELECT count(*) FROM replacements r WHERE r.visit_id=v.id) AS item_count FROM visits v ORDER BY created_at DESC LIMIT 100")]
+102 +             return [
+103 +                 dict(r)
+104 +                 for r in db.execute(
+105 +                     "SELECT v.id,v.tail,v.check_date,v.technician,v.status,v.created_at,v.completed_at,(SELECT count(*) FROM replacements r WHERE r.visit_id=v.id) AS item_count FROM visits v ORDER BY created_at DESC LIMIT 100"
+106 +                 )
+107 +             ]
+108 |
+--------------------------------------------------------------------------------
+120 |             if p["category"] == "SEAT":
+    -                 seat = next((s for s in snapshot["configuration"]["variant"]["seats"] if s["id"] == location), None)
+121 +                 seat = next(
+122 +                     (
+123 +                         s
+124 +                         for s in snapshot["configuration"]["variant"]["seats"]
+125 +                         if s["id"] == location
+126 +                     ),
+127 +                     None,
+128 +                 )
+129 |                 if not seat or not applies(p, seat):
+--------------------------------------------------------------------------------
+139 |                     raise VisitError("Substitute is not approved on this visit's check date.", 422)
+    -             parts = [{"part_no": chosen.get("alt_part_no", chosen.get("part_no")), "qty": chosen["qty"] * quantity, "unit": chosen["unit"]}]
+    -             parts.extend({"part_no": p["part_no"], "qty": p["qty"] * quantity, "unit": "PANEL"} for p in chosen.get("with_panels", []))
+    -             payload = {"location": location, "component": p["component"], "description": p["label"],
+    -                 "rule_id": rule_id, "substitute_id": substitute_id, "quantity": quantity,
+    -                 "parts": parts, "source": chosen["source"], "primary_source": line["source"],
+    -                 "pending_change": bool(line["pending_change"]), "change_note": line["change_note"],
+    -                 "note": note.strip(), "recorded_at": now()}
+    -             db.execute("INSERT INTO replacements VALUES(?,?,?,?,?) ON CONFLICT(visit_id,location,component) DO UPDATE SET payload=excluded.payload",
+    -                        (str(uuid4()), id_, location, p["component"], json.dumps(payload)))
+140 +             parts = [
+141 +                 {
+142 +                     "part_no": chosen.get("alt_part_no", chosen.get("part_no")),
+143 +                     "qty": chosen["qty"] * quantity,
+144 +                     "unit": chosen["unit"],
+145 +                 }
+146 +             ]
+147 +             parts.extend(
+148 +                 {"part_no": p["part_no"], "qty": p["qty"] * quantity, "unit": "PANEL"}
+149 +                 for p in chosen.get("with_panels", [])
+150 +             )
+151 +             payload = {
+152 +                 "location": location,
+153 +                 "component": p["component"],
+154 +                 "description": p["label"],
+155 +                 "rule_id": rule_id,
+156 +                 "substitute_id": substitute_id,
+157 +                 "quantity": quantity,
+158 +                 "parts": parts,
+159 +                 "source": chosen["source"],
+160 +                 "primary_source": line["source"],
+161 +                 "pending_change": bool(line["pending_change"]),
+162 +                 "change_note": line["change_note"],
+163 +                 "note": note.strip(),
+164 +                 "recorded_at": now(),
+165 +             }
+166 +             db.execute(
+167 +                 "INSERT INTO replacements VALUES(?,?,?,?,?) ON CONFLICT(visit_id,location,component) DO UPDATE SET payload=excluded.payload",
+168 +                 (str(uuid4()), id_, location, p["component"], json.dumps(payload)),
+169 +             )
+170 |         return self.get(id_)
+--------------------------------------------------------------------------------
+188 |                     raise VisitError("Record at least one replacement before completing the visit.")
+    -                 db.execute("UPDATE visits SET status='COMPLETED',completed_at=? WHERE id=?", (now(), id_))
+189 +                 db.execute(
+190 +                     "UPDATE visits SET status='COMPLETED',completed_at=? WHERE id=?", (now(), id_)
+191 +                 )
+192 |         return self.get(id_)
+--------------------------------------------------------------------------------
+200 |             totals[key] = totals.get(key, 0) + p["qty"]
+    -     return {**visit, "totals": [{"part_no": k[0], "unit": k[1], "qty": v} for k, v in sorted(totals.items())]}
+201 +     return {
+202 +         **visit,
+203 +         "totals": [{"part_no": k[0], "unit": k[1], "qty": v} for k, v in sorted(totals.items())],
+204 +     }
+    |
+
+unformatted: File would be reformatted
+   --> tests/browser_smoke.py:2:1
+    |
+1   | """Browser QA against a disposable visit database; default port 8001."""
+2   +
+3   | import os
+--------------------------------------------------------------------------------
+12  | with sync_playwright() as p:
+    -     browser = p.chromium.launch(executable_path=os.getenv("CHROMIUM_PATH", "/usr/bin/chromium"),
+    -         headless=True, args=["--no-sandbox", "--enable-unsafe-swiftshader"])
+13  +     browser = p.chromium.launch(
+14  +         executable_path=os.getenv("CHROMIUM_PATH", "/usr/bin/chromium"),
+15  +         headless=True,
+16  +         args=["--no-sandbox", "--enable-unsafe-swiftshader"],
+17  +     )
+18  |     page = browser.new_page(viewport={"width": 1440, "height": 1050}, timezone_id="America/Chicago")
+--------------------------------------------------------------------------------
+35  |     page.locator("#focus-selection").click()
+    -     assert page.evaluate("window.cabinViewer.camera.position.distanceTo(window.cabinViewer.controls.target)<10")
+36  +     assert page.evaluate(
+37  +         "window.cabinViewer.camera.position.distanceTo(window.cabinViewer.controls.target)<10"
+38  +     )
+39  |     page.locator('[data-view="overview"]').click()
+--------------------------------------------------------------------------------
+90  |     assert not errors, errors
+    -     mobile = browser.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, timezone_id="America/Chicago")
+91  +     mobile = browser.new_page(
+92  +         viewport={"width": 390, "height": 844},
+93  +         is_mobile=True,
+94  +         has_touch=True,
+95  +         timezone_id="America/Chicago",
+96  +     )
+97  |     mobile.goto(BASE)
+--------------------------------------------------------------------------------
+113 |     browser.close()
+    -     print("Browser workflow passed: WebGL seat selection, focus, replacements, substitutes/panels, bins, persistence, completed report/PDF/JSON, retrofit, missing config, mobile.")
+114 +     print(
+115 +         "Browser workflow passed: WebGL seat selection, focus, replacements, substitutes/panels, bins, persistence, completed report/PDF/JSON, retrofit, missing config, mobile."
+116 +     )
+    |
+
+unformatted: File would be reformatted
+  --> tests/conftest.py:28:1
+   |
+27 |             db.execute(sql, args)
+28 +
+29 |     return execute
+   |
+
+unformatted: File would be reformatted
+  --> tests/test_lookup.py:29:26
+   |
+28 |
+   - @pytest.mark.parametrize("tail,day,status", [
+   -     ("N000TL", "2026-11-12", "NO_CONFIG"), ("N100TL", "2025-09-30", "NO_CONFIG"),
+   -     ("UNKNOWN", "2026-11-12", "UNKNOWN_TAIL"), ("N110TL", "2026-11-12", "NO_CONFIG"),
+   - ])
+29 + @pytest.mark.parametrize(
+30 +     "tail,day,status",
+31 +     [
+32 +         ("N000TL", "2026-11-12", "NO_CONFIG"),
+33 +         ("N100TL", "2025-09-30", "NO_CONFIG"),
+34 +         ("UNKNOWN", "2026-11-12", "UNKNOWN_TAIL"),
+35 +         ("N110TL", "2026-11-12", "NO_CONFIG"),
+36 +     ],
+37 + )
+38 | def test_missing_configuration(repo, tail, day, status):
+--------------------------------------------------------------------------------
+56 | def test_overlapping_configurations(repo, edit):
+   -     edit("INSERT INTO tail_config(tail,variant_id,eff_from,doc_id) VALUES('N100TL','V02','2026-01-01','DOC-CONFIG')")
+57 +     edit(
+58 +         "INSERT INTO tail_config(tail,variant_id,eff_from,doc_id) VALUES('N100TL','V02','2026-01-01','DOC-CONFIG')"
+59 +     )
+60 |     r = lookup(repo)
+--------------------------------------------------------------------------------
+82 | def extra_rule(edit, selectors):
+   -     edit("INSERT INTO part_rule(id,position_id,selectors,part_no,qty,unit,eff_from,doc_id) VALUES('OTHER','P-ELR-A-CUSHION',?,'FAKE-OTHER',1,'EA','2024-01-01','DOC-A')", (json.dumps(selectors),))
+83 +     edit(
+84 +         "INSERT INTO part_rule(id,position_id,selectors,part_no,qty,unit,eff_from,doc_id) VALUES('OTHER','P-ELR-A-CUSHION',?,'FAKE-OTHER',1,'EA','2024-01-01','DOC-A')",
+85 +         (json.dumps(selectors),),
+86 +     )
+87 |
+   |
+
+unformatted: File would be reformatted
+   --> tests/test_visits.py:13:21
+    |
+12  | def create(client, day="2026-11-12"):
+    -     r = client.post("/api/visits", json={"tail": "N100TL", "check_date": day, "technician": "Demo Tech"})
+13  +     r = client.post(
+14  +         "/api/visits", json={"tail": "N100TL", "check_date": day, "technician": "Demo Tech"}
+15  +     )
+16  |     assert r.status_code == 201
+--------------------------------------------------------------------------------
+20  | def add(client, visit, **updates):
+    -     return client.put(f"/api/visits/{visit['id']}/replacements", json={"location": "3A", "rule_id": "R-V01-P-ELR-A-CUSHION", "quantity": 1, "note": "Fictional scuff"} | updates)
+21  +     return client.put(
+22  +         f"/api/visits/{visit['id']}/replacements",
+23  +         json={
+24  +             "location": "3A",
+25  +             "rule_id": "R-V01-P-ELR-A-CUSHION",
+26  +             "quantity": 1,
+27  +             "note": "Fictional scuff",
+28  +         }
+29  +         | updates,
+30  +     )
+31  |
+--------------------------------------------------------------------------------
+36  |     assert len(add(client, v).json()["replacements"]) == 1
+    -     r = add(client, v, location="FULL_CABIN", rule_id="R-V01-P-CARPET-KIT", substitute_id="SUB-KIT-1")
+37  +     r = add(
+38  +         client, v, location="FULL_CABIN", rule_id="R-V01-P-CARPET-KIT", substitute_id="SUB-KIT-1"
+39  +     )
+40  |     assert r.status_code == 200 and len(r.json()["replacements"][1]["parts"]) == 5
+--------------------------------------------------------------------------------
+51  |     assert saved["replacements"][0]["parts"][0]["part_no"] == "FAKE-SC-1001"
+    -     assert client.post(f"/api/visits/{v['id']}/complete").json()["completed_at"] == r["completed_at"]
+52  +     assert (
+53  +         client.post(f"/api/visits/{v['id']}/complete").json()["completed_at"] == r["completed_at"]
+54  +     )
+55  |
+--------------------------------------------------------------------------------
+59  |     add(client, v, location="FULL_CABIN", rule_id="R-V01-P-CARPET-KIT")
+    -     r = add(client, v, location="FULL_CABIN", rule_id="R-V01-P-CARPET-KIT", substitute_id="SUB-KIT-1").json()
+60  +     r = add(
+61  +         client, v, location="FULL_CABIN", rule_id="R-V01-P-CARPET-KIT", substitute_id="SUB-KIT-1"
+62  +     ).json()
+63  |     assert len(r["replacements"]) == 1
+64  |     assert r["replacements"][0]["parts"][0]["part_no"] == "FAKE-CK-2000"
+65  |
+66  |
+    - @pytest.mark.parametrize("updates", [
+    -     {"location": "99Z"}, {"location": "3B"}, {"quantity": 2}, {"quantity": 0},
+    -     {"quantity": 1.5}, {"quantity": True}, {"quantity": 101}, {"rule_id": "nonexistent"},
+    -     {"substitute_id": "not-approved"}, {"location": "14B", "rule_id": "R-V01-P-EXIT-B-CUSHION"},
+    -     {"location": "BIN-L-99", "rule_id": "R-V01-P-BIN-L-01"},
+    - ])
+67  + @pytest.mark.parametrize(
+68  +     "updates",
+69  +     [
+70  +         {"location": "99Z"},
+71  +         {"location": "3B"},
+72  +         {"quantity": 2},
+73  +         {"quantity": 0},
+74  +         {"quantity": 1.5},
+75  +         {"quantity": True},
+76  +         {"quantity": 101},
+77  +         {"rule_id": "nonexistent"},
+78  +         {"substitute_id": "not-approved"},
+79  +         {"location": "14B", "rule_id": "R-V01-P-EXIT-B-CUSHION"},
+80  +         {"location": "BIN-L-99", "rule_id": "R-V01-P-BIN-L-01"},
+81  +     ],
+82  + )
+83  | def test_invalid_replacements(client, updates):
+--------------------------------------------------------------------------------
+87  | def test_expired_substitute_rejected(client):
+    -     assert add(client, create(client, "2027-01-01"), location="FULL_CABIN", rule_id="R-V01-P-CARPET-KIT", substitute_id="SUB-KIT-1").status_code == 422
+88  +     assert (
+89  +         add(
+90  +             client,
+91  +             create(client, "2027-01-01"),
+92  +             location="FULL_CABIN",
+93  +             rule_id="R-V01-P-CARPET-KIT",
+94  +             substitute_id="SUB-KIT-1",
+95  +         ).status_code
+96  +         == 422
+97  +     )
+98  |
+--------------------------------------------------------------------------------
+105 | def test_no_config_cannot_start(client):
+    -     assert client.post("/api/visits", json={"tail": "N000TL", "check_date": "2026-11-12"}).status_code == 422
+106 +     assert (
+107 +         client.post("/api/visits", json={"tail": "N000TL", "check_date": "2026-11-12"}).status_code
+108 +         == 422
+109 +     )
+110 |
+--------------------------------------------------------------------------------
+142 |     store = VisitStore(tmp_path / "visits.sqlite3")
+143 +
+144 |     def edit():
+--------------------------------------------------------------------------------
+148 |             return None
+149 +
+150 |     with ThreadPoolExecutor(2) as pool:
+--------------------------------------------------------------------------------
+162 |     assert client.get("/api/visits/missing").status_code == 404
+    -     assert client.post("/api/visits", json={"tail": "N100TL", "check_date": "2026-11-12"}, headers={"Origin": "https://unrelated.example"}).status_code == 403
+163 +     assert (
+164 +         client.post(
+165 +             "/api/visits",
+166 +             json={"tail": "N100TL", "check_date": "2026-11-12"},
+167 +             headers={"Origin": "https://unrelated.example"},
+168 +         ).status_code
+169 +         == 403
+170 +     )
+    |
+
+9 files would be reformatted, 1 file already formatted
+exit=1

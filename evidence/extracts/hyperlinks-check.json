@@ -1,0 +1,203 @@
+{
+  "purpose": "Reachability note only. A status code says a host answered a HEAD request; it does not verify content, currency, authority or approval.",
+  "policy": {
+    "requested": "hyperlinks whose host is public (no SharePoint / Office 365 / Outlook / internal marker)",
+    "never_requested": "sharepoint.com, office365.com, outlook, and other private or authenticated hosts",
+    "command": "curl -sI -L --max-time 15 <url> (one invocation per distinct URL)"
+  },
+  "network_skipped": false,
+  "rtf_hyperlink_count": 0,
+  "summary": {
+    "distinct_targets": 9,
+    "public_requested": 4,
+    "private_not_accessed": 5,
+    "status_codes": [
+      {
+        "target_url": "https://support.southwest.com/helpcenter/article/airplane-specifications",
+        "final_status_code": 200
+      },
+      {
+        "target_url": "https://support.southwest.com/helpcenter/article/assigned-seats",
+        "final_status_code": 200
+      },
+      {
+        "target_url": "https://support.southwest.com/helpcenter/article/assigned-seat-selection",
+        "final_status_code": 200
+      },
+      {
+        "target_url": "https://support.southwest.com/helpcenter/article/boarding-and-seating-benefits",
+        "final_status_code": 200
+      }
+    ]
+  },
+  "results": [
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/airplane-specifications",
+      "host": "support.southwest.com",
+      "access_class": "public",
+      "classification_reason": "public web host with no tenant/authentication marker",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H01"
+      ],
+      "check": "HTTP 200",
+      "requested": true,
+      "reused_from_previous_run": false,
+      "checked_at": "2026-11-15T03:01:56.801Z",
+      "command": "curl -sI -L --max-time 15 <url>",
+      "result": {
+        "curl_exit_code": 0,
+        "curl_error": null,
+        "status_code_chain": [
+          200
+        ],
+        "final_status_code": 200,
+        "redirect_locations": [],
+        "final_content_type": "text/html; charset=utf-8",
+        "final_server": "sfdcedge"
+      }
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "host": "wnco.sharepoint.com",
+      "access_class": "private",
+      "classification_reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H02",
+        "H04",
+        "H09"
+      ],
+      "check": "not accessed (private)",
+      "requested": false
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "host": "wnco.sharepoint.com",
+      "access_class": "private",
+      "classification_reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H03",
+        "H05",
+        "H10"
+      ],
+      "check": "not accessed (private)",
+      "requested": false
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?EntityRepresentationId=836f8c7d-37c0-4227-89f4-29f558c8a05e",
+      "host": "wnco.sharepoint.com",
+      "access_class": "private",
+      "classification_reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H06"
+      ],
+      "check": "not accessed (private)",
+      "requested": false
+    },
+    {
+      "target_url": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?web=1",
+      "host": "wnco.sharepoint.com",
+      "access_class": "private",
+      "classification_reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H07"
+      ],
+      "check": "not accessed (private)",
+      "requested": false
+    },
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/assigned-seats",
+      "host": "support.southwest.com",
+      "access_class": "public",
+      "classification_reason": "public web host with no tenant/authentication marker",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H08"
+      ],
+      "check": "HTTP 200",
+      "requested": true,
+      "reused_from_previous_run": false,
+      "checked_at": "2026-11-15T03:01:56.801Z",
+      "command": "curl -sI -L --max-time 15 <url>",
+      "result": {
+        "curl_exit_code": 0,
+        "curl_error": null,
+        "status_code_chain": [
+          200
+        ],
+        "final_status_code": 200,
+        "redirect_locations": [],
+        "final_content_type": "text/html; charset=utf-8",
+        "final_server": "sfdcedge"
+      }
+    },
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/assigned-seat-selection",
+      "host": "support.southwest.com",
+      "access_class": "public",
+      "classification_reason": "public web host with no tenant/authentication marker",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H11"
+      ],
+      "check": "HTTP 200",
+      "requested": true,
+      "reused_from_previous_run": false,
+      "checked_at": "2026-11-15T03:01:56.801Z",
+      "command": "curl -sI -L --max-time 15 <url>",
+      "result": {
+        "curl_exit_code": 0,
+        "curl_error": null,
+        "status_code_chain": [
+          200
+        ],
+        "final_status_code": 200,
+        "redirect_locations": [],
+        "final_content_type": "text/html; charset=utf-8",
+        "final_server": "sfdcedge"
+      }
+    },
+    {
+      "target_url": "https://support.southwest.com/helpcenter/article/boarding-and-seating-benefits",
+      "host": "support.southwest.com",
+      "access_class": "public",
+      "classification_reason": "public web host with no tenant/authentication marker",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H12"
+      ],
+      "check": "HTTP 200",
+      "requested": true,
+      "reused_from_previous_run": false,
+      "checked_at": "2026-11-15T03:01:56.801Z",
+      "command": "curl -sI -L --max-time 15 <url>",
+      "result": {
+        "curl_exit_code": 0,
+        "curl_error": null,
+        "status_code_chain": [
+          200
+        ],
+        "final_status_code": 200,
+        "redirect_locations": [],
+        "final_content_type": "text/html; charset=utf-8",
+        "final_server": "sfdcedge"
+      }
+    },
+    {
+      "target_url": "https://outlook.office365.com/owa/?ItemID=AAMkAGI5NWY3ZGZiLTdmMWUtNDJiOS05M2ZmLTViN2YzYzA4MTc2ZgBGAAAAAAAKtYbiEss%2bRrIRqm4rHIFJBwDu9xYT3kgpRrBkyqMs%2flhIAAAAAAEMAADu9xYT3kgpRrBkyqMs%2flhIAAfWkm9%2bAAA%3d&exvsurl=1&viewmodel=ReadMessageItem",
+      "host": "outlook.office365.com",
+      "access_class": "private",
+      "classification_reason": "tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)",
+      "source_file": "Current Aircraft Seat Configurations.docx",
+      "occurrences": [
+        "H13"
+      ],
+      "check": "not accessed (private)",
+      "requested": false
+    }
+  ]
+}

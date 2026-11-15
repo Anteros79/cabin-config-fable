@@ -1,0 +1,369 @@
+{
+  "purpose": "Every expectation named in the brief, checked against measured values.",
+  "summary": {
+    "expectations": 37,
+    "confirmed": 34,
+    "differs": 2,
+    "not_verifiable": 1
+  },
+  "expectations": [
+    {
+      "id": "E01",
+      "expectation": "All originals are present: 9 documents/data files and 14 images (23)",
+      "expected_per_brief": "9 + 14 = 23",
+      "measured_actual": "9 + 14 = 23 found; missing: 0; unexpected extra files: 0",
+      "status": "CONFIRMED",
+      "evidence": "inventory.json#/summary"
+    },
+    {
+      "id": "E02",
+      "expectation": "One forward-galley photo carries another airline's name in its metadata",
+      "expected_per_brief": "another airline named in metadata",
+      "measured_actual": "IPTC:2:25 Keywords = \"American Airlines\"; XMP:dc:subject = \"American Airlines\"; other fields: EXIF.IFD0:ImageDescription = \"at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade\"; IPTC:2:5 ObjectName = \"AA LAX Thursday\"; IPTC:2:120 Caption-Abstract = \"at LAX in Los Angeles, Thursday, August 27, 2015. Photo by Brandon Wade\"",
+      "status": "CONFIRMED",
+      "evidence": "inventory.json (entry \"forward galley flight deck.jpg\")"
+    },
+    {
+      "id": "E03",
+      "expectation": "\"southwest 737 lopa normalized.json\" is 548 bytes",
+      "expected_per_brief": "548",
+      "measured_actual": "548",
+      "status": "CONFIRMED",
+      "evidence": "extracts/json-compare.json#/files"
+    },
+    {
+      "id": "E04",
+      "expectation": "\"southwest 737 lopa normalized.json\" and \"gemini-code-1794587815855.json\" are byte-identical",
+      "expected_per_brief": "identical",
+      "measured_actual": "byte_identical = true; sizes 548 / 548; SHA-256 881e1c40b1d259ec… / 881e1c40b1d259ec…",
+      "status": "CONFIRMED",
+      "evidence": "extracts/json-compare.json#/pairwise"
+    },
+    {
+      "id": "E05",
+      "expectation": "Both are invalid JSON (templates)",
+      "expected_per_brief": "do not parse",
+      "measured_actual": "parses: false / false; first error at byte 492 (line 12, column 28): unexpected token \".\", expected a JSON value",
+      "status": "CONFIRMED",
+      "evidence": "extracts/json-compare.json#/files"
+    },
+    {
+      "id": "E06",
+      "expectation": "Both contain the literal `[ ... ]`",
+      "expected_per_brief": "present",
+      "measured_actual": "3 / 3 occurrences (byte offsets 490, 514, 539)",
+      "status": "CONFIRMED",
+      "evidence": "extracts/json-compare.json#/files"
+    },
+    {
+      "id": "E07",
+      "expectation": "Workbook numeric `738` converted to identifier string, roughly 30 times",
+      "expected_per_brief": "≈ 30",
+      "measured_actual": "30",
+      "status": "CONFIRMED",
+      "evidence": "cross-format-comparison.json#/totals"
+    },
+    {
+      "id": "E08",
+      "expectation": "Blanks converted to empty strings, roughly 377 times",
+      "expected_per_brief": "≈ 377",
+      "measured_actual": "377 (workbook cells absent where the JSON holds \"\")",
+      "status": "CONFIRMED",
+      "evidence": "cross-format-comparison.json#/totals"
+    },
+    {
+      "id": "E09",
+      "expectation": "16,641 shared attribute values agree in total",
+      "expected_per_brief": "16,641 agreeing",
+      "measured_actual": "16641 compared; 16641 agree; 0 mismatch",
+      "status": "CONFIRMED",
+      "evidence": "cross-format-comparison.json#/totals"
+    },
+    {
+      "id": "E10",
+      "expectation": "The only conversions needed are the numeric identifier and the blanks",
+      "expected_per_brief": "two conversion kinds",
+      "measured_actual": "also needed for the CSV side (text is untyped): csv_text_to_number ×1709; csv_number_text_lexically_different_from_json_number (e.g. \"17.0\" vs 17) ×132; csv_text_True/False_to_boolean ×3348",
+      "status": "DIFFERS",
+      "evidence": "cross-format-comparison.json#/totals/explicit_conversions"
+    },
+    {
+      "id": "E11",
+      "expectation": "5 configurations",
+      "expected_per_brief": "5",
+      "measured_actual": "5",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json#/totals"
+    },
+    {
+      "id": "E12",
+      "expectation": "147 row records including 4 non-existent labels",
+      "expected_per_brief": "147 incl. 4",
+      "measured_actual": "147 row records; 4 with row_exists=false; 143 existing",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json#/totals"
+    },
+    {
+      "id": "E13",
+      "expectation": "837 seats",
+      "expected_per_brief": "837",
+      "measured_actual": "837",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json#/totals"
+    },
+    {
+      "id": "E14",
+      "expectation": "73G = 137 seats",
+      "expected_per_brief": "137",
+      "measured_actual": "137",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (73G)"
+    },
+    {
+      "id": "E15",
+      "expectation": "73G printed labels 1–9 and 14–27",
+      "expected_per_brief": "1–9, 14–27",
+      "measured_actual": "1–9, 14–27",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (73G)"
+    },
+    {
+      "id": "E16",
+      "expectation": "73G seats A–F except 14A",
+      "expected_per_brief": "only 14A omitted",
+      "measured_actual": "letters used ABCDEF; omitted on existing rows: 14A",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (73G)"
+    },
+    {
+      "id": "E17",
+      "expectation": "73G labels 10–13 non-existent",
+      "expected_per_brief": "10, 11, 12, 13",
+      "measured_actual": "10, 11, 12, 13",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (73G)"
+    },
+    {
+      "id": "E18",
+      "expectation": "738 = 175 seats, labels 1–30, A–F except 1A/1B/1C and 15A/15F",
+      "expected_per_brief": "175; 1–30; omit 1A, 1B, 1C, 15A, 15F",
+      "measured_actual": "175 seats; labels 1–30; omitted: 1A, 1B, 1C, 15A, 15F",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (738)"
+    },
+    {
+      "id": "E19",
+      "expectation": "7M8-1 = 175 seats, labels 1–30, A–F except 1A/1B/1C and 15A/15F",
+      "expected_per_brief": "175; 1–30; omit 1A, 1B, 1C, 15A, 15F",
+      "measured_actual": "175 seats; labels 1–30; omitted: 1A, 1B, 1C, 15A, 15F",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (7M8-1)"
+    },
+    {
+      "id": "E20",
+      "expectation": "738-2 = 175 seats, omitting 1A/1B/1C and 30A/30F, with 15A/15F present",
+      "expected_per_brief": "175; omit 1A, 1B, 1C, 30A, 30F; 15A and 15F present",
+      "measured_actual": "175 seats; labels 1–30; omitted: 1A, 1B, 1C, 30A, 30F; row 15 seats: 15A 15B 15C 15D 15E 15F",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (738-2)"
+    },
+    {
+      "id": "E21",
+      "expectation": "7M8-2 = 175 seats, omitting 1A/1B/1C and 30A/30F, with 15A/15F present",
+      "expected_per_brief": "175; omit 1A, 1B, 1C, 30A, 30F; 15A and 15F present",
+      "measured_actual": "175 seats; labels 1–30; omitted: 1A, 1B, 1C, 30A, 30F; row 15 seats: 15A 15B 15C 15D 15E 15F",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json (7M8-2)"
+    },
+    {
+      "id": "E22",
+      "expectation": "Tier totals (Extra Legroom / Preferred / Standard) 42/23/72, 46/45/84, 46/45/84, 48/45/82, 48/45/82",
+      "expected_per_brief": "73G 42/23/72; 738 46/45/84; 7M8-1 46/45/84; 738-2 48/45/82; 7M8-2 48/45/82",
+      "measured_actual": "73G 42/23/72; 738 46/45/84; 7M8-1 46/45/84; 738-2 48/45/82; 7M8-2 48/45/82",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json#/seat_sets/*/tier_totals"
+    },
+    {
+      "id": "E23",
+      "expectation": "A row exists where the A/B/C block and the D/E/F block have different commercial tiers (e.g. row 6)",
+      "expected_per_brief": "row 6",
+      "measured_actual": "73G: none; 738: row 6 (Extra Legroom | Preferred); 7M8-1: row 6 (Extra Legroom | Preferred); 738-2: row 6 (Extra Legroom | Preferred); 7M8-2: row 6 (Extra Legroom | Preferred)",
+      "status": "CONFIRMED",
+      "evidence": "candidate-seat-sets.json#/seat_sets/*/split_tier_rows"
+    },
+    {
+      "id": "E24",
+      "expectation": "The later DOCX describes four physical-layout categories, including an upgraded 138-seat 737-700 that is absent from the 5-record registry; the DOCX does not supply a complete 138-seat seat set.",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C01: 10 located quotes/values, 5/5 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C01)"
+    },
+    {
+      "id": "E25",
+      "expectation": "The DOCX says that in the 138-seat layout seats 7D/7E/7F/15B/15C have physical Extra Legroom spacing but are commercially Preferred; must not be applied to the 137-seat 73G.",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C02: 14 located quotes/values, 3/3 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C02)"
+    },
+    {
+      "id": "E26",
+      "expectation": "DOCX 34-inch larger-aircraft Extra Legroom pitch vs the registry's Elevate \"33-37 (Row 14 ~37\")\" claim.",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C03: 7 located quotes/values, 2/2 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C03)"
+    },
+    {
+      "id": "E27",
+      "expectation": "RTF contradicting its own split Row 6 pitch.",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C04: 13 located quotes/values, 1/1 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C04)"
+    },
+    {
+      "id": "E28",
+      "expectation": "Row bulkhead flags with partial-side ambiguity (row-level flag vs seat-level flags when only one side is behind a bulkhead).",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C05: 12 located quotes/values, 2/2 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C05)"
+    },
+    {
+      "id": "E29",
+      "expectation": "Approximate pitches turned into falsely exact strings.",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C06: 9 located quotes/values, 2/2 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C06)"
+    },
+    {
+      "id": "E30",
+      "expectation": "Shoulder clearance vs seat width conflated in the width field(s).",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C07: 12 located quotes/values, 2/2 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C07)"
+    },
+    {
+      "id": "E31",
+      "expectation": "Temporary-layout rear-row wording that does not identify a specific seat to remove.",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C08: 13 located quotes/values, 2/2 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C08)"
+    },
+    {
+      "id": "E32",
+      "expectation": "No approved dated tail assignment, parts/applicability/substitute catalog, exact floor/bin map, coordinate frame, exact cabin height, or image-to-layout mapping is supplied; generated timestamps and titles do not fill those gaps.",
+      "expected_per_brief": "finding present in the document text",
+      "measured_actual": "C09: 8 located quotes/values, 8/8 checks pass",
+      "status": "CONFIRMED",
+      "evidence": "conflict-register.json (C09)"
+    },
+    {
+      "id": "E33",
+      "expectation": "The DOCX is \"later\" than the populated registry",
+      "expected_per_brief": "DOCX later",
+      "measured_actual": "DOCX core created 2026-11-13T17:37:00Z; registry generated_at_utc 2026-11-13T16:29:49Z; XLSX core created 2026-11-13T16:32:23Z",
+      "status": "CONFIRMED",
+      "evidence": "extracts/docx-metadata.json; cross-format-comparison.json#/embedded_timestamps"
+    },
+    {
+      "id": "E34",
+      "expectation": "The DOCX is \"later\" than the RTF and the CSV files",
+      "expected_per_brief": "DOCX later",
+      "measured_actual": "RTF \\info group present: false; CSV files carry no internal timestamp — no internal date to compare",
+      "status": "NOT VERIFIABLE",
+      "evidence": "extracts/rtf-paragraphs.json#/info_metadata"
+    },
+    {
+      "id": "E35",
+      "expectation": "The RTF carries `\\info` metadata (named in the brief as an example of metadata to report)",
+      "expected_per_brief": "\\info fields",
+      "measured_actual": "no \\info group in the file; only header control words (rtf version, code page, cocoartf)",
+      "status": "DIFFERS",
+      "evidence": "extracts/rtf-paragraphs.json#/info_metadata"
+    },
+    {
+      "id": "E36",
+      "expectation": "Public-host hyperlinks get one reachability check; private hosts (SharePoint, Office 365, Outlook) are not accessed",
+      "expected_per_brief": "public checked, private not accessed",
+      "measured_actual": "4 public URL(s) checked: support.southwest.com → HTTP 200; support.southwest.com → HTTP 200; support.southwest.com → HTTP 200; support.southwest.com → HTTP 200; 5 private target(s) not accessed (wnco.sharepoint.com, outlook.office365.com)",
+      "status": "CONFIRMED",
+      "evidence": "extracts/hyperlinks-check.json"
+    },
+    {
+      "id": "E37",
+      "expectation": "All originals are unchanged after processing",
+      "expected_per_brief": "unchanged",
+      "measured_actual": "23 of 23 unchanged (checked 2026-11-15T03:01:58.655Z)",
+      "status": "CONFIRMED",
+      "evidence": "inventory.json#/integrity_check"
+    }
+  ],
+  "checks_without_stated_expectation": [
+    {
+      "check": "Actual format (magic bytes / content) vs file extension",
+      "result": "2 mismatch(es): southwest 737 lopa normalized.json — .json but plain text shaped like JSON but NOT valid JSON; gemini-code-1794587815855.json — .json but plain text shaped like JSON but NOT valid JSON",
+      "evidence": "inventory.json#/summary/extension_content_mismatches"
+    },
+    {
+      "check": "Classification of the generated-code JSON (data / schema / code / prose / envelope)",
+      "result": "envelope — registry envelope/template: a schema_metadata header (names, primary keys, declared record counts) followed by entity arrays whose content is the literal placeholder \"[ ... ]\"; it holds no records, is not a JSON Schema document, contains no code and no prose, and is not valid JSON",
+      "evidence": "extracts/json-compare.json#/classification"
+    },
+    {
+      "check": "Declared totals in configuration records vs counted seats",
+      "result": "73G: agree (declared 137, counted 137); 738: agree (declared 175, counted 175); 7M8-1: agree (declared 175, counted 175); 738-2: agree (declared 175, counted 175); 7M8-2: agree (declared 175, counted 175)",
+      "evidence": "candidate-seat-sets.json#/seat_sets/*/declared_vs_counted"
+    },
+    {
+      "check": "Row-level active_seat_count / omitted_seat_letters vs seat records",
+      "result": "147 row records checked; 0 mismatches",
+      "evidence": "candidate-seat-sets.json#/seat_sets/*/row_level_checks"
+    },
+    {
+      "check": "Foreign keys seats → rows → configurations",
+      "result": "all resolve: true; seat orphans 0; row orphans 0; seats on row_exists=false rows 0",
+      "evidence": "extracts/csv-metadata.json#/foreign_key_checks"
+    },
+    {
+      "check": "Duplicate primary keys",
+      "result": "cabin schema architecture.csv: 0; southwest_737_lopa_configurations.csv: 0; southwest_737_lopa_seats.csv: 0; southwest_737_lopa_rows.xlsx: 0",
+      "evidence": "extracts/csv-metadata.json"
+    },
+    {
+      "check": "CSV encoding / BOM / line endings",
+      "result": "cabin schema architecture.csv: UTF-8, BOM yes, CRLF, final newline no; southwest_737_lopa_configurations.csv: US-ASCII (valid UTF-8 subset), BOM no, CRLF, final newline yes; southwest_737_lopa_seats.csv: US-ASCII (valid UTF-8 subset), BOM no, CRLF, final newline yes",
+      "evidence": "extracts/csv-metadata.json"
+    },
+    {
+      "check": "Workbook: sheets, hidden sheets, merged cells, formulas, defined names, external links, macros",
+      "result": "1 sheet(s) (southwest_737_lopa_rows: visible, A1:J148); merged ranges 0; formulas 0; defined names 0; external links 0; vbaProject false; shared strings 44 unique (338 references declared)",
+      "evidence": "extracts/workbook.json"
+    },
+    {
+      "check": "RTF: paragraphs, tables, hyperlinks; secondary textutil cross-check",
+      "result": "57 paragraphs, 1 table(s) with 42 cells, 0 hyperlinks; textutil text identical ignoring whitespace: true",
+      "evidence": "extracts/rtf-paragraphs.json"
+    },
+    {
+      "check": "DOCX: paragraphs, tables, hyperlinks, embedded media",
+      "result": "21 body paragraphs + 46 table-cell paragraphs, 2 tables, 13 hyperlinks (9 distinct targets), embedded media: false",
+      "evidence": "extracts/docx-*.json"
+    },
+    {
+      "check": "Images: all decode; dimensions agree with a second decoder",
+      "result": "14 of 14 decode fully; dimensions agree for 14",
+      "evidence": "inventory.json"
+    },
+    {
+      "check": "Conflict register",
+      "result": "23 entries; 11 of 11 brief-expected findings confirmed; entries with unlocated quotes: 0",
+      "evidence": "conflict-register.json#/summary"
+    }
+  ]
+}

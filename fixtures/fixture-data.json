@@ -1,0 +1,180 @@
+{
+  "note": "FICTIONAL regression fixtures. Tails, variants, layouts, part numbers, documents and dates are invented for software demonstration and testing. They are kept in the 'fixture' namespace and never mixed with supplied candidate data. Seat sets, exit rows, floor areas and bin modules here are fixture shortcuts and say nothing about any real aircraft.",
+  "vocabulary": {
+    "carpets": ["MOHAWK", "BOTANY"],
+    "seams": ["PRE", "POST"],
+    "upholsteries": [],
+    "units": ["EA", "KIT", "PANEL"]
+  },
+  "sources": [
+    { "id": "FX-DOC-A", "kind": "EO", "revision": "A", "title": "Fictional seat and bin applicability", "effectiveFrom": "2020-01-01", "expiresOn": null, "released": true },
+    { "id": "FX-DOC-B", "kind": "ENG", "revision": "-", "title": "Fictional carpet applicability", "effectiveFrom": "2020-01-01", "expiresOn": null, "released": true },
+    { "id": "FX-DOC-C", "kind": "ENG", "revision": "B", "title": "Fictional retrofit and seam change", "effectiveFrom": "2020-01-01", "expiresOn": null, "released": true },
+    { "id": "FX-DOC-DEV", "kind": "DEVIATION_EA", "revision": "-", "title": "Fictional substitute kit approval", "effectiveFrom": "2020-01-01", "expiresOn": "2026-12-31", "released": true },
+    { "id": "FX-DOC-CONFIG", "kind": "DEMO", "revision": "1", "title": "Fictional layout and tail configuration", "effectiveFrom": "2020-01-01", "expiresOn": null, "released": true },
+    { "id": "FX-DOC-CONFIG-OLD", "kind": "DEMO", "revision": "0", "title": "Fictional superseded tail configuration list", "effectiveFrom": "2020-01-01", "expiresOn": "2025-12-31", "released": true },
+    { "id": "FX-DOC-OLD", "kind": "EO", "revision": "0", "title": "Fictional withdrawn backrest applicability", "effectiveFrom": "2020-01-01", "expiresOn": "2025-12-31", "released": true },
+    { "id": "FX-DOC-DRAFT", "kind": "ENG", "revision": "C-draft", "title": "Fictional unreleased carpet revision", "effectiveFrom": null, "expiresOn": null, "released": false }
+  ],
+  "subtypes": [
+    { "id": "FX-MAX8", "name": "Fictional MAX8 sub-fleet" },
+    { "id": "FX-800", "name": "Fictional 800 sub-fleet" },
+    { "id": "FX-700", "name": "Fictional 700 sub-fleet" },
+    { "id": "FX-MAX7", "name": "Fictional MAX7 sub-fleet (planned)" }
+  ],
+  "seatSpecs": {
+    "S176": { "rows": 30, "omit": ["14B", "14E", "15B", "15E"], "exitRows": [14, 15], "elrRows": [1, 2, 3, 4, 5] },
+    "S170": { "rows": 29, "omit": ["14B", "14E", "15B", "15E"], "exitRows": [14, 15], "elrRows": [1, 2, 3, 4, 5] },
+    "S137": { "rows": 23, "omit": ["23C"], "exitRows": [12], "elrRows": [1, 2, 3, 4, 5] },
+    "S138": { "rows": 23, "omit": [], "exitRows": [12], "elrRows": [1, 2, 3, 4, 5] }
+  },
+  "variants": [
+    { "id": "V01", "subtype": "FX-MAX8", "hardware": "Recaro", "elr": "Post-ELR", "layoutNote": "Final", "power": true, "cabinHeight": "Full", "statusNote": "Active", "seatSpec": "S176", "released": true },
+    { "id": "V02", "subtype": "FX-MAX8", "hardware": "Meridian", "elr": "Post-ELR", "layoutNote": "Final", "power": true, "cabinHeight": "Full", "statusNote": "Active", "seatSpec": "S176", "released": true },
+    { "id": "V03", "subtype": "FX-MAX8", "hardware": "Meridian", "elr": "Post-ELR", "layoutNote": "Temporary", "power": true, "cabinHeight": "Full", "statusNote": "Being retired", "seatSpec": "S170", "released": true },
+    { "id": "V04", "subtype": "FX-800", "hardware": "Recaro", "elr": "Post-ELR", "layoutNote": "Final", "power": true, "cabinHeight": "Full", "statusNote": "Retrofit in progress", "seatSpec": "S176", "released": true },
+    { "id": "V05", "subtype": "FX-800", "hardware": "Meridian", "elr": "Post-ELR", "layoutNote": "Final", "power": true, "cabinHeight": "Full", "statusNote": "Active", "seatSpec": "S176", "released": true },
+    { "id": "V06", "subtype": "FX-800", "hardware": "Meridian", "elr": "Post-ELR", "layoutNote": "Final", "power": true, "cabinHeight": "Half", "statusNote": "Active", "seatSpec": "S176", "released": true },
+    { "id": "V07", "subtype": "FX-800", "hardware": "Meridian", "elr": "Post-ELR", "layoutNote": "Final", "power": false, "cabinHeight": null, "statusNote": "Active", "seatSpec": "S176", "released": true },
+    { "id": "V08", "subtype": "FX-800", "hardware": "Innovator", "elr": "ELR", "layoutNote": "No designators", "power": false, "cabinHeight": null, "statusNote": "Small group", "seatSpec": "S176", "released": true },
+    { "id": "V09", "subtype": "FX-700", "hardware": "Innovator", "elr": "Standard", "layoutNote": "137 seats", "power": false, "cabinHeight": "n/a", "statusNote": "Exiting fleet", "seatSpec": "S137", "released": true },
+    { "id": "V10", "subtype": "FX-700", "hardware": "Meridian / Recaro-look covers", "elr": "Standard", "layoutNote": "138 seats", "power": true, "cabinHeight": "n/a", "statusNote": "Retrofit in progress", "seatSpec": "S138", "released": true },
+    { "id": "V11", "subtype": "FX-MAX7", "hardware": null, "elr": null, "layoutNote": null, "power": null, "cabinHeight": null, "statusNote": "Planned", "seatSpec": null, "released": false }
+  ],
+  "aircraft": [
+    { "tail": "N100TL", "subtype": "FX-MAX8", "note": "Mandatory regression tail: V01" },
+    { "tail": "N200TL", "subtype": "FX-800", "note": "Mandatory regression tail: V05 then V04 retrofit" },
+    { "tail": "N300TL", "subtype": "FX-700", "note": "Mandatory regression tail: V10" },
+    { "tail": "N000TL", "subtype": "FX-800", "note": "Known tail with no configuration" },
+    { "tail": "N110TL", "subtype": "FX-MAX7", "note": "Planned V11 only" },
+    { "tail": "N010TL", "subtype": "FX-MAX8", "note": "Generic V01 example" },
+    { "tail": "N020TL", "subtype": "FX-MAX8", "note": "Generic V02 example" },
+    { "tail": "N030TL", "subtype": "FX-MAX8", "note": "Generic V03 example" },
+    { "tail": "N040TL", "subtype": "FX-800", "note": "Generic V04 example" },
+    { "tail": "N050TL", "subtype": "FX-800", "note": "Generic V05 example" },
+    { "tail": "N060TL", "subtype": "FX-800", "note": "Generic V06 example" },
+    { "tail": "N070TL", "subtype": "FX-800", "note": "Generic V07 example" },
+    { "tail": "N080TL", "subtype": "FX-800", "note": "Generic V08 example" },
+    { "tail": "N090TL", "subtype": "FX-700", "note": "V09, 137 seats without 23C; carries deliberate applicability gaps" },
+    { "tail": "N101TL", "subtype": "FX-700", "note": "Generic V10 example" },
+    { "tail": "N400TL", "subtype": "FX-800", "note": "Deliberate overlapping assignments (September 2026)" },
+    { "tail": "N500TL", "subtype": "FX-MAX8", "note": "Deliberate date gap (January to May 2026)" },
+    { "tail": "N600TL", "subtype": "FX-800", "note": "Configuration source expired after 2025-12-31" }
+  ],
+  "assignments": [
+    { "tail": "N100TL", "variant": "V01", "carpet": "MOHAWK", "seam": "PRE", "from": "2025-10-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N200TL", "variant": "V05", "carpet": "BOTANY", "seam": "PRE", "from": "2024-01-01", "to": "2026-06-30", "source": "FX-DOC-CONFIG" },
+    { "tail": "N200TL", "variant": "V04", "carpet": "BOTANY", "seam": "POST", "from": "2026-07-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N300TL", "variant": "V10", "carpet": "MOHAWK", "seam": "POST", "from": "2026-03-15", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N110TL", "variant": "V11", "carpet": null, "seam": null, "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG", "status": "planned" },
+    { "tail": "N010TL", "variant": "V01", "carpet": "MOHAWK", "seam": "PRE", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N020TL", "variant": "V02", "carpet": "MOHAWK", "seam": "PRE", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N030TL", "variant": "V03", "carpet": "MOHAWK", "seam": "PRE", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N040TL", "variant": "V04", "carpet": "BOTANY", "seam": "POST", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N050TL", "variant": "V05", "carpet": "BOTANY", "seam": "PRE", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N060TL", "variant": "V06", "carpet": "BOTANY", "seam": "POST", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N070TL", "variant": "V07", "carpet": "MOHAWK", "seam": "PRE", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N080TL", "variant": "V08", "carpet": "MOHAWK", "seam": "PRE", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N090TL", "variant": "V09", "carpet": "MOHAWK", "seam": "PRE", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N101TL", "variant": "V10", "carpet": "MOHAWK", "seam": "POST", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N400TL", "variant": "V05", "carpet": "BOTANY", "seam": "PRE", "from": "2024-01-01", "to": "2026-09-30", "source": "FX-DOC-CONFIG" },
+    { "tail": "N400TL", "variant": "V04", "carpet": "BOTANY", "seam": "POST", "from": "2026-09-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N500TL", "variant": "V02", "carpet": "MOHAWK", "seam": "PRE", "from": "2024-01-01", "to": "2025-12-31", "source": "FX-DOC-CONFIG" },
+    { "tail": "N500TL", "variant": "V02", "carpet": "MOHAWK", "seam": "POST", "from": "2026-06-01", "to": null, "source": "FX-DOC-CONFIG" },
+    { "tail": "N600TL", "variant": "V06", "carpet": "BOTANY", "seam": "POST", "from": "2024-01-01", "to": null, "source": "FX-DOC-CONFIG-OLD" }
+  ],
+  "components": [
+    { "id": "CUSHION", "name": "Seat cushion cover", "locationKind": "SEAT", "maxReplacementsPerLocation": 1, "countNote": "One cushion cover per seat." },
+    { "id": "BACKREST", "name": "Seat backrest cover", "locationKind": "SEAT", "maxReplacementsPerLocation": 1, "countNote": "One backrest cover per seat." },
+    { "id": "CARPET_KIT", "name": "Full-cabin carpet kit", "locationKind": "FLOOR", "maxReplacementsPerLocation": 1, "countNote": "One kit covers the whole fictional cabin floor." },
+    { "id": "CARPET_PANEL", "name": "Carpet panel", "locationKind": "FLOOR", "maxReplacementsPerLocation": 4, "countNote": "Up to four fictional panels per floor area." },
+    { "id": "BIN_DOOR", "name": "Overhead bin door", "locationKind": "BIN", "maxReplacementsPerLocation": 1, "countNote": "One door per bin module." }
+  ],
+  "seatRuleSource": "FX-DOC-A",
+  "carpetRuleSource": "FX-DOC-B",
+  "ruleEffectiveFrom": "2024-01-01",
+  "partOverrides": {
+    "V01|ELR|A|CUSHION": "FAKE-SC-1001",
+    "V01|STD|A|CUSHION": "FAKE-SC-1002",
+    "V01|CARPET_KIT": "FAKE-CK-2001"
+  },
+  "variantOmissions": {
+    "V09": {
+      "noBinRules": true,
+      "backrestExitSource": "FX-DOC-OLD",
+      "aftPanelUnreleased": true
+    }
+  },
+  "extraParts": [
+    { "partNo": "FAKE-CK-2002", "description": "Fictional Botany post-fix carpet kit" },
+    { "partNo": "FAKE-CK-2000", "description": "Fictional alternate carpet kit (deviation)" },
+    { "partNo": "FAKE-P-39", "description": "Fictional supplement panel 39" },
+    { "partNo": "FAKE-P-40", "description": "Fictional supplement panel 40" },
+    { "partNo": "FAKE-P-41", "description": "Fictional supplement panel 41" },
+    { "partNo": "FAKE-P-42", "description": "Fictional supplement panel 42" },
+    { "partNo": "FAKE-700-PRE-FWD-PANEL", "description": "Fictional forward panel, 700 pre-fix seam" },
+    { "partNo": "FAKE-V09-AFT-PANEL-DRAFT", "description": "Fictional aft panel from an unreleased revision" }
+  ],
+  "extraRules": [
+    {
+      "id": "FX-R4",
+      "componentId": "CARPET_KIT",
+      "partNo": "FAKE-CK-2002",
+      "unit": "KIT",
+      "constraint": { "variant": ["V04"], "carpet": ["BOTANY"], "seam": ["POST"] },
+      "locations": { "kind": "FLOOR", "ids": ["FLOOR:FULL-CABIN"] },
+      "effectiveFrom": "2026-07-01",
+      "source": "FX-DOC-C",
+      "released": true,
+      "note": "More specific than the general V04 kit rule: it adds carpet and seam."
+    },
+    {
+      "id": "FX-R-700-PRE-FWD-PANEL",
+      "componentId": "CARPET_PANEL",
+      "partNo": "FAKE-700-PRE-FWD-PANEL",
+      "unit": "PANEL",
+      "constraint": { "subtype": ["FX-700"], "seam": ["PRE"] },
+      "locations": { "kind": "FLOOR", "ids": ["FLOOR:FWD"] },
+      "effectiveFrom": "2024-01-01",
+      "source": "FX-DOC-B",
+      "released": true,
+      "note": "Deliberately incomparable with the V09 forward-panel rule to demonstrate ambiguity."
+    },
+    {
+      "id": "FX-R-V09-AFT-PANEL-DRAFT",
+      "componentId": "CARPET_PANEL",
+      "partNo": "FAKE-V09-AFT-PANEL-DRAFT",
+      "unit": "PANEL",
+      "constraint": { "variant": ["V09"] },
+      "locations": { "kind": "FLOOR", "ids": ["FLOOR:AFT"] },
+      "effectiveFrom": "2024-01-01",
+      "source": "FX-DOC-DRAFT",
+      "released": false,
+      "note": "Unreleased change. It must never grant eligibility."
+    }
+  ],
+  "pendingChanges": [
+    { "id": "FX-PC-1", "ruleId": "FX-R4", "note": "Fictional STA 521 revision pending.", "sourceId": "FX-DOC-DRAFT", "proposedEffectiveFrom": null }
+  ],
+  "substitutes": [
+    {
+      "id": "FX-SUB-KIT-1",
+      "componentId": "CARPET_KIT",
+      "primaryPartNo": "FAKE-CK-2001",
+      "altPartNo": "FAKE-CK-2000",
+      "qtyPerReplacement": 1,
+      "unit": "KIT",
+      "constraint": { "variant": ["V01"] },
+      "effectiveFrom": "2025-07-22",
+      "effectiveTo": "2026-12-31",
+      "source": "FX-DOC-DEV",
+      "note": "Deviation approval; expires 2026-12-31 inclusive."
+    }
+  ],
+  "kitChildren": [
+    { "parentPartNo": "FAKE-CK-2000", "childPartNo": "FAKE-P-39", "qty": 2, "unit": "PANEL", "source": "FX-DOC-DEV" },
+    { "parentPartNo": "FAKE-CK-2000", "childPartNo": "FAKE-P-40", "qty": 2, "unit": "PANEL", "source": "FX-DOC-DEV" },
+    { "parentPartNo": "FAKE-CK-2000", "childPartNo": "FAKE-P-41", "qty": 1, "unit": "PANEL", "source": "FX-DOC-DEV" },
+    { "parentPartNo": "FAKE-CK-2000", "childPartNo": "FAKE-P-42", "qty": 1, "unit": "PANEL", "source": "FX-DOC-DEV" }
+  ]
+}

@@ -1,0 +1,340 @@
+{
+  "file": "Current Aircraft Seat Configurations.docx",
+  "core_properties": {
+    "dc:title": "Document",
+    "dc:creator": "Un-named",
+    "cp:lastModifiedBy": "Joe McCarley",
+    "cp:revision": "2",
+    "dcterms:created": "2026-11-13T17:37:00Z",
+    "dcterms:modified": "2026-11-13T17:37:00Z"
+  },
+  "app_properties": {
+    "Template": "Normal.dotm",
+    "TotalTime": "0",
+    "Pages": "3",
+    "Words": "974",
+    "Characters": "5554",
+    "Application": "Microsoft Office Word",
+    "DocSecurity": "0",
+    "Lines": "46",
+    "Paragraphs": "13",
+    "ScaleCrop": "false",
+    "Company": "",
+    "LinksUpToDate": "false",
+    "CharactersWithSpaces": "6515",
+    "SharedDoc": "false",
+    "HyperlinksChanged": "false",
+    "AppVersion": "16.0000"
+  },
+  "custom_properties_part": false,
+  "sensitivity_labels": [
+    {
+      "id": "{6f6b1f18-f556-4b39-a158-6b6d47ff40df}",
+      "enabled": "1",
+      "method": "Standard",
+      "siteId": "{f5d3bd9c-a8c2-4efc-9493-ddf2d4b42f17}",
+      "removed": "0"
+    }
+  ],
+  "sensitivity_label_note": "docMetadata/LabelInfo.xml carries a Microsoft Purview sensitivity-label reference (GUIDs only; the label name is not stored in the file).",
+  "settings": {
+    "w14_doc_id": "2384D4C2",
+    "w15_doc_id": "{FDEE6D6D-8A64-6849-8152-E9611DAE9470}",
+    "rsid_root": "00C77B3A",
+    "rsids": [
+      "005168F2",
+      "00874FA5",
+      "00C77B3A",
+      "00F26E4E"
+    ],
+    "track_revisions": false,
+    "document_protection": false,
+    "theme_font_lang": "en-US"
+  },
+  "page": {
+    "width_twips": 11906,
+    "height_twips": 16838
+  },
+  "declared_vs_counted": {
+    "app_xml_declared": {
+      "Pages": "3",
+      "Words": "974",
+      "Characters": "5554",
+      "Paragraphs": "13",
+      "Lines": "46"
+    },
+    "counted_here": {
+      "body_paragraphs": 21,
+      "table_cell_paragraphs": 46,
+      "words_whitespace_split": 676,
+      "characters_excluding_whitespace": 4004
+    },
+    "note": "Word’s own statistics are application-computed and are recorded as declared values only."
+  },
+  "embedded_media": {
+    "media_parts": [],
+    "embedding_parts": [],
+    "image_relationships": 0,
+    "drawing_elements": 0,
+    "vml_pict_elements": 0,
+    "ole_object_elements": 0,
+    "any_embedded_media": false
+  },
+  "macros": {
+    "vba_project_present": false,
+    "macro_enabled_content_type": false
+  },
+  "tracked_changes": {
+    "inserted": 0,
+    "deleted": 0
+  },
+  "other_parts": {
+    "comments": [],
+    "footnotes_endnotes": [],
+    "headers_footers": [],
+    "custom_xml": []
+  },
+  "content_types": {
+    "defaults": [
+      {
+        "extension": "rels",
+        "content_type": "application/vnd.openxmlformats-package.relationships+xml"
+      },
+      {
+        "extension": "xml",
+        "content_type": "application/xml"
+      }
+    ],
+    "overrides": [
+      {
+        "part": "/word/document.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+      },
+      {
+        "part": "/word/numbering.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"
+      },
+      {
+        "part": "/word/styles.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"
+      },
+      {
+        "part": "/word/settings.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"
+      },
+      {
+        "part": "/word/webSettings.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.webSettings+xml"
+      },
+      {
+        "part": "/word/fontTable.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"
+      },
+      {
+        "part": "/word/theme/theme1.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.theme+xml"
+      },
+      {
+        "part": "/docProps/core.xml",
+        "content_type": "application/vnd.openxmlformats-package.core-properties+xml"
+      },
+      {
+        "part": "/docProps/app.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.extended-properties+xml"
+      },
+      {
+        "part": "/docMetadata/LabelInfo.xml",
+        "content_type": "application/vnd.ms-office.classificationlabels+xml"
+      }
+    ]
+  },
+  "zip_entries": [
+    {
+      "name": "[Content_Types].xml",
+      "size": 1559
+    },
+    {
+      "name": "_rels/.rels",
+      "size": 736
+    },
+    {
+      "name": "word/document.xml",
+      "size": 42839
+    },
+    {
+      "name": "word/_rels/document.xml.rels",
+      "size": 4445
+    },
+    {
+      "name": "word/theme/theme1.xml",
+      "size": 8717
+    },
+    {
+      "name": "word/settings.xml",
+      "size": 3110
+    },
+    {
+      "name": "word/numbering.xml",
+      "size": 10506
+    },
+    {
+      "name": "word/styles.xml",
+      "size": 44665
+    },
+    {
+      "name": "word/webSettings.xml",
+      "size": 1018
+    },
+    {
+      "name": "word/fontTable.xml",
+      "size": 2636
+    },
+    {
+      "name": "docProps/core.xml",
+      "size": 670
+    },
+    {
+      "name": "docProps/app.xml",
+      "size": 719
+    },
+    {
+      "name": "docMetadata/LabelInfo.xml",
+      "size": 307
+    }
+  ],
+  "relationships": [
+    {
+      "id": "rId8",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId13",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId18",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable",
+      "type_short": "fontTable",
+      "target": "fontTable.xml",
+      "target_mode": "Internal"
+    },
+    {
+      "id": "rId3",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings",
+      "type_short": "settings",
+      "target": "settings.xml",
+      "target_mode": "Internal"
+    },
+    {
+      "id": "rId7",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId12",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://support.southwest.com/helpcenter/article/assigned-seats",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId17",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://outlook.office365.com/owa/?ItemID=AAMkAGI5NWY3ZGZiLTdmMWUtNDJiOS05M2ZmLTViN2YzYzA4MTc2ZgBGAAAAAAAKtYbiEss%2bRrIRqm4rHIFJBwDu9xYT3kgpRrBkyqMs%2flhIAAAAAAEMAADu9xYT3kgpRrBkyqMs%2flhIAAfWkm9%2bAAA%3d&exvsurl=1&viewmodel=ReadMessageItem",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId2",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+      "type_short": "styles",
+      "target": "styles.xml",
+      "target_mode": "Internal"
+    },
+    {
+      "id": "rId16",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://support.southwest.com/helpcenter/article/boarding-and-seating-benefits",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId1",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
+      "type_short": "numbering",
+      "target": "numbering.xml",
+      "target_mode": "Internal"
+    },
+    {
+      "id": "rId6",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?EntityRepresentationId=4ac7f0d6-a2aa-4068-b2a1-a2ab2e37820a",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId11",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?web=1",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId5",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://support.southwest.com/helpcenter/article/airplane-specifications",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId15",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://support.southwest.com/helpcenter/article/assigned-seat-selection",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId10",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Revealed-Our-New-Elevated-Onboard-Experience.aspx?EntityRepresentationId=836f8c7d-37c0-4227-89f4-29f558c8a05e",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId19",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
+      "type_short": "theme",
+      "target": "theme/theme1.xml",
+      "target_mode": "Internal"
+    },
+    {
+      "id": "rId4",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSettings",
+      "type_short": "webSettings",
+      "target": "webSettings.xml",
+      "target_mode": "Internal"
+    },
+    {
+      "id": "rId9",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "target_mode": "External"
+    },
+    {
+      "id": "rId14",
+      "type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "type_short": "hyperlink",
+      "target": "https://wnco.sharepoint.com/sites/SWALife-News/SitePages/Changes-and-Upcoming-Additions-to-Our-Fleet.aspx?web=1",
+      "target_mode": "External"
+    }
+  ]
+}

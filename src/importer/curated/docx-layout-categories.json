@@ -1,0 +1,46 @@
+[
+  {
+    "id": "DOCX-CAT-700-137",
+    "name": "737-700, 137-seat LOPA",
+    "claimedSeatCount": 137,
+    "crosswalk": ["CAND-73G"],
+    "quotes": ["737-700, 137-seat LOPA", "one double-seat exit-row section"],
+    "note": "Crosswalk to candidate 73G is inferred from model and seat count; the document does not name registry identifiers."
+  },
+  {
+    "id": "DOCX-CAT-700-138",
+    "name": "737-700, upgraded 138-seat LOPA",
+    "claimedSeatCount": 138,
+    "crosswalk": [],
+    "quotes": [
+      "737-700, upgraded 138-seat LOPA",
+      "exit row changed from two seats to three on the affected side",
+      "seats 7D, 7E, 7F, 15B and 15C physically have Extra Legroom spacing but are sold as Preferred, not Extra Legroom"
+    ],
+    "note": "Absent from the five-record registry. No complete seat set, row list or omitted-seat list is supplied, so no layout is created. It is never derived from the seat count, from candidate 73G or from fictional fixture V10. The stated physical-Extra-Legroom / commercially-Preferred exception for 7D, 7E, 7F, 15B and 15C applies to this category only and is not applied to the 137-seat candidate."
+  },
+  {
+    "id": "DOCX-CAT-800-MAX8-TEMP",
+    "name": "737-800 / MAX 8, temporary LOPA",
+    "claimedSeatCount": 175,
+    "crosswalk": ["CAND-738", "CAND-7M8-1"],
+    "quotes": ["737-800 / MAX 8, temporary LOPA", "reduced seating at part of the exit-row and rear-row areas"],
+    "note": "One document category spans two registry identifiers (a grain difference, not a duplicate). Crosswalk is inferred. The rear-row wording does not identify a seat and is left unresolved."
+  },
+  {
+    "id": "DOCX-CAT-800-MAX8-FINAL",
+    "name": "737-800 / MAX 8, final LOPA",
+    "claimedSeatCount": 175,
+    "crosswalk": ["CAND-738-2", "CAND-7M8-2"],
+    "quotes": ["737-800 / MAX 8, final LOPA", "three seats on both sides of the exit row and two seats on both sides of the last row"],
+    "note": "One document category spans two registry identifiers. Crosswalk is inferred. The document's 34 in. Extra Legroom pitch conflicts with the registry's 33-37 (Row 14 ~37\") claim; both raw claims are kept."
+  },
+  {
+    "id": "DOCX-CAT-MAX7-NOT-CURRENT",
+    "name": "737 MAX 7 (stated as not a current configuration)",
+    "claimedSeatCount": 150,
+    "crosswalk": [],
+    "quotes": ["The 737 MAX 7 is not yet a current revenue configuration", "planned 150-passenger ELR/RECARO layout"],
+    "note": "Described as planned, with dates subject to change. No layout is created."
+  }
+]

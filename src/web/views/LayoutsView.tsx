@@ -1,0 +1,192 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { LayoutCategory, VisualProfile } from "../../domain/types.ts";
+import { api, ApiError, type LayoutDetail, type LayoutSummary } from "../api.ts";
+import { Inspector } from "../components/Inspector.tsx";
+import { Viewer } from "../components/Viewer.tsx";
+import type { Workspace } from "../model.ts";
+
+const STATUS_TEXT: Record<string, string> = {
+  released: "Fixture, released",
+  planned: "Planned only",
+  candidate: "Candidate, unassigned",
+};
+
+/** Explore layouts without a tail. Candidate layouts are shown with their unverified status. */
+export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | null; visualProfiles: VisualProfile[] }) {
+  const [list, setList] = useState<{ layouts: LayoutSummary[]; layoutCategories: LayoutCategory[] } | null>(null);
+  const [detail, setDetail] = useState<LayoutDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      if (layoutId) {
+        setDetail(null);
+        setSelection(null);
+        setDetail(await api.layout(layoutId));
+      } else setList(await api.layouts());
+    } catch (e) {
+      setError(e instanceof ApiError && e.kind === "network" ? "The server could not be reached. Retry when the connection is back." : (e as Error).message);
+    }
+  }, [layoutId]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const workspace: Workspace | null = useMemo(() => {
+    if (!detail) return null;
+    const candidate = detail.layoutRevision.namespace === "candidate";
+    return {
+      mode: "explore",
+      layout: detail.layoutRevision,
+      resolution: null,
+      componentDefs: Object.fromEntries(detail.components.map((c) => [c.id, c])),
+      records: [],
+      editable: false,
+      unresolvedReason: candidate
+        ? "Unresolved: no approved parts, applicability or substitute catalogue was supplied for this candidate layout, and it is not assigned to any tail."
+        : "Open an appearance check for a tail and date to resolve parts. Applicability depends on the dated tail configuration.",
+    };
+  }, [detail]);
+
+  if (error) {
+    return (
+      <section className="panel">
+        <h2>Layouts</h2>
+        <div className="alert" role="alert">
+          <p>{error}</p>
+          <button type="button" onClick={load}>
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (layoutId) {
+    if (!detail || !workspace) return <p role="status">Loading layout…</p>;
+    const rev = detail.layoutRevision;
+    const location = rev.locations.find((l) => l.id === selection) ?? null;
+    return (
+      <div className="check-view">
+        <section className="panel" aria-labelledby="layout-h">
+          <p>
+            <a href="#/layouts">← All layouts</a>
+          </p>
+          <h2 id="layout-h">{rev.name}</h2>
+          <p>
+            <span className={`pill ${rev.namespace === "candidate" ? "candidate" : rev.status === "planned" ? "unresolved" : "ok"}`}>{STATUS_TEXT[rev.status] ?? rev.status}</span> {rev.id} · namespace{" "}
+            {rev.namespace} · {rev.locations.filter((l) => l.kind === "SEAT").length} seats · floor map {rev.floorMapStatus} · bin map {rev.binMapStatus}
+          </p>
+          <ul className="notes">
+            {rev.notes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+            {detail.source && (
+              <li>
+                Source: {detail.source.title} ({detail.source.kind}; {detail.source.authority}; revision {detail.source.revision}
+                {detail.source.file ? `; file "${detail.source.file.path}", SHA-256 ${detail.source.file.sha256.slice(0, 16)}…` : ""})
+              </li>
+            )}
+            {detail.categories.map((c) => (
+              <li key={c.id}>
+                Document category "{c.name}" maps here by inference. {c.note}
+              </li>
+            ))}
+          </ul>
+          <p className="fine">{rev.geometry.note}</p>
+        </section>
+        <div className="workspace">
+          <Viewer workspace={workspace} selection={selection} onSelect={(id) => setSelection(id)} visualProfiles={visualProfiles} />
+          <aside className="side" aria-label="Selected location">
+            <Inspector
+              workspace={workspace}
+              location={location}
+              focusComponent={null}
+              saveState={{ status: "idle", message: "" }}
+              onRecord={() => undefined}
+              onRemove={() => undefined}
+              onRetry={() => undefined}
+              onSelect={(id) => setSelection(id)}
+            />
+          </aside>
+        </div>
+      </div>
+    );
+  }
+
+  if (!list) return <p role="status">Loading layouts…</p>;
+  const groups: [string, string, LayoutSummary[]][] = [
+    ["Candidate layouts from the supplied registry", "Unverified and unassigned. Explorable in 3D; no tails, parts or floor/bin maps.", list.layouts.filter((l) => l.namespace === "candidate")],
+    ["Fictional fixture layouts", "Used by the demonstration tails. Not aircraft data.", list.layouts.filter((l) => l.namespace === "fixture")],
+  ];
+  return (
+    <section className="panel" aria-labelledby="layouts-h">
+      <h2 id="layouts-h">Layouts</h2>
+      {groups.map(([title, blurb, items]) => (
+        <section key={title} aria-label={title}>
+          <h3>{title}</h3>
+          <p className="fine">{blurb}</p>
+          <div className="table-scroll" tabIndex={0} role="region" aria-label={`${title} table`}>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Layout revision</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Seats</th>
+                  <th scope="col">Tier / zone counts</th>
+                  <th scope="col">Floor / bin map</th>
+                  <th scope="col">Variants</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((l) => (
+                  <tr key={l.id}>
+                    <th scope="row">
+                      {l.seatSetStatus === "complete" ? <a href={`#/layouts/${encodeURIComponent(l.id)}`}>{l.name}</a> : l.name}
+                      <br />
+                      <span className="fine">{l.id}</span>
+                    </th>
+                    <td>{STATUS_TEXT[l.status] ?? l.status}</td>
+                    <td>{l.seatSetStatus === "complete" ? l.seatCount : "seat set not supplied"}</td>
+                    <td>
+                      {Object.entries(l.tierCounts)
+                        .map(([k, v]) => `${k} ${v}`)
+                        .join(" · ") || "—"}
+                    </td>
+                    <td>
+                      {l.floorMapStatus} / {l.binMapStatus}
+                    </td>
+                    <td>{l.variants.join(", ") || "none"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+      <section aria-labelledby="cats-h">
+        <h3 id="cats-h">Layout categories described in the supplied DOCX</h3>
+        <p className="fine">Four document categories versus five registry identifiers is a difference of grain. No record is merged or dropped, and crosswalks are inferred, not stated.</p>
+        <ul className="category-list">
+          {list.layoutCategories.map((c) => (
+            <li key={c.id} data-category={c.id}>
+              <strong>{c.name}</strong> — claimed {c.claimedSeatCount ?? "?"} seats.{" "}
+              {c.seatSetStatus === "not-supplied" ? <span className="pill unresolved">Unresolved: seat set not supplied</span> : <span className="pill candidate">Inferred: {c.crosswalk.map((x) => x.layoutRevisionId).join(", ")}</span>}
+              <br />
+              <span className="fine">{c.note}</span>
+              <ul className="plain fine">
+                {c.claims.map((claim) => (
+                  <li key={claim.locator + claim.text.slice(0, 20)}>
+                    “{claim.text}” <span className="mono">[{claim.locator}]</span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </section>
+  );
+}

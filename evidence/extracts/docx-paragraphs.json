@@ -1,0 +1,1963 @@
+{
+  "purpose": "DOCX read as ZIP + XML only.",
+  "file": "Current Aircraft Seat Configurations.docx",
+  "counts": {
+    "body_paragraphs": 21,
+    "table_cell_paragraphs": 46,
+    "all_w_p_elements": 67,
+    "empty_body_paragraphs": 0,
+    "headings": 6,
+    "list_items": 9,
+    "tables": 2,
+    "hyperlinks": 13
+  },
+  "headings": [
+    {
+      "locator": "P001",
+      "level": 2,
+      "style": "Heading2",
+      "text": "Current Southwest seat configurations"
+    },
+    {
+      "locator": "P004",
+      "level": 3,
+      "style": "Heading3",
+      "text": "What distinguishes the four layouts"
+    },
+    {
+      "locator": "P008",
+      "level": 2,
+      "style": "Heading2",
+      "text": "Customer-facing seat tiers"
+    },
+    {
+      "locator": "P011",
+      "level": 3,
+      "style": "Heading3",
+      "text": "Special 138-seat 737-700 treatment"
+    },
+    {
+      "locator": "P013",
+      "level": 2,
+      "style": "Heading2",
+      "text": "Premium access by fare and loyalty tier"
+    },
+    {
+      "locator": "P020",
+      "level": 2,
+      "style": "Heading2",
+      "text": "Not currently included"
+    }
+  ],
+  "paragraphs": [
+    {
+      "locator": "P001",
+      "context": "body",
+      "para_id": "2384D4C2",
+      "style_id": "Heading2",
+      "style_name": "heading 2",
+      "heading_level": 2,
+      "list": null,
+      "text": "Current Southwest seat configurations",
+      "runs": [
+        {
+          "text": "Current Southwest seat configurations",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Current Southwest seat configurations"
+      ]
+    },
+    {
+      "locator": "P002",
+      "context": "body",
+      "para_id": "2384D4C3",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "As of November 13, 2026, Southwest is flying three aircraft families with four active seating layouts because portions of the fleet are still being standardized:",
+      "runs": [
+        {
+          "text": "As of ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "November 13, 2026",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ", Southwest is flying three aircraft families with ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "four active seating layouts",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " because portions of the fleet are still being standardized:",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Current Southwest seat configurations"
+      ]
+    },
+    {
+      "locator": "T01.R01.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4C4",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Aircraft / active layout",
+      "runs": [
+        {
+          "text": "Aircraft / active layout",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R01.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4C5",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Capacity",
+      "runs": [
+        {
+          "text": "Capacity",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R01.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4C6",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Seating arrangement",
+      "runs": [
+        {
+          "text": "Seating arrangement",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R01.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4C7",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Extra Legroom pitch",
+      "runs": [
+        {
+          "text": "Extra Legroom pitch",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R01.C05.P1",
+      "context": "table-cell",
+      "para_id": "2384D4C8",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Standard / Preferred pitch",
+      "runs": [
+        {
+          "text": "Standard / Preferred pitch",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R01.C06.P1",
+      "context": "table-cell",
+      "para_id": "2384D4C9",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Seat width",
+      "runs": [
+        {
+          "text": "Seat width",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R02.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4CB",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "737-700, 137-seat LOPA",
+      "runs": [
+        {
+          "text": "737-700, 137-seat LOPA",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R02.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4CC",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "137",
+      "runs": [
+        {
+          "text": "137",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R02.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4CD",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Single cabin, 3-3 seating; one double-seat exit-row section",
+      "runs": [
+        {
+          "text": "Single cabin, 3-3 seating; one double-seat exit-row section",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R02.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4CE",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "35-36 in.",
+      "runs": [
+        {
+          "text": "35-36 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R02.C05.P1",
+      "context": "table-cell",
+      "para_id": "2384D4CF",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "31-33 in.",
+      "runs": [
+        {
+          "text": "31-33 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R02.C06.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D0",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "15.5-17.0 in.",
+      "runs": [
+        {
+          "text": "15.5-17.0 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R03.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D2",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "737-700, upgraded 138-seat LOPA",
+      "runs": [
+        {
+          "text": "737-700, upgraded 138-seat LOPA",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R03.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D3",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "138",
+      "runs": [
+        {
+          "text": "138",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R03.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D4",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Single cabin, 3-3 seating; exit row changed from two seats to three on the affected side",
+      "runs": [
+        {
+          "text": "Single cabin, 3-3 seating; exit row changed from two seats to three on the affected side",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R03.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D5",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "35-36 in.",
+      "runs": [
+        {
+          "text": "35-36 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R03.C05.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D6",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "31-33 in.",
+      "runs": [
+        {
+          "text": "31-33 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R03.C06.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D7",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "15.5-17.0 in.",
+      "runs": [
+        {
+          "text": "15.5-17.0 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R04.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4D9",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "737-800 / MAX 8, temporary LOPA",
+      "runs": [
+        {
+          "text": "737-800 / MAX 8, temporary LOPA",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R04.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4DA",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "175",
+      "runs": [
+        {
+          "text": "175",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R04.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4DB",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Single cabin, 3-3 seating; reduced seating at part of the exit-row and rear-row areas",
+      "runs": [
+        {
+          "text": "Single cabin, 3-3 seating; reduced seating at part of the exit-row and rear-row areas",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R04.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4DC",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "34 in.",
+      "runs": [
+        {
+          "text": "34 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R04.C05.P1",
+      "context": "table-cell",
+      "para_id": "2384D4DD",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "31-32 in.",
+      "runs": [
+        {
+          "text": "31-32 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R04.C06.P1",
+      "context": "table-cell",
+      "para_id": "2384D4DE",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "15.5-17.8 in.",
+      "runs": [
+        {
+          "text": "15.5-17.8 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R05.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4E0",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "737-800 / MAX 8, final LOPA",
+      "runs": [
+        {
+          "text": "737-800 / MAX 8, final LOPA",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R05.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4E1",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "175",
+      "runs": [
+        {
+          "text": "175",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R05.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4E2",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Single cabin, 3-3 seating; three seats on both sides of the exit row and two seats on both sides of the last row",
+      "runs": [
+        {
+          "text": "Single cabin, 3-3 seating; three seats on both sides of the exit row and two seats on both sides of the last row",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R05.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4E3",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "34 in.",
+      "runs": [
+        {
+          "text": "34 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R05.C05.P1",
+      "context": "table-cell",
+      "para_id": "2384D4E4",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "31-32 in.",
+      "runs": [
+        {
+          "text": "31-32 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T01.R05.C06.P1",
+      "context": "table-cell",
+      "para_id": "2384D4E5",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "15.5-17.8 in.",
+      "runs": [
+        {
+          "text": "15.5-17.8 in.",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "P003",
+      "context": "body",
+      "para_id": "2384D4E7",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "The measurements above are Southwest’s published ranges. Pitch is the distance from a point on one seat to the same point on the seat immediately ahead, not the amount of unobstructed knee clearance. [support.so...thwest.com]",
+      "runs": [
+        {
+          "text": "The measurements above are Southwest’s published ranges. Pitch is the distance from a point on one seat to the same point on the seat immediately ahead, not the amount of unobstructed knee clearance. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[support.so...thwest.com]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId5"
+        }
+      ],
+      "hyperlink_count": 1,
+      "section_path": [
+        "Current Southwest seat configurations"
+      ]
+    },
+    {
+      "locator": "P004",
+      "context": "body",
+      "para_id": "2384D4E8",
+      "style_id": "Heading3",
+      "style_name": "heading 3",
+      "heading_level": 3,
+      "list": null,
+      "text": "What distinguishes the four layouts",
+      "runs": [
+        {
+          "text": "What distinguishes the four layouts",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Current Southwest seat configurations",
+        "What distinguishes the four layouts"
+      ]
+    },
+    {
+      "locator": "P005",
+      "context": "body",
+      "para_id": "2384D4E9",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "2",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "The 137-seat and 138-seat 737-700 layouts are both in circulation while 170 selected -700s are upgraded. The 138-seat version replaces Innovator seats with Meridian seats, adds in-seat power and converts the affected exit-row position to a triple-seat arrangement. Southwest expects the remaining non-upgraded aircraft to be retired, sold or otherwise removed from the fleet. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]",
+      "runs": [
+        {
+          "text": "The ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "137-seat and 138-seat 737-700 layouts are both in circulation",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " while 170 selected -700s are upgraded. The 138-seat version replaces Innovator seats with Meridian seats, adds in-seat power and converts the affected exit-row position to a triple-seat arrangement. Southwest expects the remaining non-upgraded aircraft to be retired, sold or otherwise removed from the fleet. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "Changes-and-Upcoming-Additions-to-Our-Fleet.aspx",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId6"
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[Changes an.",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId7"
+        },
+        {
+          "text": "..Our",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId7"
+        },
+        {
+          "text": " Fleet | SharePoint]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId7"
+        }
+      ],
+      "hyperlink_count": 2,
+      "section_path": [
+        "Current Southwest seat configurations",
+        "What distinguishes the four layouts"
+      ]
+    },
+    {
+      "locator": "P006",
+      "context": "body",
+      "para_id": "2384D4EA",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "2",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "The 737-800 and MAX 8 temporary and final LOPAs both retain 175 total seats. The final layout adds one Extra Legroom seat on each side of the exit row, while the last row becomes two seats per side, keeping the overall capacity unchanged. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]",
+      "runs": [
+        {
+          "text": "The ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "737-800 and MAX 8 temporary and final LOPAs both retain 175 total seats",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ". The final layout adds one Extra Legroom seat on each side of the exit row, while the last row becomes two seats per side, keeping the overall capacity unchanged. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "Changes-and-Upcoming-Additions-to-Our-Fleet.aspx",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId8"
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[Changes an.",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId9"
+        },
+        {
+          "text": "..Our",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId9"
+        },
+        {
+          "text": " Fleet | SharePoint]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId9"
+        }
+      ],
+      "hyperlink_count": 2,
+      "section_path": [
+        "Current Southwest seat configurations",
+        "What distinguishes the four layouts"
+      ]
+    },
+    {
+      "locator": "P007",
+      "context": "body",
+      "para_id": "2384D4EB",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "2",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "Existing aircraft can have Innovator, Collins Meridian or RECARO R2 seating, depending on the aircraft and retrofit status. New deliveries use the RECARO interior; selected -800s and -700s are also being converted as part of the standardization program. Revealed-Our-New-Elevated-Onboard-Experience.aspx [Revealed:...Experience | SharePoint]",
+      "runs": [
+        {
+          "text": "Existing aircraft can have ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "Innovator, Collins Meridian or RECARO R2 seating",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ", depending on the aircraft and retrofit status. New deliveries use the RECARO interior; selected -800s and -700s are also being converted as part of the standardization program. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "Revealed-Our-New-Elevated-Onboard-Experience.aspx",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId10"
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId11"
+        },
+        {
+          "text": "Revealed:...",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId11"
+        },
+        {
+          "text": "Experience | SharePoint]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId11"
+        }
+      ],
+      "hyperlink_count": 2,
+      "section_path": [
+        "Current Southwest seat configurations",
+        "What distinguishes the four layouts"
+      ]
+    },
+    {
+      "locator": "P008",
+      "context": "body",
+      "para_id": "2384D4EC",
+      "style_id": "Heading2",
+      "style_name": "heading 2",
+      "heading_level": 2,
+      "list": null,
+      "text": "Customer-facing seat tiers",
+      "runs": [
+        {
+          "text": "Customer-facing seat tiers",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Customer-facing seat tiers"
+      ]
+    },
+    {
+      "locator": "P009",
+      "context": "body",
+      "para_id": "2384D4ED",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Southwest still operates one physical cabin, not a separate first- or business-class cabin. “Premium” refers to the Extra Legroom product within that cabin.",
+      "runs": [
+        {
+          "text": "Southwest still operates ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "one physical cabin",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ", not a separate first- or business-class cabin. “Premium” refers to the Extra Legroom product within that cabin.",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Customer-facing seat tiers"
+      ]
+    },
+    {
+      "locator": "T02.R01.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4EE",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Seat tier",
+      "runs": [
+        {
+          "text": "Seat tier",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R01.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4EF",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Location",
+      "runs": [
+        {
+          "text": "Location",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R01.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F0",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Physical dimensions",
+      "runs": [
+        {
+          "text": "Physical dimensions",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R01.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F1",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Included experience",
+      "runs": [
+        {
+          "text": "Included experience",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R02.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F3",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Extra Legroom, premium tier",
+      "runs": [
+        {
+          "text": "Extra Legroom",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ", premium tier",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R02.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F4",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Front of the cabin and designated exit-row positions",
+      "runs": [
+        {
+          "text": "Front of the cabin and designated exit-row positions",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R02.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F5",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "737-700: 35-36-inch pitch, up to five inches more than standard. 737-800/MAX 8: 34-inch pitch, approximately three inches more than standard",
+      "runs": [
+        {
+          "text": "737-700:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " 35-36-inch pitch, up to five inches more than standard. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "737-800/MAX 8:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " 34-inch pitch, approximately three inches more than standard",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R02.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F6",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Earlier boarding, enhanced snacks and a complimentary premium beverage when available",
+      "runs": [
+        {
+          "text": "Earlier boarding, enhanced snacks and a complimentary premium beverage when available",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R03.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F8",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Preferred",
+      "runs": [
+        {
+          "text": "Preferred",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R03.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4F9",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Standard-pitch seats toward the front",
+      "runs": [
+        {
+          "text": "Standard-pitch seats toward the front",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R03.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4FA",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Same pitch and width range as Standard for the aircraft type",
+      "runs": [
+        {
+          "text": "Same pitch and width range as Standard for the aircraft type",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R03.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D4FB",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Primarily better cabin position and quicker deplaning; it is not a wider seat",
+      "runs": [
+        {
+          "text": "Primarily better cabin position and quicker deplaning; it is not a wider seat",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R04.C01.P1",
+      "context": "table-cell",
+      "para_id": "2384D4FD",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Standard",
+      "runs": [
+        {
+          "text": "Standard",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R04.C02.P1",
+      "context": "table-cell",
+      "para_id": "2384D4FE",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Rear portion of the cabin",
+      "runs": [
+        {
+          "text": "Rear portion of the cabin",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R04.C03.P1",
+      "context": "table-cell",
+      "para_id": "2384D4FF",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "737-700: 31-33-inch pitch. 737-800/MAX 8: 31-32-inch pitch",
+      "runs": [
+        {
+          "text": "737-700:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " 31-33-inch pitch. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "737-800/MAX 8:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " 31-32-inch pitch",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "T02.R04.C04.P1",
+      "context": "table-cell",
+      "para_id": "2384D500",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Standard assigned seat",
+      "runs": [
+        {
+          "text": "Standard assigned seat",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0
+    },
+    {
+      "locator": "P010",
+      "context": "body",
+      "para_id": "2384D502",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "Southwest describes Extra Legroom as providing three to five additional inches of pitch: five inches on the 737-700 and three inches on the 737-800/MAX 8. Preferred is a location upgrade, not a dimensional upgrade. [support.so...thwest.com]",
+      "runs": [
+        {
+          "text": "Southwest describes Extra Legroom as providing ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "three to five additional inches of pitch",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ": five inches on the 737-700 and three inches on the 737-800/MAX 8. Preferred is a location upgrade, not a dimensional upgrade. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[support.so...thwest.com]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId12"
+        }
+      ],
+      "hyperlink_count": 1,
+      "section_path": [
+        "Customer-facing seat tiers"
+      ]
+    },
+    {
+      "locator": "P011",
+      "context": "body",
+      "para_id": "2384D503",
+      "style_id": "Heading3",
+      "style_name": "heading 3",
+      "heading_level": 3,
+      "list": null,
+      "text": "Special 138-seat 737-700 treatment",
+      "runs": [
+        {
+          "text": "Special 138-seat 737-700 treatment",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Customer-facing seat tiers",
+        "Special 138-seat 737-700 treatment"
+      ]
+    },
+    {
+      "locator": "P012",
+      "context": "body",
+      "para_id": "2384D504",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "On the upgraded 138-seat -700 layout, seats 7D, 7E, 7F, 15B and 15C physically have Extra Legroom spacing but are sold as Preferred, not Extra Legroom. That distinction needs to be retained in any configuration, seat-map or appearance-part application because the physical pitch and commercial product designation do not match. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]",
+      "runs": [
+        {
+          "text": "On the upgraded 138-seat -700 layout, seats ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "7D, 7E, 7F, 15B and 15C",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " physically have Extra Legroom spacing but are sold as ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "Preferred",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ", not Extra Legroom. That distinction needs to be retained in any configuration, seat-map or appearance-part application because the physical pitch and commercial product designation do not match. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "Changes-and-Upcoming-Additions-to-Our-Fleet.aspx",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId13"
+        },
+        {
+          "text": " ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[Changes an.",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId14"
+        },
+        {
+          "text": "..Our",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId14"
+        },
+        {
+          "text": " Fleet | SharePoint]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId14"
+        }
+      ],
+      "hyperlink_count": 2,
+      "section_path": [
+        "Customer-facing seat tiers",
+        "Special 138-seat 737-700 treatment"
+      ]
+    },
+    {
+      "locator": "P013",
+      "context": "body",
+      "para_id": "2384D505",
+      "style_id": "Heading2",
+      "style_name": "heading 2",
+      "heading_level": 2,
+      "list": null,
+      "text": "Premium access by fare and loyalty tier",
+      "runs": [
+        {
+          "text": "Premium access by fare and loyalty tier",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Premium access by fare and loyalty tier"
+      ]
+    },
+    {
+      "locator": "P014",
+      "context": "body",
+      "para_id": "2384D506",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "3",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "Choice Extra: Extra Legroom, Preferred or Standard at booking.",
+      "runs": [
+        {
+          "text": "Choice Extra:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " Extra Legroom, Preferred or Standard at booking.",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Premium access by fare and loyalty tier"
+      ]
+    },
+    {
+      "locator": "P015",
+      "context": "body",
+      "para_id": "2384D507",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "3",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "Choice Preferred: Preferred or Standard at booking.",
+      "runs": [
+        {
+          "text": "Choice Preferred:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " Preferred or Standard at booking.",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Premium access by fare and loyalty tier"
+      ]
+    },
+    {
+      "locator": "P016",
+      "context": "body",
+      "para_id": "2384D508",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "3",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "Choice: Standard at booking.",
+      "runs": [
+        {
+          "text": "Choice:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " Standard at booking.",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Premium access by fare and loyalty tier"
+      ]
+    },
+    {
+      "locator": "P017",
+      "context": "body",
+      "para_id": "2384D509",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "3",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "Basic: Standard seat assigned at check-in or the gate.",
+      "runs": [
+        {
+          "text": "Basic:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " Standard seat assigned at check-in or the gate.",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Premium access by fare and loyalty tier"
+      ]
+    },
+    {
+      "locator": "P018",
+      "context": "body",
+      "para_id": "2384D50A",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "3",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "A-List Preferred: Any available seat, including Extra Legroom, at booking.",
+      "runs": [
+        {
+          "text": "A-List Preferred:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " Any available seat, including Extra Legroom, at booking.",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Premium access by fare and loyalty tier"
+      ]
+    },
+    {
+      "locator": "P019",
+      "context": "body",
+      "para_id": "2384D50B",
+      "style_id": "ListParagraph",
+      "style_name": "List Paragraph",
+      "heading_level": null,
+      "list": {
+        "num_id": "3",
+        "level": 0,
+        "num_fmt": "bullet",
+        "lvl_text": ""
+      },
+      "text": "A-List: Preferred or Standard at booking, with an Extra Legroom upgrade available within 48 hours of departure when available. [support.so...thwest.com], [support.so...thwest.com]",
+      "runs": [
+        {
+          "text": "A-List:",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " Preferred or Standard at booking, with an Extra Legroom upgrade available within 48 hours of departure when available. ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[support.so...thwest.com]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId15"
+        },
+        {
+          "text": ", ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[support.so...thwest.com]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId16"
+        }
+      ],
+      "hyperlink_count": 2,
+      "section_path": [
+        "Premium access by fare and loyalty tier"
+      ]
+    },
+    {
+      "locator": "P020",
+      "context": "body",
+      "para_id": "2384D50C",
+      "style_id": "Heading2",
+      "style_name": "heading 2",
+      "heading_level": 2,
+      "list": null,
+      "text": "Not currently included",
+      "runs": [
+        {
+          "text": "Not currently included",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        }
+      ],
+      "hyperlink_count": 0,
+      "section_path": [
+        "Not currently included"
+      ]
+    },
+    {
+      "locator": "P021",
+      "context": "body",
+      "para_id": "2384D50D",
+      "style_id": null,
+      "style_name": null,
+      "heading_level": null,
+      "list": null,
+      "text": "The 737 MAX 7 is not yet a current revenue configuration. Recent Tech Ops communication identifies a planned 150-passenger ELR/RECARO layout, with initial revenue service targeted for 2027 and dates subject to change. Know Before Fix | 737 MAX-7 vs MAX-8 Differences [Know Befor...ifferences | Outlook]",
+      "runs": [
+        {
+          "text": "The ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "737 MAX 7 is not yet a current revenue configuration",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": ". Recent Tech Ops communication identifies a planned ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "150-passenger",
+          "bold": true,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": " ELR/RECARO layout, with initial revenue service targeted for 2027 and dates subject to change. Know Before Fix | 737 MAX-7 vs MAX-8 Differences ",
+          "bold": false,
+          "italic": false,
+          "run_style": null,
+          "hyperlink_rel_id": null
+        },
+        {
+          "text": "[Know ",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId17"
+        },
+        {
+          "text": "Befor",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId17"
+        },
+        {
+          "text": "...",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId17"
+        },
+        {
+          "text": "ifferences",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId17"
+        },
+        {
+          "text": " | Outlook]",
+          "bold": false,
+          "italic": false,
+          "run_style": "Hyperlink",
+          "hyperlink_rel_id": "rId17"
+        }
+      ],
+      "hyperlink_count": 1,
+      "section_path": [
+        "Not currently included"
+      ]
+    }
+  ]
+}

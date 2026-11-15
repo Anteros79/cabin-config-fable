@@ -1,0 +1,121 @@
+{
+  "sourceRoot": "../.. (development folder root)",
+  "recordedAt": "2026-11-15T03:49:02.870Z",
+  "files": [
+    {
+      "path": "southwest 737 lopa normalized.json",
+      "bytes": 548,
+      "sha256": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d"
+    },
+    {
+      "path": "southwest_737_lopa_normalized.json",
+      "bytes": 578823,
+      "sha256": "5643d1e130a8d28c2038d18d1695ca51b2ff09811314425f43a93270b69a7252"
+    },
+    {
+      "path": "Southwest Cabin Configuration Standard.rtf",
+      "bytes": 29274,
+      "sha256": "d15281b8b4df25e8dc1d2aed1088a7ee771d3522d25b4be57924925d2aef128b"
+    },
+    {
+      "path": "gemini-code-1794587815855.json",
+      "bytes": 548,
+      "sha256": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d"
+    },
+    {
+      "path": "cabin schema architecture.csv",
+      "bytes": 1026,
+      "sha256": "2e23ce574c83737b2d596c2bf8cc43e143a85020c3eb9fc751502bd33043203e"
+    },
+    {
+      "path": "southwest_737_lopa_seats.csv",
+      "bytes": 105688,
+      "sha256": "3ac05f450ed414ff89a9da6ce94e34a01865aaaa8327b6b0d26c25ca2794fc2a"
+    },
+    {
+      "path": "southwest_737_lopa_rows.xlsx",
+      "bytes": 15573,
+      "sha256": "c8a3fe13238b5a7ae269c4bf8a643acbe8a9986c6de1b7e29b6b232d6a6f9e7f"
+    },
+    {
+      "path": "southwest_737_lopa_configurations.csv",
+      "bytes": 2004,
+      "sha256": "6244a799ac434b70b19e10d9dfbbd354f595e56ca84484a7b98672cbf2f8bdc6"
+    },
+    {
+      "path": "Current Aircraft Seat Configurations.docx",
+      "bytes": 20131,
+      "sha256": "723d11ee62d028a0d2af44b8215e01d1f0723d94505c9647c9e9031ff7cfd985"
+    },
+    {
+      "path": "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png",
+      "bytes": 674957,
+      "sha256": "61b22740bc46b74633afb6155b6bc28b0b39f2852434081deefe1d184dd2ae89"
+    },
+    {
+      "path": "barrier.webp",
+      "bytes": 93646,
+      "sha256": "b6ee68403975b364d20dcc2bf2adc52a8c71ba6fbdc3ba3be4ef7320d2fb2909"
+    },
+    {
+      "path": "carpet.jpg",
+      "bytes": 278848,
+      "sha256": "007e65eca369ef808e27da1f2623a46607a8f35062b92893a0eac00d04af5bcd"
+    },
+    {
+      "path": "forward galley flight deck.jpg",
+      "bytes": 3352738,
+      "sha256": "0963d74c7e4d01dfc4a4e968f7c0da6fdac1eb2cf761eab5bbca079327c30557"
+    },
+    {
+      "path": "rear galley.jpg",
+      "bytes": 143251,
+      "sha256": "f9ea2338140eeb77565fd1cee857804ba8a68acef49b0d17106793a165b5ee8e"
+    },
+    {
+      "path": "recarro 2.jpg",
+      "bytes": 77918,
+      "sha256": "58c8c019e04bc4ec32de62e667f2785e117f41623c60f7ee814b3e5b6f9e0c5d"
+    },
+    {
+      "path": "seats 1.jpeg",
+      "bytes": 43764,
+      "sha256": "d6c27a49eff8a74ae6a3104de1dca18560d2e01f4f874a9788b34be76fc00ad7"
+    },
+    {
+      "path": "seats 2 .jpeg",
+      "bytes": 30894,
+      "sha256": "026cdd68f87a6cb60bc160b763de7404a701d0004c1fef78e1b792e550de4eac"
+    },
+    {
+      "path": "seats 3.jpg",
+      "bytes": 410493,
+      "sha256": "29dae2e131d0a05db1eae3fb191c0478d65bd7a9ca71910495acee202919b29e"
+    },
+    {
+      "path": "seats 4.jpg",
+      "bytes": 3323626,
+      "sha256": "b108b845381296b523ba3bea5d13414e7dc885e7d40e4ed3b87cf4d8016d9bab"
+    },
+    {
+      "path": "seats 5.jpg",
+      "bytes": 443619,
+      "sha256": "49f16c78b6a8c4e3ac2883035b020b0c6dcf63a2102b6e7689c1eb5ef92ef9b6"
+    },
+    {
+      "path": "seats 6.avif",
+      "bytes": 86337,
+      "sha256": "c7929bf7ac093e66fd8c949e120551de74e394b5ad630e2454034a85c5750dfe"
+    },
+    {
+      "path": "seats 8.jpg",
+      "bytes": 102063,
+      "sha256": "94985372ea11685c4a37ff023fe736e9367237a5ecad5547daee57862f72d92c"
+    },
+    {
+      "path": "southwest seats-7.webp",
+      "bytes": 215456,
+      "sha256": "a0feb22156a758b51db8ef0ea2701156e945b91db4d558782e5880f9d3d7f574"
+    }
+  ]
+}

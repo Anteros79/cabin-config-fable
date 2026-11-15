@@ -1,0 +1,344 @@
+{
+  "purpose": "Byte-wise comparison of the JSON-named originals. Invalid files are reported as-is and never repaired.",
+  "files": [
+    {
+      "file": "southwest 737 lopa normalized.json",
+      "size_bytes": 548,
+      "sha256": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+      "valid_utf8": true,
+      "non_ascii_bytes": 0,
+      "bom_present": false,
+      "line_count": 15,
+      "line_ending": "LF",
+      "ends_with_newline": false,
+      "parses_as_json": false,
+      "strict_validator_error": {
+        "message": "unexpected token \".\", expected a JSON value",
+        "offset": 492,
+        "line": 12,
+        "column": 28,
+        "found": ".",
+        "context": "},\n  \"lopa_configurations\": [ ... ],\n  \"lopa_rows\": [ ... ],"
+      },
+      "native_json_parse_error": "Unexpected token '.', ...\"tions\": [ ... ],\n  \"\"... is not valid JSON",
+      "literal_placeholder_bracket_ellipsis": {
+        "pattern": "[ ... ]",
+        "count": 3,
+        "offsets": [
+          490,
+          514,
+          539
+        ]
+      },
+      "literal_ellipsis": {
+        "pattern": "...",
+        "count": 3,
+        "offsets": [
+          492,
+          516,
+          541
+        ]
+      },
+      "placeholder_lines": [
+        {
+          "line": 12,
+          "text": "  \"lopa_configurations\": [ ... ],"
+        },
+        {
+          "line": 13,
+          "text": "  \"lopa_rows\": [ ... ],"
+        },
+        {
+          "line": 14,
+          "text": "  \"lopa_seats\": [ ... ]"
+        }
+      ],
+      "top_level_keys_if_parsed": null
+    },
+    {
+      "file": "gemini-code-1794587815855.json",
+      "size_bytes": 548,
+      "sha256": "881e1c40b1d259ec1f568354d542d478ce532e8fd07ccc4addf7dc6d8ac1852d",
+      "valid_utf8": true,
+      "non_ascii_bytes": 0,
+      "bom_present": false,
+      "line_count": 15,
+      "line_ending": "LF",
+      "ends_with_newline": false,
+      "parses_as_json": false,
+      "strict_validator_error": {
+        "message": "unexpected token \".\", expected a JSON value",
+        "offset": 492,
+        "line": 12,
+        "column": 28,
+        "found": ".",
+        "context": "},\n  \"lopa_configurations\": [ ... ],\n  \"lopa_rows\": [ ... ],"
+      },
+      "native_json_parse_error": "Unexpected token '.', ...\"tions\": [ ... ],\n  \"\"... is not valid JSON",
+      "literal_placeholder_bracket_ellipsis": {
+        "pattern": "[ ... ]",
+        "count": 3,
+        "offsets": [
+          490,
+          514,
+          539
+        ]
+      },
+      "literal_ellipsis": {
+        "pattern": "...",
+        "count": 3,
+        "offsets": [
+          492,
+          516,
+          541
+        ]
+      },
+      "placeholder_lines": [
+        {
+          "line": 12,
+          "text": "  \"lopa_configurations\": [ ... ],"
+        },
+        {
+          "line": 13,
+          "text": "  \"lopa_rows\": [ ... ],"
+        },
+        {
+          "line": 14,
+          "text": "  \"lopa_seats\": [ ... ]"
+        }
+      ],
+      "top_level_keys_if_parsed": null
+    },
+    {
+      "file": "southwest_737_lopa_normalized.json",
+      "size_bytes": 578823,
+      "sha256": "5643d1e130a8d28c2038d18d1695ca51b2ff09811314425f43a93270b69a7252",
+      "valid_utf8": true,
+      "non_ascii_bytes": 0,
+      "bom_present": false,
+      "line_count": 18662,
+      "line_ending": "LF",
+      "ends_with_newline": false,
+      "parses_as_json": true,
+      "strict_validator_error": null,
+      "native_json_parse_error": null,
+      "literal_placeholder_bracket_ellipsis": {
+        "pattern": "[ ... ]",
+        "count": 0,
+        "offsets": []
+      },
+      "literal_ellipsis": {
+        "pattern": "...",
+        "count": 0,
+        "offsets": []
+      },
+      "placeholder_lines": [],
+      "top_level_keys_if_parsed": [
+        "schema_metadata",
+        "lopa_configurations",
+        "lopa_rows",
+        "lopa_seats"
+      ]
+    }
+  ],
+  "pairwise": [
+    {
+      "a": "southwest 737 lopa normalized.json",
+      "b": "gemini-code-1794587815855.json",
+      "size_a": 548,
+      "size_b": 548,
+      "sha256_equal": true,
+      "byte_identical": true,
+      "first_differing_byte_offset": null,
+      "semantic_comparison": {
+        "performed": false,
+        "reason": "at least one side is not valid JSON; no repair is attempted"
+      }
+    },
+    {
+      "a": "southwest 737 lopa normalized.json",
+      "b": "southwest_737_lopa_normalized.json",
+      "size_a": 548,
+      "size_b": 578823,
+      "sha256_equal": false,
+      "byte_identical": false,
+      "first_differing_byte_offset": 174,
+      "semantic_comparison": {
+        "performed": false,
+        "reason": "at least one side is not valid JSON; no repair is attempted"
+      }
+    },
+    {
+      "a": "gemini-code-1794587815855.json",
+      "b": "southwest_737_lopa_normalized.json",
+      "size_a": 548,
+      "size_b": 578823,
+      "sha256_equal": false,
+      "byte_identical": false,
+      "first_differing_byte_offset": 174,
+      "semantic_comparison": {
+        "performed": false,
+        "reason": "at least one side is not valid JSON; no repair is attempted"
+      }
+    }
+  ],
+  "classification": {
+    "southwest 737 lopa normalized.json": {
+      "classification": "envelope",
+      "classification_options": [
+        "data",
+        "schema",
+        "code",
+        "prose",
+        "envelope"
+      ],
+      "basis": "registry envelope/template: a schema_metadata header (names, primary keys, declared record counts) followed by entity arrays whose content is the literal placeholder \"[ ... ]\"; it holds no records, is not a JSON Schema document, contains no code and no prose, and is not valid JSON",
+      "flags": {
+        "looks_like_json_object_envelope": true,
+        "has_schema_metadata_key": true,
+        "names_entity_arrays": [
+          "lopa_configurations",
+          "lopa_rows",
+          "lopa_seats"
+        ],
+        "entity_arrays_are_elided_placeholders": 3,
+        "contains_any_data_record": false,
+        "json_schema_keywords_present": false,
+        "code_tokens_present": false,
+        "prose_sentences_present": false,
+        "markdown_fence_present": false
+      }
+    },
+    "gemini-code-1794587815855.json": {
+      "classification": "envelope",
+      "classification_options": [
+        "data",
+        "schema",
+        "code",
+        "prose",
+        "envelope"
+      ],
+      "basis": "registry envelope/template: a schema_metadata header (names, primary keys, declared record counts) followed by entity arrays whose content is the literal placeholder \"[ ... ]\"; it holds no records, is not a JSON Schema document, contains no code and no prose, and is not valid JSON",
+      "flags": {
+        "looks_like_json_object_envelope": true,
+        "has_schema_metadata_key": true,
+        "names_entity_arrays": [
+          "lopa_configurations",
+          "lopa_rows",
+          "lopa_seats"
+        ],
+        "entity_arrays_are_elided_placeholders": 3,
+        "contains_any_data_record": false,
+        "json_schema_keywords_present": false,
+        "code_tokens_present": false,
+        "prose_sentences_present": false,
+        "markdown_fence_present": false
+      }
+    },
+    "southwest_737_lopa_normalized.json": {
+      "classification": "data",
+      "classification_options": [
+        "data",
+        "schema",
+        "code",
+        "prose",
+        "envelope"
+      ],
+      "basis": "valid JSON carrying populated record arrays",
+      "flags": {
+        "looks_like_json_object_envelope": true,
+        "has_schema_metadata_key": true,
+        "names_entity_arrays": [
+          "lopa_configurations",
+          "lopa_rows",
+          "lopa_seats"
+        ],
+        "entity_arrays_are_elided_placeholders": 0,
+        "contains_any_data_record": true,
+        "json_schema_keywords_present": false,
+        "code_tokens_present": false,
+        "prose_sentences_present": false,
+        "markdown_fence_present": false
+      }
+    }
+  },
+  "textual_observations_without_repair": {
+    "note": "Regex over raw text; not a semantic parse of the invalid templates.",
+    "declared_record_counts_in_text": {
+      "southwest 737 lopa normalized.json": {
+        "lopa_configurations": 5,
+        "lopa_rows": 147,
+        "lopa_seats": 837
+      },
+      "gemini-code-1794587815855.json": {
+        "lopa_configurations": 5,
+        "lopa_rows": 147,
+        "lopa_seats": 837
+      },
+      "southwest_737_lopa_normalized.json": {
+        "lopa_configurations": 5,
+        "lopa_rows": 147,
+        "lopa_seats": 837
+      }
+    },
+    "actual_array_lengths_in_populated_registry": {
+      "lopa_configurations": 5,
+      "lopa_rows": 147,
+      "lopa_seats": 837
+    },
+    "metadata_keys_present_in_text": {
+      "southwest 737 lopa normalized.json": [
+        "schema_name",
+        "schema_version",
+        "normalization_form"
+      ],
+      "gemini-code-1794587815855.json": [
+        "schema_name",
+        "schema_version",
+        "normalization_form"
+      ],
+      "southwest_737_lopa_normalized.json": [
+        "generated_at_utc",
+        "foreign_keys",
+        "schema_name",
+        "schema_version",
+        "normalization_form"
+      ]
+    }
+  },
+  "populated_registry_schema_metadata": {
+    "schema_name": "southwest_airlines_737_lopa_registry",
+    "schema_version": "2026.1",
+    "normalization_form": "3NF (Third Normal Form)",
+    "generated_at_utc": "2026-11-13T16:29:49Z",
+    "entities": {
+      "lopa_configurations": {
+        "primary_key": [
+          "lopa_id"
+        ],
+        "record_count": 5
+      },
+      "lopa_rows": {
+        "primary_key": [
+          "lopa_id",
+          "row_number"
+        ],
+        "foreign_keys": [
+          "lopa_id -> lopa_configurations.lopa_id"
+        ],
+        "record_count": 147
+      },
+      "lopa_seats": {
+        "primary_key": [
+          "lopa_id",
+          "row_number",
+          "seat_letter"
+        ],
+        "foreign_keys": [
+          "(lopa_id, row_number) -> lopa_rows.(lopa_id, row_number)"
+        ],
+        "record_count": 837
+      }
+    }
+  }
+}

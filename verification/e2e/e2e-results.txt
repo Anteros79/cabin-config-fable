@@ -1,0 +1,66 @@
+Cabin Kit end-to-end run 2026-11-15T03:52:41.844Z
+Node v24.16.0, Chrome 157.0.8103.51, darwin 27.3.0
+62/62 passed
+
+PASS  [lookup states in the UI] N999ZZ 2026-11-12 shows UNKNOWN_TAIL
+PASS  [lookup states in the UI] N000TL 2026-11-12 shows UNCONFIGURED
+PASS  [lookup states in the UI] N500TL 2026-03-01 shows UNCONFIGURED
+PASS  [lookup states in the UI] N400TL 2026-09-15 shows OVERLAP
+PASS  [lookup states in the UI] N110TL 2026-11-12 shows PLANNED
+PASS  [lookup states in the UI] N600TL 2026-03-01 shows SOURCE_INVALID
+PASS  [lookup states in the UI] N090TL 2026-11-12 shows PARTIAL
+PASS  [lookup states in the UI] N200TL 2026-06-30 shows RESOLVED
+PASS  [lookup states in the UI] N200TL 2026-07-01 shows RESOLVED
+PASS  [lookup states in the UI] N200TL retrofit boundary shows V05 then V04
+PASS  [lookup states in the UI] empty tail is reported as invalid input, not a guess
+PASS  [full workflow by keyboard (desktop)] look up N100TL and start a visit using only the keyboard
+PASS  [full workflow by keyboard (desktop)] select seat 3A in the map with arrow keys and record the cushion
+PASS  [full workflow by keyboard (desktop)] select the full-cabin floor, choose the approved alternate and record it
+PASS  [full workflow by keyboard (desktop)] draft is saved: sample draft exported
+PASS  [full workflow by keyboard (desktop)] complete requires an explicit confirmation and opens the locked report
+PASS  [full workflow by keyboard (desktop)] report shows exactly the six mandated part/unit totals
+PASS  [full workflow by keyboard (desktop)] structured JSON, server PDF and printed PDF agree with the persisted work
+PASS  [full workflow by keyboard (desktop)] completed visit is locked in the UI and through the API
+PASS  [3D cutaway] genuine WebGL scene with one instance per seat, floor area and bin module
+PASS  [3D cutaway] spatial picking selects the exact seat and its component
+PASS  [3D cutaway] selection, recorded and unresolved states stay in sync across 3D, map, inspector and work list
+PASS  [3D cutaway] floor areas and bin modules are pickable in 3D
+PASS  [3D cutaway] a hidden layer never blocks a pick
+PASS  [3D cutaway] camera buttons, orbit, pan and zoom change the view; reset restores it
+PASS  [3D cutaway] whole cabin is framed to fill the view
+PASS  [3D cutaway] lighting, visual family and colour modes switch independently
+PASS  [captures and performance] save full-cabin, seat-front, seat-rear, carpet and bin captures for each family and light
+PASS  [captures and performance] measured frame rate and selection feedback on this device
+PASS  [draft edits, persistence and restart] quantity update, primary/alternate switch and remove keep one record with no orphans
+PASS  [draft edits, persistence and restart] draft survives a service restart and a browser reload, and can be resumed from history
+PASS  [draft edits, persistence and restart] changing the lookup form does not retarget the open visit
+PASS  [draft edits, persistence and restart] stale edit from a second window is reported as a conflict and reloaded
+PASS  [failure handling and recovery] network loss during save: outcome reported as unknown, retry is safe
+PASS  [failure handling and recovery] response lost after commit: retry confirms the earlier save without duplicating
+PASS  [failure handling and recovery] storage failure: reported as not saved, retry succeeds after recovery
+PASS  [failure handling and recovery] reference store failure: lookup shows SERVICE_UNAVAILABLE, saved visits stay usable, then recovers
+PASS  [failure handling and recovery] server down: clear banner, retry buttons, recovery without losing the draft
+PASS  [failure handling and recovery] 3D module failure: complete map-and-list fallback, work continues, retry restores 3D
+PASS  [failure handling and recovery] WebGL unavailable: fallback covers seats, floors and bins
+PASS  [failure handling and recovery] blocked localStorage does not break the app
+PASS  [partial configuration, preparation, candidates and history] PARTIAL visit: gaps are visible, cannot be recorded and stay in the report
+PASS  [partial configuration, preparation, candidates and history] expired alternate is not offered on 2027-01-01 and the reason is shown
+PASS  [partial configuration, preparation, candidates and history] pending change is an advisory and the rule stays usable
+PASS  [partial configuration, preparation, candidates and history] preparation overview: searchable, filterable, printable, exportable, coverage not confused with work
+PASS  [partial configuration, preparation, candidates and history] candidate layout is explorable with its status visible and nothing resolvable
+PASS  [partial configuration, preparation, candidates and history] more than 100 visits remain navigable in saved history
+PASS  [partial configuration, preparation, candidates and history] a reference update leaves the completed report unchanged and is flagged, not applied
+PASS  [accessibility] axe: no serious or critical WCAG A/AA violations on check
+PASS  [accessibility] axe: no serious or critical WCAG A/AA violations on visit-3d
+PASS  [accessibility] axe: no serious or critical WCAG A/AA violations on report
+PASS  [accessibility] axe: no serious or critical WCAG A/AA violations on preparation
+PASS  [accessibility] axe: no serious or critical WCAG A/AA violations on visits
+PASS  [accessibility] axe: no serious or critical WCAG A/AA violations on layouts
+PASS  [accessibility] axe: no serious or critical WCAG A/AA violations on reference
+PASS  [accessibility] axe: map and list with a selected location and record form
+PASS  [accessibility] screen-reader oriented structure: landmarks, headings, labels, live regions
+PASS  [mobile viewport] mobile: lookup, start visit, no horizontal overflow
+PASS  [mobile viewport] mobile: 3D renders in portrait framing and a tap picks a seat
+PASS  [mobile viewport] mobile: record through the map with touch-sized targets, complete and read the report
+PASS  [mobile viewport] axe on mobile: visit map and report
+PASS  [console] no uncaught page errors during the desktop run

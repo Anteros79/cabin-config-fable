@@ -1,0 +1,39 @@
+{
+  "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+  "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4 Pro, Unspecified Version)",
+  "scene": {
+    "seats": 176,
+    "floorAreas": 3,
+    "binModules": 20,
+    "profile": "photo-navy-band",
+    "light": "neutral",
+    "view": "cutaway",
+    "layers": {
+      "seats": true,
+      "floor": true,
+      "bins": true,
+      "context": false
+    },
+    "colourMode": "status",
+    "selection": null,
+    "camera": {
+      "position": [
+        -0.384,
+        9.389,
+        12.075
+      ],
+      "target": [
+        9.808,
+        -0.803,
+        -1.253
+      ],
+      "fov": 36
+    },
+    "renderer": {
+      "drawCalls": 27,
+      "triangles": 1384868,
+      "pixelRatio": 1
+    },
+    "frames": 2
+  }
+}

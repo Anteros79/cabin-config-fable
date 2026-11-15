@@ -1,0 +1,57 @@
+{
+  "name": "cabin-kit-replacement",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cabin Kit replacement - fictional home-lab demonstration, not an approved maintenance authority",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "setup": "npm ci && npm run build && npm run reference:import && npm run sample:seed",
+    "build": "vite build",
+    "dev:web": "vite",
+    "start": "node src/server/main.ts",
+    "reference:import": "node src/importer/cli.ts import",
+    "reference:status": "node src/importer/cli.ts status",
+    "reference:findings": "node src/importer/cli.ts findings",
+    "reference:reset": "node src/importer/cli.ts reset",
+    "sample:seed": "node tools/seed-sample-visits.ts",
+    "originals:verify": "node tools/verify-originals.ts",
+    "evidence:build": "node tools/evidence/build-all.mjs",
+    "images:previews": "node tools/make-image-previews.mjs",
+    "comparisons": "node tools/make-comparisons.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit tests/integration",
+    "test:process": "vitest run tests/process",
+    "test:e2e": "npm run build && node tests/e2e/run.ts",
+    "verify": "npm run typecheck && npm run test && npm run test:e2e && npm run comparisons && npm run originals:verify"
+  },
+  "dependencies": {
+    "@fastify/static": "^9.0.0",
+    "fastify": "^5.12.8",
+    "fast-xml-parser": "^5.0.0",
+    "fflate": "^0.8.2",
+    "pdfkit": "^0.20.2",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@types/node": "^24.0.0",
+    "@types/pdfkit": "^0.17.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.187.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "pdfjs-dist": "^5.0.0",
+    "playwright-core": "^1.65.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "sharp": "^0.34.0",
+    "three": "^0.187.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

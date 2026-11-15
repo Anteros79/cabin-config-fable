@@ -1,0 +1,2772 @@
+{
+  "purpose": "Crosswalk from supplied fields and narrative domains to the logical model. A mapping is a proposal for where a claim is stored, not a statement that the claim is true.",
+  "conventions": {
+    "raw_claim": "Values marked \"preserve verbatim\" are stored exactly as written (ranges, \"~\" qualifiers, inch marks, free text). Any parsed helper value is stored beside the raw string, never instead of it.",
+    "identifiers": "lopa_id, iata_code and printed row labels are strings even when they look numeric.",
+    "separation": "Commercial tier (SeatCommercialAttributes) and physical attributes (SeatPhysicalAttributes: pitch, width, exit, bulkhead, recline, window, legroom, tray, storage, power) are separate; none is inferred from another."
+  },
+  "summary": {
+    "operational_fields": 49,
+    "by_entity": {
+      "lopa_configurations": 21,
+      "lopa_rows": 10,
+      "lopa_seats": 18
+    },
+    "preserve_verbatim_fields": 32,
+    "narrative_domains": 18,
+    "logical_entities": 29,
+    "logical_entities_not_supplied": 19,
+    "crosswalk_completeness_problems": []
+  },
+  "operational_fields": [
+    {
+      "entity": "lopa_configurations",
+      "field": "lopa_id",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/lopa_id",
+        "southwest_737_lopa_configurations.csv (column lopa_id)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 4,
+        "integer": 1
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "73G",
+        "export": "73G",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/lopa_id"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "Layout.source_layout_code",
+        "LayoutRevision.source_layout_code"
+      ],
+      "notes": "Identifier string, never a number (some values are all digits). 5 model/interior IDs; grain differs from the DOCX layout categories (see conflict register)."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "boeing_model",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/boeing_model",
+        "southwest_737_lopa_configurations.csv (column boeing_model)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": "Boeing 737-700",
+        "export": "Boeing 737-700",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/boeing_model"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "AircraftSubtype.model_name"
+      ],
+      "notes": "Free-text model name."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "icao_code",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/icao_code",
+        "southwest_737_lopa_configurations.csv (column icao_code)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": "B737",
+        "export": "B737",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/icao_code"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "AircraftSubtype.icao_type_designator"
+      ],
+      "notes": "Code string."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "iata_code",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/iata_code",
+        "southwest_737_lopa_configurations.csv (column iata_code)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 3,
+        "integer": 2
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": "73G",
+        "export": "73G",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/iata_code"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "AircraftSubtype.iata_type_code"
+      ],
+      "notes": "Code string; contains an all-digit value that must stay a string."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "configuration_name",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/configuration_name",
+        "southwest_737_lopa_configurations.csv (column configuration_name)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "2026 Cabin Iteration (Retrofitted)",
+        "export": "2026 Cabin Iteration (Retrofitted)",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/configuration_name"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "Layout.name_claim"
+      ],
+      "notes": "Label as written, including embedded quotes."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "interior_generation",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/interior_generation",
+        "southwest_737_lopa_configurations.csv (column interior_generation)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "2026 Cabin Retrofit",
+        "export": "2026 Cabin Retrofit",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/interior_generation"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "LayoutRevision.interior_generation_label",
+        "MaintenanceVariant.label_candidate"
+      ],
+      "notes": "Generation label; not a revision identifier or approval."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "seat_hardware_model",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/seat_hardware_model",
+        "southwest_737_lopa_configurations.csv (column seat_hardware_model)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 4,
+      "example_raw_value": {
+        "json": "Legacy Slimline (Retrofitted)",
+        "export": "Legacy Slimline (Retrofitted)",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/seat_hardware_model"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatHardware.model_label_claim",
+        "MaintenanceVariant.label_candidate"
+      ],
+      "notes": "Hardware label only: no part numbers, no vendor documents. Naming differs from the DOCX."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "est_active_aircraft",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/est_active_aircraft",
+        "southwest_737_lopa_configurations.csv (column est_active_aircraft)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": "aircraft (approximate)",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "~277",
+        "export": "~277",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/est_active_aircraft"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "Layout.estimated_fleet_count_claim"
+      ],
+      "notes": "Qualified estimate or free text. Not a tail list; does NOT populate Aircraft(tail) or TailAssignment."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "total_seats",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/total_seats",
+        "southwest_737_lopa_configurations.csv (column total_seats)"
+      ],
+      "json_value_types": {
+        "integer": 5
+      },
+      "export_representation": {
+        "integer": 5
+      },
+      "logical_type": "integer",
+      "unit": "seats",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": 137,
+        "export": "137",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/total_seats"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "LayoutRevision.declared_total_seats"
+      ],
+      "notes": "Declared total; checked against counted SeatLocation records."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "extra_legroom_seats",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/extra_legroom_seats",
+        "southwest_737_lopa_configurations.csv (column extra_legroom_seats)"
+      ],
+      "json_value_types": {
+        "integer": 5
+      },
+      "export_representation": {
+        "integer": 5
+      },
+      "logical_type": "integer",
+      "unit": "seats",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": 42,
+        "export": "42",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/extra_legroom_seats"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "LayoutRevision.declared_tier_count[Extra Legroom]"
+      ],
+      "notes": "Declared commercial-tier count; checked against SeatCommercialAttributes."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "preferred_seats",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/preferred_seats",
+        "southwest_737_lopa_configurations.csv (column preferred_seats)"
+      ],
+      "json_value_types": {
+        "integer": 5
+      },
+      "export_representation": {
+        "integer": 5
+      },
+      "logical_type": "integer",
+      "unit": "seats",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": 23,
+        "export": "23",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/preferred_seats"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "LayoutRevision.declared_tier_count[Preferred]"
+      ],
+      "notes": "Declared commercial-tier count."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "standard_seats",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/standard_seats",
+        "southwest_737_lopa_configurations.csv (column standard_seats)"
+      ],
+      "json_value_types": {
+        "integer": 5
+      },
+      "export_representation": {
+        "integer": 5
+      },
+      "logical_type": "integer",
+      "unit": "seats",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": 72,
+        "export": "72",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/standard_seats"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "LayoutRevision.declared_tier_count[Standard]"
+      ],
+      "notes": "Declared commercial-tier count."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "numbered_row_range",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/numbered_row_range",
+        "southwest_737_lopa_configurations.csv (column numbered_row_range)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": "printed row labels",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": "1-9, 14-27 (skips 10-13)",
+        "export": "1-9, 14-27 (skips 10-13)",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/numbered_row_range"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "RowLabel.declared_label_range_claim"
+      ],
+      "notes": "Describes printed labels, not physical row count."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "elr_pitch_inches",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/elr_pitch_inches",
+        "southwest_737_lopa_configurations.csv (column elr_pitch_inches)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 3,
+        "integer": 2
+      },
+      "logical_type": "string",
+      "unit": "inches",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": "35-36",
+        "export": "35-36",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/elr_pitch_inches"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.pitch_claim (layout-level, Extra Legroom)"
+      ],
+      "notes": "Single value, range, or range with parenthetical \"~\" qualifier. Keep raw; optional parsed min/max/qualifier stored beside it."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "standard_pitch_inches",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/standard_pitch_inches",
+        "southwest_737_lopa_configurations.csv (column standard_pitch_inches)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": "inches",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": "31-33",
+        "export": "31-33",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/standard_pitch_inches"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.pitch_claim (layout-level, Standard/Preferred)"
+      ],
+      "notes": "Range string."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "max_seat_width_inches",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/max_seat_width_inches",
+        "southwest_737_lopa_configurations.csv (column max_seat_width_inches)"
+      ],
+      "json_value_types": {
+        "integer": 1,
+        "number": 4
+      },
+      "export_representation": {
+        "decimal": 5
+      },
+      "logical_type": "number (decimal)",
+      "unit": "inches",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": 17,
+        "export": "17.0",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/max_seat_width_inches"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.width_claim (layout-level, measurement_kind = \"max seat width\", kind not defined by source)"
+      ],
+      "notes": "Number in JSON, decimal text in CSV. What is measured (cushion, between armrests, shoulder) is not stated."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "in_seat_power",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/in_seat_power",
+        "southwest_737_lopa_configurations.csv (column in_seat_power)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 4,
+      "example_raw_value": {
+        "json": "None (legacy) / USB-C on select retrofits",
+        "export": "None (legacy) / USB-C on select retrofits",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/in_seat_power"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.power_claim (layout-level)"
+      ],
+      "notes": "Alternatives separated by \"/\" depend on the airframe; not resolvable without tail data."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "wifi_system",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/wifi_system",
+        "southwest_737_lopa_configurations.csv (column wifi_system)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 4,
+      "example_raw_value": {
+        "json": "Anuvu Ku-band",
+        "export": "Anuvu Ku-band",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/wifi_system"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "(no logical-model target) LayoutRevision.raw_source_attributes"
+      ],
+      "notes": "Outside the cabin-appearance model. One value embeds a tail-like token; kept as raw text only."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "lavatory_count_fwd",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/lavatory_count_fwd",
+        "southwest_737_lopa_configurations.csv (column lavatory_count_fwd)"
+      ],
+      "json_value_types": {
+        "integer": 5
+      },
+      "export_representation": {
+        "integer": 5
+      },
+      "logical_type": "integer",
+      "unit": "lavatories",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 1,
+      "example_raw_value": {
+        "json": 1,
+        "export": "1",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/lavatory_count_fwd"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "FloorArea (count only) → LayoutRevision.raw_source_attributes"
+      ],
+      "notes": "A count, not a floor map: no position, footprint or module id."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "lavatory_count_aft",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/lavatory_count_aft",
+        "southwest_737_lopa_configurations.csv (column lavatory_count_aft)"
+      ],
+      "json_value_types": {
+        "integer": 5
+      },
+      "export_representation": {
+        "integer": 5
+      },
+      "logical_type": "integer",
+      "unit": "lavatories",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": 1,
+        "export": "1",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/lavatory_count_aft"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "FloorArea (count only) → LayoutRevision.raw_source_attributes"
+      ],
+      "notes": "A count, not a floor map."
+    },
+    {
+      "entity": "lopa_configurations",
+      "field": "notes",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_configurations/*/notes",
+        "southwest_737_lopa_configurations.csv (column notes)"
+      ],
+      "json_value_types": {
+        "string": 5
+      },
+      "export_representation": {
+        "string": 5
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "Single overwing exit at Row 15; Rows 10-13 omitted from numbering; 14A omitted for exit access.",
+        "export": "Single overwing exit at Row 15; Rows 10-13 omitted from numbering; 14A omitted for exit access.",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/0/notes"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "LayoutRevision.source_notes"
+      ],
+      "notes": "Free text."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "lopa_id",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/lopa_id",
+        "southwest_737_lopa_rows.xlsx (column lopa_id)"
+      ],
+      "json_value_types": {
+        "string": 147
+      },
+      "export_representation": {
+        "shared-string cell": 117,
+        "number cell": 30
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "73G",
+        "export": "73G",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/lopa_id"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "RowLabel.layout_revision_ref"
+      ],
+      "notes": "Foreign key to the configuration. Stored as a NUMBER in 30 workbook cells; must be handled as an identifier string."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "row_number",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/row_number",
+        "southwest_737_lopa_rows.xlsx (column row_number)"
+      ],
+      "json_value_types": {
+        "integer": 147
+      },
+      "export_representation": {
+        "number cell": 147
+      },
+      "logical_type": "integer",
+      "unit": "printed row label",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 30,
+      "example_raw_value": {
+        "json": 1,
+        "export": 1,
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/row_number"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "RowLabel.printed_label"
+      ],
+      "notes": "A printed label, not a physical index. RowLabel.physical_order is DERIVED (ascending label over existing rows) and flagged as an assumption."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "row_exists",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/row_exists",
+        "southwest_737_lopa_rows.xlsx (column row_exists)"
+      ],
+      "json_value_types": {
+        "boolean": 147
+      },
+      "export_representation": {
+        "boolean cell": 147
+      },
+      "logical_type": "boolean",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": true,
+        "export": true,
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/row_exists"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "RowLabel.exists"
+      ],
+      "notes": "false = label skipped in the cabin (no physical row)."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "active_seat_count",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/active_seat_count",
+        "southwest_737_lopa_rows.xlsx (column active_seat_count)"
+      ],
+      "json_value_types": {
+        "integer": 147
+      },
+      "export_representation": {
+        "number cell": 147
+      },
+      "logical_type": "integer",
+      "unit": "seats",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": 6,
+        "export": 6,
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/active_seat_count"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "(derived check) count of SeatLocation per RowLabel"
+      ],
+      "notes": "Redundant with the seat records; used as a consistency check only."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "omitted_seat_letters",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/omitted_seat_letters",
+        "southwest_737_lopa_rows.xlsx (column omitted_seat_letters)"
+      ],
+      "json_value_types": {
+        "string": 147
+      },
+      "export_representation": {
+        "absent cell": 134,
+        "shared-string cell": 13
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 134,
+        "json_null_count": 0,
+        "export_blank_count": 134,
+        "description": "blank = \"\" in JSON (134), absent cell in XLSX; JSON null never used"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "A,B,C,D,E,F",
+        "export": "A,B,C,D,E,F",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/9/omitted_seat_letters"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "(derived check) absent SeatLocation letters per RowLabel"
+      ],
+      "notes": "Comma-separated letters; blank when none."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "is_exit_row",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/is_exit_row",
+        "southwest_737_lopa_rows.xlsx (column is_exit_row)"
+      ],
+      "json_value_types": {
+        "boolean": 147
+      },
+      "export_representation": {
+        "boolean cell": 147
+      },
+      "logical_type": "boolean",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": false,
+        "export": false,
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/is_exit_row"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "RowLabel.exit_row_claim → SeatPhysicalAttributes.exit (row-level claim)"
+      ],
+      "notes": "Row-level flag; semantics differ between configurations (see conflict register)."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "is_bulkhead_row",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/is_bulkhead_row",
+        "southwest_737_lopa_rows.xlsx (column is_bulkhead_row)"
+      ],
+      "json_value_types": {
+        "boolean": 147
+      },
+      "export_representation": {
+        "boolean cell": 147
+      },
+      "logical_type": "boolean",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": true,
+        "export": true,
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/is_bulkhead_row"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "RowLabel.bulkhead_row_claim → SeatPhysicalAttributes.bulkhead (row-level claim)"
+      ],
+      "notes": "Row-level flag cannot express a bulkhead on one side only; seat-level flags are kept separately."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "recline_status",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/recline_status",
+        "southwest_737_lopa_rows.xlsx (column recline_status)"
+      ],
+      "json_value_types": {
+        "string": 147
+      },
+      "export_representation": {
+        "shared-string cell": 147
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "Standard",
+        "export": "Standard",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/recline_status"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.recline (row-level claim)"
+      ],
+      "notes": "Compound enumeration values such as \"None/Limited\" are raw claims."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "recline_restriction_reason",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/recline_restriction_reason",
+        "southwest_737_lopa_rows.xlsx (column recline_restriction_reason)"
+      ],
+      "json_value_types": {
+        "string": 147
+      },
+      "export_representation": {
+        "absent cell": 125,
+        "shared-string cell": 22
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 125,
+        "json_null_count": 0,
+        "export_blank_count": 125,
+        "description": "blank = \"\" in JSON (125), absent cell in XLSX; JSON null never used"
+      },
+      "distinct_value_count": 9,
+      "example_raw_value": {
+        "json": "Row number skipped in cabin layout",
+        "export": "Row number skipped in cabin layout",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/9/recline_restriction_reason"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.recline_reason_claim"
+      ],
+      "notes": "Free text, includes unverified regulatory attributions."
+    },
+    {
+      "entity": "lopa_rows",
+      "field": "row_notes",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_rows/*/row_notes",
+        "southwest_737_lopa_rows.xlsx (column row_notes)"
+      ],
+      "json_value_types": {
+        "string": 147
+      },
+      "export_representation": {
+        "shared-string cell": 29,
+        "absent cell": 118
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 118,
+        "json_null_count": 0,
+        "export_blank_count": 118,
+        "description": "blank = \"\" in JSON (118), absent cell in XLSX; JSON null never used"
+      },
+      "distinct_value_count": 14,
+      "example_raw_value": {
+        "json": "Dual-sided forward bulkhead; armrest tray tables; no underseat floor stowage",
+        "export": "Dual-sided forward bulkhead; armrest tray tables; no underseat floor stowage",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/row_notes"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "RowLabel.source_notes"
+      ],
+      "notes": "Free text, carries pitch and seat statements with inch marks."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "lopa_id",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/lopa_id",
+        "southwest_737_lopa_seats.csv (column lopa_id)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 662,
+        "integer": 175
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": "73G",
+        "export": "73G",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/lopa_id"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatLocation.layout_revision_ref"
+      ],
+      "notes": "Part of seat identity."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "row_number",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/row_number",
+        "southwest_737_lopa_seats.csv (column row_number)"
+      ],
+      "json_value_types": {
+        "integer": 837
+      },
+      "export_representation": {
+        "integer": 837
+      },
+      "logical_type": "integer",
+      "unit": "printed row label",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 30,
+      "example_raw_value": {
+        "json": 1,
+        "export": "1",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/row_number"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatLocation.printed_row_label"
+      ],
+      "notes": "Part of seat identity; printed label, not physical order."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "seat_letter",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/seat_letter",
+        "southwest_737_lopa_seats.csv (column seat_letter)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 6,
+      "example_raw_value": {
+        "json": "A",
+        "export": "A",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/seat_letter"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatLocation.letter",
+        "SeatLocation.side (DERIVED: A/B/C vs D/E/F)",
+        "SeatLocation.block (DERIVED)"
+      ],
+      "notes": "Part of seat identity. Side/block are not supplied as fields; derived from the letter and flagged as derived."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "seat_code",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/seat_code",
+        "southwest_737_lopa_seats.csv (column seat_code)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 180,
+      "example_raw_value": {
+        "json": "1A",
+        "export": "1A",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/seat_code"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatLocation.display_code (derived check: printed label + letter)"
+      ],
+      "notes": "Redundant with row_number + seat_letter."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "seat_position_type",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/seat_position_type",
+        "southwest_737_lopa_seats.csv (column seat_position_type)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": "Window",
+        "export": "Window",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/seat_position_type"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "SeatLocation.position (Window/Middle/Aisle)"
+      ],
+      "notes": "Enumeration."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "commercial_tier",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/commercial_tier",
+        "southwest_737_lopa_seats.csv (column commercial_tier)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 3,
+      "example_raw_value": {
+        "json": "Extra Legroom",
+        "export": "Extra Legroom",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/commercial_tier"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "SeatCommercialAttributes.tier"
+      ],
+      "notes": "Commercial product tier only. Must not be used as a proxy for physical spacing."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "pitch_range_inches",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/pitch_range_inches",
+        "southwest_737_lopa_seats.csv (column pitch_range_inches)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 733,
+        "integer": 104
+      },
+      "logical_type": "string",
+      "unit": "inches",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 6,
+      "example_raw_value": {
+        "json": "35-36",
+        "export": "35-36",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/pitch_range_inches"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.pitch_claim (raw + optional min/max/qualifier)"
+      ],
+      "notes": "Holds ranges and single values; approximate source statements appear here without their \"~\"."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "effective_width_inches",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/effective_width_inches",
+        "southwest_737_lopa_seats.csv (column effective_width_inches)"
+      ],
+      "json_value_types": {
+        "number": 706,
+        "integer": 131
+      },
+      "export_representation": {
+        "decimal": 837
+      },
+      "logical_type": "number (decimal)",
+      "unit": "inches",
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 5,
+      "example_raw_value": {
+        "json": 15.5,
+        "export": "15.5",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/effective_width_inches"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.width_claim (measurement_kind = \"effective width\", kind not defined by source)"
+      ],
+      "notes": "Mixes seat width with a shoulder-clearance reduction on some seats (see conflict register)."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "recline_status",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/recline_status",
+        "southwest_737_lopa_seats.csv (column recline_status)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 4,
+      "example_raw_value": {
+        "json": "Standard",
+        "export": "Standard",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/recline_status"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.recline"
+      ],
+      "notes": "Compound enumeration values are raw claims."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "window_status",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/window_status",
+        "southwest_737_lopa_seats.csv (column window_status)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 6,
+      "example_raw_value": {
+        "json": "Standard",
+        "export": "Standard",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/window_status"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.window_status"
+      ],
+      "notes": "Compound enumeration values are raw claims; \"N/A\" for non-window seats."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "window_notes",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/window_notes",
+        "southwest_737_lopa_seats.csv (column window_notes)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "blank": 785,
+        "string": 52
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 785,
+        "json_null_count": 0,
+        "export_blank_count": 785,
+        "description": "blank = \"\" in JSON (785), empty field in CSV; JSON null never used"
+      },
+      "distinct_value_count": 8,
+      "example_raw_value": {
+        "json": "Window frame positioned slightly behind seatback",
+        "export": "Window frame positioned slightly behind seatback",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/12/window_notes"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.window_notes"
+      ],
+      "notes": "Free text."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "is_exit_seat",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/is_exit_seat",
+        "southwest_737_lopa_seats.csv (column is_exit_seat)"
+      ],
+      "json_value_types": {
+        "boolean": 837
+      },
+      "export_representation": {
+        "boolean(True/False)": 837
+      },
+      "logical_type": "boolean",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": false,
+        "export": "False",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/is_exit_seat"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "SeatPhysicalAttributes.exit"
+      ],
+      "notes": "Seat-level flag."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "is_bulkhead_seat",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/is_bulkhead_seat",
+        "southwest_737_lopa_seats.csv (column is_bulkhead_seat)"
+      ],
+      "json_value_types": {
+        "boolean": 837
+      },
+      "export_representation": {
+        "boolean(True/False)": 837
+      },
+      "logical_type": "boolean",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": true,
+        "export": "True",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/is_bulkhead_seat"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "SeatPhysicalAttributes.bulkhead"
+      ],
+      "notes": "Seat-level flag; authoritative granularity for one-sided bulkheads."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "has_unobstructed_legroom",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/has_unobstructed_legroom",
+        "southwest_737_lopa_seats.csv (column has_unobstructed_legroom)"
+      ],
+      "json_value_types": {
+        "boolean": 837
+      },
+      "export_representation": {
+        "boolean(True/False)": 837
+      },
+      "logical_type": "boolean",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": false,
+        "export": "False",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/has_unobstructed_legroom"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "SeatPhysicalAttributes.legroom_unobstructed"
+      ],
+      "notes": "Seat-level flag."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "tray_table_location",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/tray_table_location",
+        "southwest_737_lopa_seats.csv (column tray_table_location)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": "Armrest",
+        "export": "Armrest",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/tray_table_location"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "SeatPhysicalAttributes.tray"
+      ],
+      "notes": "Enumeration."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "underseat_storage_allowed",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/underseat_storage_allowed",
+        "southwest_737_lopa_seats.csv (column underseat_storage_allowed)"
+      ],
+      "json_value_types": {
+        "boolean": 837
+      },
+      "export_representation": {
+        "boolean(True/False)": 837
+      },
+      "logical_type": "boolean",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 2,
+      "example_raw_value": {
+        "json": false,
+        "export": "False",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/underseat_storage_allowed"
+      },
+      "raw_claim_preserve_verbatim": false,
+      "handling": "typed value; source text also retained",
+      "maps_to": [
+        "SeatPhysicalAttributes.storage"
+      ],
+      "notes": "Seat-level flag."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "power_type",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/power_type",
+        "southwest_737_lopa_seats.csv (column power_type)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 837
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 0,
+        "json_null_count": 0,
+        "export_blank_count": 0,
+        "description": "always populated in the supplied records"
+      },
+      "distinct_value_count": 4,
+      "example_raw_value": {
+        "json": "None / Select USB-C",
+        "export": "None / Select USB-C",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/power_type"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatPhysicalAttributes.power_claim"
+      ],
+      "notes": "Same string on every seat of a configuration; alternatives depend on the airframe."
+    },
+    {
+      "entity": "lopa_seats",
+      "field": "special_notes",
+      "present_in_registry_json": true,
+      "sources": [
+        "southwest_737_lopa_normalized.json#/lopa_seats/*/special_notes",
+        "southwest_737_lopa_seats.csv (column special_notes)"
+      ],
+      "json_value_types": {
+        "string": 837
+      },
+      "export_representation": {
+        "string": 104,
+        "blank": 733
+      },
+      "logical_type": "string",
+      "unit": null,
+      "null_convention": {
+        "json_empty_string_count": 733,
+        "json_null_count": 0,
+        "export_blank_count": 733,
+        "description": "blank = \"\" in JSON (733), empty field in CSV; JSON null never used"
+      },
+      "distinct_value_count": 8,
+      "example_raw_value": {
+        "json": "Bulkhead seat; armrest-stowed tray table; no floor stowage",
+        "export": "Bulkhead seat; armrest-stowed tray table; no floor stowage",
+        "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/special_notes"
+      },
+      "raw_claim_preserve_verbatim": true,
+      "handling": "raw claim — preserve verbatim",
+      "maps_to": [
+        "SeatLocation.source_notes"
+      ],
+      "notes": "Free text."
+    }
+  ],
+  "schema_architecture_fields": [
+    {
+      "entity": "schema architecture summary",
+      "field": "Entity / Table",
+      "sources": [
+        "cabin schema architecture.csv (column Entity / Table)"
+      ],
+      "example_raw_value": "lopa_configurations",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SourceArtifact (descriptive metadata about the registry); not operational data"
+      ],
+      "notes": "Describes entities, keys and row counts in prose; contains no operational records."
+    },
+    {
+      "entity": "schema architecture summary",
+      "field": "Primary Key",
+      "sources": [
+        "cabin schema architecture.csv (column Primary Key)"
+      ],
+      "example_raw_value": "lopa_id",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SourceArtifact (descriptive metadata about the registry); not operational data"
+      ],
+      "notes": "Describes entities, keys and row counts in prose; contains no operational records."
+    },
+    {
+      "entity": "schema architecture summary",
+      "field": "Foreign Keys",
+      "sources": [
+        "cabin schema architecture.csv (column Foreign Keys)"
+      ],
+      "example_raw_value": "—",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SourceArtifact (descriptive metadata about the registry); not operational data"
+      ],
+      "notes": "Describes entities, keys and row counts in prose; contains no operational records."
+    },
+    {
+      "entity": "schema architecture summary",
+      "field": "Row Count",
+      "sources": [
+        "cabin schema architecture.csv (column Row Count)"
+      ],
+      "example_raw_value": "5",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SourceArtifact (descriptive metadata about the registry); not operational data"
+      ],
+      "notes": "Describes entities, keys and row counts in prose; contains no operational records."
+    },
+    {
+      "entity": "schema architecture summary",
+      "field": "Grain & Purpose",
+      "sources": [
+        "cabin schema architecture.csv (column Grain & Purpose)"
+      ],
+      "example_raw_value": "Aircraft model (737-700, 737-800, 737 MAX 8), ICAO/IATA codes, interior generation, total/tier seat counts, pitch bands, max seat width, power, Wi-Fi, and lavatory layout.",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SourceArtifact (descriptive metadata about the registry); not operational data"
+      ],
+      "notes": "Describes entities, keys and row counts in prose; contains no operational records."
+    }
+  ],
+  "narrative_domains": [
+    {
+      "id": "N-RTF-01",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Configuration summary table (variant, interior generation, totals, tier counts with row ranges, omitted positions)",
+      "anchor_quote": "LOPA / Variant",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#T01.R01.C01"
+      ],
+      "example_raw_value": "LOPA / Variant",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "Layout",
+        "LayoutRevision.declared_total_seats",
+        "LayoutRevision.declared_tier_count",
+        "RowLabel"
+      ],
+      "notes": "Tier cells mix a count with a row/seat range in one string."
+    },
+    {
+      "id": "N-RTF-02",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Row numbering rule (labels aligned so overwing exits fall in a fixed label band; skipped labels)",
+      "anchor_quote": "row numbering is standardized",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#P001"
+      ],
+      "example_raw_value": "Across all 5 active Southwest Airlines cabin configurations (LOPAs), row numbering is standardized so that overwing emergency exits fall in the Row 14–16 band regardless of fuselage length. Every seat maps into three commercial tiers—Extra Legroom (ELR), Preferred, and Standard—with structural cutouts, windowless fuselage frames, and FAA-mandated recline locks varying by interior generation.",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "RowLabel.printed_label",
+        "RowLabel.physical_order (derived)"
+      ],
+      "notes": "Basis for separating printed label from physical order."
+    },
+    {
+      "id": "N-RTF-03",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Row-by-row tier map with pitch statements",
+      "anchor_quote": "Row-by-Row Tier Map",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#P004",
+        "Southwest Cabin Configuration Standard.rtf#P020"
+      ],
+      "example_raw_value": "Row-by-Row Tier Map",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatCommercialAttributes.tier",
+        "SeatPhysicalAttributes.pitch_claim"
+      ],
+      "notes": "Pitch written with inch marks, ranges and \"~\"."
+    },
+    {
+      "id": "N-RTF-04",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Bulkhead, tray-table and floor-stowage statements",
+      "anchor_quote": "armrest-stowed tray tables",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#P005"
+      ],
+      "example_raw_value": "⚬     Rows 1–6 (Extra Legroom — 36 seats): Full 3-3 layout (A–F) pitched at 35\"–36\". Row 1 (1A–1F) is a dual-sided bulkhead with armrest-stowed tray tables and zero floor stowage during taxi, takeoff, and landing.",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatPhysicalAttributes.bulkhead",
+        "SeatPhysicalAttributes.tray",
+        "SeatPhysicalAttributes.storage"
+      ],
+      "notes": "Side-specific wording (port/starboard)."
+    },
+    {
+      "id": "N-RTF-05",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Window restrictions (missing, limited, misaligned, set-back)",
+      "anchor_quote": "Missing / Obstructed Windows:",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#P012",
+        "Southwest Cabin Configuration Standard.rtf#P033",
+        "Southwest Cabin Configuration Standard.rtf#P049"
+      ],
+      "example_raw_value": "⚬     Missing / Obstructed Windows:",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatPhysicalAttributes.window_status",
+        "SeatPhysicalAttributes.window_notes"
+      ],
+      "notes": "Includes a shoulder-width statement for a windowless seat."
+    },
+    {
+      "id": "N-RTF-06",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Recline restrictions with stated reasons",
+      "anchor_quote": "Non-Reclining / Limited-Recline Rows:",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#P015",
+        "Southwest Cabin Configuration Standard.rtf#P037",
+        "Southwest Cabin Configuration Standard.rtf#P053"
+      ],
+      "example_raw_value": "⚬     Non-Reclining / Limited-Recline Rows:",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatPhysicalAttributes.recline",
+        "SeatPhysicalAttributes.recline_reason_claim"
+      ],
+      "notes": "Regulatory attributions are unverified claims."
+    },
+    {
+      "id": "N-RTF-07",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Structural deltas between two interior generations (exit-row seats, pitch, last row)",
+      "anchor_quote": "Structural Deltas vs. the \"Heart\" Layout",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#P044"
+      ],
+      "example_raw_value": "Structural Deltas vs. the \"Heart\" Layout",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "LayoutRevision (difference between revisions)",
+        "SeatLocation",
+        "SeatPhysicalAttributes.pitch_claim"
+      ],
+      "notes": "Approximate pitch values."
+    },
+    {
+      "id": "N-RTF-08",
+      "source": "Southwest Cabin Configuration Standard.rtf",
+      "domain": "Unobstructed-legroom statements (no seat directly ahead)",
+      "anchor_quote": "unobstructed legroom",
+      "locators": [
+        "Southwest Cabin Configuration Standard.rtf#P009"
+      ],
+      "example_raw_value": "⚬     Row 15 (Extra Legroom — 6 seats): Overwing exit row (15A–15F) pitched at 35\"–36\". Because 14A is missing, 15A has no seat directly in front of it, providing unobstructed legroom (with an armrest-stowed tray table).",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatPhysicalAttributes.legroom_unobstructed"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "N-DOCX-01",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "\"As of\" date and count of active layouts",
+      "anchor_quote": "four active seating layouts",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P002"
+      ],
+      "example_raw_value": "As of November 13, 2026, Southwest is flying three aircraft families with four active seating layouts because portions of the fleet are still being standardized:",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SourceArtifact.as_of_claim",
+        "Layout (category grain)"
+      ],
+      "notes": "A date written in the text; not a validation release."
+    },
+    {
+      "id": "N-DOCX-02",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Layout category table (capacity, arrangement, Extra Legroom pitch, Standard/Preferred pitch, seat width)",
+      "anchor_quote": "Aircraft / active layout",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#T01.R01.C01"
+      ],
+      "example_raw_value": "Aircraft / active layout",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "Layout (category grain)",
+        "LayoutRevision.declared_total_seats",
+        "SeatPhysicalAttributes.pitch_claim",
+        "SeatPhysicalAttributes.width_claim (range, kind = \"seat width\")"
+      ],
+      "notes": "Category grain differs from the registry lopa_id grain; arrangement text names no seats."
+    },
+    {
+      "id": "N-DOCX-03",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Measurement definition for pitch and \"published ranges\" attribution",
+      "anchor_quote": "Pitch is the distance from a point on one seat",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P003"
+      ],
+      "example_raw_value": "The measurements above are Southwest’s published ranges. Pitch is the distance from a point on one seat to the same point on the seat immediately ahead, not the amount of unobstructed knee clearance. [support.so...thwest.com]",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatPhysicalAttributes.pitch_claim (definition)",
+        "SourceArtifact (cited source, unverified)"
+      ],
+      "notes": "Defines pitch; does not define width."
+    },
+    {
+      "id": "N-DOCX-04",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Fleet standardisation narrative (upgrade programme, seat products, power, fleet numbers)",
+      "anchor_quote": "170 selected -700s are upgraded",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P005"
+      ],
+      "example_raw_value": "The 137-seat and 138-seat 737-700 layouts are both in circulation while 170 selected -700s are upgraded. The 138-seat version replaces Innovator seats with Meridian seats, adds in-seat power and converts the affected exit-row position to a triple-seat arrangement. Southwest expects the remaining non-upgraded aircraft to be retired, sold or otherwise removed from the fleet. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "MaintenanceVariant.label_candidate",
+        "SeatHardware.model_label_claim",
+        "SeatPhysicalAttributes.power_claim",
+        "Layout.estimated_fleet_count_claim"
+      ],
+      "notes": "No tail numbers; cannot populate TailAssignment."
+    },
+    {
+      "id": "N-DOCX-05",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Temporary vs final layout difference for the larger aircraft",
+      "anchor_quote": "temporary and final LOPAs both retain 175 total seats",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P006"
+      ],
+      "example_raw_value": "The 737-800 and MAX 8 temporary and final LOPAs both retain 175 total seats. The final layout adds one Extra Legroom seat on each side of the exit row, while the last row becomes two seats per side, keeping the overall capacity unchanged. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "LayoutRevision (difference between revisions)",
+        "SeatLocation (unspecified seats)"
+      ],
+      "notes": "Seats are described by area, not by seat code."
+    },
+    {
+      "id": "N-DOCX-06",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Customer-facing seat tier table (location, physical dimensions, included experience)",
+      "anchor_quote": "Seat tier",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#T02.R01.C01"
+      ],
+      "example_raw_value": "Seat tier",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatCommercialAttributes.tier (definition)",
+        "SeatPhysicalAttributes.pitch_claim"
+      ],
+      "notes": "Service inclusions have no logical-model target."
+    },
+    {
+      "id": "N-DOCX-07",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Seats with Extra Legroom spacing but sold as Preferred (commercial vs physical mismatch) on one layout",
+      "anchor_quote": "physically have Extra Legroom spacing but are sold as Preferred",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P012"
+      ],
+      "example_raw_value": "On the upgraded 138-seat -700 layout, seats 7D, 7E, 7F, 15B and 15C physically have Extra Legroom spacing but are sold as Preferred, not Extra Legroom. That distinction needs to be retained in any configuration, seat-map or appearance-part application because the physical pitch and commercial product designation do not match. Changes-and-Upcoming-Additions-to-Our-Fleet.aspx [Changes an...Our Fleet | SharePoint]",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SeatCommercialAttributes.tier",
+        "SeatPhysicalAttributes.pitch_claim"
+      ],
+      "notes": "Applies only to the layout the DOCX names; that layout has no seat set in the registry."
+    },
+    {
+      "id": "N-DOCX-08",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Fare and loyalty access rules",
+      "anchor_quote": "Premium access by fare and loyalty tier",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P013"
+      ],
+      "example_raw_value": "Premium access by fare and loyalty tier",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "(no logical-model target)"
+      ],
+      "notes": "Commercial policy; outside cabin-appearance scope. Kept as source text only."
+    },
+    {
+      "id": "N-DOCX-09",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Aircraft type stated as not currently included (planned layout)",
+      "anchor_quote": "is not yet a current revenue configuration",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P021"
+      ],
+      "example_raw_value": "The 737 MAX 7 is not yet a current revenue configuration. Recent Tech Ops communication identifies a planned 150-passenger ELR/RECARO layout, with initial revenue service targeted for 2027 and dates subject to change. Know Before Fix | 737 MAX-7 vs MAX-8 Differences [Know Befor...ifferences | Outlook]",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "(no logical-model target; out of scope)"
+      ],
+      "notes": "Planned, date subject to change; no registry record."
+    },
+    {
+      "id": "N-DOCX-10",
+      "source": "Current Aircraft Seat Configurations.docx",
+      "domain": "Hyperlink citations (public help pages and private intranet/mail items)",
+      "anchor_quote": "[support.so...thwest.com]",
+      "locators": [
+        "Current Aircraft Seat Configurations.docx#P003",
+        "Current Aircraft Seat Configurations.docx#P010",
+        "Current Aircraft Seat Configurations.docx#P019"
+      ],
+      "example_raw_value": "The measurements above are Southwest’s published ranges. Pitch is the distance from a point on one seat to the same point on the seat immediately ahead, not the amount of unobstructed knee clearance. [support.so...thwest.com]",
+      "raw_claim_preserve_verbatim": true,
+      "maps_to": [
+        "SourceArtifact.cited_reference (unverified)"
+      ],
+      "notes": "Private targets were not accessed; public targets only checked for reachability."
+    }
+  ],
+  "logical_model_coverage": [
+    {
+      "logical_entity": "SourceArtifact",
+      "status": "supplied (measured here)",
+      "supplied_by": "File identity, format, size, SHA-256, internal metadata — produced by this evidence stage (inventory.json).",
+      "notes": "Provenance beyond the bytes (who issued, whether approved) is not supplied."
+    },
+    {
+      "logical_entity": "ValidationRelease",
+      "status": "not supplied",
+      "supplied_by": "No approval, sign-off, effectivity or release record in any source.",
+      "notes": "schema_version and generated_at_utc are generation metadata; the DOCX \"As of\" date and document titles are text. None is a validation release."
+    },
+    {
+      "logical_entity": "AircraftSubtype",
+      "status": "supplied (candidate)",
+      "supplied_by": "boeing_model, icao_code, iata_code (configurations).",
+      "notes": "3 distinct model names across 5 configuration records."
+    },
+    {
+      "logical_entity": "Aircraft(tail)",
+      "status": "not supplied",
+      "supplied_by": "No tail list.",
+      "notes": "Only tail-like tokens inside free text (see absence checks); they are not aircraft records."
+    },
+    {
+      "logical_entity": "Layout",
+      "status": "partial",
+      "supplied_by": "lopa_id, configuration_name (registry: 5 IDs); DOCX layout category table (4 data rows).",
+      "notes": "Grain conflict between sources; see conflict register."
+    },
+    {
+      "logical_entity": "LayoutRevision",
+      "status": "partial",
+      "supplied_by": "interior_generation, declared totals, notes.",
+      "notes": "No revision identifier, date, drawing or approval reference."
+    },
+    {
+      "logical_entity": "RowLabel",
+      "status": "supplied (candidate)",
+      "supplied_by": "row_number (printed label), row_exists.",
+      "notes": "physical_order is derived by assumption; no station or coordinate."
+    },
+    {
+      "logical_entity": "SeatLocation",
+      "status": "supplied (candidate)",
+      "supplied_by": "lopa_id + row_number + seat_letter; seat_position_type.",
+      "notes": "side and block are derived from the letter, not supplied."
+    },
+    {
+      "logical_entity": "SeatCommercialAttributes",
+      "status": "supplied (candidate)",
+      "supplied_by": "commercial_tier.",
+      "notes": "Kept separate from physical attributes."
+    },
+    {
+      "logical_entity": "SeatPhysicalAttributes",
+      "status": "supplied (candidate raw claims)",
+      "supplied_by": "pitch_range_inches, effective_width_inches, is_exit_seat, is_bulkhead_seat, recline_status, window_status/notes, has_unobstructed_legroom, tray_table_location, underseat_storage_allowed, power_type.",
+      "notes": "Pitch and width are unverified claims with undefined measurement kind for width."
+    },
+    {
+      "logical_entity": "MaintenanceVariant",
+      "status": "partial",
+      "supplied_by": "interior_generation / seat_hardware_model labels; DOCX seat product names.",
+      "notes": "Labels only; naming differs between sources; no variant definition."
+    },
+    {
+      "logical_entity": "SeatHardware",
+      "status": "partial",
+      "supplied_by": "seat_hardware_model label.",
+      "notes": "No part numbers, drawings, vendor data or per-seat hardware assignment."
+    },
+    {
+      "logical_entity": "MaterialProfile",
+      "status": "not supplied",
+      "supplied_by": "No carpet, seam, upholstery or visual-profile data in any text or table.",
+      "notes": "Reference images exist but carry no mapping to a layout, tail or material specification."
+    },
+    {
+      "logical_entity": "TailAssignment",
+      "status": "not supplied",
+      "supplied_by": "No dated tail-to-layout assignment.",
+      "notes": "Estimated fleet counts are not assignments."
+    },
+    {
+      "logical_entity": "FloorArea",
+      "status": "not supplied",
+      "supplied_by": "Only lavatory counts and narrative mentions of galleys/lavatories.",
+      "notes": "No floor map, footprint, position or area identifiers."
+    },
+    {
+      "logical_entity": "BinModule",
+      "status": "not supplied",
+      "supplied_by": "No overhead-bin data.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Component",
+      "status": "not supplied",
+      "supplied_by": "No component catalogue.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Part",
+      "status": "not supplied",
+      "supplied_by": "No part numbers or part catalogue.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "ApplicabilityRule",
+      "status": "not supplied",
+      "supplied_by": "No applicability or effectivity rules.",
+      "notes": "Free-text hints such as \"select retrofits\" are not rules."
+    },
+    {
+      "logical_entity": "SubstituteApproval",
+      "status": "not supplied",
+      "supplied_by": "No substitute or alternate approvals.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "KitChild",
+      "status": "not supplied",
+      "supplied_by": "No kit structure.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Visit",
+      "status": "not supplied",
+      "supplied_by": "Application runtime entity; no source counterpart.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Snapshot",
+      "status": "not supplied",
+      "supplied_by": "Application runtime entity; no source counterpart.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "ReplacementRecord",
+      "status": "not supplied",
+      "supplied_by": "Application runtime entity; no source counterpart.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Report",
+      "status": "not supplied",
+      "supplied_by": "Application runtime entity; no source counterpart.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "AuditEvent",
+      "status": "not supplied",
+      "supplied_by": "Application runtime entity; no source counterpart.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Coordinate frame / seat coordinates",
+      "status": "not supplied",
+      "supplied_by": "No coordinates, stations or datum.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Cabin height / cross-section dimensions",
+      "status": "not supplied",
+      "supplied_by": "No cabin height or cross-section data.",
+      "notes": ""
+    },
+    {
+      "logical_entity": "Image-to-layout mapping",
+      "status": "not supplied",
+      "supplied_by": "Images carry no layout, tail, row or seat reference in their metadata.",
+      "notes": ""
+    }
+  ],
+  "absence_checks": {
+    "note": "Keyword searches over every text value of the registry, the schema CSV, the RTF and the DOCX. A hit is a mention, not a supplied data set; zero hits supports \"not supplied\".",
+    "checks": [
+      {
+        "topic": "tail registration token (N-number)",
+        "pattern": "/\\bN\\d{1,5}[A-Z]{0,2}\\b/",
+        "total_matching_text_units": 1,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 1,
+            "distinct_matching_texts": 1,
+            "examples": [
+              {
+                "locator": "southwest_737_lopa_normalized.json#/lopa_configurations/2/wifi_system",
+                "text": "Anuvu Ku-band / Viasat Ka-band (N8849Q+)",
+                "matched": "N8849Q"
+              }
+            ]
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "part number / manual reference",
+        "pattern": "/\\b(part\\s*(number|no\\.?)|P\\/N|IPC|CMM|AMM|SRM)\\b/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "carpet",
+        "pattern": "/carpet/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "seam",
+        "pattern": "/\\bseams?\\b/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "upholstery / leather / fabric / dress cover",
+        "pattern": "/upholster|leather|fabric|dress cover/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "colour",
+        "pattern": "/\\bcolou?rs?\\b/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "overhead bin",
+        "pattern": "/\\bbins?\\b/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "floor",
+        "pattern": "/\\bfloor\\b/i",
+        "total_matching_text_units": 37,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 35,
+            "distinct_matching_texts": 4,
+            "examples": [
+              {
+                "locator": "southwest_737_lopa_normalized.json#/lopa_rows/0/row_notes",
+                "text": "Dual-sided forward bulkhead; armrest tray tables; no underseat floor stowage",
+                "matched": "floor"
+              },
+              {
+                "locator": "southwest_737_lopa_normalized.json#/lopa_rows/28/row_notes",
+                "text": "2A-2C sit directly behind port-side bulkhead wall (armrest tray tables, no floor stowage)",
+                "matched": "floor"
+              },
+              {
+                "locator": "southwest_737_lopa_normalized.json#/lopa_seats/0/special_notes",
+                "text": "Bulkhead seat; armrest-stowed tray table; no floor stowage",
+                "matched": "floor"
+              }
+            ]
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 2,
+            "distinct_matching_texts": 2,
+            "examples": [
+              {
+                "locator": "Southwest Cabin Configuration Standard.rtf#P005",
+                "text": "⚬     Rows 1–6 (Extra Legroom — 36 seats): Full 3-3 layout (A–F) pitched at 35\"–36\". Row 1 (1A–1F) is a dual-sided bulkhead with armrest-stowed tray tables and zero floor stowage during taxi, takeoff, and landing.",
+                "matched": "floor"
+              },
+              {
+                "locator": "Southwest Cabin Configuration Standard.rtf#P022",
+                "text": "⚬     Rows 2–5 (Extra Legroom — 24 seats): Full 3-3 layout (A–F) pitched at 34\". 2A, 2B, 2C sit directly behind the port-side bulkhead wall (armrest tray tables, no floor stowage).",
+                "matched": "floor"
+              }
+            ]
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "coordinate / station / datum",
+        "pattern": "/coordinate|\\bstation\\b|\\bSTA\\b|\\bdatum\\b/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "height / ceiling",
+        "pattern": "/\\bheight\\b|\\bceiling\\b/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "applicability / effectivity",
+        "pattern": "/applicab|effectivit/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "substitute / alternate / interchangeable",
+        "pattern": "/substitut|\\balternate\\b|interchangeab/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "approval / approved / authorised",
+        "pattern": "/\\bapprov|\\bauthori[sz]/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      },
+      {
+        "topic": "metric length unit",
+        "pattern": "/\\b\\d+(\\.\\d+)?\\s?(mm|cm)\\b/i",
+        "total_matching_text_units": 0,
+        "per_source": [
+          {
+            "source": "southwest_737_lopa_normalized.json",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "cabin schema architecture.csv",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Southwest Cabin Configuration Standard.rtf",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          },
+          {
+            "source": "Current Aircraft Seat Configurations.docx",
+            "matching_text_units": 0,
+            "distinct_matching_texts": 0,
+            "examples": []
+          }
+        ]
+      }
+    ]
+  }
+}

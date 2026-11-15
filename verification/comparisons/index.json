@@ -1,0 +1,90 @@
+{
+  "note": "Left: supplied original (read only, resized for the sheet). Right: actual render of this build.",
+  "generatedAt": "2026-11-15T03:53:41.066Z",
+  "sheets": [
+    {
+      "file": "01-seat-front-band-neutral.jpg",
+      "id": "01-seat-front-band-neutral",
+      "original": "recarro 2.jpg",
+      "capture": "seat-front_photo-navy-band_neutral.png",
+      "topic": "Seat front, banded navy family, daylight / neutral light"
+    },
+    {
+      "file": "02-seat-front-band-blue.jpg",
+      "id": "02-seat-front-band-blue",
+      "original": "seats 1.jpeg",
+      "capture": "seat-front_photo-navy-band_blue.png",
+      "topic": "Seat front and arms, banded navy family, blue cabin light"
+    },
+    {
+      "file": "03-seat-front-plain-blue.jpg",
+      "id": "03-seat-front-plain-blue",
+      "original": "seats 5.jpg",
+      "capture": "seat-front_photo-navy-plain_blue.png",
+      "topic": "Seat front, navy family without band, blue cabin light"
+    },
+    {
+      "file": "04-seat-front-concept.jpg",
+      "id": "04-seat-front-concept",
+      "original": "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png",
+      "capture": "seat-front_concept-gray_neutral.png",
+      "topic": "Seat front, concept/render gray treatment"
+    },
+    {
+      "file": "05-seat-front-concept-wide.jpg",
+      "id": "05-seat-front-concept-wide",
+      "original": "seats 8.jpg",
+      "capture": "seat-front_concept-gray_neutral.png",
+      "topic": "Seats and arms, concept/render gray treatment"
+    },
+    {
+      "file": "06-seat-rear-neutral.jpg",
+      "id": "06-seat-rear-neutral",
+      "original": "southwest seats-7.webp",
+      "capture": "seat-rear_photo-navy-band_neutral.png",
+      "topic": "Seat rear shells and aisle carpet"
+    },
+    {
+      "file": "07-seat-rear-blue.jpg",
+      "id": "07-seat-rear-blue",
+      "original": "seats 3.jpg",
+      "capture": "seat-rear_photo-navy-band_blue.png",
+      "topic": "Seat rear furniture close-up, blue cabin light"
+    },
+    {
+      "file": "08-carpet.jpg",
+      "id": "08-carpet",
+      "original": "carpet.jpg",
+      "capture": "carpet_photo-navy-band_neutral.png",
+      "topic": "Carpet pattern and aisle borders from above"
+    },
+    {
+      "file": "09-bins-blue.jpg",
+      "id": "09-bins-blue",
+      "original": "seats 4.jpg",
+      "capture": "bin-detail_photo-navy-band_blue.png",
+      "topic": "Overhead bins, underside and seat profile, blue cabin light"
+    },
+    {
+      "file": "10-cabin-aisle-neutral.jpg",
+      "id": "10-cabin-aisle-neutral",
+      "original": "seats 2 .jpeg",
+      "capture": "full-cabin-aisle_photo-navy-band_neutral.png",
+      "topic": "Cabin looking aft along the aisle"
+    },
+    {
+      "file": "11-cabin-aisle-blue.jpg",
+      "id": "11-cabin-aisle-blue",
+      "original": "southwest seats-7.webp",
+      "capture": "full-cabin-aisle_photo-navy-band_blue.png",
+      "topic": "Cabin and bins, blue cabin light (original looks forward at seat backs)"
+    },
+    {
+      "file": "12-headrest-plain-neutral.jpg",
+      "id": "12-headrest-plain-neutral",
+      "original": "seats 6.avif",
+      "capture": "seat-front_photo-navy-plain_neutral.png",
+      "topic": "Headrests, navy family without band"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+# Store hazard checks against the COPY, disposable files under inspection/disposable/hazards. 2026-11-14T20:32:43-0600
+$ PYTHONPATH=. .venv/bin/python -B ../tools/store_hazards.py ../disposable/hazards
+<inspection>/baseline-copy/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+
+=== A. Seeder default path vs server CABIN_DB_PATH ===
+CABIN_DB_PATH (env)            = <inspection>/disposable/hazards/env-reference.sqlite3
+app.seed.DEFAULT_DB            = <inspection>/baseline-copy/data/reference.sqlite3
+seed.py reads CABIN_DB_PATH    = False
+default data/ dir exists in copy = False
+-> `python -m app.seed` without --db always targets <root>/data/reference.sqlite3, even when the server is
+   pointed elsewhere by CABIN_DB_PATH; the two only agree when neither is overridden or --db repeats the env value.
+
+=== B. Server with a reference path that was never seeded ===
+GET /api/health -> 503 {"detail":"Database unavailable. Check local setup and seed the reference dataset."}
+GET /api/lookup?tail=N100TL&check_date=2026-11-12 -> 503 {"detail":"Database unavailable. Check local setup and seed the reference dataset."}
+POST /api/visits -> 503 {"detail":"Database unavailable. Check local setup and seed the reference dataset."}
+GET /api/visits -> 200 []
+reference file created by the server = False
+
+=== C. Reference and visit store configured as the SAME file, then seed --reset ===
+app start + create visit + record replacement on shared file -> 200
+tables before reset: ['aircraft', 'metadata', 'part_rule', 'position', 'replacements', 'source_doc', 'substitute', 'substitute_panel', 'tail_config', 'variant', 'variant_position', 'visits']
+visits before reset = 1, replacements before reset = 1
+$ python -m app.seed --db <shared> --reset -> exit 0
+  stdout: Fictional reference data ready: <scratch>/shared.sqlite3. Visit history was not changed.
+tables after reset: ['aircraft', 'metadata', 'part_rule', 'position', 'source_doc', 'substitute', 'substitute_panel', 'tail_config', 'variant', 'variant_position']
+visits after reset = ERROR OperationalError: no such table: visits
+-> the marker check passes (metadata.dataset is present), the file is atomically replaced and the visit history
+   is destroyed while the CLI prints 'Visit history was not changed.'
+
+=== D. What --reset refuses, and how ===
+--reset on visits-only DB: refused via OperationalError: no such table: metadata
+--reset on non-SQLite file: refused via DatabaseError: file is not a database
+--reset on foreign DB carrying the marker row: OVERWRITTEN; tables now ['aircraft', 'metadata', 'part_rule', 'position']…
+temporary files left behind = []
+
+=== E. History listing cap ===
+visits created = 105; GET /api/visits returned = 100; rows in table = 105
+oldest visit present in listing = False; still fetchable by id = 200
+listing query parameters accepted (limit/offset/status/tail) = none; store file size = 9494528 bytes
+
+=== F. Writer blocked by another connection holding the write lock ===
+PUT while locked -> 503 after 10.4s: {"detail":"Database unavailable. Check local setup and seed the reference dataset."}
+journal_mode = delete
+
+=== G. Lost update between two editors of one draft (no version / precondition) ===
+both editors loaded the draft with 0/0 items; PUT A -> 200, PUT B -> 200
+stored note = 'editor B, unaware of A'; version/etag fields on visit = []
+ETag header on GET = None
+
+store hazard checks finished
+exit=0

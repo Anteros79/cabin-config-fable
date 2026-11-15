@@ -1,0 +1,686 @@
+# Live probe of the baseline COPY (inspection/baseline-copy). Started 2026-11-14T20:30:27-0600
+# Server: inspection/baseline-copy/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 53258  (pid 26605, locked venv from uv sync --frozen)
+# CABIN_DB_PATH=inspection/disposable/probe-reference.sqlite3 (seeded with: python -m app.seed --db <that path>)
+# CABIN_VISITS_DB_PATH=inspection/disposable/probe-visits.sqlite3
+# Port chosen dynamically (bind to port 0); not 8000/8001. Responses summarised by inspection/tools/summarize.py.
+
+================ 1. Health, aircraft list, static shell, response headers ================
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/health'
+  HTTP 200
+  body: {"status": "ok", "demo": true}
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/aircraft'
+  HTTP 200
+  body: [{"tail": "N000TL", "subfleet": "800", "etops": 0}, {"tail": "N010TL", "subfleet": "MAX8", "etops": 0}, {"tail": "N020TL", "subfleet": "MAX8", "etops": 1}, {"tail": "N030TL", "subfleet": "MAX8", "etops": 0}, {"tail": "N040TL", "subfleet": "800", "etops": 0}, {"tail": "N050TL", "subfleet": "800", "etops": 0}, {"tail": "N060TL", "subfleet": "800", "etops": 0}, {"tail": "N070TL", "subfleet": "800", "etops": 0}, {"tail": "N080TL", "subfleet": "800", "etops": 0}, {"tail": "N090TL", "subfleet": "700", "etops": 0}, {"tail": "N100TL", "subfleet": "MAX8", "etops": 0}, {"tail": "N101TL", "subfleet": "700", "etops": 0}, {"tail": "N110TL", "subfleet": "MAX7", "etops": 0}, {"tail": "N200TL", "subfleet":  …
+
+$ curl -s -X GET 'http://127.0.0.1:53258/'
+  HTTP 200
+  index.html bytes=6228
+  header: content-type: text/html; charset=utf-8
+  header: cache-control: no-store
+  header: x-content-type-options: nosniff
+
+$ curl -s -X GET 'http://127.0.0.1:53258/vendor/THREE-LICENSE.txt'
+  HTTP 200
+  first line: The MIT License
+
+$ curl -s -X GET 'http://127.0.0.1:53258/vendor/three.core.js'
+  HTTP 200
+  three.core.js bytes=1403455
+  header: content-length: 1403455
+  header: cache-control: no-store
+
+================ 2. Lookups requested by the task ================
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=2026-11-12'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N100TL' check_date=2026-11-12 demo=True
+  variant=V01 name='MAX8 / Recaro' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2025-10-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-ELR-A-CUSHION: rule=R-V01-P-ELR-A-CUSHION part_no=FAKE-SC-1001 qty=1 unit=EA eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-A type=EO rev=A eff_from=2020-01-01 expires=None
+    substitutes=0
+  line P-STD-A-CUSHION: rule=R-V01-P-STD-A-CUSHION part_no=FAKE-SC-1002 qty=1 unit=EA eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-A type=EO rev=A eff_from=2020-01-01 expires=None
+    substitutes=0
+  line P-EXIT-B-CUSHION: rule=R-V01-P-EXIT-B-CUSHION part_no=FAKE-V01-EXIT-B-CUSHION qty=1 unit=EA eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-A type=EO rev=A eff_from=2020-01-01 expires=None
+    substitutes=0
+  line P-CARPET-KIT: rule=R-V01-P-CARPET-KIT part_no=FAKE-CK-2001 qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=1
+    substitute SUB-KIT-1: alt_part_no=FAKE-CK-2000 qty=1 unit=KIT eff_from=2025-07-22 eff_to=None panels=[FAKE-P-39 x2, FAKE-P-40 x2, FAKE-P-41 x1, FAKE-P-42 x1]
+      source: DOC-DEV type=DEVIATION_EA rev=- eff_from=2020-01-01 expires=2026-12-31
+  line P-FORWARD-PANEL: rule=R-V01-P-FORWARD-PANEL part_no=FAKE-V01-FORWARD-PANEL qty=1 unit=PANEL eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=0
+  line P-BIN-L-01: rule=R-V01-P-BIN-L-01 part_no=FAKE-V01-BIN-L-01 qty=1 unit=EA eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-A type=EO rev=A eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N200TL&check_date=2026-06-30'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N200TL' check_date=2026-06-30 demo=True
+  variant=V05 name='800 / Meridian' subfleet=800 released=1 carpet=BOTANY seam=PRE config eff_from=2024-01-01 eff_to=2026-06-30
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R-V05-P-CARPET-KIT part_no=FAKE-V05-CARPET-KIT qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V05'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N200TL&check_date=2026-07-01'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N200TL' check_date=2026-07-01 demo=True
+  variant=V04 name='800 / Recaro' subfleet=800 released=1 carpet=BOTANY seam=POST config eff_from=2026-07-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R4 part_no=FAKE-CK-2002 qty=1 unit=KIT eff_from=2026-07-01 eff_to=None pending_change=1 change_note='Fictional STA 521 revision pending.' selectors={'variant_id': 'V04', 'carpet': 'BOTANY', 'seam': 'POST'}
+    source: DOC-C type=ENG rev=B eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N300TL&check_date=2026-11-12'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N300TL' check_date=2026-11-12 demo=True
+  variant=V10 name='700 / Meridian / Recaro-look covers' subfleet=700 released=1 carpet=MOHAWK seam=POST config eff_from=2026-03-15 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=138 rows=1..23 exit_rows=[12] zones={'ELR': 30, 'STD': 102, 'EXIT': 6}
+  seats omitted from a full 6-abreast grid: none
+  seat lines that match no seat in this layout: 0 []
+  lines=54 by_category={'BIN': 16, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-EXIT-B-CUSHION: rule=R-V10-P-EXIT-B-CUSHION part_no=FAKE-V10-EXIT-B-CUSHION qty=1 unit=EA eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V10'}
+    source: DOC-A type=EO rev=A eff_from=2020-01-01 expires=None
+    substitutes=0
+  line P-CARPET-KIT: rule=R-V10-P-CARPET-KIT part_no=FAKE-V10-CARPET-KIT qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V10'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N000TL&check_date=2026-11-12'
+  HTTP 200
+  status=NO_CONFIG message='No configuration on this date.'
+  tail='N000TL' check_date=2026-11-12 demo=True
+  lines=0 by_category={} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N110TL&check_date=2026-11-12'
+  HTTP 200
+  status=NO_CONFIG message='This variant is planned; no released configuration is available.'
+  tail='N110TL' check_date=2026-11-12 demo=True
+  lines=0 by_category={} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N999ZZ&check_date=2026-11-12'
+  HTTP 200
+  status=UNKNOWN_TAIL message='This tail is not in the dataset.'
+  tail='N999ZZ' check_date=2026-11-12 demo=True
+  lines=0 by_category={} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=2027-01-01'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N100TL' check_date=2027-01-01 demo=True
+  variant=V01 name='MAX8 / Recaro' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2025-10-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R-V01-P-CARPET-KIT part_no=FAKE-CK-2001 qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=0
+
+================ 3. Extra boundary and layout lookups ================
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=2026-12-31'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N100TL' check_date=2026-12-31 demo=True
+  variant=V01 name='MAX8 / Recaro' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2025-10-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R-V01-P-CARPET-KIT part_no=FAKE-CK-2001 qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=1
+    substitute SUB-KIT-1: alt_part_no=FAKE-CK-2000 qty=1 unit=KIT eff_from=2025-07-22 eff_to=None panels=[FAKE-P-39 x2, FAKE-P-40 x2, FAKE-P-41 x1, FAKE-P-42 x1]
+      source: DOC-DEV type=DEVIATION_EA rev=- eff_from=2020-01-01 expires=2026-12-31
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=2025-07-21'
+  HTTP 200
+  status=NO_CONFIG message='No configuration on this date.'
+  tail='N100TL' check_date=2025-07-21 demo=True
+  lines=0 by_category={} issues=0
+  line P-CARPET-KIT: <absent>
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=2025-09-30'
+  HTTP 200
+  status=NO_CONFIG message='No configuration on this date.'
+  tail='N100TL' check_date=2025-09-30 demo=True
+  lines=0 by_category={} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=2025-10-01'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N100TL' check_date=2025-10-01 demo=True
+  variant=V01 name='MAX8 / Recaro' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2025-10-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R-V01-P-CARPET-KIT part_no=FAKE-CK-2001 qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=1
+    substitute SUB-KIT-1: alt_part_no=FAKE-CK-2000 qty=1 unit=KIT eff_from=2025-07-22 eff_to=None panels=[FAKE-P-39 x2, FAKE-P-40 x2, FAKE-P-41 x1, FAKE-P-42 x1]
+      source: DOC-DEV type=DEVIATION_EA rev=- eff_from=2020-01-01 expires=2026-12-31
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N010TL&check_date=2025-07-21'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N010TL' check_date=2025-07-21 demo=True
+  variant=V01 name='MAX8 / Recaro' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2024-01-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R-V01-P-CARPET-KIT part_no=FAKE-CK-2001 qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N010TL&check_date=2025-07-22'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N010TL' check_date=2025-07-22 demo=True
+  variant=V01 name='MAX8 / Recaro' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2024-01-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R-V01-P-CARPET-KIT part_no=FAKE-CK-2001 qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V01'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=1
+    substitute SUB-KIT-1: alt_part_no=FAKE-CK-2000 qty=1 unit=KIT eff_from=2025-07-22 eff_to=None panels=[FAKE-P-39 x2, FAKE-P-40 x2, FAKE-P-41 x1, FAKE-P-42 x1]
+      source: DOC-DEV type=DEVIATION_EA rev=- eff_from=2020-01-01 expires=2026-12-31
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N030TL&check_date=2026-11-12'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N030TL' check_date=2026-11-12 demo=True
+  variant=V03 name='MAX8 / Meridian' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2024-01-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=170 rows=1..29 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 132, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N040TL&check_date=2026-06-30'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N040TL' check_date=2026-06-30 demo=True
+  variant=V04 name='800 / Recaro' subfleet=800 released=1 carpet=BOTANY seam=POST config eff_from=2024-01-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R-V04-P-CARPET-KIT part_no=FAKE-V04-CARPET-KIT qty=1 unit=KIT eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V04'}
+    source: DOC-B type=ENG rev=- eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N040TL&check_date=2026-07-01'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N040TL' check_date=2026-07-01 demo=True
+  variant=V04 name='800 / Recaro' subfleet=800 released=1 carpet=BOTANY seam=POST config eff_from=2024-01-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-CARPET-KIT: rule=R4 part_no=FAKE-CK-2002 qty=1 unit=KIT eff_from=2026-07-01 eff_to=None pending_change=1 change_note='Fictional STA 521 revision pending.' selectors={'variant_id': 'V04', 'carpet': 'BOTANY', 'seam': 'POST'}
+    source: DOC-C type=ENG rev=B eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N050TL&check_date=2026-11-12'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N050TL' check_date=2026-11-12 demo=True
+  variant=V05 name='800 / Meridian' subfleet=800 released=1 carpet=BOTANY seam=PRE config eff_from=2024-01-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N090TL&check_date=2026-11-12'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N090TL' check_date=2026-11-12 demo=True
+  variant=V09 name='700 / Innovator' subfleet=700 released=1 carpet=MOHAWK seam=PRE config eff_from=2024-01-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=137 rows=1..23 exit_rows=[12] zones={'ELR': 30, 'STD': 101, 'EXIT': 6}
+  seats omitted from a full 6-abreast grid: ['23C']
+  seat lines that match no seat in this layout: 0 []
+  lines=54 by_category={'BIN': 16, 'CARPET': 2, 'SEAT': 36} issues=0
+  line P-EXIT-B-CUSHION: rule=R-V09-P-EXIT-B-CUSHION part_no=FAKE-V09-EXIT-B-CUSHION qty=1 unit=EA eff_from=2024-01-01 eff_to=None pending_change=0 change_note=None selectors={'variant_id': 'V09'}
+    source: DOC-A type=EO rev=A eff_from=2020-01-01 expires=None
+    substitutes=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N010TL&check_date=2023-12-31'
+  HTTP 200
+  status=NO_CONFIG message='No configuration on this date.'
+  tail='N010TL' check_date=2023-12-31 demo=True
+  lines=0 by_category={} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=%20n100tl%20&check_date=2026-11-12'
+  HTTP 200
+  status=OK message='Matching parts found for the configured demo positions.'
+  tail='N100TL' check_date=2026-11-12 demo=True
+  variant=V01 name='MAX8 / Recaro' subfleet=MAX8 released=1 carpet=MOHAWK seam=PRE config eff_from=2025-10-01 eff_to=None
+  config source: DOC-CONFIG type=DEMO rev=1 eff_from=2020-01-01 expires=None
+  seats=176 rows=1..30 exit_rows=[14, 15] zones={'ELR': 30, 'STD': 138, 'EXIT': 8}
+  seats omitted from a full 6-abreast grid: ['14B', '14E', '15B', '15E']
+  seat lines that match no seat in this layout: 4 ['P-EXIT-B-BACKREST', 'P-EXIT-B-CUSHION', 'P-EXIT-E-BACKREST', 'P-EXIT-E-CUSHION']
+  lines=58 by_category={'BIN': 20, 'CARPET': 2, 'SEAT': 36} issues=0
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=bad'
+  HTTP 422
+  body: {"detail": [{"type": "date_from_datetime_parsing", "loc": ["query", "check_date"], "msg": "Input should be a valid date or datetime, input is too short", "input": "bad", "ctx": {"error": "input is too short"}}]}
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL'
+  HTTP 422
+  body: {"detail": [{"type": "missing", "loc": ["query", "check_date"], "msg": "Field required", "input": null}]}
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/lookup?tail=N100TL&check_date=2026-02-30'
+  HTTP 422
+  body: {"detail": [{"type": "date_from_datetime_parsing", "loc": ["query", "check_date"], "msg": "Input should be a valid date or datetime, day value is outside expected range", "input": "2026-02-30", "ctx": {"error": "day value is outside expected range"}}]}
+
+================ 4. Visit A: N100TL 2026-11-12, 3A cushion + full-cabin carpet substitute kit ================
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N100TL","check_date":"2026-11-12","technician":"Probe Tech"}'
+  HTTP 201
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=DRAFT tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=0
+  -> visit A id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":1,"note":"probe: 3A cushion"}'
+  HTTP 200
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=DRAFT tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=1
+    item id=050f52e5-ab35-4408-b04e-17e57da23cc9 location=3A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='probe: 3A cushion'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:28.600844+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":1,"note":"probe: 3A cushion recorded again (upsert)"}'
+  HTTP 200
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=DRAFT tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=1
+    item id=050f52e5-ab35-4408-b04e-17e57da23cc9 location=3A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='probe: 3A cushion recorded again (upsert)'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:28.643040+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements' -H 'Content-Type: application/json' -d '{"location":"FULL_CABIN","rule_id":"R-V01-P-CARPET-KIT","quantity":1,"note":"probe: primary carpet kit"}'
+  HTTP 200
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=DRAFT tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=050f52e5-ab35-4408-b04e-17e57da23cc9 location=3A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='probe: 3A cushion recorded again (upsert)'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:28.643040+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=e2b036fa-2a2d-4cc9-a5c5-4959a4498f23 location=FULL_CABIN component=CARPET_KIT quantity=1 rule_id=R-V01-P-CARPET-KIT substitute_id=None note='probe: primary carpet kit'
+      parts=[FAKE-CK-2001 x1 KIT]
+      source=DOC-B rev=- expires=None primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:28.680134+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements' -H 'Content-Type: application/json' -d '{"location":"FULL_CABIN","rule_id":"R-V01-P-CARPET-KIT","substitute_id":"SUB-KIT-1","quantity":1,"note":"probe: substitute kit replaces primary"}'
+  HTTP 200
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=DRAFT tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=050f52e5-ab35-4408-b04e-17e57da23cc9 location=3A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='probe: 3A cushion recorded again (upsert)'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:28.643040+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=e2b036fa-2a2d-4cc9-a5c5-4959a4498f23 location=FULL_CABIN component=CARPET_KIT quantity=1 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='probe: substitute kit replaces primary'
+      parts=[FAKE-CK-2000 x1 KIT, FAKE-P-39 x2 PANEL, FAKE-P-40 x2 PANEL, FAKE-P-41 x1 PANEL, FAKE-P-42 x1 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:28.711583+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/report'
+  HTTP 200
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=DRAFT tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician', 'totals'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=050f52e5-ab35-4408-b04e-17e57da23cc9 location=3A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='probe: 3A cushion recorded again (upsert)'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:28.643040+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=e2b036fa-2a2d-4cc9-a5c5-4959a4498f23 location=FULL_CABIN component=CARPET_KIT quantity=1 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='probe: substitute kit replaces primary'
+      parts=[FAKE-CK-2000 x1 KIT, FAKE-P-39 x2 PANEL, FAKE-P-40 x2 PANEL, FAKE-P-41 x1 PANEL, FAKE-P-42 x1 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:28.711583+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+  totals:
+    TOTAL FAKE-CK-2000 qty=1 unit=KIT
+    TOTAL FAKE-P-39 qty=2 unit=PANEL
+    TOTAL FAKE-P-40 qty=2 unit=PANEL
+    TOTAL FAKE-P-41 qty=1 unit=PANEL
+    TOTAL FAKE-P-42 qty=1 unit=PANEL
+    TOTAL FAKE-SC-1001 qty=1 unit=EA
+  totals_lines=6 totals_qty_sum=8
+
+================ 5. Visit B: empty completion, forged input ================
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N100TL","check_date":"2026-11-12"}'
+  HTTP 201
+  visit id=d6d57630-421e-4453-a25a-6a90e4f7c72e status=DRAFT tail=N100TL check_date=2026-11-12 technician=''
+  created_at=2026-11-15T02:30:28.778670+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=0
+  -> visit B id=d6d57630-421e-4453-a25a-6a90e4f7c72e
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/complete'
+  HTTP 409
+  body: {"detail": "Record at least one replacement before completing the visit."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"3B","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":1}'
+  HTTP 422
+  body: {"detail": "This part does not apply to this seat."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"99Z","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":1}'
+  HTTP 422
+  body: {"detail": "This part does not apply to this seat."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":2}'
+  HTTP 422
+  body: {"detail": "Record one replacement per seat component."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V02-P-ELR-A-CUSHION","quantity":1}'
+  HTTP 422
+  body: {"detail": "Part rule is not applicable to this visit."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V01-P-ELR-A-CUSHION","substitute_id":"SUB-KIT-1","quantity":1}'
+  HTTP 422
+  body: {"detail": "Substitute is not approved on this visit's check date."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"14B","rule_id":"R-V01-P-EXIT-B-CUSHION","quantity":1}'
+  HTTP 422
+  body: {"detail": "This part does not apply to this seat."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"14A","rule_id":"R-V01-P-STD-A-CUSHION","quantity":1}'
+  HTTP 422
+  body: {"detail": "This part does not apply to this seat."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"BIN-L-02","rule_id":"R-V01-P-BIN-L-01","quantity":1}'
+  HTTP 422
+  body: {"detail": "This part does not apply to this cabin location."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"FORWARD","rule_id":"R-V01-P-CARPET-KIT","quantity":1}'
+  HTTP 422
+  body: {"detail": "This part does not apply to this cabin location."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":"1"}'
+  HTTP 422
+  body: {"detail": [{"type": "int_type", "loc": ["body", "quantity"], "msg": "Input should be a valid integer", "input": "1"}]}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":1,"note":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  HTTP 422
+  body: {"detail": [{"type": "string_too_long", "loc": ["body", "note"], "msg": "String should have at most 1000 characters", "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx …
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"3A"}'
+  HTTP 422
+  body: {"detail": [{"type": "missing", "loc": ["body", "rule_id"], "msg": "Field required", "input": {"location": "3A"}}]}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d 'not json'
+  HTTP 422
+  body: {"detail": [{"type": "json_invalid", "loc": ["body", 0], "msg": "JSON decode error", "input": {}, "ctx": {"error": "Expecting value"}}]}
+  -- quantity on non-seat locations (pydantic allows 1..100; only seats are forced to 1) --
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"BIN-L-01","rule_id":"R-V01-P-BIN-L-01","quantity":100,"note":"forged: 100 doors for one bin module"}'
+  HTTP 200
+  visit id=d6d57630-421e-4453-a25a-6a90e4f7c72e status=DRAFT tail=N100TL check_date=2026-11-12 technician=''
+  created_at=2026-11-15T02:30:28.778670+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=1
+    item id=cfb3bba6-c99d-464e-94c8-22d3f7fc1bf8 location=BIN-L-01 component=BIN_DOOR quantity=100 rule_id=R-V01-P-BIN-L-01 substitute_id=None note='forged: 100 doors for one bin module'
+      parts=[FAKE-V01-BIN-L-01 x100 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:29.238642+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements' -H 'Content-Type: application/json' -d '{"location":"FULL_CABIN","rule_id":"R-V01-P-CARPET-KIT","substitute_id":"SUB-KIT-1","quantity":7,"note":"forged: 7 full-cabin kits","part_no":"EVIL-PART","parts":[{"part_no":"EVIL","qty":9,"unit":"EA"}],"status":"COMPLETED"}'
+  HTTP 200
+  visit id=d6d57630-421e-4453-a25a-6a90e4f7c72e status=DRAFT tail=N100TL check_date=2026-11-12 technician=''
+  created_at=2026-11-15T02:30:28.778670+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=cfb3bba6-c99d-464e-94c8-22d3f7fc1bf8 location=BIN-L-01 component=BIN_DOOR quantity=100 rule_id=R-V01-P-BIN-L-01 substitute_id=None note='forged: 100 doors for one bin module'
+      parts=[FAKE-V01-BIN-L-01 x100 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:29.238642+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=cf6fc7fd-cdf5-40e3-ba06-a59fdcfad63f location=FULL_CABIN component=CARPET_KIT quantity=7 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='forged: 7 full-cabin kits'
+      parts=[FAKE-CK-2000 x7 KIT, FAKE-P-39 x14 PANEL, FAKE-P-40 x14 PANEL, FAKE-P-41 x7 PANEL, FAKE-P-42 x7 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:29.273506+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/report'
+  HTTP 200
+  visit id=d6d57630-421e-4453-a25a-6a90e4f7c72e status=DRAFT tail=N100TL check_date=2026-11-12 technician=''
+  created_at=2026-11-15T02:30:28.778670+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician', 'totals'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=cfb3bba6-c99d-464e-94c8-22d3f7fc1bf8 location=BIN-L-01 component=BIN_DOOR quantity=100 rule_id=R-V01-P-BIN-L-01 substitute_id=None note='forged: 100 doors for one bin module'
+      parts=[FAKE-V01-BIN-L-01 x100 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:29.238642+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=cf6fc7fd-cdf5-40e3-ba06-a59fdcfad63f location=FULL_CABIN component=CARPET_KIT quantity=7 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='forged: 7 full-cabin kits'
+      parts=[FAKE-CK-2000 x7 KIT, FAKE-P-39 x14 PANEL, FAKE-P-40 x14 PANEL, FAKE-P-41 x7 PANEL, FAKE-P-42 x7 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:29.273506+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+  totals:
+    TOTAL FAKE-CK-2000 qty=7 unit=KIT
+    TOTAL FAKE-P-39 qty=14 unit=PANEL
+    TOTAL FAKE-P-40 qty=14 unit=PANEL
+    TOTAL FAKE-P-41 qty=7 unit=PANEL
+    TOTAL FAKE-P-42 qty=7 unit=PANEL
+    TOTAL FAKE-V01-BIN-L-01 qty=100 unit=EA
+  totals_lines=6 totals_qty_sum=149
+  -- cross-visit delete: item of visit B addressed through visit A --
+
+$ curl -s -X DELETE 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements/cfb3bba6-c99d-464e-94c8-22d3f7fc1bf8'
+  HTTP 404
+  body: {"detail": "Replacement not found."}
+
+$ curl -s -X DELETE 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements/does-not-exist'
+  HTTP 404
+  body: {"detail": "Replacement not found."}
+
+$ curl -s -X DELETE 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e/replacements/cfb3bba6-c99d-464e-94c8-22d3f7fc1bf8'
+  HTTP 200
+  visit id=d6d57630-421e-4453-a25a-6a90e4f7c72e status=DRAFT tail=N100TL check_date=2026-11-12 technician=''
+  created_at=2026-11-15T02:30:28.778670+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=1
+    item id=cf6fc7fd-cdf5-40e3-ba06-a59fdcfad63f location=FULL_CABIN component=CARPET_KIT quantity=7 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='forged: 7 full-cabin kits'
+      parts=[FAKE-CK-2000 x7 KIT, FAKE-P-39 x14 PANEL, FAKE-P-40 x14 PANEL, FAKE-P-41 x7 PANEL, FAKE-P-42 x7 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:29.273506+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+  -- visit creation refusals and input validation --
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N000TL","check_date":"2026-11-12"}'
+  HTTP 422
+  body: {"detail": "No configuration on this date."}
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N110TL","check_date":"2026-11-12"}'
+  HTTP 422
+  body: {"detail": "This variant is planned; no released configuration is available."}
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N999ZZ","check_date":"2026-11-12"}'
+  HTTP 422
+  body: {"detail": "This tail is not in the dataset."}
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N100TL; DROP","check_date":"2026-11-12"}'
+  HTTP 422
+  body: {"detail": [{"type": "string_pattern_mismatch", "loc": ["body", "tail"], "msg": "String should match pattern '^[A-Za-z0-9-]+$'", "input": "N100TL; DROP", "ctx": {"pattern": "^[A-Za-z0-9-]+$"}}]}
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N100TL","check_date":"2026-11-12","technician":"TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"}'
+  HTTP 422
+  body: {"detail": [{"type": "string_too_long", "loc": ["body", "technician"], "msg": "String should have at most 80 characters", "input": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT", "ctx": {"max_length": 80}}]}
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N100TL","check_date":"2026-11-12"}' -H Origin: https://unrelated.example
+  HTTP 403
+  body: {"detail": "Cross-origin writes are not allowed."}
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits' -H 'Content-Type: application/json' -d '{"tail":"N100TL","check_date":"2026-11-12"}' -H Origin: null
+  HTTP 403
+  body: {"detail": "Cross-origin writes are not allowed."}
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits/missing'
+  HTTP 404
+  body: {"detail": "Visit not found."}
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits/missing/report'
+  HTTP 404
+  body: {"detail": "Visit not found."}
+
+================ 6. Completion, locking, idempotent completion (visit A) ================
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/complete'
+  HTTP 200
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=COMPLETED tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=2026-11-15T02:30:29.709171+00:00
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician', 'totals'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=050f52e5-ab35-4408-b04e-17e57da23cc9 location=3A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='probe: 3A cushion recorded again (upsert)'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:28.643040+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=e2b036fa-2a2d-4cc9-a5c5-4959a4498f23 location=FULL_CABIN component=CARPET_KIT quantity=1 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='probe: substitute kit replaces primary'
+      parts=[FAKE-CK-2000 x1 KIT, FAKE-P-39 x2 PANEL, FAKE-P-40 x2 PANEL, FAKE-P-41 x1 PANEL, FAKE-P-42 x1 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:28.711583+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+  totals:
+    TOTAL FAKE-CK-2000 qty=1 unit=KIT
+    TOTAL FAKE-P-39 qty=2 unit=PANEL
+    TOTAL FAKE-P-40 qty=2 unit=PANEL
+    TOTAL FAKE-P-41 qty=1 unit=PANEL
+    TOTAL FAKE-P-42 qty=1 unit=PANEL
+    TOTAL FAKE-SC-1001 qty=1 unit=EA
+  totals_lines=6 totals_qty_sum=8
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements' -H 'Content-Type: application/json' -d '{"location":"3A","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":1,"note":"edit after completion"}'
+  HTTP 409
+  body: {"detail": "Completed visits are locked."}
+
+$ curl -s -X PUT 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements' -H 'Content-Type: application/json' -d '{"location":"4A","rule_id":"R-V01-P-ELR-A-CUSHION","quantity":1,"note":"add after completion"}'
+  HTTP 409
+  body: {"detail": "Completed visits are locked."}
+
+$ curl -s -X DELETE 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/replacements/050f52e5-ab35-4408-b04e-17e57da23cc9'
+  HTTP 409
+  body: {"detail": "Completed visits are locked."}
+
+$ curl -s -X POST 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/complete'
+  HTTP 200
+  second complete: status=COMPLETED completed_at unchanged=yes (2026-11-15T02:30:29.709171+00:00)
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits/fd6413b8-b26d-4ba3-afc6-5641b9b8a688/report'
+  HTTP 200
+  visit id=fd6413b8-b26d-4ba3-afc6-5641b9b8a688 status=COMPLETED tail=N100TL check_date=2026-11-12 technician='Probe Tech'
+  created_at=2026-11-15T02:30:28.495178+00:00 completed_at=2026-11-15T02:30:29.709171+00:00
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician', 'totals'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=050f52e5-ab35-4408-b04e-17e57da23cc9 location=3A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='probe: 3A cushion recorded again (upsert)'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:28.643040+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=e2b036fa-2a2d-4cc9-a5c5-4959a4498f23 location=FULL_CABIN component=CARPET_KIT quantity=1 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='probe: substitute kit replaces primary'
+      parts=[FAKE-CK-2000 x1 KIT, FAKE-P-39 x2 PANEL, FAKE-P-40 x2 PANEL, FAKE-P-41 x1 PANEL, FAKE-P-42 x1 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:28.711583+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+  totals:
+    TOTAL FAKE-CK-2000 qty=1 unit=KIT
+    TOTAL FAKE-P-39 qty=2 unit=PANEL
+    TOTAL FAKE-P-40 qty=2 unit=PANEL
+    TOTAL FAKE-P-41 qty=1 unit=PANEL
+    TOTAL FAKE-P-42 qty=1 unit=PANEL
+    TOTAL FAKE-SC-1001 qty=1 unit=EA
+  totals_lines=6 totals_qty_sum=8
+
+================ 7. History listing ================
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits'
+  HTTP 200
+  rows=2
+    {'id': 'd6d57630-421e-4453-a25a-6a90e4f7c72e', 'tail': 'N100TL', 'check_date': '2026-11-12', 'technician': '', 'status': 'DRAFT', 'created_at': '2026-11-15T02:30:28.778670+00:00', 'completed_at': None, 'item_count': 1}
+    {'id': 'fd6413b8-b26d-4ba3-afc6-5641b9b8a688', 'tail': 'N100TL', 'check_date': '2026-11-12', 'technician': 'Probe Tech', 'status': 'COMPLETED', 'created_at': '2026-11-15T02:30:28.495178+00:00', 'completed_at': '2026-11-15T02:30:29.709171+00:00', 'item_count': 2}
+
+================ 8. Concurrency: 12 parallel upserts of the same seat/component on visit B (no version / If-Match exists) ================
+  parallel PUT status counts:   12 200
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e'
+  HTTP 200
+  visit id=d6d57630-421e-4453-a25a-6a90e4f7c72e status=DRAFT tail=N100TL check_date=2026-11-12 technician=''
+  created_at=2026-11-15T02:30:28.778670+00:00 completed_at=None
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=cf6fc7fd-cdf5-40e3-ba06-a59fdcfad63f location=FULL_CABIN component=CARPET_KIT quantity=7 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='forged: 7 full-cabin kits'
+      parts=[FAKE-CK-2000 x7 KIT, FAKE-P-39 x14 PANEL, FAKE-P-40 x14 PANEL, FAKE-P-41 x7 PANEL, FAKE-P-42 x7 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:29.273506+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=3421489e-b0d5-4e97-ab2a-ba51b063be79 location=5A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='writer 8'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:30.111916+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+  -- parallel complete + edit on visit B --
+  complete -> 200
+  edit     -> 409
+
+$ curl -s -X GET 'http://127.0.0.1:53258/api/visits/d6d57630-421e-4453-a25a-6a90e4f7c72e'
+  HTTP 200
+  visit id=d6d57630-421e-4453-a25a-6a90e4f7c72e status=COMPLETED tail=N100TL check_date=2026-11-12 technician=''
+  created_at=2026-11-15T02:30:28.778670+00:00 completed_at=2026-11-15T02:30:30.159911+00:00
+  top-level keys=['check_date', 'completed_at', 'created_at', 'id', 'replacements', 'status', 'tail', 'technician'] + snapshot
+  snapshot keys=['aircraft', 'check_date', 'configuration', 'demo', 'issues', 'lines', 'message', 'status', 'tail'] snapshot_bytes=88487 snapshot lines=58 snapshot seats=176
+  replacements=2
+    item id=cf6fc7fd-cdf5-40e3-ba06-a59fdcfad63f location=FULL_CABIN component=CARPET_KIT quantity=7 rule_id=R-V01-P-CARPET-KIT substitute_id=SUB-KIT-1 note='forged: 7 full-cabin kits'
+      parts=[FAKE-CK-2000 x7 KIT, FAKE-P-39 x14 PANEL, FAKE-P-40 x14 PANEL, FAKE-P-41 x7 PANEL, FAKE-P-42 x7 PANEL]
+      source=DOC-DEV rev=- expires=2026-12-31 primary_source=DOC-B pending_change=False recorded_at=2026-11-15T02:30:29.273506+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+    item id=3421489e-b0d5-4e97-ab2a-ba51b063be79 location=5A component=CUSHION quantity=1 rule_id=R-V01-P-ELR-A-CUSHION substitute_id=None note='writer 8'
+      parts=[FAKE-SC-1001 x1 EA]
+      source=DOC-A rev=A expires=None primary_source=DOC-A pending_change=False recorded_at=2026-11-15T02:30:30.111916+00:00 keys=['change_note', 'component', 'description', 'id', 'location', 'note', 'parts', 'pending_change', 'primary_source', 'quantity', 'recorded_at', 'rule_id', 'source', 'substitute_id']
+
+================ 9. API docs endpoints ================
+
+$ curl -s -X GET 'http://127.0.0.1:53258/openapi.json'
+  HTTP 200
+  openapi paths: ['/api/aircraft', '/api/health', '/api/lookup', '/api/visits', '/api/visits/{visit_id}', '/api/visits/{visit_id}/complete', '/api/visits/{visit_id}/replacements', '/api/visits/{visit_id}/replacements/{item_id}', '/api/visits/{visit_id}/report']
+
+$ curl -s -X GET 'http://127.0.0.1:53258/docs'
+  HTTP 200
+  external hosts referenced by /docs: https://cdn.jsdelivr.net https://fastapi.tiangolo.com 
+
+probe finished
+# Probe finished 2026-11-14T20:30:30-0600
+
+# Server stopped: kill 26605 at 2026-11-14T20:31:02-0600; lsof shows no listener on 127.0.0.1:53258; curl to the port fails to connect (exit 7).

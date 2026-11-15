@@ -1,0 +1,104 @@
+# Located text extract of "Southwest Cabin Configuration Standard.rtf"
+# Locators: P### = body paragraph (document order, empty paragraphs not numbered); T##.R##.C## = table cell.
+# Text is verbatim (cp1252 escapes and \u escapes decoded); leading spaces and list markers preserved.
+
+[P001] Across all 5 active Southwest Airlines cabin configurations (LOPAs), row numbering is standardized so that overwing emergency exits fall in the Row 14–16 band regardless of fuselage length. Every seat maps into three commercial tiers—Extra Legroom (ELR), Preferred, and Standard—with structural cutouts, windowless fuselage frames, and FAA-mandated recline locks varying by interior generation.
+[T01] table: 6 rows x 7 columns
+[T01.R01.C01] LOPA / Variant
+[T01.R01.C02] Interior Generation
+[T01.R01.C03] Total Seats
+[T01.R01.C04] Extra Legroom (ELR)
+[T01.R01.C05] Preferred
+[T01.R01.C06] Standard
+[T01.R01.C07] Omitted Seat Positions
+[T01.R02.C01] 73G (737-700)
+[T01.R02.C02] 2026 Cabin Retrofit
+[T01.R02.C03] 137
+[T01.R02.C04] 42 (Rows 1–6, 15)
+[T01.R02.C05] 23 (Rows 7–9, 14)
+[T01.R02.C06] 72 (Rows 16–27)
+[T01.R02.C07] Rows 10–13 (skipped), 14A
+[T01.R03.C01] 738 (737-800)
+[T01.R03.C02] Legacy "Heart" Cabin
+[T01.R03.C03] 175
+[T01.R03.C04] 46 (1D–6C, 14–16)
+[T01.R03.C05] 45 (6D–13F)
+[T01.R03.C06] 84 (Rows 17–30)
+[T01.R03.C07] 1A, 1B, 1C, 15A, 15F
+[T01.R04.C01] 7M8-1 (MAX 8)
+[T01.R04.C02] Pre-Oct 2025 Sky/Heart
+[T01.R04.C03] 175
+[T01.R04.C04] 46 (1D–6C, 14–16)
+[T01.R04.C05] 45 (6D–13F)
+[T01.R04.C06] 84 (Rows 17–30)
+[T01.R04.C07] 1A, 1B, 1C, 15A, 15F
+[T01.R05.C01] 738-2 (737-800)
+[T01.R05.C02] 2025 "Elevate" (RECARO R2)
+[T01.R05.C03] 175
+[T01.R05.C04] 48 (1D–6C, 14–16)
+[T01.R05.C05] 45 (6D–13F)
+[T01.R05.C06] 82 (Rows 17–30)
+[T01.R05.C07] 1A, 1B, 1C, 2 seats in Row 30
+[T01.R06.C01] 7M8-2 (MAX 8)
+[T01.R06.C02] 2025 "Elevate" Factory
+[T01.R06.C03] 175
+[T01.R06.C04] 48 (1D–6C, 14–16)
+[T01.R06.C05] 45 (6D–13F)
+[T01.R06.C06] 82 (Rows 17–30)
+[T01.R06.C07] 1A, 1B, 1C, 2 seats in Row 30
+[P002] {heading-like L1} 1. Boeing 737-700 (73G — 137 Seats, 2026 Retrofit)
+[P003] The single-overwing-exit 737-700 skips Rows 10–13 entirely so that its single exit row aligns at Row 15.
+[P004] {heading-like L2} Row-by-Row Tier Map
+[P005] ⚬     Rows 1–6 (Extra Legroom — 36 seats): Full 3-3 layout (A–F) pitched at 35"–36". Row 1 (1A–1F) is a dual-sided bulkhead with armrest-stowed tray tables and zero floor stowage during taxi, takeoff, and landing.
+[P006] ⚬     Rows 7–9 (Preferred — 18 seats): Full 3-3 layout pitched at 31"–33".
+[P007] ⚬     Rows 10–13 (Non-Existent — 0 seats): Omitted from cabin numbering.
+[P008] ⚬     Row 14 (Preferred — 5 seats): Asymmetric layout (14B, 14C, 14D, 14E, 14F) at 31"–33" pitch; 14A does not exist to preserve clear access to the port-side overwing exit hatch.
+[P009] ⚬     Row 15 (Extra Legroom — 6 seats): Overwing exit row (15A–15F) pitched at 35"–36". Because 14A is missing, 15A has no seat directly in front of it, providing unobstructed legroom (with an armrest-stowed tray table).
+[P010] ⚬     Rows 16–27 (Standard — 72 seats): Full 3-3 layout (A–F) pitched at 31"–33".
+[P011] {heading-like L2} Window & Recline Restrictions (73G)
+[P012] ⚬     Missing / Obstructed Windows:
+[P013]     ⚬         7A and 7F: Flagged in Southwest's official seat-selection disclosure for limited/missing window visibility due to the air-conditioning riser duct frame.
+[P014]     ⚬         3A and 14F: Misaligned window frames positioned slightly behind the seatback.
+[P015] ⚬     Non-Reclining / Limited-Recline Rows:
+[P016]     ⚬         Row 14 (14B–14F): Locked / zero recline per FAA regulations because overwing exit Row 15 sits directly behind it.
+[P017]     ⚬         Row 27 (27A–27F): Limited or zero recline against the aft bulkhead and rear lavatory/galley wall.
+[P018] {heading-like L1} 2. Boeing 737-800 (738) & 737 MAX 8 (7M8-1) — "Heart" / Pre-Oct 2025 Cabins (175 Seats)
+[P019] Both the legacy 737-800 Heart retrofit and pre-October 2025 737 MAX 8 deliveries share an identical 46 ELR / 45 Preferred / 84 Standard seat distribution across Rows 1–30.
+[P020] {heading-like L2} Row-by-Row Tier Map
+[P021] ⚬     Row 1 (Extra Legroom — 3 seats): Starboard-only bulkhead (1D, 1E, 1F) pitched at 34". 1A, 1B, and 1C do not exist because the forward lavatory and galley occupy the port-side entrance zone.
+[P022] ⚬     Rows 2–5 (Extra Legroom — 24 seats): Full 3-3 layout (A–F) pitched at 34". 2A, 2B, 2C sit directly behind the port-side bulkhead wall (armrest tray tables, no floor stowage).
+[P023] ⚬     Row 6 (Split Row — 3 ELR / 3 Preferred):
+[P024]     ⚬         6A, 6B, 6C (Extra Legroom): Pitched at 34".
+[P025]     ⚬         6D, 6E, 6F (Preferred): Pitched at 31"–32".
+[P026] ⚬     Rows 7–13 (Preferred — 42 seats): Full 3-3 layout (A–F) pitched at 31"–32".
+[P027] ⚬     Rows 14–16 (Extra Legroom — 16 seats): Twin-overwing exit zone pitched at 34":
+[P028]     ⚬         Row 14 (14A–14F): 6 seats.
+[P029]     ⚬         Row 15 (15B, 15C, 15D, 15E): 4 seats; 15A and 15F are omitted at the aft overwing exit hatches.
+[P030]     ⚬         Row 16 (16A–16F): 6 seats; because 15A and 15F are missing, 16A and 16F have unrestricted legroom with no seat directly ahead.
+[P031] ⚬     Rows 17–30 (Standard — 84 seats): Full 3-3 layout (A–F) across all 14 rows, pitched at 31"–32".
+[P032] {heading-like L2} Window & Recline Restrictions (738 & 7M8-1)
+[P033] ⚬     Missing / Obstructed Windows:
+[P034]     ⚬         10A (Preferred): Completely windowless (blank cabin wall covering the environmental control ducting; also reduces shoulder width by ~2" due to the missing window reveal).
+[P035]     ⚬         11A and 11F (Preferred): Officially disclosed as limited/obstructed window visibility (forward-offset window frame).
+[P036]     ⚬         Set-Back Windows: 7A/7F (Preferred), plus 16A/16F, 18A/18F, 20A/20F, and 24A/24F have windows positioned behind the headrest.
+[P037] ⚬     Non-Reclining / Limited-Recline Rows:
+[P038]     ⚬         Row 13 (13A–13F): Zero recline (Preferred row immediately forward of exit Row 14).
+[P039]     ⚬         Row 14 (14A–14F): Zero recline (forward overwing exit row immediately ahead of exit Row 15).
+[P040]     ⚬         Row 15 (15B–15E): Zero / severely restricted recline (center overwing exit row). (Note: Row 16 reclines normally.)
+[P041]     ⚬         Row 30 (30A–30F): Limited or zero recline against the twin aft lavatory bulkheads.
+[P042] {heading-like L1} 3. Boeing 737-800 (738-2) & 737 MAX 8 (7M8-2) — 2025 "Elevate" Cabins (175 Seats)
+[P043] Aircraft outfitted with the 2025 "Elevate" RECARO R2 interior (factory-delivered on MAX 8s from October 2025 onward and retrofitted across select 737-800 frames) maintain 175 total seats and identical Row 1–13 and Row 17–29 boundaries, but shift 2 seats from Standard to Extra Legroom (48 ELR / 45 Preferred / 82 Standard).
+[P044] {heading-like L2} Structural Deltas vs. the "Heart" Layout
+[P045] 1.     Row 15 Restored to 6 Seats (15A–15F): Unlike the Heart layout, 15A and 15F are present on Elevate cabins. Consequently, 16A and 16F no longer have an empty gap in front of them and offer standard ~34" ELR pitch.
+[P046] 2.     Row 14 Pitch Increase (~37"): Row 14 (14A–14F) receives the deepest legroom on the aircraft at ~37" pitch, while Rows 1–6, 15, and 16 measure ~33"–34".
+[P047] 3.     Row 30 Reduced to 4 Seats: To preserve the 175-seat cap after adding 15A and 15F, Row 30 drops two window-side positions to become a 4-seat rear row adjacent to the enlarged aft lavatory/galley complex.
+[P048] {heading-like L2} Window & Recline Restrictions (738-2 & 7M8-2)
+[P049] ⚬     Missing / Obstructed Windows:
+[P050]     ⚬         10A: Remains completely windowless due to fuselage structural ducting.
+[P051]     ⚬         11A and 11F: Remain limited/obstructed window visibility.
+[P052]     ⚬         Set-Back Windows: Shift slightly due to RECARO seat pitch geometry to 9A/9F, 13A/13F, 20A/20F, and 22A/22F.
+[P053] ⚬     Non-Reclining / Limited-Recline Rows:
+[P054]     ⚬         Row 13 (13A–13F): Zero recline (immediately forward of exit Row 14).
+[P055]     ⚬         Row 14 (14A–14F): Zero / restricted recline (immediately forward of exit Row 15).
+[P056]     ⚬         Row 15 (15A–15F): Zero / restricted recline (overwing exit row). (Note: Row 16 reclines normally.)
+[P057]     ⚬         Row 30 (4 seats): Limited or zero recline against the aft lavatory bulkhead.

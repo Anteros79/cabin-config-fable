@@ -1,0 +1,200 @@
+{
+  "note": "Review-generated previews. Not independent evidence; every preview derives from the named original.",
+  "generatedAt": "2026-11-15T02:25:01.003Z",
+  "images": [
+    {
+      "original": "Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png",
+      "originalSha256": "61b22740bc46b74633afb6155b6bc28b0b39f2852434081deefe1d184dd2ae89",
+      "format": "png",
+      "width": 970,
+      "height": 521,
+      "previews": [
+        {
+          "file": "view/Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "barrier.webp",
+      "originalSha256": "b6ee68403975b364d20dcc2bf2adc52a8c71ba6fbdc3ba3be4ef7320d2fb2909",
+      "format": "webp",
+      "width": 960,
+      "height": 1048,
+      "previews": [
+        {
+          "file": "full/barrier.png",
+          "kind": "lossless decode at native size"
+        },
+        {
+          "file": "view/barrier.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "carpet.jpg",
+      "originalSha256": "007e65eca369ef808e27da1f2623a46607a8f35062b92893a0eac00d04af5bcd",
+      "format": "jpeg",
+      "width": 1000,
+      "height": 750,
+      "previews": [
+        {
+          "file": "view/carpet.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "forward galley flight deck.jpg",
+      "originalSha256": "0963d74c7e4d01dfc4a4e968f7c0da6fdac1eb2cf761eab5bbca079327c30557",
+      "format": "jpeg",
+      "width": 5184,
+      "height": 3456,
+      "previews": [
+        {
+          "file": "view/forward galley flight deck.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "rear galley.jpg",
+      "originalSha256": "f9ea2338140eeb77565fd1cee857804ba8a68acef49b0d17106793a165b5ee8e",
+      "format": "jpeg",
+      "width": 1920,
+      "height": 1281,
+      "previews": [
+        {
+          "file": "view/rear galley.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "recarro 2.jpg",
+      "originalSha256": "58c8c019e04bc4ec32de62e667f2785e117f41623c60f7ee814b3e5b6f9e0c5d",
+      "format": "jpeg",
+      "width": 1140,
+      "height": 641,
+      "previews": [
+        {
+          "file": "view/recarro 2.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "seats 1.jpeg",
+      "originalSha256": "d6c27a49eff8a74ae6a3104de1dca18560d2e01f4f874a9788b34be76fc00ad7",
+      "format": "jpeg",
+      "width": 736,
+      "height": 416,
+      "previews": [
+        {
+          "file": "view/seats 1.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "seats 2 .jpeg",
+      "originalSha256": "026cdd68f87a6cb60bc160b763de7404a701d0004c1fef78e1b792e550de4eac",
+      "format": "jpeg",
+      "width": 617,
+      "height": 324,
+      "previews": [
+        {
+          "file": "view/seats 2 .jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "seats 3.jpg",
+      "originalSha256": "29dae2e131d0a05db1eae3fb191c0478d65bd7a9ca71910495acee202919b29e",
+      "format": "jpeg",
+      "width": 1440,
+      "height": 480,
+      "previews": [
+        {
+          "file": "view/seats 3.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "seats 4.jpg",
+      "originalSha256": "b108b845381296b523ba3bea5d13414e7dc885e7d40e4ed3b87cf4d8016d9bab",
+      "format": "jpeg",
+      "width": 2500,
+      "height": 1667,
+      "previews": [
+        {
+          "file": "view/seats 4.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "seats 5.jpg",
+      "originalSha256": "49f16c78b6a8c4e3ac2883035b020b0c6dcf63a2102b6e7689c1eb5ef92ef9b6",
+      "format": "jpeg",
+      "width": 4032,
+      "height": 3024,
+      "previews": [
+        {
+          "file": "view/seats 5.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "seats 6.avif",
+      "originalSha256": "c7929bf7ac093e66fd8c949e120551de74e394b5ad630e2454034a85c5750dfe",
+      "format": "heif",
+      "width": 1920,
+      "height": 1080,
+      "previews": [
+        {
+          "file": "full/seats 6.png",
+          "kind": "lossless decode at native size"
+        },
+        {
+          "file": "view/seats 6.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "seats 8.jpg",
+      "originalSha256": "94985372ea11685c4a37ff023fe736e9367237a5ecad5547daee57862f72d92c",
+      "format": "jpeg",
+      "width": 1280,
+      "height": 720,
+      "previews": [
+        {
+          "file": "view/seats 8.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    },
+    {
+      "original": "southwest seats-7.webp",
+      "originalSha256": "a0feb22156a758b51db8ef0ea2701156e945b91db4d558782e5880f9d3d7f574",
+      "format": "webp",
+      "width": 1600,
+      "height": 1067,
+      "previews": [
+        {
+          "file": "full/southwest seats-7.png",
+          "kind": "lossless decode at native size"
+        },
+        {
+          "file": "view/southwest seats-7.jpg",
+          "kind": "downscaled inspection copy (max 1400 px)"
+        }
+      ]
+    }
+  ]
+}

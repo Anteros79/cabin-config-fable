@@ -1,0 +1,315 @@
+{
+  "report": {
+    "authorityNotice": "Fictional home-lab demonstration. Not an approved maintenance authority, engineering source or work instruction. Part numbers, tails, applicability and geometry shown are fictional fixtures or unverified candidate data.",
+    "configuration": {
+      "assignmentEffectiveFrom": "2025-10-01",
+      "assignmentEffectiveTo": null,
+      "assignmentId": "FX-TA-N100TL-V01-2025-10-01",
+      "capturedAt": "2026-11-15T03:52:44.141Z",
+      "carpet": "MOHAWK",
+      "configurationSourceId": "FX-DOC-CONFIG",
+      "geometryVersion": "cabin-kit.geometry/1",
+      "hardware": "Recaro",
+      "layoutId": "FX-L-S176-MAX8",
+      "layoutName": "Fictional 176-seat layout (S176-MAX8)",
+      "layoutRevisionId": "FX-L-S176-MAX8@1",
+      "lookupState": "RESOLVED",
+      "namespace": "fixture",
+      "referenceContentHash": "6df5118095a4e9416c3e409a62edabb0a10e38bbb17e50a2f4d8615776969400",
+      "referenceReleaseId": "REL-0001-6df51180",
+      "seam": "PRE",
+      "seatCount": 176,
+      "snapshotSha256": "3e3303f5847f07d8deeb31d70925db853aedba8995090070cf835c321f244a92",
+      "subtype": "Fictional MAX8 sub-fleet",
+      "upholstery": null,
+      "variantId": "V01",
+      "variantName": "MAX8 / Recaro"
+    },
+    "counts": {
+      "replacements": 2,
+      "totalLines": 6,
+      "unresolvedComponents": 0,
+      "workItems": 2
+    },
+    "dateRule": "Effective-from and effective-to/expiry dates are calendar dates and are both inclusive.",
+    "gaps": [],
+    "generatedAt": "2026-11-15T03:52:44.490Z",
+    "linkedEvents": [],
+    "replacementCountSemantics": "Replacements = number of that component replaced at that location during this visit (one record per visit, location and component). Line quantity = replacements x quantity per replacement; mandatory children = replacements x alternate quantity x child quantity.",
+    "reportKind": "FINAL",
+    "schema": "cabin-kit.report/1",
+    "sources": [
+      {
+        "authority": "fictional-fixture",
+        "effectiveFrom": "2020-01-01",
+        "expiresOn": null,
+        "id": "FX-DOC-A",
+        "kind": "EO",
+        "namespace": "fixture",
+        "owner": "Demo engineering desk (fictional)",
+        "released": true,
+        "revision": "A",
+        "title": "Fictional seat and bin applicability"
+      },
+      {
+        "authority": "fictional-fixture",
+        "effectiveFrom": "2020-01-01",
+        "expiresOn": null,
+        "id": "FX-DOC-B",
+        "kind": "ENG",
+        "namespace": "fixture",
+        "owner": "Demo engineering desk (fictional)",
+        "released": true,
+        "revision": "-",
+        "title": "Fictional carpet applicability"
+      },
+      {
+        "authority": "fictional-fixture",
+        "effectiveFrom": "2020-01-01",
+        "expiresOn": null,
+        "id": "FX-DOC-CONFIG",
+        "kind": "DEMO",
+        "namespace": "fixture",
+        "owner": "Demo engineering desk (fictional)",
+        "released": true,
+        "revision": "1",
+        "title": "Fictional layout and tail configuration"
+      },
+      {
+        "authority": "fictional-fixture",
+        "effectiveFrom": "2020-01-01",
+        "expiresOn": "2026-12-31",
+        "id": "FX-DOC-DEV",
+        "kind": "DEVIATION_EA",
+        "namespace": "fixture",
+        "owner": "Demo engineering desk (fictional)",
+        "released": true,
+        "revision": "-",
+        "title": "Fictional substitute kit approval"
+      }
+    ],
+    "totals": [
+      {
+        "description": "Fictional alternate carpet kit (deviation)",
+        "locations": [
+          {
+            "componentId": "CARPET_KIT",
+            "locationId": "FLOOR:FULL-CABIN",
+            "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
+            "quantity": 1,
+            "role": "ALTERNATE"
+          }
+        ],
+        "partNo": "FAKE-CK-2000",
+        "quantity": 1,
+        "roles": [
+          "ALTERNATE"
+        ],
+        "unit": "KIT"
+      },
+      {
+        "description": "Fictional supplement panel 39",
+        "locations": [
+          {
+            "componentId": "CARPET_KIT",
+            "locationId": "FLOOR:FULL-CABIN",
+            "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
+            "quantity": 2,
+            "role": "MANDATORY_CHILD"
+          }
+        ],
+        "partNo": "FAKE-P-39",
+        "quantity": 2,
+        "roles": [
+          "MANDATORY_CHILD"
+        ],
+        "unit": "PANEL"
+      },
+      {
+        "description": "Fictional supplement panel 40",
+        "locations": [
+          {
+            "componentId": "CARPET_KIT",
+            "locationId": "FLOOR:FULL-CABIN",
+            "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
+            "quantity": 2,
+            "role": "MANDATORY_CHILD"
+          }
+        ],
+        "partNo": "FAKE-P-40",
+        "quantity": 2,
+        "roles": [
+          "MANDATORY_CHILD"
+        ],
+        "unit": "PANEL"
+      },
+      {
+        "description": "Fictional supplement panel 41",
+        "locations": [
+          {
+            "componentId": "CARPET_KIT",
+            "locationId": "FLOOR:FULL-CABIN",
+            "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
+            "quantity": 1,
+            "role": "MANDATORY_CHILD"
+          }
+        ],
+        "partNo": "FAKE-P-41",
+        "quantity": 1,
+        "roles": [
+          "MANDATORY_CHILD"
+        ],
+        "unit": "PANEL"
+      },
+      {
+        "description": "Fictional supplement panel 42",
+        "locations": [
+          {
+            "componentId": "CARPET_KIT",
+            "locationId": "FLOOR:FULL-CABIN",
+            "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
+            "quantity": 1,
+            "role": "MANDATORY_CHILD"
+          }
+        ],
+        "partNo": "FAKE-P-42",
+        "quantity": 1,
+        "roles": [
+          "MANDATORY_CHILD"
+        ],
+        "unit": "PANEL"
+      },
+      {
+        "description": "Fictional cushion cover, V01 ELR seat A",
+        "locations": [
+          {
+            "componentId": "CUSHION",
+            "locationId": "SEAT:3A",
+            "locationLabel": "Seat 3A",
+            "quantity": 1,
+            "role": "PRIMARY"
+          }
+        ],
+        "partNo": "FAKE-SC-1001",
+        "quantity": 1,
+        "roles": [
+          "PRIMARY"
+        ],
+        "unit": "EA"
+      }
+    ],
+    "visit": {
+      "checkDate": "2026-11-12",
+      "completedAt": "2026-11-15T03:52:44.490Z",
+      "createdAt": "2026-11-15T03:52:44.142Z",
+      "id": "3be0adb7-2805-4a91-a373-0722dcc9e697",
+      "number": 1,
+      "status": "COMPLETED",
+      "tail": "N100TL",
+      "technician": "Keyboard Tech",
+      "version": 4
+    },
+    "work": [
+      {
+        "componentId": "CUSHION",
+        "componentName": "Seat cushion cover",
+        "lines": [
+          {
+            "description": "Fictional cushion cover, V01 ELR seat A",
+            "parentPartNo": null,
+            "partNo": "FAKE-SC-1001",
+            "qty": 1,
+            "role": "PRIMARY",
+            "sourceId": "FX-DOC-A",
+            "unit": "EA"
+          }
+        ],
+        "locationId": "SEAT:3A",
+        "locationKind": "SEAT",
+        "locationLabel": "Seat 3A",
+        "note": "",
+        "pendingChanges": [],
+        "primaryPartNo": "FAKE-SC-1001",
+        "recordVersion": 1,
+        "recordedAt": "2026-11-15T03:52:44.349Z",
+        "replacements": 1,
+        "ruleId": "FX-R-V01-ELR-A-CUSHION",
+        "ruleSourceId": "FX-DOC-A",
+        "selectedPartNo": "FAKE-SC-1001",
+        "selection": "PRIMARY",
+        "selectionSourceId": "FX-DOC-A",
+        "substituteId": null,
+        "updatedAt": "2026-11-15T03:52:44.349Z"
+      },
+      {
+        "componentId": "CARPET_KIT",
+        "componentName": "Full-cabin carpet kit",
+        "lines": [
+          {
+            "description": "Fictional alternate carpet kit (deviation)",
+            "parentPartNo": null,
+            "partNo": "FAKE-CK-2000",
+            "qty": 1,
+            "role": "ALTERNATE",
+            "sourceId": "FX-DOC-DEV",
+            "unit": "KIT"
+          },
+          {
+            "description": "Fictional supplement panel 39",
+            "parentPartNo": "FAKE-CK-2000",
+            "partNo": "FAKE-P-39",
+            "qty": 2,
+            "role": "MANDATORY_CHILD",
+            "sourceId": "FX-DOC-DEV",
+            "unit": "PANEL"
+          },
+          {
+            "description": "Fictional supplement panel 40",
+            "parentPartNo": "FAKE-CK-2000",
+            "partNo": "FAKE-P-40",
+            "qty": 2,
+            "role": "MANDATORY_CHILD",
+            "sourceId": "FX-DOC-DEV",
+            "unit": "PANEL"
+          },
+          {
+            "description": "Fictional supplement panel 41",
+            "parentPartNo": "FAKE-CK-2000",
+            "partNo": "FAKE-P-41",
+            "qty": 1,
+            "role": "MANDATORY_CHILD",
+            "sourceId": "FX-DOC-DEV",
+            "unit": "PANEL"
+          },
+          {
+            "description": "Fictional supplement panel 42",
+            "parentPartNo": "FAKE-CK-2000",
+            "partNo": "FAKE-P-42",
+            "qty": 1,
+            "role": "MANDATORY_CHILD",
+            "sourceId": "FX-DOC-DEV",
+            "unit": "PANEL"
+          }
+        ],
+        "locationId": "FLOOR:FULL-CABIN",
+        "locationKind": "FLOOR",
+        "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
+        "note": "",
+        "pendingChanges": [],
+        "primaryPartNo": "FAKE-CK-2001",
+        "recordVersion": 1,
+        "recordedAt": "2026-11-15T03:52:44.423Z",
+        "replacements": 1,
+        "ruleId": "FX-R-V01-CARPET-KIT",
+        "ruleSourceId": "FX-DOC-B",
+        "selectedPartNo": "FAKE-CK-2000",
+        "selection": "ALTERNATE",
+        "selectionSourceId": "FX-DOC-DEV",
+        "substituteId": "FX-SUB-KIT-1",
+        "updatedAt": "2026-11-15T03:52:44.423Z"
+      }
+    ]
+  },
+  "basisSha256": "ab6e9e7343114d8d0ed12103dfb60173f23de5914c921e803e05b634674aca0f",
+  "linkedEvents": []
+}
