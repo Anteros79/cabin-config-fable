@@ -54,6 +54,8 @@ Every command checks its options strictly: an unknown or misspelled option, a st
 
 `reference:findings` shows the newest release when it was rejected, otherwise the active one; `-- --release <id>` shows any release. `sample:seed` and `originals:verify` also reject unknown options (exit 64).
 
+Every import checks the nine data originals against `evidence/originals-manifest.json`. A missing original stops the release (`SOURCE_FILE_MISSING`); a changed one (`SOURCE_HASH_CHANGED`) does too, unless `--accept-changed` is given, which stages it with a warning. A source root that is not a directory fails the command (exit 1) before any store is opened or created.
+
 Releases are immutable once active. An import that fails validation leaves the previous release active. Existing visits are unaffected by any import or reset because each visit carries its own frozen copy of the configuration it was opened against.
 
 ### Reset safety

@@ -134,7 +134,8 @@ describe("a hand-edited export is rejected and the previous release stays active
     const root = editXlsx("xl/workbook.xml", (x) =>
       x.replace('<sheet name="southwest_737_lopa_rows" sheetId="1" r:id="rId1"/>', '$&<sheet name="copy" sheetId="2" r:id="rId1"/>'),
     )();
-    const { findings } = buildStagedRelease({ sourceRoot: root });
+    // the workbook is an edited original, so its manifest mismatch is accepted (a warning) for this test
+    const { findings } = buildStagedRelease({ sourceRoot: root, acceptChanged: true });
     expect(findings.filter((f) => f.code === "XLSX_EXTRA_SHEETS").map((f) => f.severity)).toEqual(["warning"]);
     expect(errorCodes(findings)).toEqual([]);
   });

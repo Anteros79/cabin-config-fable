@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, test } from "vitest";
+import { defaultSourceRoot } from "../../src/importer/assemble.ts";
+import { DATA_ORIGINALS, ORIGINAL_FILES } from "../../src/importer/originals.ts";
 import { PROJECT_ROOT } from "../../src/server/config.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import { cleanupTempDirs, tempDir } from "../helpers.ts";
@@ -141,5 +143,26 @@ describe("importer CLI", () => {
     const newest = store.listReleases()[0]?.id;
     store.close();
     expect(shown.stdout).toContain(String(newest));
+  });
+
+  test("a changed original is rejected (exit 2); --accept-changed stages it with a warning (exit 0)", async () => {
+    const root = tempDir("cabin-kit-cli-src-");
+    for (const file of DATA_ORIGINALS) cpSync(join(defaultSourceRoot(), file), join(root, file));
+    writeFileSync(join(root, ORIGINAL_FILES.rtf), "");
+    const rejected = await runCli(CLI, ["import", "--source-root", root], tempDir("cabin-kit-cli-"));
+    expect(rejected.code).toBe(2);
+    expect(rejected.stderr).toContain("SOURCE_HASH_CHANGED");
+    const accepted = await runCli(CLI, ["import", "--source-root", root, "--accept-changed"], tempDir("cabin-kit-cli-"));
+    expect(accepted.code).toBe(0);
+    expect(accepted.stdout).toMatch(/validated, now active/);
+    expect(accepted.stdout).toMatch(/"warning":1/);
+  });
+
+  test("a non-existent --source-root exits 1 and creates no store file", async () => {
+    const dataDir = tempDir("cabin-kit-cli-");
+    const r = await runCli(CLI, ["import", "--source-root", join(dataDir, "no-such-root")], dataDir);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toMatch(/Source root is not a directory/);
+    expect(readdirSync(dataDir)).toEqual([]);
   });
 });

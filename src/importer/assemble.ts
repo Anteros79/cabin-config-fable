@@ -59,6 +59,8 @@ export interface BuildOptions {
   label?: string;
   /** Skip the supplied candidate registry (used by tests that only need fixtures). */
   includeCandidate?: boolean;
+  /** Stage originals that differ from evidence/originals-manifest.json (a warning instead of an error). */
+  acceptChanged?: boolean;
 }
 
 /** Most FIXTURE_INVALID findings per build; past that, the last one says how many more there are. */
@@ -86,7 +88,7 @@ export function buildStagedRelease(options: BuildOptions = {}): StagedBuild {
   const { fixture, findings: fixtureProblems } = loadFixtures(options.fixturePath ?? DEFAULT_FIXTURE_PATH);
   const includeCandidate = options.includeCandidate ?? true;
   const candidate = includeCandidate
-    ? buildCandidateContent(options.sourceRoot ?? defaultSourceRoot())
+    ? buildCandidateContent(options.sourceRoot ?? defaultSourceRoot(), { acceptChanged: options.acceptChanged ?? false })
     : { sources: [], subtypes: [], layouts: [], layoutRevisions: [], layoutCategories: [], findings: [], stats: {} };
   const content: ReleaseContent = {
     schema: "cabin-kit.reference/1",

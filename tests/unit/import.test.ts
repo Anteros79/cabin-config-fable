@@ -47,12 +47,12 @@ describe("staged import of fixtures and the supplied candidate registry", () => 
     const { content, stats } = stagedFull();
     const templates = stats.templates as { spaceNamed: string; gemini: string; byteIdentical: boolean };
     expect(templates.byteIdentical).toBe(true);
-    expect(templates.spaceNamed).toMatch(/^invalid JSON/);
-    expect(templates.gemini).toMatch(/^invalid JSON/);
+    expect(templates.spaceNamed).toMatch(/^invalid: not valid JSON \(/);
+    expect(templates.gemini).toMatch(/^invalid: not valid JSON \(/);
     for (const id of ["CAND-SRC-TEMPLATE-JSON", "CAND-SRC-GEMINI-JSON"]) {
       const source = content.sources.find((s) => s.id === id)!;
       expect(source.file!.bytes).toBe(548);
-      expect(source.file!.parseStatus).toMatch(/^invalid JSON/);
+      expect(source.file!.parseStatus).toMatch(/^invalid: not valid JSON \(/);
       expect(content.layoutRevisions.some((r) => r.sourceId === id)).toBe(false);
     }
   });

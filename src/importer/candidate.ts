@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { geometryDeclaration, isKnownSeatLetter, seatPlacement, sideOf } from "../domain/geometry.ts";
 import type { AircraftSubtype, CabinLocation, Finding, Layout, LayoutCategory, LayoutRevision, RangeClaim, RowLabel, SourceArtifact } from "../domain/types.ts";
-import { ORIGINAL_FILES } from "./originals.ts";
+import { checkOriginals, ORIGINAL_FILES, ORIGINALS_MANIFEST_PATH } from "./originals.ts";
 import { parseCsv } from "./readers/csv.ts";
 import { normaliseForQuote, readDocxParagraphs } from "./readers/docx.ts";
 import { readXlsx } from "./readers/xlsx.ts";
@@ -255,20 +255,109 @@ function compareTable(args: {
   return compared;
 }
 
-export function buildCandidateContent(sourceRoot: string): CandidateContent {
-  const findings: Finding[] = [];
-  const stats: Record<string, unknown> = {};
-  const sources: SourceArtifact[] = [];
-  const bytesOf = new Map<string, Uint8Array>();
+export interface CandidateOptions {
+  /** Stage originals that differ from the manifest, reporting the difference as a warning instead of an error. */
+  acceptChanged?: boolean;
+  manifestPath?: string;
+}
 
-  const register = (id: string, file: string, kind: string, title: string, revision: string, parseStatus: string, note?: string) => {
-    const path = join(sourceRoot, file);
-    if (!existsSync(path)) {
-      findings.push({ severity: "error", code: "SOURCE_FILE_MISSING", message: `Supplied file "${file}" was not found under the source root.`, refs: [id] });
-      return;
+const NOT_READ = "not read: file missing";
+const RTF_STATUS = "not parsed: narrative evidence, hash recorded";
+/** Replaced by every path that parses the file; it remains only when the import stopped on an unexpected error. */
+const NOT_REACHED = "invalid: not parsed, the import stopped before reaching this file";
+
+const isPlainObject = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
+
+function describeJson(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return typeof value === "object" ? "an object" : `a ${typeof value}`;
+}
+
+const REGISTRY_ARRAYS = ["lopa_configurations", "lopa_rows", "lopa_seats"] as const;
+
+interface Registry {
+  schema_metadata: Json;
+  lopa_configurations: Json[];
+  lopa_rows: Json[];
+  lopa_seats: Json[];
+  [key: string]: unknown;
+}
+
+/** Every way `value` differs from the registry shape the importer reads, one sentence each; empty when it fits. */
+export function registryShapeProblems(value: unknown): string[] {
+  if (!isPlainObject(value)) return [`The registry JSON root is ${describeJson(value)}, not an object.`];
+  const problems: string[] = [];
+  if (!isPlainObject(value.schema_metadata))
+    problems.push(
+      `Registry field "schema_metadata" is ${value.schema_metadata === undefined ? "missing" : describeJson(value.schema_metadata)}, not an object.`,
+    );
+  for (const key of REGISTRY_ARRAYS) {
+    const list = value[key];
+    if (!Array.isArray(list)) {
+      problems.push(`Registry field "${key}" is ${list === undefined ? "missing" : describeJson(list)}, not an array.`);
+      continue;
     }
-    const bytes = readFileSync(path);
-    bytesOf.set(id, bytes);
+    const bad = list.flatMap((item, i) => (isPlainObject(item) ? [] : [i]));
+    if (bad.length) problems.push(`Registry field "${key}" has ${bad.length} element(s) that are not objects (first at index ${bad[0]}).`);
+  }
+  return problems;
+}
+
+/**
+ * Stage the supplied registry as candidate content. Never throws: every problem, including an
+ * unexpected one (IMPORT_INTERNAL), is a finding, and every source ends with a real parse status.
+ */
+export function buildCandidateContent(sourceRoot: string, options: CandidateOptions = {}): CandidateContent {
+  const content: CandidateContent = { sources: [], subtypes: [], layouts: [], layoutRevisions: [], layoutCategories: [], findings: [], stats: {} };
+  try {
+    stageCandidate(sourceRoot, options, content);
+    content.findings.push({
+      severity: "conflict",
+      code: "AIRLINE_DATA_NOT_SUPPLIED",
+      message:
+        "No approved dated tail assignment, parts/applicability/substitute catalogue, floor or bin map, coordinate frame, cabin height or image-to-layout mapping was supplied. The 'accepted' namespace is empty and candidate layouts stay unassigned.",
+    });
+  } catch (e) {
+    content.findings.push({
+      severity: "error",
+      code: "IMPORT_INTERNAL",
+      message: `The candidate import stopped on an unexpected error: ${e instanceof Error ? e.message : String(e)}`,
+    });
+  }
+  return content;
+}
+
+function stageCandidate(sourceRoot: string, options: CandidateOptions, out: CandidateContent): void {
+  const { findings, stats, sources } = out;
+  const bytesOf = new Map<string, Uint8Array>();
+  findings.push(...checkOriginals(sourceRoot, options.manifestPath ?? ORIGINALS_MANIFEST_PATH, { acceptChanged: options.acceptChanged ?? false }));
+
+  // A path that is not a regular file is reported by checkOriginals (SOURCE_FILE_MISSING) and recorded here as not read.
+  const register = (id: string, file: string, kind: string, title: string, revision: string, note?: string) => {
+    const path = join(sourceRoot, file);
+    let isFile = false;
+    try {
+      isFile = statSync(path).isFile();
+    } catch {
+      isFile = false;
+    }
+    let bytes: Uint8Array | null = null;
+    let parseStatus = isFile ? NOT_REACHED : NOT_READ;
+    if (isFile) {
+      try {
+        bytes = readFileSync(path);
+        bytesOf.set(id, bytes);
+      } catch (e) {
+        parseStatus = `invalid: could not be read (${(e as Error).message})`;
+        findings.push({
+          severity: "error",
+          code: "SOURCE_UNREADABLE",
+          message: `Supplied file "${file}" could not be read: ${(e as Error).message}`,
+          refs: [id],
+        });
+      }
+    }
     sources.push({
       id,
       namespace: "candidate",
@@ -280,7 +369,7 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       released: false,
       effectiveFrom: null,
       expiresOn: null,
-      file: { path: file, sha256: sha256(bytes), bytes: bytes.length, parseStatus },
+      file: { path: file, sha256: bytes ? sha256(bytes) : "", bytes: bytes?.length ?? 0, parseStatus },
       note,
     });
   };
@@ -296,111 +385,191 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     "generated registry export (JSON)",
     "Southwest 737 LOPA registry (normalized JSON)",
     "unknown",
-    "pending",
   );
-  register(
-    "CAND-SRC-TEMPLATE-JSON",
-    ORIGINAL_FILES.templateJson,
-    "JSON template (not data)",
-    "Space-named normalized JSON",
-    "none",
-    "pending",
-    "Not imported.",
-  );
+  register("CAND-SRC-TEMPLATE-JSON", ORIGINAL_FILES.templateJson, "JSON template (not data)", "Space-named normalized JSON", "none", "Not imported.");
   register(
     "CAND-SRC-GEMINI-JSON",
     ORIGINAL_FILES.geminiJson,
     "JSON template (not data)",
     "Gemini code JSON",
     "none",
-    "pending",
     "Not imported. Content is treated as reference text and is never executed.",
   );
-  register("CAND-SRC-CONFIG-CSV", ORIGINAL_FILES.configCsv, "generated registry export (CSV)", "LOPA configurations CSV", "unknown", "pending");
-  register("CAND-SRC-SEATS-CSV", ORIGINAL_FILES.seatsCsv, "generated registry export (CSV)", "LOPA seats CSV", "unknown", "pending");
-  register("CAND-SRC-ROWS-XLSX", ORIGINAL_FILES.rowsXlsx, "generated registry export (XLSX)", "LOPA rows workbook", "unknown", "pending");
-  register(
-    "CAND-SRC-SCHEMA-CSV",
-    ORIGINAL_FILES.schemaCsv,
-    "descriptive schema summary",
-    "Cabin schema architecture CSV",
-    "none",
-    "read; descriptive, not operational records",
-  );
-  register(
-    "CAND-SRC-RTF",
-    ORIGINAL_FILES.rtf,
-    "narrative document (RTF)",
-    "Southwest Cabin Configuration Standard",
-    "not stated",
-    "read as narrative evidence; see evidence/extracts",
-  );
-  register("CAND-SRC-DOCX", ORIGINAL_FILES.docx, "narrative document (DOCX)", "Current Aircraft Seat Configurations", "not stated", "pending");
+  register("CAND-SRC-CONFIG-CSV", ORIGINAL_FILES.configCsv, "generated registry export (CSV)", "LOPA configurations CSV", "unknown");
+  register("CAND-SRC-SEATS-CSV", ORIGINAL_FILES.seatsCsv, "generated registry export (CSV)", "LOPA seats CSV", "unknown");
+  register("CAND-SRC-ROWS-XLSX", ORIGINAL_FILES.rowsXlsx, "generated registry export (XLSX)", "LOPA rows workbook", "unknown");
+  register("CAND-SRC-SCHEMA-CSV", ORIGINAL_FILES.schemaCsv, "descriptive schema summary", "Cabin schema architecture CSV", "none");
+  register("CAND-SRC-RTF", ORIGINAL_FILES.rtf, "narrative document (RTF)", "Southwest Cabin Configuration Standard", "not stated");
+  register("CAND-SRC-DOCX", ORIGINAL_FILES.docx, "narrative document (DOCX)", "Current Aircraft Seat Configurations", "not stated");
+  // The RTF is narrative evidence: its bytes are hashed and verified, never parsed.
+  if (bytesOf.has("CAND-SRC-RTF")) setStatus("CAND-SRC-RTF", RTF_STATUS);
 
-  const empty: CandidateContent = { sources, subtypes: [], layouts: [], layoutRevisions: [], layoutCategories: [], findings, stats };
-  if (findings.some((f) => f.severity === "error")) return empty;
-
-  // Templates: record what they are, never repair them.
-  const templateStatus = (id: string): string => {
+  // Text sources must be valid UTF-8; a byte-order mark is kept so the CSV reader can report it.
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+  const textOf = (id: string, label: string): string | null => {
+    const bytes = bytesOf.get(id);
+    if (!bytes) return null;
     try {
-      JSON.parse(Buffer.from(bytesOf.get(id)!).toString("utf8"));
-      return "parsed as JSON";
-    } catch (e) {
-      return `invalid JSON: ${(e as Error).message}`;
+      return decoder.decode(bytes);
+    } catch {
+      setStatus(id, "invalid: not valid UTF-8 text");
+      findings.push({ severity: "error", code: "SOURCE_ENCODING", message: `${label} is not valid UTF-8 text; it was not parsed.`, refs: [id] });
+      return null;
     }
   };
-  const tStatus = templateStatus("CAND-SRC-TEMPLATE-JSON");
-  const gStatus = templateStatus("CAND-SRC-GEMINI-JSON");
-  setStatus("CAND-SRC-TEMPLATE-JSON", tStatus);
-  setStatus("CAND-SRC-GEMINI-JSON", gStatus);
-  const identicalTemplates = Buffer.compare(Buffer.from(bytesOf.get("CAND-SRC-TEMPLATE-JSON")!), Buffer.from(bytesOf.get("CAND-SRC-GEMINI-JSON")!)) === 0;
-  stats.templates = { spaceNamed: tStatus, gemini: gStatus, byteIdentical: identicalTemplates };
-  for (const [id, status] of [
-    ["CAND-SRC-TEMPLATE-JSON", tStatus],
-    ["CAND-SRC-GEMINI-JSON", gStatus],
+
+  // Templates: record what they are, never repair them. `jsonError` is null when the file parses.
+  const readTemplate = (id: string, label: string): { status: string; jsonError: string | null } | null => {
+    const text = textOf(id, label);
+    if (text === null) return null;
+    try {
+      JSON.parse(text);
+      return { status: "parsed: valid JSON (a template; not imported)", jsonError: null };
+    } catch (e) {
+      const jsonError = (e as Error).message;
+      return { status: `invalid: not valid JSON (${jsonError})`, jsonError };
+    }
+  };
+  const spaceNamed = readTemplate("CAND-SRC-TEMPLATE-JSON", "The space-named template JSON");
+  const gemini = readTemplate("CAND-SRC-GEMINI-JSON", "The Gemini template JSON");
+  const tBytes = bytesOf.get("CAND-SRC-TEMPLATE-JSON");
+  const gBytes = bytesOf.get("CAND-SRC-GEMINI-JSON");
+  const identicalTemplates = tBytes !== undefined && gBytes !== undefined && Buffer.compare(Buffer.from(tBytes), Buffer.from(gBytes)) === 0;
+  for (const [id, template] of [
+    ["CAND-SRC-TEMPLATE-JSON", spaceNamed],
+    ["CAND-SRC-GEMINI-JSON", gemini],
   ] as const) {
-    findings.push({
-      severity: status.startsWith("invalid") ? "info" : "warning",
-      code: status.startsWith("invalid") ? "TEMPLATE_NOT_IMPORTED" : "UNEXPECTED_PARSEABLE_TEMPLATE",
-      message: status.startsWith("invalid")
-        ? `${id} is not valid JSON (${status}). It is recorded as a template, not repaired and not imported.${identicalTemplates ? " It is byte-identical to the other template file." : ""}`
-        : `${id} unexpectedly parses as JSON. It is still not imported; review it before relying on any comparison.`,
-      refs: [id],
-    });
+    if (template === null) continue;
+    setStatus(id, template.status);
+    findings.push(
+      template.jsonError !== null
+        ? {
+            severity: "info",
+            code: "TEMPLATE_NOT_IMPORTED",
+            message: `${id} is not valid JSON (${template.jsonError}). It is recorded as a template, not repaired and not imported.${identicalTemplates ? " It is byte-identical to the other template file." : ""}`,
+            refs: [id],
+          }
+        : {
+            severity: "warning",
+            code: "UNEXPECTED_PARSEABLE_TEMPLATE",
+            message: `${id} unexpectedly parses as JSON. It is still not imported; review it before relying on any comparison.`,
+            refs: [id],
+          },
+    );
   }
 
-  // Populated registry
-  let registry: Json;
-  try {
-    registry = JSON.parse(Buffer.from(bytesOf.get("CAND-SRC-REGISTRY-JSON")!).toString("utf8")) as Json;
-  } catch (e) {
-    setStatus("CAND-SRC-REGISTRY-JSON", `invalid JSON: ${(e as Error).message}`);
-    findings.push({
-      severity: "error",
-      code: "REGISTRY_UNREADABLE",
-      message: `The populated registry JSON could not be parsed: ${(e as Error).message}`,
-      refs: ["CAND-SRC-REGISTRY-JSON"],
-    });
-    return empty;
+  const statusOf = (id: string) => sources.find((x) => x.id === id)?.file?.parseStatus;
+  stats.templates = { spaceNamed: statusOf("CAND-SRC-TEMPLATE-JSON"), gemini: statusOf("CAND-SRC-GEMINI-JSON"), byteIdentical: identicalTemplates };
+
+  // Populated registry: parsed, then its shape checked before any property is read.
+  let registry: Registry | null = null;
+  const registryText = textOf("CAND-SRC-REGISTRY-JSON", "The registry JSON");
+  if (registryText !== null) {
+    let parsed: unknown;
+    let parsedOk = true;
+    try {
+      parsed = JSON.parse(registryText);
+    } catch (e) {
+      parsedOk = false;
+      setStatus("CAND-SRC-REGISTRY-JSON", `invalid: not valid JSON (${(e as Error).message})`);
+      findings.push({
+        severity: "error",
+        code: "REGISTRY_UNREADABLE",
+        message: `The populated registry JSON could not be parsed: ${(e as Error).message}`,
+        refs: ["CAND-SRC-REGISTRY-JSON"],
+      });
+    }
+    if (parsedOk) {
+      const problems = registryShapeProblems(parsed);
+      for (const message of problems) findings.push({ severity: "error", code: "REGISTRY_SHAPE", message, refs: ["CAND-SRC-REGISTRY-JSON"] });
+      if (problems.length) setStatus("CAND-SRC-REGISTRY-JSON", `invalid: ${problems.length} registry shape problem(s); not imported`);
+      else registry = parsed as Registry;
+    }
   }
-  const meta = (registry.schema_metadata ?? {}) as Json;
+
+  // Exports and the schema summary are parsed on their own, whatever the state of the registry.
+  const csvSource = (id: string, label: string, suffix = "") => {
+    const text = textOf(id, label);
+    if (text === null) return null;
+    try {
+      const csv = parseCsv(text);
+      setStatus(id, `parsed: ${csv.records.length} records, ${csv.headers.length} columns${csv.hasBom ? ", UTF-8 BOM" : ""}${suffix}`);
+      // an empty CSV cell stands for a JSON null (or, as a counted conversion, an empty string)
+      const records = csv.records.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === "" ? null : v])));
+      return { headers: csv.headers, records };
+    } catch (e) {
+      setStatus(id, `invalid: ${(e as Error).message}`);
+      findings.push({ severity: "error", code: "SOURCE_UNREADABLE", message: `${label} could not be read: ${(e as Error).message}`, refs: [id] });
+      return null;
+    }
+  };
+  const configTable = csvSource("CAND-SRC-CONFIG-CSV", "Configuration CSV");
+  const seatTable = csvSource("CAND-SRC-SEATS-CSV", "Seat CSV");
+  csvSource("CAND-SRC-SCHEMA-CSV", "Schema summary CSV", "; descriptive, not operational records");
+
+  let rowTable: { headers: string[]; records: Json[] } | null = null;
+  const xlsxBytes = bytesOf.get("CAND-SRC-ROWS-XLSX");
+  if (xlsxBytes) {
+    try {
+      const book = readXlsx(xlsxBytes);
+      const sheet = book.sheets[0];
+      const formulas = book.sheets.reduce((n, s) => n + s.cells.filter((c) => c.hasFormula).length, 0);
+      setStatus(
+        "CAND-SRC-ROWS-XLSX",
+        `parsed: ${book.sheets.length} sheet(s) [${book.sheets.map((s) => `${s.name}:${s.state}`).join(", ")}], ${sheet ? sheet.rows.length - 1 : 0} data rows, ${formulas} formulas, macros ${book.hasMacros ? "present (not run)" : "absent"}, external links ${book.hasExternalLinks ? "present (not opened)" : "absent"}`,
+      );
+      if (book.sheets.length > 1)
+        findings.push({
+          severity: "warning",
+          code: "XLSX_EXTRA_SHEETS",
+          message: `Rows workbook has ${book.sheets.length} sheets; only the first ("${sheet?.name}") is compared. The others (${book.sheets
+            .slice(1)
+            .map((s) => `"${s.name}"`)
+            .join(", ")}) are not read.`,
+          refs: ["CAND-SRC-ROWS-XLSX"],
+        });
+      // a workbook without a sheet compares as an empty table, so every row and column is reported missing
+      const headers = (sheet?.rows[0] ?? []).map((h) => (h === null ? "" : String(h)));
+      const records = (sheet?.rows.slice(1) ?? []).map((cells) => Object.fromEntries(headers.map((h, col) => [h, cells[col] ?? null])));
+      rowTable = { headers, records };
+    } catch (e) {
+      setStatus("CAND-SRC-ROWS-XLSX", `invalid: ${(e as Error).message}`);
+      findings.push({
+        severity: "error",
+        code: "SOURCE_UNREADABLE",
+        message: `Rows workbook could not be read: ${(e as Error).message}`,
+        refs: ["CAND-SRC-ROWS-XLSX"],
+      });
+    }
+  }
+
+  let paragraphs: DocxParagraph[] | null = null;
+  const docxBytes = bytesOf.get("CAND-SRC-DOCX");
+  if (docxBytes) {
+    try {
+      paragraphs = readDocxParagraphs(docxBytes).map((p) => ({ ...p, norm: normaliseForQuote(p.text) }));
+      setStatus("CAND-SRC-DOCX", `parsed: ${paragraphs.filter((p) => p.text.trim()).length} non-empty paragraphs`);
+    } catch (e) {
+      setStatus("CAND-SRC-DOCX", `invalid: ${(e as Error).message}`);
+      findings.push({ severity: "error", code: "SOURCE_UNREADABLE", message: `The DOCX could not be read: ${(e as Error).message}`, refs: ["CAND-SRC-DOCX"] });
+    }
+  }
+
+  // Everything below needs a registry of the expected shape.
+  if (registry === null) return;
+  const meta = registry.schema_metadata;
   const schemaVersion = typeof meta.schema_version === "string" ? meta.schema_version : "unversioned";
   const generatedAt = typeof meta.generated_at_utc === "string" ? meta.generated_at_utc : null;
-  setStatus("CAND-SRC-REGISTRY-JSON", "parsed", `schema ${schemaVersion}${generatedAt ? `, generated ${generatedAt}` : ""}`);
-  const configs = (registry.lopa_configurations ?? []) as Json[];
-  const rows = (registry.lopa_rows ?? []) as Json[];
-  const seats = (registry.lopa_seats ?? []) as Json[];
-  if (!Array.isArray(configs) || !Array.isArray(rows) || !Array.isArray(seats)) {
-    findings.push({
-      severity: "error",
-      code: "REGISTRY_SHAPE",
-      message: "The registry JSON does not contain the three expected arrays.",
-      refs: ["CAND-SRC-REGISTRY-JSON"],
-    });
-    return empty;
-  }
+  const configs = registry.lopa_configurations;
+  const rows = registry.lopa_rows;
+  const seats = registry.lopa_seats;
+  setStatus(
+    "CAND-SRC-REGISTRY-JSON",
+    `parsed: ${configs.length} configurations, ${rows.length} row records, ${seats.length} seats`,
+    `schema ${schemaVersion}${generatedAt ? `, generated ${generatedAt}` : ""}`,
+  );
   for (const key of Object.keys(registry)) {
-    if (!["schema_metadata", "lopa_configurations", "lopa_rows", "lopa_seats"].includes(key)) {
+    if (!["schema_metadata", ...REGISTRY_ARRAYS].includes(key)) {
       findings.push({
         severity: "warning",
         code: "UNSUPPORTED_FIELD",
@@ -487,95 +656,13 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
   // Cross-format agreement (declared, counted conversions; any substantive difference is reported, not resolved)
   const conversions: Record<string, number> = {};
   let compared = 0;
-  const csvTable = (text: string) => {
-    const csv = parseCsv(text);
-    // an empty CSV cell stands for a JSON null (or, as a counted conversion, an empty string)
-    const records = csv.records.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === "" ? null : v])));
-    return { csv, table: { headers: csv.headers, records } };
-  };
-  try {
-    const { csv, table } = csvTable(Buffer.from(bytesOf.get("CAND-SRC-CONFIG-CSV")!).toString("utf8"));
-    setStatus("CAND-SRC-CONFIG-CSV", `parsed: ${csv.records.length} records, ${csv.headers.length} columns${csv.hasBom ? ", UTF-8 BOM" : ""}`);
-    compared += compareTable({
-      sourceId: "CAND-SRC-CONFIG-CSV",
-      label: "Configuration CSV",
-      expectedFields: CONFIG_FIELDS,
-      keyOf: (r) => String(r.lopa_id),
-      reference: configs,
-      other: table,
-      conversions,
-      findings,
-    });
-  } catch (e) {
-    setStatus("CAND-SRC-CONFIG-CSV", `unreadable: ${(e as Error).message}`);
-    findings.push({
-      severity: "error",
-      code: "SOURCE_UNREADABLE",
-      message: `Configuration CSV could not be read: ${(e as Error).message}`,
-      refs: ["CAND-SRC-CONFIG-CSV"],
-    });
-  }
-  try {
-    const { csv, table } = csvTable(Buffer.from(bytesOf.get("CAND-SRC-SEATS-CSV")!).toString("utf8"));
-    setStatus("CAND-SRC-SEATS-CSV", `parsed: ${csv.records.length} records, ${csv.headers.length} columns${csv.hasBom ? ", UTF-8 BOM" : ""}`);
-    compared += compareTable({
-      sourceId: "CAND-SRC-SEATS-CSV",
-      label: "Seat CSV",
-      expectedFields: SEAT_FIELDS,
-      keyOf: (r) => `${r.lopa_id}|${r.row_number}|${r.seat_letter}`,
-      reference: seats,
-      other: table,
-      conversions,
-      findings,
-    });
-  } catch (e) {
-    setStatus("CAND-SRC-SEATS-CSV", `unreadable: ${(e as Error).message}`);
-    findings.push({
-      severity: "error",
-      code: "SOURCE_UNREADABLE",
-      message: `Seat CSV could not be read: ${(e as Error).message}`,
-      refs: ["CAND-SRC-SEATS-CSV"],
-    });
-  }
-  try {
-    const book = readXlsx(bytesOf.get("CAND-SRC-ROWS-XLSX")!);
-    const sheet = book.sheets[0];
-    const formulas = book.sheets.reduce((n, s) => n + s.cells.filter((c) => c.hasFormula).length, 0);
-    setStatus(
-      "CAND-SRC-ROWS-XLSX",
-      `parsed: ${book.sheets.length} sheet(s) [${book.sheets.map((s) => `${s.name}:${s.state}`).join(", ")}], ${sheet ? sheet.rows.length - 1 : 0} data rows, ${formulas} formulas, macros ${book.hasMacros ? "present (not run)" : "absent"}, external links ${book.hasExternalLinks ? "present (not opened)" : "absent"}`,
-    );
-    if (book.sheets.length > 1)
-      findings.push({
-        severity: "warning",
-        code: "XLSX_EXTRA_SHEETS",
-        message: `Rows workbook has ${book.sheets.length} sheets; only the first ("${sheet?.name}") is compared. The others (${book.sheets
-          .slice(1)
-          .map((s) => `"${s.name}"`)
-          .join(", ")}) are not read.`,
-        refs: ["CAND-SRC-ROWS-XLSX"],
-      });
-    // a workbook without a sheet compares as an empty table, so every row and column is reported missing
-    const headers = (sheet?.rows[0] ?? []).map((h) => (h === null ? "" : String(h)));
-    const records = (sheet?.rows.slice(1) ?? []).map((cells) => Object.fromEntries(headers.map((h, col) => [h, cells[col] ?? null])));
-    compared += compareTable({
-      sourceId: "CAND-SRC-ROWS-XLSX",
-      label: "Rows workbook",
-      expectedFields: ROW_FIELDS,
-      keyOf: (r) => `${r.lopa_id}|${r.row_number}`,
-      reference: rows,
-      other: { headers, records },
-      conversions,
-      findings,
-    });
-  } catch (e) {
-    setStatus("CAND-SRC-ROWS-XLSX", `unreadable: ${(e as Error).message}`);
-    findings.push({
-      severity: "error",
-      code: "SOURCE_UNREADABLE",
-      message: `Rows workbook could not be read: ${(e as Error).message}`,
-      refs: ["CAND-SRC-ROWS-XLSX"],
-    });
+  for (const [sourceId, label, expectedFields, keyOf, reference, other] of [
+    ["CAND-SRC-CONFIG-CSV", "Configuration CSV", CONFIG_FIELDS, (r: Json) => String(r.lopa_id), configs, configTable],
+    ["CAND-SRC-SEATS-CSV", "Seat CSV", SEAT_FIELDS, (r: Json) => `${r.lopa_id}|${r.row_number}|${r.seat_letter}`, seats, seatTable],
+    ["CAND-SRC-ROWS-XLSX", "Rows workbook", ROW_FIELDS, (r: Json) => `${r.lopa_id}|${r.row_number}`, rows, rowTable],
+  ] as const) {
+    // an export that could not be read is reported above and leaves the count short
+    if (other) compared += compareTable({ sourceId, label, expectedFields, keyOf, reference, other, conversions, findings });
   }
   // The comparison must have covered every registry value; anything less is a bypass, not agreement.
   const expectedCompared = configs.length * CONFIG_FIELDS.length + seats.length * SEAT_FIELDS.length + rows.length * ROW_FIELDS.length;
@@ -594,7 +681,16 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     refs: ["CAND-SRC-REGISTRY-JSON", "CAND-SRC-CONFIG-CSV", "CAND-SRC-SEATS-CSV", "CAND-SRC-ROWS-XLSX"],
   });
 
-  // Layouts
+  const built = buildLayouts(configs, rows, seats, schemaVersion, findings);
+  out.subtypes = built.subtypes;
+  out.layouts = built.layouts;
+  out.layoutRevisions = built.layoutRevisions;
+  if (paragraphs) out.layoutCategories = buildLayoutCategories(paragraphs, built.layoutRevisions, findings);
+}
+
+type DocxParagraph = ReturnType<typeof readDocxParagraphs>[number] & { norm: string };
+
+function buildLayouts(configs: Json[], rows: Json[], seats: Json[], schemaVersion: string, findings: Finding[]) {
   const subtypes = new Map<string, AircraftSubtype>();
   const layouts: Layout[] = [];
   const layoutRevisions: LayoutRevision[] = [];
@@ -740,85 +836,75 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     });
   });
 
-  // Narrative layout categories from the DOCX, each quote verified against the document bytes.
+  return { subtypes: [...subtypes.values()], layouts, layoutRevisions };
+}
+
+/** Narrative layout categories from the DOCX, each quote verified against the document text. */
+function buildLayoutCategories(paragraphs: DocxParagraph[], layoutRevisions: LayoutRevision[], findings: Finding[]): LayoutCategory[] {
   const layoutCategories: LayoutCategory[] = [];
-  try {
-    const paragraphs = readDocxParagraphs(bytesOf.get("CAND-SRC-DOCX")!).map((p) => ({ ...p, norm: normaliseForQuote(p.text) }));
-    setStatus("CAND-SRC-DOCX", `parsed: ${paragraphs.filter((p) => p.text.trim()).length} non-empty paragraphs`);
-    const curatedPath = join(dirname(fileURLToPath(import.meta.url)), "curated", "docx-layout-categories.json");
-    const curated = JSON.parse(readFileSync(curatedPath, "utf8")) as {
-      id: string;
-      name: string;
-      claimedSeatCount: number | null;
-      crosswalk: string[];
-      quotes: string[];
-      note: string;
-    }[];
-    const revisionByLayout = new Map(layoutRevisions.map((r) => [r.layoutId, r.id]));
-    for (const c of curated) {
-      const claims: LayoutCategory["claims"] = [];
-      for (const quote of c.quotes) {
-        const hit = paragraphs.find((p) => p.norm.includes(normaliseForQuote(quote)));
-        if (!hit) {
-          findings.push({
-            severity: "error",
-            code: "QUOTE_NOT_FOUND",
-            message: `Curated quote "${quote}" for ${c.id} was not found in the supplied DOCX. Nothing is assumed about its contents.`,
-            refs: [c.id],
-          });
-          continue;
-        }
-        claims.push({ text: hit.text.trim(), sourceId: "CAND-SRC-DOCX", locator: `${ORIGINAL_FILES.docx}#${hit.locator}` });
-      }
-      const crosswalk = c.crosswalk
-        .map((layoutId) => revisionByLayout.get(layoutId))
-        .filter((id): id is string => Boolean(id))
-        .map((layoutRevisionId) => ({ layoutRevisionId, basis: "inferred" as const }));
-      if (crosswalk.length !== c.crosswalk.length) {
+  const curatedPath = join(dirname(fileURLToPath(import.meta.url)), "curated", "docx-layout-categories.json");
+  const curated = JSON.parse(readFileSync(curatedPath, "utf8")) as {
+    id: string;
+    name: string;
+    claimedSeatCount: number | null;
+    crosswalk: string[];
+    quotes: string[];
+    note: string;
+  }[];
+  const revisionByLayout = new Map(layoutRevisions.map((r) => [r.layoutId, r.id]));
+  for (const c of curated) {
+    const claims: LayoutCategory["claims"] = [];
+    for (const quote of c.quotes) {
+      const hit = paragraphs.find((p) => p.norm.includes(normaliseForQuote(quote)));
+      if (!hit) {
         findings.push({
           severity: "error",
-          code: "CROSSWALK",
-          message: `Layout category ${c.id} crosswalks to a registry configuration that is not present.`,
+          code: "QUOTE_NOT_FOUND",
+          message: `Curated quote "${quote}" for ${c.id} was not found in the supplied DOCX. Nothing is assumed about its contents.`,
           refs: [c.id],
         });
+        continue;
       }
-      layoutCategories.push({
-        id: c.id,
-        namespace: "candidate",
-        name: c.name,
-        claimedSeatCount: c.claimedSeatCount,
-        seatSetStatus: crosswalk.length > 0 ? "matched-to-candidate" : "not-supplied",
-        crosswalk,
-        claims,
-        note: c.note,
-      });
-      if (crosswalk.length === 0) {
-        findings.push({
-          severity: "conflict",
-          code: "LAYOUT_NOT_SUPPLIED",
-          message: `${c.name}: described in the DOCX but no seat set is supplied. Kept as an explicit unresolved category; no layout is derived.`,
-          refs: [c.id],
-        });
-      } else if (crosswalk.length > 1) {
-        findings.push({
-          severity: "info",
-          code: "GRAIN_DIFFERENCE",
-          message: `${c.name}: one document category maps (by inference) to ${crosswalk.length} registry configurations. Both records are kept.`,
-          refs: [c.id],
-        });
-      }
+      claims.push({ text: hit.text.trim(), sourceId: "CAND-SRC-DOCX", locator: `${ORIGINAL_FILES.docx}#${hit.locator}` });
     }
-  } catch (e) {
-    setStatus("CAND-SRC-DOCX", `unreadable: ${(e as Error).message}`);
-    findings.push({ severity: "error", code: "SOURCE_UNREADABLE", message: `The DOCX could not be read: ${(e as Error).message}`, refs: ["CAND-SRC-DOCX"] });
+    const crosswalk = c.crosswalk
+      .map((layoutId) => revisionByLayout.get(layoutId))
+      .filter((id): id is string => Boolean(id))
+      .map((layoutRevisionId) => ({ layoutRevisionId, basis: "inferred" as const }));
+    if (crosswalk.length !== c.crosswalk.length) {
+      findings.push({
+        severity: "error",
+        code: "CROSSWALK",
+        message: `Layout category ${c.id} crosswalks to a registry configuration that is not present.`,
+        refs: [c.id],
+      });
+    }
+    layoutCategories.push({
+      id: c.id,
+      namespace: "candidate",
+      name: c.name,
+      claimedSeatCount: c.claimedSeatCount,
+      seatSetStatus: crosswalk.length > 0 ? "matched-to-candidate" : "not-supplied",
+      crosswalk,
+      claims,
+      note: c.note,
+    });
+    if (crosswalk.length === 0) {
+      findings.push({
+        severity: "conflict",
+        code: "LAYOUT_NOT_SUPPLIED",
+        message: `${c.name}: described in the DOCX but no seat set is supplied. Kept as an explicit unresolved category; no layout is derived.`,
+        refs: [c.id],
+      });
+    } else if (crosswalk.length > 1) {
+      findings.push({
+        severity: "info",
+        code: "GRAIN_DIFFERENCE",
+        message: `${c.name}: one document category maps (by inference) to ${crosswalk.length} registry configurations. Both records are kept.`,
+        refs: [c.id],
+      });
+    }
   }
 
-  findings.push({
-    severity: "conflict",
-    code: "AIRLINE_DATA_NOT_SUPPLIED",
-    message:
-      "No approved dated tail assignment, parts/applicability/substitute catalogue, floor or bin map, coordinate frame, cabin height or image-to-layout mapping was supplied. The 'accepted' namespace is empty and candidate layouts stay unassigned.",
-  });
-
-  return { sources, subtypes: [...subtypes.values()], layouts, layoutRevisions, layoutCategories, findings, stats };
+  return layoutCategories;
 }

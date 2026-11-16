@@ -237,7 +237,8 @@ function overrideProblem(key: string, data: FixtureData, variants: Map<string, F
   const fields = key.split("|");
   const variant = variants.get(fields[0] ?? "");
   if (!variant) return `variant ${fields[0]} does not exist.`;
-  if (!variant.released || variant.seatSpec === null) return `variant ${variant.id} is not released with a seat spec, so no rule uses this override.`;
+  // An unreleased variant may carry staged overrides; they take effect once it is released.
+  if (variant.seatSpec === null) return `variant ${variant.id} has no seat spec, so no rule uses this override.`;
   if (fields.length === 2 && fields[1] === "CARPET_KIT") return null;
   if (fields.length !== 4) return "expected VARIANT|ZONE|LETTER|COMPONENT or VARIANT|CARPET_KIT.";
   const [, zone = "", letter = "", component = ""] = fields;
@@ -252,11 +253,18 @@ function overrideProblem(key: string, data: FixtureData, variants: Map<string, F
 
 /** Read, parse and validate the fixture file. Throws `FixtureError` listing every problem. */
 export function loadFixtureData(path: string): FixtureData {
+  const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
+  let text: string;
+  try {
+    text = readFileSync(path, "utf8");
+  } catch (error) {
+    throw new FixtureError([`fixture: the file ${path} cannot be read (${reason(error)}).`]);
+  }
   let json: unknown;
   try {
-    json = JSON.parse(readFileSync(path, "utf8"));
+    json = JSON.parse(text);
   } catch (error) {
-    throw new FixtureError([`fixture: cannot be read as JSON (${error instanceof Error ? error.message : String(error)}).`]);
+    throw new FixtureError([`fixture: the file ${path} is not valid JSON (${reason(error)}).`]);
   }
   const parsed = parseFixtureData(json);
   if (parsed.data === null) throw new FixtureError(parsed.issues);

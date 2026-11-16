@@ -5,6 +5,7 @@ import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStore
 import { VisitStore } from "../server/visitStore.ts";
 import { type OptionSpec, parseCliArgs, UsageError } from "./args.ts";
 import { buildStagedRelease, defaultSourceRoot } from "./assemble.ts";
+import { assertSourceRoot } from "./originals.ts";
 
 /**
  * Reference data CLI. It only ever writes the reference store; the visit store is opened
@@ -86,16 +87,22 @@ export function importReference(options: {
   label?: string;
   activate?: boolean;
   includeCandidate?: boolean;
+  acceptChanged?: boolean;
 }): ImportOutcome {
+  const includeCandidate = options.includeCandidate ?? true;
+  const sourceRoot = options.sourceRoot ?? defaultSourceRoot();
+  // Before any store is opened or created: a wrong source root must leave the data directory untouched.
+  if (includeCandidate) assertSourceRoot(sourceRoot);
   assertSafeReferenceTarget(options.referencePath, options.visitsPath);
   const before = visitFingerprint(options.visitsPath, options.referencePath);
   const store = ReferenceStore.openOrCreate(options.referencePath, options.visitsPath);
   try {
     const staged = buildStagedRelease({
-      sourceRoot: options.sourceRoot,
+      sourceRoot,
       fixturePath: options.fixturePath,
       label: options.label,
-      includeCandidate: options.includeCandidate,
+      includeCandidate,
+      acceptChanged: options.acceptChanged,
     });
     const { id, status } = store.stage(staged.content, staged.findings, staged.stats);
     const activate = (options.activate ?? true) && status === "validated";
@@ -143,6 +150,7 @@ function main(argv: string[]): number {
   const sourceRoot = text("source-root") ?? defaultSourceRoot();
   const fixturePath = text("fixtures");
   const includeCandidate = flags["no-candidate"] !== true;
+  const acceptChanged = flags["accept-changed"] === true;
   let exitCode = 0;
 
   if (command === "import") {
@@ -154,6 +162,7 @@ function main(argv: string[]): number {
       label: text("label"),
       activate: flags["no-activate"] !== true,
       includeCandidate,
+      acceptChanged,
     });
     console.log(`Reference store : ${stores.referencePath}`);
     console.log(`Source root     : ${sourceRoot}`);
@@ -207,9 +216,10 @@ function main(argv: string[]): number {
     );
     return 1;
   }
+  if (includeCandidate) assertSourceRoot(sourceRoot);
   const before = visitFingerprint(stores.visitsPath, stores.referencePath);
   resetReferenceStore(stores.referencePath, stores.visitsPath, (store) => {
-    const staged = buildStagedRelease({ sourceRoot, fixturePath, label: text("label"), includeCandidate });
+    const staged = buildStagedRelease({ sourceRoot, fixturePath, label: text("label"), includeCandidate, acceptChanged });
     const { id, status } = store.stage(staged.content, staged.findings, staged.stats);
     if (status !== "validated")
       throw new ReferenceStoreError("RELEASE_REJECTED", "The rebuilt release has blocking findings; the existing reference store was left in place.");

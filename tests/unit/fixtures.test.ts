@@ -160,6 +160,51 @@ describe("fixture file schema (IMP-04)", () => {
     expect(fixtureInvalid(build)).toHaveLength(1);
   });
 
+  test("a missing fixture file says it cannot be read, with the path; a file that is not JSON says so", () => {
+    const dir = tempDir("cabin-kit-fixture-");
+    const missing = join(dir, "no-such-fixture.json");
+    const missingMessages = fixtureInvalid(buildStagedRelease({ fixturePath: missing, includeCandidate: false })).map((f) => f.message);
+    expect(missingMessages).toHaveLength(1);
+    expect(missingMessages[0]).toContain("cannot be read");
+    expect(missingMessages[0]).toContain(missing);
+    expect(missingMessages[0]).not.toMatch(/JSON/);
+    const notJson = join(dir, "fixture-data.json");
+    writeFileSync(notJson, "{ not json");
+    const notJsonMessages = fixtureInvalid(buildStagedRelease({ fixturePath: notJson, includeCandidate: false })).map((f) => f.message);
+    expect(notJsonMessages).toHaveLength(1);
+    expect(notJsonMessages[0]).toContain("is not valid JSON");
+    expect(notJsonMessages[0]).toContain(notJson);
+    expect(notJsonMessages[0]).not.toContain("cannot be read");
+  });
+
+  test("a part override for an existing but unreleased variant with a seat spec does not block", () => {
+    const build = buildWith((d) => {
+      const v11 = d.variants.find((v) => v.id === "V11");
+      if (!v11 || v11.released) throw new Error("fixture changed: V11 is expected to be unreleased");
+      v11.seatSpec = "S176";
+      d.partOverrides["V11|ELR|A|CUSHION"] = "FAKE-X";
+      d.partOverrides["V11|CARPET_KIT"] = "FAKE-Y";
+    });
+    expect(fixtureInvalid(build)).toEqual([]);
+  });
+
+  test.each<[string, (d: FixtureData) => void, RegExp]>([
+    ["an unknown variant", (d) => Object.assign(d.partOverrides, { "V99|ELR|A|CUSHION": "FAKE-X" }), /V99 does not exist/],
+    ["a variant with no seat spec", (d) => Object.assign(d.partOverrides, { "V11|ELR|A|CUSHION": "FAKE-X" }), /V11 has no seat spec/],
+    [
+      "an unreleased variant's zone and letter that no seat has",
+      (d) => {
+        Object.assign(d.variants.find((v) => v.id === "V11") ?? {}, { seatSpec: "S176" });
+        d.partOverrides["V11|EXIT|B|CUSHION"] = "FAKE-X";
+      },
+      /no seat of variant V11/,
+    ],
+  ])("a part override for %s still blocks", (_name, mutate, message) => {
+    const invalid = fixtureInvalid(buildWith(mutate));
+    expect(invalid.map((f) => f.message).join("\n")).toMatch(message);
+    expect(invalid.every(isError)).toBe(true);
+  });
+
   test("at most 50 FIXTURE_INVALID findings are listed", () => {
     const build = buildWith((d) => {
       for (let i = 0; i < 80; i++) d.partOverrides[`V99|ELR|A|CUSHION|${i}`] = "FAKE-X";
