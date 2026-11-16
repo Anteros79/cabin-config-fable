@@ -128,6 +128,18 @@ function variantSatisfies(constraint: ContextConstraint, variant: MaintenanceVar
   return true;
 }
 
+/** Layout revisions some variant can pair with under this constraint (selectors and components aside). */
+export function reachableRevisions(release: ReleaseContent, revisions: Map<string, LayoutRevision>, constraint: ContextConstraint): LayoutRevision[] {
+  const reached = new Map<string, LayoutRevision>();
+  for (const variant of release.variants) {
+    for (const revisionId of variant.layoutRevisionIds) {
+      const revision = revisions.get(revisionId);
+      if (revision && variantSatisfies(constraint, variant, revisionId)) reached.set(revisionId, revision);
+    }
+  }
+  return [...reached.values()];
+}
+
 export function buildMatchSet(
   release: ReleaseContent,
   revisions: Map<string, LayoutRevision>,
@@ -185,6 +197,39 @@ export function isStrictlyMoreSpecific(a: MatchSet, b: MatchSet): boolean {
 
 export function matchSetsEqual(a: MatchSet, b: MatchSet): boolean {
   return isSubset(a, b) && isSubset(b, a);
+}
+
+function dimIntersection(a: Set<string> | null, b: Set<string> | null): Set<string> | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return new Set([...a].filter((value) => b.has(value)));
+}
+
+/** Every situation accepted by both a and b. */
+export function intersectMatchSets(a: MatchSet, b: MatchSet): MatchSet {
+  const pairs = new Map<string, Set<string>>();
+  for (const [pair, ids] of a.pairs) {
+    const other = b.pairs.get(pair);
+    if (!other) continue;
+    const shared = new Set([...ids].filter((id) => other.has(id)));
+    if (shared.size > 0) pairs.set(pair, shared);
+  }
+  const carpet = dimIntersection(a.carpet, b.carpet);
+  const seam = dimIntersection(a.seam, b.seam);
+  const upholstery = dimIntersection(a.upholstery, b.upholstery);
+  const empty =
+    a.empty ||
+    b.empty ||
+    pairs.size === 0 ||
+    (carpet !== null && carpet.size === 0) ||
+    (seam !== null && seam.size === 0) ||
+    (upholstery !== null && upholstery.size === 0);
+  return { pairs, carpet, seam, upholstery, empty };
+}
+
+/** True when some situation is accepted by both a and b. */
+export function matchSetsIntersect(a: MatchSet, b: MatchSet): boolean {
+  return !intersectMatchSets(a, b).empty;
 }
 
 export function matchesContext(constraint: ContextConstraint, ctx: AssignmentContext): boolean {

@@ -1,8 +1,21 @@
 import { intervalsOverlap } from "./dates.ts";
 import { validateKits } from "./kits.ts";
+import { compareCodePoints } from "./order.ts";
+import { configurationProblems } from "./resolve.ts";
 import { structuralFindings } from "./schema.ts";
-import { buildMatchSet, type MatchSet, matchSetsEqual } from "./specificity.ts";
-import type { ContextConstraint, Finding, LayoutRevision, ReleaseContent } from "./types.ts";
+import {
+  buildIndex,
+  buildMatchSet,
+  intersectMatchSets,
+  isStrictlyMoreSpecific,
+  isSubset,
+  locationMatches,
+  type MatchSet,
+  matchSetsEqual,
+  matchSetsIntersect,
+  reachableRevisions,
+} from "./specificity.ts";
+import type { ApplicabilityRule, ContextConstraint, Finding, LocationSelector, ReleaseContent } from "./types.ts";
 
 function duplicates<T>(items: T[], key: (item: T) => string): string[] {
   const seen = new Set<string>();
@@ -13,6 +26,18 @@ function duplicates<T>(items: T[], key: (item: T) => string): string[] {
     seen.add(k);
   }
   return [...dup];
+}
+
+const laterDate = (a: string, b: string) => (compareCodePoints(a, b) >= 0 ? a : b);
+const earlierDate = (a: string, b: string) => (compareCodePoints(a, b) <= 0 ? a : b);
+
+const NO_MATCH: MatchSet = { pairs: new Map(), carpet: null, seam: null, upholstery: null, empty: true };
+
+/** Does a validity interval cover every date from `from` to `to` (null = open-ended)? */
+function validityCovers(rule: ApplicabilityRule, from: string, to: string | null): boolean {
+  if (rule.effectiveFrom > from) return false;
+  if (rule.effectiveTo === null) return true;
+  return to !== null && rule.effectiveTo >= to;
 }
 
 /**
@@ -52,10 +77,12 @@ export function validateRelease(input: unknown): Finding[] {
   const aircraft = new Map(content.aircraft.map((a) => [a.tail, a]));
   const variants = new Map(content.variants.map((v) => [v.id, v]));
   const layouts = new Set(content.layouts.map((l) => l.id));
-  const revisions = new Map<string, LayoutRevision>(content.layoutRevisions.map((r) => [r.id, r]));
+  const index = buildIndex(content);
+  const revisions = index.layoutRevisions;
   const components = new Map(content.components.map((c) => [c.id, c]));
   const parts = new Map(content.parts.map((p) => [p.partNo, p]));
   const { units, carpets, seams, upholsteries } = content.vocabulary;
+  const hardware = new Set(content.variants.flatMap((v) => (v.hardware === null ? [] : [v.hardware])));
 
   const intervalOk = (from: string | null, to: string | null, ref: string) => {
     if (from !== null && to !== null && to < from) {
@@ -136,6 +163,16 @@ export function validateRelease(input: unknown): Finding[] {
     if (r.namespace === "candidate" && (r.floorMapStatus !== "not-supplied" || r.binMapStatus !== "not-supplied")) {
       err("UNSUPPORTED_FIELD", `Candidate layout revision ${r.id} claims a floor or bin map that was not supplied.`, [r.id]);
     }
+    if (r.namespace === "candidate") {
+      // zones, floor areas and bin modules are fixture shortcuts and never enter candidate layouts
+      for (const loc of r.locations) {
+        const at = `${r.id}#${loc.id}`;
+        const zone = loc.seat?.maintenanceZone ?? null;
+        if (loc.kind === "FLOOR" || loc.kind === "BIN")
+          err("CANDIDATE_HAS_FIXTURE_DATA", `Candidate layout revision ${r.id} contains fixture ${loc.kind} location ${loc.id}.`, [r.id, at]);
+        else if (zone !== null) err("CANDIDATE_HAS_FIXTURE_DATA", `Candidate seat ${at} carries fixture maintenance zone ${zone}.`, [r.id, at]);
+      }
+    }
   }
 
   for (const v of content.variants) {
@@ -152,12 +189,23 @@ export function validateRelease(input: unknown): Finding[] {
   // assignments
   for (const a of content.assignments) {
     const ref = a.id;
-    if (!aircraft.has(a.tail)) err("ORPHAN", `Assignment ${ref} refers to unknown tail ${a.tail}.`, [ref]);
+    const plane = aircraft.get(a.tail);
+    if (!plane) err("ORPHAN", `Assignment ${ref} refers to unknown tail ${a.tail}.`, [ref]);
     const variant = variants.get(a.variantId);
     if (!variant) err("ORPHAN", `Assignment ${ref} refers to unknown variant ${a.variantId}.`, [ref]);
-    if (!revisions.has(a.layoutRevisionId)) err("ORPHAN", `Assignment ${ref} refers to unknown layout revision ${a.layoutRevisionId}.`, [ref]);
+    const revision = revisions.get(a.layoutRevisionId);
+    if (!revision) err("ORPHAN", `Assignment ${ref} refers to unknown layout revision ${a.layoutRevisionId}.`, [ref]);
     else if (variant && !variant.layoutRevisionIds.includes(a.layoutRevisionId))
       err("ORPHAN", `Assignment ${ref} pairs variant ${a.variantId} with layout revision ${a.layoutRevisionId}, which that variant does not list.`, [ref]);
+    // as in lookup, only a released assignment of a released variant and layout revision is a configuration
+    if (plane && variant && revision && a.status === "released" && variant.released && revision.status === "released") {
+      const problems = configurationProblems(plane, variant, revision);
+      if (problems.length > 0)
+        conflict("ASSIGNMENT_INCONSISTENT", `Assignment ${ref} for tail ${a.tail}: ${problems.join(" ")} Lookups for this configuration are refused.`, [
+          ref,
+          a.tail,
+        ]);
+    }
     if (!sources.has(a.sourceId)) err("ORPHAN", `Assignment ${ref} cites unknown source ${a.sourceId}.`, [ref]);
     if (a.namespace !== "fixture")
       err("NAMESPACE", `Assignment ${ref} is in namespace ${a.namespace}; no approved dated tail assignment has been supplied.`, [ref]);
@@ -183,15 +231,43 @@ export function validateRelease(input: unknown): Finding[] {
   }
 
   // rules and substitutes
-  const constraintOk = (c: ContextConstraint, ref: string) => {
-    for (const id of c.variant ?? []) if (!variants.has(id)) err("ORPHAN", `${ref} constrains unknown variant ${id}.`, [ref]);
-    for (const id of c.layoutRevision ?? []) if (!revisions.has(id)) err("ORPHAN", `${ref} constrains unknown layout revision ${id}.`, [ref]);
-    for (const id of c.subtype ?? []) if (!subtypes.has(id)) err("ORPHAN", `${ref} constrains unknown subtype ${id}.`, [ref]);
-    for (const id of c.carpet ?? []) if (!carpets.includes(id)) err("VOCABULARY", `${ref} constrains unknown carpet ${id}.`, [ref]);
-    for (const id of c.seam ?? []) if (!seams.includes(id)) err("VOCABULARY", `${ref} constrains unknown seam ${id}.`, [ref]);
-    for (const id of c.upholstery ?? []) if (!upholsteries.includes(id)) err("VOCABULARY", `${ref} constrains unknown upholstery ${id}.`, [ref]);
+  const constraintOk = (c: ContextConstraint, ref: string, ownerId: string) => {
+    const check = (label: string, values: string[] | undefined, known: (value: string) => boolean) => {
+      for (const value of values ?? []) if (!known(value)) err("CONSTRAINT_VALUE_UNKNOWN", `${ref} constrains unknown ${label} ${value}.`, [ownerId, value]);
+    };
+    check("variant", c.variant, (v) => variants.has(v));
+    check("layout revision", c.layoutRevision, (v) => revisions.has(v));
+    check("subtype", c.subtype, (v) => subtypes.has(v));
+    check("hardware", c.hardware, (v) => hardware.has(v));
+    check("carpet", c.carpet, (v) => carpets.includes(v));
+    check("seam", c.seam, (v) => seams.includes(v));
+    check("upholstery", c.upholstery, (v) => upholsteries.includes(v));
   };
-  const ruleSets = new Map<string, MatchSet>();
+  /**
+   * Every selector value must exist somewhere it can reach. Values are checked one at a time; whether
+   * they can match together is the unreachable-rule check. A selector whose constraint reaches no
+   * layout revision at all is left to that check too.
+   */
+  const selectorOk = (selector: LocationSelector | undefined, constraint: ContextConstraint, ref: string, ownerId: string) => {
+    if (!selector) return;
+    const { kind, rowFrom, rowTo } = selector;
+    const rowRangeValid = (rowFrom === undefined) === (rowTo === undefined) && (rowFrom === undefined || rowTo === undefined || rowFrom <= rowTo);
+    if (!rowRangeValid)
+      err("ROW_RANGE_INVALID", `${ref} has row range ${rowFrom ?? "(none)"} to ${rowTo ?? "(none)"}; give both bounds, first not after last.`, [ownerId]);
+    const reached = reachableRevisions(content, revisions, constraint);
+    if (reached.length === 0) return;
+    const matchesSome = (probe: LocationSelector) => reached.some((rev) => rev.locations.some((loc) => locationMatches(probe, loc)));
+    for (const id of selector.ids ?? [])
+      if (!matchesSome({ kind, ids: [id] }))
+        err("SELECTOR_ID_UNKNOWN", `${ref} selects ${id}, which is not a ${kind} location in any layout revision it can reach.`, [ownerId, id]);
+    const unmatched = (what: string) => err("SELECTOR_VALUE_UNMATCHED", `${ref} selects ${what}, which matches no ${kind} location it can reach.`, [ownerId]);
+    for (const zone of selector.zones ?? []) if (!matchesSome({ kind, zones: [zone] })) unmatched(`zone ${zone}`);
+    for (const letter of selector.letters ?? []) if (!matchesSome({ kind, letters: [letter] })) unmatched(`letter ${letter}`);
+    for (const side of selector.sides ?? []) if (!matchesSome({ kind, sides: [side] })) unmatched(`side ${side}`);
+    for (const area of selector.floorAreaTypes ?? []) if (!matchesSome({ kind, floorAreaTypes: [area] })) unmatched(`floor area type ${area}`);
+    if (rowRangeValid && rowFrom !== undefined && rowTo !== undefined && !matchesSome({ kind, rowFrom, rowTo })) unmatched(`rows ${rowFrom} to ${rowTo}`);
+  };
+  const ruleSet = (id: string): MatchSet => index.ruleMatch.get(id) ?? NO_MATCH;
   for (const r of content.rules) {
     const ref = `rule ${r.id}`;
     const def = components.get(r.componentId);
@@ -203,9 +279,9 @@ export function validateRelease(input: unknown): Finding[] {
     if (!units.includes(r.unit)) err("UNKNOWN_UNIT", `${ref} uses unknown unit ${r.unit}.`, [r.id]);
     if (r.namespace !== "fixture") err("NAMESPACE", `${ref} is in namespace ${r.namespace}; no approved parts applicability has been supplied.`, [r.id]);
     intervalOk(r.effectiveFrom, r.effectiveTo, ref);
-    constraintOk(r.constraint, ref);
-    const set = buildMatchSet(content, revisions, r.constraint, r.locations, r.componentId);
-    ruleSets.set(r.id, set);
+    constraintOk(r.constraint, ref, r.id);
+    selectorOk(r.locations, r.constraint, ref, r.id);
+    const set = ruleSet(r.id);
     if (set.empty) err("UNREACHABLE_RULE", `${ref} cannot match any location in any configuration (unreachable).`, [r.id]);
     else {
       for (const pair of set.pairs.keys()) {
@@ -216,14 +292,14 @@ export function validateRelease(input: unknown): Finding[] {
       }
     }
   }
-  // equal released rules for the same component with overlapping validity can never be resolved
+  // equal or incomparable released rules for the same component with overlapping validity can never be resolved
   const byComponent = new Map<string, typeof content.rules>();
   for (const r of content.rules) if (r.released) byComponent.set(r.componentId, [...(byComponent.get(r.componentId) ?? []), r]);
   for (const list of byComponent.values()) {
     const bySignature = new Map<string, typeof content.rules>();
     for (const r of list) {
-      const set = ruleSets.get(r.id);
-      if (!set || set.empty) continue;
+      const set = ruleSet(r.id);
+      if (set.empty) continue;
       const sig = [...set.pairs.entries()]
         .map(([k, v]) => `${k}:${v.size}`)
         .sort()
@@ -234,13 +310,38 @@ export function validateRelease(input: unknown): Finding[] {
       for (const [i, a] of group.entries()) {
         for (const b of group.slice(i + 1)) {
           if (!intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) continue;
-          if (matchSetsEqual(ruleSets.get(a.id)!, ruleSets.get(b.id)!)) {
+          if (matchSetsEqual(ruleSet(a.id), ruleSet(b.id))) {
             conflict("EQUAL_RULES", `Rules ${a.id} and ${b.id} have identical scope and overlapping validity. Affected components are reported as ambiguous.`, [
               a.id,
               b.id,
             ]);
           }
         }
+      }
+    }
+    for (const [i, a] of list.entries()) {
+      const aSet = ruleSet(a.id);
+      if (aSet.empty) continue;
+      for (const b of list.slice(i + 1)) {
+        const bSet = ruleSet(b.id);
+        if (bSet.empty || !intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) continue;
+        if (!matchSetsIntersect(aSet, bSet) || isSubset(aSet, bSet) || isSubset(bSet, aSet)) continue;
+        // a third rule more specific than both, covering their whole overlap for the whole shared validity, settles it
+        const shared = intersectMatchSets(aSet, bSet);
+        const from = laterDate(a.effectiveFrom, b.effectiveFrom);
+        const to = a.effectiveTo === null ? b.effectiveTo : b.effectiveTo === null ? a.effectiveTo : earlierDate(a.effectiveTo, b.effectiveTo);
+        const settled = list.some((c) => {
+          if (c === a || c === b) return false;
+          const cSet = ruleSet(c.id);
+          return isStrictlyMoreSpecific(cSet, aSet) && isStrictlyMoreSpecific(cSet, bSet) && isSubset(shared, cSet) && validityCovers(c, from, to);
+        });
+        if (settled) continue;
+        const pair = [a.id, b.id].sort(compareCodePoints);
+        conflict(
+          "RULES_INCOMPARABLE",
+          `Rules ${pair[0]} and ${pair[1]} overlap in scope and validity but neither is more specific than the other. Affected components are reported as ambiguous.`,
+          pair,
+        );
       }
     }
   }
@@ -258,11 +359,16 @@ export function validateRelease(input: unknown): Finding[] {
     if (def && s.locations && def.locationKind !== s.locations.kind)
       err("COMPONENT_KIND", `${ref} selects ${s.locations.kind} locations for a ${def.locationKind} component.`, [s.id]);
     intervalOk(s.effectiveFrom, s.effectiveTo, ref);
-    constraintOk(s.constraint, ref);
-    if (!primaryParts.has(`${s.componentId}|${s.primaryPartNo}`))
+    constraintOk(s.constraint, ref, s.id);
+    selectorOk(s.locations, s.constraint, ref, s.id);
+    if (!primaryParts.has(`${s.componentId}|${s.primaryPartNo}`)) {
       warn("SUBSTITUTE_UNUSED", `${ref} stands in for ${s.primaryPartNo}, which no rule for ${s.componentId} selects.`, [s.id]);
-    else if (buildMatchSet(content, revisions, s.constraint, s.locations, s.componentId).empty)
-      err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
+      continue;
+    }
+    const subSet = buildMatchSet(content, revisions, s.constraint, s.locations, s.componentId);
+    if (subSet.empty) err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
+    else if (!content.rules.some((r) => r.componentId === s.componentId && r.partNo === s.primaryPartNo && matchSetsIntersect(ruleSet(r.id), subSet)))
+      warn("SUBSTITUTE_UNREACHABLE", `${ref} covers no location where a rule selects ${s.primaryPartNo}, so it can never be offered.`, [s.id]);
   }
   const ruleIds = new Set(content.rules.map((r) => r.id));
   for (const p of content.pendingChanges) {

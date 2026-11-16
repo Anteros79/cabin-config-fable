@@ -3,6 +3,7 @@ import { expandKit } from "./kits.ts";
 import { compareCodePoints } from "./order.ts";
 import { type AssignmentContext, buildIndex, matchesContext, type ReleaseIndex, undominated } from "./specificity.ts";
 import type {
+  Aircraft,
   ApplicabilityRule,
   ComponentResolution,
   ExcludedSubstitute,
@@ -10,7 +11,9 @@ import type {
   FrozenRule,
   FrozenSubstitute,
   IsoDate,
+  LayoutRevision,
   LookupResult,
+  MaintenanceVariant,
   ReferenceRelease,
   Resolution,
   ResolvedContext,
@@ -70,6 +73,22 @@ function describe(a: TailAssignment, date: IsoDate) {
     effectiveTo: a.effectiveTo,
     coversDate: withinInclusive(date, a.effectiveFrom, a.effectiveTo),
   };
+}
+
+/**
+ * Why an (aircraft, variant, layout revision) triple cannot be a configuration. Empty = consistent.
+ * Shared by lookup (which refuses the configuration) and release validation (which reports it).
+ */
+export function configurationProblems(aircraft: Aircraft, variant: MaintenanceVariant, revision: LayoutRevision): string[] {
+  const problems: string[] = [];
+  if (!variant.layoutRevisionIds.includes(revision.id)) problems.push(`Layout revision ${revision.id} is not valid for variant ${variant.id}.`);
+  if (variant.subtypeId !== aircraft.subtypeId || revision.subtypeId !== aircraft.subtypeId) {
+    problems.push(
+      `Aircraft, variant and layout subtypes disagree (aircraft ${aircraft.tail} ${aircraft.subtypeId}, variant ${variant.id} ${variant.subtypeId}, layout revision ${revision.id} ${revision.subtypeId}).`,
+    );
+  }
+  if (revision.seatSetStatus !== "complete") problems.push(`Layout revision ${revision.id} has no complete seat set.`);
+  return problems;
 }
 
 /**
@@ -160,14 +179,11 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     message,
   });
   if (!layout || !subtype) return invalid("INCONSISTENT_CONFIGURATION", "The configuration refers to a layout or subtype missing from the reference data.");
-  if (!variant.layoutRevisionIds.includes(layoutRevision.id)) {
-    return invalid("INCONSISTENT_CONFIGURATION", `Layout revision ${layoutRevision.id} is not valid for variant ${variant.id}.`);
-  }
-  if (variant.subtypeId !== aircraft.subtypeId || layoutRevision.subtypeId !== aircraft.subtypeId) {
-    return invalid("INCONSISTENT_CONFIGURATION", "Aircraft, variant and layout subtypes disagree.");
-  }
-  if (layoutRevision.seatSetStatus !== "complete") {
-    return invalid("SEAT_SET_NOT_SUPPLIED", `Layout revision ${layoutRevision.id} has no complete seat set.`);
+  const problems = configurationProblems(aircraft, variant, layoutRevision);
+  if (problems.length > 0) {
+    // an incomplete seat set alone is its own reason; any other problem makes the configuration inconsistent
+    const seatSetOnly = problems.length === 1 && layoutRevision.seatSetStatus !== "complete";
+    return invalid(seatSetOnly ? "SEAT_SET_NOT_SUPPLIED" : "INCONSISTENT_CONFIGURATION", problems.join(" "));
   }
   const configurationSource = index.sources.get(assignment.sourceId);
   const sourceProblems = sourceExclusions(configurationSource, checkDate);
