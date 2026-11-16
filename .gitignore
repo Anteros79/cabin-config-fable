@@ -4,3 +4,14 @@ data/*.sqlite*
 inspection/baseline-copy/.venv/
 inspection/disposable/
 *.tmp
+.impeccable/
+__pycache__/
+*.pyc
+coverage/
+test-results/
+playwright-report/
+verification/out/
+.DS_Store
+.env*
+*.log
+*.tsbuildinfo
