@@ -15,7 +15,27 @@ interface Props {
   /** Re-sends the last write of a target with its idempotency key. */
   onRetry(target: string): void;
   onSelect(locationId: string): void;
+  /** A card holds typed input that is not saved (`dirty`), or no longer does. The target is `record:<locationId>|<componentId>`. */
+  onDirtyChange(target: string, dirty: boolean): void;
 }
+
+/** What the form holds. The quantity stays the text that was typed, so clearing the field and typing a new number works. */
+interface Draft {
+  selection: "PRIMARY" | "ALTERNATE";
+  substituteId: string | null;
+  quantityText: string;
+  note: string;
+}
+
+const draftOf = (record: VisitRecord | null): Draft => ({
+  selection: record?.selection ?? "PRIMARY",
+  substituteId: record?.substituteId ?? null,
+  quantityText: String(record?.quantity ?? 1),
+  note: record?.note ?? "",
+});
+const sameDraft = (a: Draft, b: Draft): boolean =>
+  a.selection === b.selection && a.substituteId === b.substituteId && a.quantityText.trim() === b.quantityText.trim() && a.note.trim() === b.note.trim();
+const quantityValid = (text: string, limit: number): boolean => /^[1-9]\d*$/.test(text) && Number(text) <= limit;
 
 function ComponentCard({
   view,
@@ -27,6 +47,7 @@ function ComponentCard({
   onRecord,
   onRemove,
   onRetry,
+  onDirtyChange,
 }: {
   view: ComponentView;
   workspace: Workspace;
@@ -37,38 +58,59 @@ function ComponentCard({
   onRecord: Props["onRecord"];
   onRemove: Props["onRemove"];
   onRetry: Props["onRetry"];
+  onDirtyChange: Props["onDirtyChange"];
 }) {
   const id = useId();
   const { rule, record } = view;
   const alternates = (rule?.substitutes ?? []).filter((s) => s.locationIds === null || s.locationIds.includes(location.id));
-  const [choice, setChoice] = useState<string>(record?.substituteId ?? "PRIMARY");
-  const [quantity, setQuantity] = useState<number>(record?.quantity ?? 1);
-  const [note, setNote] = useState<string>(record?.note ?? "");
-  // Re-sync the form when the saved record changes (saved, removed, or reloaded after a conflict).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.5
-  useEffect(() => {
-    setChoice(record?.substituteId ?? "PRIMARY");
-    setQuantity(record?.quantity ?? 1);
-    setNote(record?.note ?? "");
-  }, [record?.version, record?.substituteId, record?.quantity, record?.note, location.id]);
+  const saved = draftOf(record);
+  const serverVersion = record?.version ?? 0;
+  const [draft, setDraft] = useState<Draft>(saved);
+  // The record the draft was loaded from, and the version it had (0 for none).
+  const [base, setBase] = useState<{ record: VisitRecord | null; version: number }>({ record, version: serverVersion });
+  // What the last save sent, so the answer to the person's own save is not taken for a change made elsewhere.
+  const [sent, setSent] = useState<Draft | null>(null);
+  if (base.version !== serverVersion && !(sent && sameDraft(sent, saved))) {
+    // The saved record changed. A form with nothing unsaved follows it; one with typed input keeps it and says so below.
+    if (sameDraft(draft, draftOf(base.record))) {
+      setDraft(saved);
+      setBase({ record, version: serverVersion });
+    }
+  } else if (base.version !== serverVersion) {
+    setBase({ record, version: serverVersion });
+  }
+  const dirty = !sameDraft(draft, saved);
+  const changedElsewhere = dirty && base.version !== serverVersion;
+  const limit = view.maxReplacements;
+  const quantityOk = quantityValid(draft.quantityText, limit);
+  const quantityHelp = `${id}-quantity-help`;
 
   const target = recordTarget(location.id, view.componentId);
+  useEffect(() => {
+    onDirtyChange(target, dirty);
+    return () => onDirtyChange(target, false);
+  }, [target, dirty, onDirtyChange]);
+
   const status = statusOf(target);
   const busy = status.phase === "saving";
   const message = status.phase === "conflict" ? `${describeSaveStatus(status)} The current saved state has been reloaded.` : describeSaveStatus(status);
-  const dirty = record ? (record.substituteId ?? "PRIMARY") !== choice || record.quantity !== quantity || record.note !== note.trim() : true;
+  const savedText = `${saved.selection === "PRIMARY" ? "Primary" : `Alternate ${alternates.find((s) => s.id === saved.substituteId)?.altPartNo ?? saved.substituteId}`}, ${saved.quantityText}, note ${saved.note === "" ? "none" : `“${saved.note}”`}`;
+  const choose = (substituteId: string | null) => setDraft((d) => ({ ...d, selection: substituteId === null ? "PRIMARY" : "ALTERNATE", substituteId }));
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!quantityOk) return;
+    setSent(draft);
     onRecord(
       {
         locationId: location.id,
         componentId: view.componentId,
-        selection: choice === "PRIMARY" ? "PRIMARY" : "ALTERNATE",
-        substituteId: choice === "PRIMARY" ? null : choice,
-        quantity,
-        note,
+        selection: draft.selection,
+        substituteId: draft.substituteId,
+        quantity: Number(draft.quantityText),
+        note: draft.note,
       },
-      record?.version ?? 0,
+      // The version the person last agreed to build on, so a save over a change made elsewhere is refused until they choose.
+      base.version,
     );
   };
 
@@ -185,43 +227,71 @@ function ComponentCard({
                 <legend>{record ? "Recorded replacement" : "Record a replacement"}</legend>
                 <div className="choices" role="radiogroup" aria-label={`Part used for ${view.name}`}>
                   <label className="radio">
-                    <input type="radio" name={`${id}-choice`} value="PRIMARY" checked={choice === "PRIMARY"} onChange={() => setChoice("PRIMARY")} />
+                    <input type="radio" name={`${id}-choice`} value="PRIMARY" checked={draft.selection === "PRIMARY"} onChange={() => choose(null)} />
                     Primary <span className="partno">{rule.partNo}</span>
                   </label>
                   {alternates.map((s) => (
                     <label key={s.id} className="radio">
-                      <input type="radio" name={`${id}-choice`} value={s.id} checked={choice === s.id} onChange={() => setChoice(s.id)} />
+                      <input type="radio" name={`${id}-choice`} value={s.id} checked={draft.substituteId === s.id} onChange={() => choose(s.id)} />
                       Alternate <span className="partno">{s.altPartNo}</span>
                       {s.children.length > 0 && <span className="fine"> + {s.children.length} required supplements</span>}
                     </label>
                   ))}
                 </div>
                 {view.maxReplacements > 1 ? (
-                  <label className="field inline">
-                    <span>
-                      Replacements{" "}
-                      <span className="fine">
-                        (1–{view.maxReplacements}; {view.countNote})
+                  <>
+                    <label className="field inline">
+                      <span>
+                        Replacements{" "}
+                        <span className="fine">
+                          (1–{view.maxReplacements}; {view.countNote})
+                        </span>
                       </span>
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={view.maxReplacements}
-                      step={1}
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.trunc(Number(e.target.value)) || 1)}
-                    />
-                  </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="off"
+                        value={draft.quantityText}
+                        aria-invalid={quantityOk ? undefined : true}
+                        aria-describedby={quantityOk ? undefined : quantityHelp}
+                        onChange={(e) => setDraft((d) => ({ ...d, quantityText: e.target.value }))}
+                      />
+                    </label>
+                    {!quantityOk && (
+                      <p id={quantityHelp} className="field-error">
+                        Enter a whole number from 1 to {limit}.
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <p className="fine">Replacements: 1. {view.countNote}</p>
                 )}
+                {changedElsewhere && (
+                  <div className="notice" role="note">
+                    <p>This replacement changed elsewhere. Saved value: {savedText}.</p>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraft(saved);
+                          setBase({ record, version: serverVersion });
+                        }}
+                      >
+                        Use saved value
+                      </button>
+                      <button type="button" onClick={() => setBase({ record, version: serverVersion })}>
+                        Keep mine
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <label className="field">
                   <span>Note (optional)</span>
-                  <textarea value={note} maxLength={1000} rows={2} onChange={(e) => setNote(e.target.value)} />
+                  <textarea value={draft.note} maxLength={1000} rows={2} onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))} />
                 </label>
                 <div className="actions">
-                  <button type="submit" className="primary" disabled={busy || (!!record && !dirty)}>
+                  <button type="submit" className="primary" disabled={busy || !quantityOk || (!!record && !dirty)}>
                     {record ? "Update record" : "Record replacement"}
                   </button>
                   {record && (
@@ -232,7 +302,7 @@ function ComponentCard({
                 </div>
               </fieldset>
               <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
-                {message || (record ? `Saved. Record version ${record.version}, last changed ${record.updatedAt}.` : "")}
+                {message || (record && !dirty ? `Saved. Record version ${record.version}, last changed ${record.updatedAt}.` : "")}
               </p>
               {canRetry(status) && (
                 <button type="button" onClick={() => onRetry(target)}>
@@ -255,7 +325,7 @@ function ComponentCard({
 }
 
 /** Component-level parts for the selected location: primary part, separate alternates, record form. */
-export function Inspector({ workspace, location, focusComponent, statusOf, onRecord, onRemove, onRetry, onSelect }: Props) {
+export function Inspector({ workspace, location, focusComponent, statusOf, onRecord, onRemove, onRetry, onSelect, onDirtyChange }: Props) {
   if (!location) {
     return (
       <div className="inspector empty">
@@ -302,6 +372,7 @@ export function Inspector({ workspace, location, focusComponent, statusOf, onRec
           onRecord={onRecord}
           onRemove={onRemove}
           onRetry={onRetry}
+          onDirtyChange={onDirtyChange}
         />
       ))}
     </div>

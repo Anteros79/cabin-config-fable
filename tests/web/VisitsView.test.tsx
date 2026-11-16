@@ -20,6 +20,12 @@ afterEach(() => {
 });
 
 describe("VisitsView", () => {
+  it("the search field stops at the 100 characters the server accepts", () => {
+    stubFetch((): Answer => ({ body: { items: [], total: 0 } }));
+    render(<VisitsView status={null} q="" page={1} navigate={vi.fn()} />);
+    expect(screen.getByLabelText(/^Search tail/)).toHaveAttribute("maxlength", "100");
+  });
+
   it("Apply is disabled while the list is loading", async () => {
     const answer = deferred<{ body: unknown }>();
     stubFetch((): Answer => answer.promise);

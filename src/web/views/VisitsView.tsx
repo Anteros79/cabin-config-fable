@@ -67,7 +67,7 @@ export function VisitsView({
         </label>
         <label className="field">
           <span>Search tail, technician, date, variant or visit number</span>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input value={query} maxLength={100} onChange={(e) => setQuery(e.target.value)} />
         </label>
         <button type="submit" disabled={busy}>
           Apply

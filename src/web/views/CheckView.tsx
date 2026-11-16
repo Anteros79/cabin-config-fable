@@ -231,11 +231,45 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     if (selection && workspace && !workspace.layout.locations.some((l) => l.id === selection)) setSelection(null);
   }, [workspace, selection]);
 
-  const select = useCallback((locationId: string, componentId: string | null) => {
+  // Cards report typed input that is not saved. Leaving the location or completing the visit asks first.
+  const [dirtyTargets, setDirtyTargets] = useState<ReadonlySet<string>>(new Set());
+  const onDirtyChange = useCallback((target: string, dirty: boolean) => {
+    setDirtyTargets((cur) => {
+      if (cur.has(target) === dirty) return cur;
+      const next = new Set(cur);
+      if (dirty) next.add(target);
+      else next.delete(target);
+      return next;
+    });
+  }, []);
+  /** True when nothing unrecorded is lost, or the person agreed to lose it. */
+  const mayDiscard = (): boolean => {
+    const [first] = dirtyTargets;
+    if (!first || !workspace) return true;
+    const [locationId = "", componentId = ""] = first.slice("record:".length).split("|");
+    const where = workspace.layout.locations.find((l) => l.id === locationId)?.label ?? locationId;
+    const what = workspace.componentDefs[componentId]?.name ?? componentId;
+    // Task 4.6 replaces this with the confirm dialog ("Discard" / "Go back").
+    return window.confirm(`You have an unrecorded change for ${where} / ${what}. Discard it?`);
+  };
+  const select = (locationId: string, componentId: string | null) => {
+    if (locationId !== selection && !mayDiscard()) return;
     window.__cabinKit?.scene?.markInteraction();
     setSelection(locationId);
     setFocusComponent(componentId);
-  }, []);
+  };
+
+  // A reload or close would lose typed input, or leave a save whose outcome is not known.
+  const guardUnload = dirtyTargets.size > 0 || writes.anyUnknown || creation.anyUnknown;
+  useEffect(() => {
+    if (!guardUnload) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [guardUnload]);
 
   // The form follows the route, so a lookup restored by Back or reload shows what it looked up.
   useEffect(() => {
@@ -540,6 +574,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                 onRecord={record}
                 onRemove={remove}
                 onRetry={retry}
+                onDirtyChange={onDirtyChange}
                 onSelect={(id) => select(id, null)}
               />
               {visit && visitId && (
@@ -582,7 +617,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                     </ul>
                   )}
                   {visit.status === "DRAFT" && !confirming && (
-                    <button type="button" className="primary" disabled={visit.records.length === 0} onClick={() => setConfirming(true)}>
+                    <button type="button" className="primary" disabled={visit.records.length === 0} onClick={() => mayDiscard() && setConfirming(true)}>
                       Complete visit…
                     </button>
                   )}
