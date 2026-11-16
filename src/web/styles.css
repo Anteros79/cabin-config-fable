@@ -90,6 +90,11 @@ a {
 .skip:focus {
   top: 0.5rem;
 }
+/* outweighs the general button hover, so the link keeps its colours */
+button.skip:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
 .boot-note {
   padding: 2rem;
 }
@@ -227,11 +232,12 @@ button,
   align-items: center;
   justify-content: center;
 }
-button:hover:not(:disabled),
+button:hover:not(:disabled, [aria-disabled="true"]),
 .button:hover {
   background: #eef1f7;
 }
-button:disabled {
+button:disabled,
+button[aria-disabled="true"] {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -241,7 +247,7 @@ button.primary {
   color: #fff;
   font-weight: 600;
 }
-button.primary:hover:not(:disabled) {
+button.primary:hover:not(:disabled, [aria-disabled="true"]) {
   background: #24398a;
 }
 button.danger {
@@ -839,10 +845,19 @@ button.loc.partial {
   border-color: var(--bad);
   border-style: dashed;
 }
-/* selection is drawn inside the button, so the focus outline stays visible on a selected seat */
+/* selection is drawn inside the button, so the focus outline stays visible on a selected seat;
+   the ink ring gives the 3:1 contrast, the yellow band inside it matches the 3D selection colour */
 button.loc.selected {
   border-color: var(--ink);
-  box-shadow: inset 0 0 0 3px var(--select);
+  box-shadow:
+    inset 0 0 0 2px var(--ink),
+    inset 0 0 0 5px var(--select);
+}
+/* on a selected seat the tier bar sits inside the selection rings, not over them */
+button.loc.selected::before {
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
 }
 /* state marks are decorative: the state is in each button's accessible name */
 button.loc.recorded::after {

@@ -172,8 +172,14 @@ export function App() {
       return heading !== null;
     };
     if (focusHeading()) return;
-    // A view that is still loading shows its heading later; focus it when it appears.
+    // A view that is still loading shows its heading later; focus it when it appears, unless the person has moved focus meanwhile.
+    const before = document.activeElement;
     const observer = new MutationObserver(() => {
+      const active = document.activeElement;
+      if (active !== null && active !== before && active !== document.body && active !== main) {
+        observer.disconnect();
+        return;
+      }
       if (focusHeading()) observer.disconnect();
     });
     observer.observe(main, { childList: true, subtree: true });

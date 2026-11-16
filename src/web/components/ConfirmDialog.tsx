@@ -8,7 +8,7 @@ interface Props {
   cancelLabel: string;
   /** The confirm action loses something; it is styled as a danger button. */
   destructive?: boolean;
-  /** The confirm action cannot run yet (for example, a save is still in flight). */
+  /** The confirm action cannot run yet (for example, a save is still in flight). The button stays focusable but does nothing. */
   busy?: boolean;
   onConfirm(): void;
   onCancel(): void;
@@ -64,7 +64,15 @@ export function ConfirmDialog({ open, title, children, confirmLabel, cancelLabel
           <h2 id={titleId}>{title}</h2>
           {children}
           <div className="actions">
-            <button type="button" className={destructive ? "danger" : "primary"} onClick={onConfirm} disabled={busy}>
+            {/* aria-disabled, not disabled: a button that disables itself while focused would drop focus to the page */}
+            <button
+              type="button"
+              className={destructive ? "danger" : "primary"}
+              aria-disabled={busy}
+              onClick={() => {
+                if (!busy) onConfirm();
+              }}
+            >
               {confirmLabel}
             </button>
             <button type="button" ref={cancelRef} onClick={onCancel}>

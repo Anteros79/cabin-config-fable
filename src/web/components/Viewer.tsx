@@ -95,15 +95,18 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
       )}
       {/* Both panels stay mounted, so each tab's aria-controls names a panel that exists; the inactive one is hidden. */}
       <div role="tabpanel" id="panel-3d" aria-labelledby="tab-3d" hidden={showing !== "3d"}>
-        <Cabin3D
-          key={attempt}
-          workspace={workspace}
-          states={scene}
-          selection={selection}
-          onSelect={onSelect}
-          visualProfiles={visualProfiles}
-          onFailed={setFailure}
-        />
+        {/* A failed scene is unmounted, so it is disposed and no later selection reaches it; Retry mounts a new one. */}
+        {!failure && (
+          <Cabin3D
+            key={attempt}
+            workspace={workspace}
+            states={scene}
+            selection={selection}
+            onSelect={onSelect}
+            visualProfiles={visualProfiles}
+            onFailed={setFailure}
+          />
+        )}
       </div>
       <div role="tabpanel" id="panel-map" aria-labelledby="tab-map" hidden={showing !== "map"}>
         <CabinMap workspace={workspace} flags={flags} selection={selection} onSelect={onSelect} />

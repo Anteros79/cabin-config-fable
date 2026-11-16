@@ -5,14 +5,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../src/web/App.tsx";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
 import { CUSHION_3A, fixtureRelease, snapshotFor, visitWith } from "../helpers.ts";
-import { type Answer, stubFetch } from "./fetchStub.ts";
+import { type Answer, deferred, stubFetch } from "./fetchStub.ts";
 
-// jsdom has no WebGL: the scene is a stand-in whose every method does nothing. The 3D component, its canvas and the tabs are real.
+// jsdom has no WebGL: the scene is a stand-in whose every method does nothing (or fails, when a test asks). The 3D component,
+// its canvas and the tabs are real.
+const scenes = vi.hoisted(() => ({ failLayout: false, disposed: 0, calls: [] as string[] }));
 vi.mock("../../src/web/scene/CabinScene.ts", () => ({
   CabinScene: class {
     constructor() {
-      // biome-ignore lint/correctness/noConstructorReturn: a stand-in that answers every method call with nothing
-      return new Proxy({}, { get: () => () => undefined });
+      // biome-ignore lint/correctness/noConstructorReturn: a stand-in that answers every method call
+      return new Proxy(
+        {},
+        {
+          get: (_target, name) => () => {
+            scenes.calls.push(String(name));
+            if (name === "setLayout" && scenes.failLayout) throw new Error("The test scene could not be built.");
+            if (name === "dispose") scenes.disposed += 1;
+          },
+        },
+      );
     }
   },
 }));
@@ -42,6 +53,9 @@ async function openVisit() {
 }
 
 beforeEach(() => {
+  scenes.failLayout = false;
+  scenes.disposed = 0;
+  scenes.calls = [];
   localStorage.clear();
   sessionStorage.clear();
   window.location.hash = "";
@@ -105,6 +119,83 @@ describe("focus and announcements", () => {
     fireEvent.click(screen.getByRole("button", { name: "Complete visit…" }));
     dialog = screen.getByRole("dialog", { name: "Complete and lock this visit?" });
     expect(dialog).toHaveAttribute("open");
+  });
+
+  it("a view that loads after the person moved focus does not take focus back", async () => {
+    window.location.hash = "#/visits";
+    const layouts = deferred<{ body: unknown }>();
+    let held = false;
+    stubApp((_m, url) => {
+      // the first layouts read is App's own; the view's read is held until the person has moved on
+      if (!url.startsWith("/api/layouts")) return undefined;
+      if (held) return layouts.promise;
+      held = true;
+      return undefined;
+    });
+    render(<App />);
+    await screen.findByRole("heading", { name: "Saved visits" });
+    window.location.hash = "#/layouts";
+    await act(async () => {
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    const nav = screen.getByRole("link", { name: "Reference" });
+    nav.focus();
+    await act(async () => {
+      layouts.resolve({ body: { layouts: [], layoutCategories: [], visualProfiles: [] } });
+    });
+    await screen.findByRole("heading", { level: 2, name: "Layouts" });
+    expect(nav).toHaveFocus();
+  });
+
+  it("Confirm completion keeps focus while it waits for the completion answer, and a second press sends nothing", async () => {
+    const answer = deferred<{ body: unknown }>();
+    const sent = stubFetch((method): Answer => (method === "GET" ? { body: { visit } } : answer.promise));
+    render(<CheckView visitId={visit.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Complete visit…" }));
+    const confirm = screen.getByRole("button", { name: "Confirm completion" });
+    const completions = () => sent.filter((s) => s.url.endsWith("/complete"));
+    confirm.focus();
+    fireEvent.click(confirm);
+    await waitFor(() => expect(completions()).toHaveLength(1));
+    expect(confirm).toHaveAttribute("aria-disabled", "true");
+    expect(confirm).not.toBeDisabled();
+    expect(confirm).toHaveFocus();
+    fireEvent.click(confirm);
+    await act(async () => {});
+    expect(completions()).toHaveLength(1);
+    await act(async () => {
+      answer.resolve({ body: { visit: { ...visit, status: "COMPLETED" }, replayed: false } });
+    });
+  });
+
+  it("Discard, then Cancel in the completion dialog, returns focus to Complete visit", async () => {
+    await openVisit();
+    fireEvent.click(screen.getByRole("tab", { name: "Map and list" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Seat 3A/ }));
+    const card = await screen.findByRole("region", { name: /^Seat cushion cover/ });
+    fireEvent.change(within(card).getByLabelText("Note (optional)"), { target: { value: "frayed edge" } });
+    const opener = screen.getByRole("button", { name: "Complete visit…" });
+    opener.focus();
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(opener).toHaveFocus();
+  });
+
+  it("after a 3D failure the scene is disposed and the map still selects", async () => {
+    scenes.failLayout = true;
+    await openVisit();
+    await screen.findByText(/3D view unavailable/);
+    expect(scenes.disposed).toBe(1);
+    expect(window.__cabinKit?.scene ?? null).toBeNull();
+    expect(screen.queryByRole("application")).toBeNull();
+    expect(screen.getByRole("tab", { name: "3D cutaway" })).toBeDisabled();
+    expect(document.getElementById("panel-3d")).not.toBeNull();
+    const before = scenes.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: /^Seat 3A/ }));
+    expect(await screen.findByRole("heading", { name: "Seat 3A" })).toBeInTheDocument();
+    expect(scenes.calls.length).toBe(before);
   });
 
   it("Cancel in the completion dialog returns focus to Complete visit", async () => {
@@ -207,7 +298,9 @@ describe("styles", () => {
     const selected = rulesFor(outsideForced, "button.loc.selected");
     expect(selected).toHaveLength(1);
     expect(selected[0]).not.toMatch(/outline/);
-    expect(selected[0]).toMatch(/box-shadow:\s*inset 0 0 0 3px var\(--select\);/);
+    // an ink ring carries the 3:1 contrast; the yellow band matches the 3D selection colour
+    expect(selected[0]).toMatch(/box-shadow:\s*inset 0 0 0 2px var\(--ink\),\s*inset 0 0 0 5px var\(--select\);/);
+    expect(rulesFor(css, "button.loc.selected::before").join("")).toMatch(/bottom:\s*5px;/);
     expect(rulesFor(css, ".canvas-wrap canvas:focus-visible").join("")).toMatch(/outline-offset:\s*-3px;/);
   });
 

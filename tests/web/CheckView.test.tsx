@@ -206,16 +206,20 @@ describe("CheckView writes", () => {
 
   it("Confirm completion waits while a record save is in flight or has an unknown outcome", async () => {
     const answer = deferred<"reject">();
-    stubFetch((method): Answer => (method === "GET" ? { body: { visit: base } } : answer.promise));
+    const sent = stubFetch((method): Answer => (method === "GET" ? { body: { visit: base } } : answer.promise));
     render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Complete visit…" }));
     const confirm = screen.getByRole("button", { name: "Confirm completion" });
-    expect(confirm).toBeEnabled();
+    expect(confirm).toHaveAttribute("aria-disabled", "false");
     fireEvent.click(screen.getByRole("button", { name: removeLabel(cushion) }));
-    expect(confirm).toBeDisabled();
+    expect(confirm).toHaveAttribute("aria-disabled", "true");
     answer.resolve("reject");
     await screen.findByText(/A save has an unknown outcome/);
-    expect(confirm).toBeDisabled();
+    expect(confirm).toHaveAttribute("aria-disabled", "true");
+    // pressing it anyway sends no completion
+    const posts = () => sent.filter((s) => s.url.endsWith("/complete")).length;
+    fireEvent.click(confirm);
+    expect(posts()).toBe(0);
   });
 
   it("two tabs: the tab whose answer was lost retries with the same key and the other tab's save survives", async () => {
