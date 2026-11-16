@@ -5,6 +5,7 @@ import { configurationProblems, isReleasedConfiguration } from "./resolve.ts";
 import { structuralFindings } from "./schema.ts";
 import {
   buildIndex,
+  buildMatchSet,
   intersectMatchSets,
   isStrictlyMoreSpecific,
   isSubset,
@@ -290,10 +291,13 @@ export function validateRelease(input: unknown): Finding[] {
     intervalOk(r.effectiveFrom, r.effectiveTo, ref);
     constraintOk(r.constraint, ref, r.id);
     selectorOk(r.locations, r.constraint, ref, r.id);
-    const set = ruleSet(r.id);
-    if (set.empty) err("UNREACHABLE_RULE", `${ref} cannot match any location in any configuration (unreachable).`, [r.id]);
+    // reachability and namespace use every listed pair, released or not, so staged data still validates
+    const listed = buildMatchSet(content, revisions, r.constraint, r.locations, r.componentId, "listed");
+    if (listed.empty) err("UNREACHABLE_RULE", `${ref} cannot match any location in any configuration (unreachable).`, [r.id]);
     else {
-      for (const pair of set.pairs.keys()) {
+      if (ruleSet(r.id).empty)
+        warn("RULE_UNRELEASED_ONLY", `${ref} reaches only unreleased configurations, so no lookup can use it until they are released.`, [r.id]);
+      for (const pair of listed.pairs.keys()) {
         const [, revisionId] = pair.split("|");
         const revision = revisionId === undefined ? undefined : revisions.get(revisionId);
         if (revision && revision.namespace !== r.namespace)
@@ -381,9 +385,13 @@ export function validateRelease(input: unknown): Finding[] {
       warn("SUBSTITUTE_UNUSED", `${ref} stands in for ${s.primaryPartNo}, which no rule for ${s.componentId} selects.`, [s.id]);
       continue;
     }
+    // the index's usable set decides; the listed set is built only to tell staged data from unreachable data
     const subSet = index.substituteMatch.get(s.id) ?? NO_MATCH;
-    if (subSet.empty) err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
-    else if (!content.rules.some((r) => r.componentId === s.componentId && r.partNo === s.primaryPartNo && matchSetsIntersect(ruleSet(r.id), subSet)))
+    if (subSet.empty) {
+      if (buildMatchSet(content, revisions, s.constraint, s.locations, s.componentId, "listed").empty)
+        err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
+      else warn("SUBSTITUTE_UNRELEASED_ONLY", `${ref} reaches only unreleased configurations, so no lookup can offer it until they are released.`, [s.id]);
+    } else if (!content.rules.some((r) => r.componentId === s.componentId && r.partNo === s.primaryPartNo && matchSetsIntersect(ruleSet(r.id), subSet)))
       warn("SUBSTITUTE_UNREACHABLE", `${ref} covers no location where a rule selects ${s.primaryPartNo}, so it can never be offered.`, [s.id]);
   }
   const ruleIds = new Set(content.rules.map((r) => r.id));

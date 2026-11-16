@@ -219,6 +219,53 @@ describe("referential findings", () => {
     expect(findings.filter(pair).map((f) => f.code)).toEqual(["EQUAL_RULES"]);
   });
 
+  it("a rule and substitute staged for a planned revision of an unreleased variant validate, with a warning", () => {
+    const content = fixtureContent((c) => {
+      const rev = must(
+        c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1"),
+        "FX-L-S176-MAX8@1",
+      );
+      const v01 = must(
+        c.variants.find((v) => v.id === "V01"),
+        "V01",
+      );
+      c.layoutRevisions.push({ ...structuredClone(rev), id: "FX-L-S176-MAX8@9", status: "planned" });
+      c.variants.push({ ...v01, id: "V12-DRAFT", released: false, layoutRevisionIds: ["FX-L-S176-MAX8@9"] });
+      c.rules.push({ ...cushionOverAllSeats(c, "X-STAGED", { variant: ["V12-DRAFT"] }), locations: { kind: "SEAT", ids: ["SEAT:3A"], letters: ["A"] } });
+      const sub = must(c.substitutes[0], "a substitute");
+      c.substitutes.push({
+        ...sub,
+        id: "X-STAGED-SUB",
+        componentId: "CUSHION",
+        primaryPartNo: rule(c, "X-STAGED").partNo,
+        constraint: { variant: ["V12-DRAFT"] },
+        locations: { kind: "SEAT", ids: ["SEAT:3A"] },
+      });
+    });
+    const findings = validateRelease(content);
+    expect(findings.filter((f) => f.severity === "error")).toEqual([]);
+    expectFinding(findings, "RULE_UNRELEASED_ONLY", "warning", "X-STAGED");
+    expectFinding(findings, "SUBSTITUTE_UNRELEASED_ONLY", "warning", "X-STAGED-SUB");
+    expect(withCode(findings, "SUBSTITUTE_UNREACHABLE").filter((f) => f.refs?.includes("X-STAGED-SUB"))).toEqual([]);
+  });
+
+  it("NAMESPACE: a fixture rule reaching a candidate layout revision, even one no released data can use", () => {
+    const content = structuredClone(stagedFull().content);
+    const rev = must(
+      content.layoutRevisions.find((r) => r.id === "CAND-73G@2026.1"),
+      "CAND-73G@2026.1",
+    );
+    const v01 = must(
+      content.variants.find((v) => v.id === "V01"),
+      "V01",
+    );
+    content.variants.push({ ...v01, id: "X-CAND-V", namespace: "candidate", subtypeId: rev.subtypeId, layoutRevisionIds: [rev.id] });
+    content.rules.push(cushionOverAllSeats(content, "X-REACH", { variant: ["X-CAND-V"] }));
+    const hits = withCode(validateRelease(content), "NAMESPACE").filter((f) => f.refs?.includes("X-REACH"));
+    expect(hits.map((f) => f.severity)).toEqual(["error"]);
+    expect(hits[0]?.message).toMatch(/reaches layout revision CAND-73G@2026\.1/);
+  });
+
   it("RULES_INCOMPARABLE is not raised for rules whose validity does not overlap, or for unreleased rules", () => {
     const findings = validateRelease(
       fixtureContent((c) => {

@@ -141,6 +141,7 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
   }
 
   const covering = all.filter((a) => withinInclusive(checkDate, a.effectiveFrom, a.effectiveTo));
+  // isReleasedPair, not isUsablePair: an unlisted pair must stay INCONSISTENT_CONFIGURATION, not become PLANNED
   const isReleased = (a: TailAssignment) => isReleasedConfiguration(a, index.variants.get(a.variantId), index.layoutRevisions.get(a.layoutRevisionId));
   const released = covering.filter(isReleased);
   const planned = covering.filter((a) => !isReleased(a));

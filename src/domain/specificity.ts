@@ -145,17 +145,27 @@ function variantSatisfies(constraint: ContextConstraint, variant: MaintenanceVar
   return true;
 }
 
-/** Layout revisions some variant can pair with, in a usable pair, under this constraint (selectors and components aside). */
+/**
+ * Layout revisions some variant lists and can pair with under this constraint (selectors and
+ * components aside), released or not. For validating what a rule refers to, not for specificity.
+ */
 export function reachableRevisions(release: ReleaseContent, revisions: Map<string, LayoutRevision>, constraint: ContextConstraint): LayoutRevision[] {
   const reached = new Map<string, LayoutRevision>();
   for (const variant of release.variants) {
     for (const revisionId of variant.layoutRevisionIds) {
       const revision = revisions.get(revisionId);
-      if (revision && isUsablePair(variant, revision) && variantSatisfies(constraint, variant, revisionId)) reached.set(revisionId, revision);
+      if (revision && variantSatisfies(constraint, variant, revisionId)) reached.set(revisionId, revision);
     }
   }
   return [...reached.values()];
 }
+
+/**
+ * Which (variant, layout revision) pairs a match set draws on. "usable" (the default) is D2: only
+ * pairs released data can resolve, for specificity, dominance and conflicts. "listed" is every pair
+ * a variant lists, released or not, for checking that staged data refers to something real.
+ */
+export type PairScope = "usable" | "listed";
 
 export function buildMatchSet(
   release: ReleaseContent,
@@ -163,13 +173,14 @@ export function buildMatchSet(
   constraint: ContextConstraint,
   selector: LocationSelector | undefined,
   componentId: string,
+  scope: PairScope = "usable",
 ): MatchSet {
   const pairs = new Map<string, Set<string>>();
   for (const variant of release.variants) {
     for (const revisionId of variant.layoutRevisionIds) {
       if (!variantSatisfies(constraint, variant, revisionId)) continue;
       const revision = revisions.get(revisionId);
-      if (!revision || !isUsablePair(variant, revision)) continue;
+      if (!revision || (scope === "usable" && !isUsablePair(variant, revision))) continue;
       const ids = new Set<string>();
       for (const loc of revision.locations) {
         if (!loc.componentIds.includes(componentId)) continue;
@@ -263,10 +274,20 @@ export function matchesContext(constraint: ContextConstraint, ctx: AssignmentCon
 }
 
 /**
+ * A release whose index may be cached: the release object and its rule, variant and layout-revision
+ * arrays are frozen. The reference store deep-freezes what it loads (Task 1.7), which passes; a
+ * release frozen only at the top, with mutable arrays, does not. This samples the arrays the index
+ * is built from rather than walking the whole tree, so it trusts a deep freeze, not a partial one.
+ */
+function isCacheable(release: ReleaseContent): boolean {
+  return Object.isFrozen(release) && Object.isFrozen(release.rules) && Object.isFrozen(release.variants) && Object.isFrozen(release.layoutRevisions);
+}
+
+/**
  * Index a release. The index (match sets, dominance) is derived from the content, so it is cached
- * only when the release is frozen: content mutated after indexing would otherwise be answered from
- * a stale index (DOM-22). Releases loaded from the reference store are deep-frozen; anything else
- * (staged content under validation, test releases) is indexed afresh on every call.
+ * only when the content is frozen (`isCacheable`): content mutated after indexing would otherwise be
+ * answered from a stale index (DOM-22). Anything else (staged content under validation, test
+ * releases) is indexed afresh on every call.
  */
 export function buildIndex(release: ReleaseContent): ReleaseIndex {
   const cached = indexCache.get(release);
@@ -306,7 +327,7 @@ export function buildIndex(release: ReleaseContent): ReleaseIndex {
     substituteMatch,
     dominance: new Map(),
   };
-  if (Object.isFrozen(release)) indexCache.set(release, index);
+  if (isCacheable(release)) indexCache.set(release, index);
   return index;
 }
 

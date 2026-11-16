@@ -96,6 +96,9 @@ describe("index cache", () => {
     expect(buildIndex(open)).not.toBe(buildIndex(open));
     const frozen = deepFreeze(asRelease(fixtureContent()));
     expect(buildIndex(frozen)).toBe(buildIndex(frozen));
+    // frozen only at the top, its arrays still mutable: not trusted
+    const shallow = Object.freeze(asRelease(fixtureContent()));
+    expect(buildIndex(shallow)).not.toBe(buildIndex(shallow));
   });
 });
 
