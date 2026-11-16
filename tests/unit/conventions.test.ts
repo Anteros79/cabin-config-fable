@@ -41,3 +41,14 @@ test("src/server does not import the importer's assemble module", () => {
   const offenders = findMatches(/from\s+["']\.\.\/importer\/assemble(\.ts)?["']/).filter((hit) => hit.startsWith("src/server/"));
   expect(offenders).toEqual([]);
 });
+
+test("no browser spec or helper under e2e/ waits a fixed time with waitForTimeout", () => {
+  const files = sourceFiles(join(ROOT, "e2e"));
+  expect(files.length).toBeGreaterThan(0);
+  const offenders = files.flatMap((file) =>
+    readFileSync(file, "utf8")
+      .split("\n")
+      .flatMap((line, index) => (/waitForTimeout\(/.test(line) ? [`${file.slice(ROOT.length + 1)}:${index + 1}`] : [])),
+  );
+  expect(offenders).toEqual([]);
+});

@@ -31,7 +31,8 @@
     "coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/unit tests/integration",
     "test:process": "vitest run tests/process",
-    "test:e2e": "npm run build:e2e && CABIN_KIT_WEB_ROOT=dist/web-e2e node tests/e2e/run.ts",
+    "test:e2e": "npm run build:e2e && playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "verify": "npm run typecheck && npm run test && npm run test:e2e && npm run comparisons && npm run originals:verify"
   },
   "dependencies": {
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
     "@biomejs/biome": "2.6.8",
+    "@playwright/test": "^1.65.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -59,7 +61,6 @@
     "@vitest/coverage-v8": "^5.1.0",
     "jsdom": "^31.0.1",
     "pdfjs-dist": "5.5.207",
-    "playwright-core": "^1.65.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "sharp": "^0.35.5",

@@ -1,7 +1,6 @@
 {
-  // The browser-driving E2E runner. It is Node code whose page.evaluate callbacks
-  // run in the page, so it needs Node types and the DOM library, and it sees
-  // src/web for the window.__cabinKit test hook type.
+  // The Playwright specs, fixtures and config. Node code whose page.evaluate callbacks run in the page, so it needs Node
+  // types and the DOM library, and it sees src/web for the window.__cabinKit test hook type.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
@@ -9,6 +8,6 @@
     "jsx": "react-jsx",
     "tsBuildInfoFile": "./node_modules/.cache/tsc/e2e.tsbuildinfo"
   },
-  "include": ["tests/e2e", "src/web"],
+  "include": ["e2e", "playwright.config.ts", "src/web"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
