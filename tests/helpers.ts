@@ -11,6 +11,12 @@ import { type AppHandle, createApp } from "../src/server/app.ts";
 import { resolveServerConfig } from "../src/server/config.ts";
 import { VisitStore } from "../src/server/visitStore.ts";
 
+/**
+ * Content hash of the release the importer stages from the committed fixtures and originals (PF-2).
+ * A task that moves it on purpose updates it here and records old → new in CHANGELOG.md and its commit body.
+ */
+export const EXPECTED_CONTENT_HASH = "6df5118095a4e9416c3e409a62edabb0a10e38bbb17e50a2f4d8615776969400";
+
 let fullBuild: StagedBuild | null = null;
 let fixtureBuild: StagedBuild | null = null;
 

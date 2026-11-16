@@ -5,7 +5,8 @@ import { contentHash } from "../domain/hash.ts";
 import type { Finding, ReleaseContent, VisualProfile } from "../domain/types.ts";
 import { validateRelease } from "../domain/validate.ts";
 import { buildCandidateContent } from "./candidate.ts";
-import { buildFixtureContent, loadFixtureData } from "./fixtures.ts";
+import { FixtureError } from "./fixtureSchema.ts";
+import { buildFixtureContent, emptyFixtureContent, type FixtureContent, loadFixtureData } from "./fixtures.ts";
 import { resolveSourceRoot } from "./originals.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -60,9 +61,29 @@ export interface BuildOptions {
   includeCandidate?: boolean;
 }
 
+/** Most FIXTURE_INVALID findings per build; past that, the last one says how many more there are. */
+const MAX_FIXTURE_FINDINGS = 50;
+
+function fixtureFindings(issues: string[]): Finding[] {
+  const listed = issues.length > MAX_FIXTURE_FINDINGS ? issues.slice(0, MAX_FIXTURE_FINDINGS - 1) : issues;
+  const messages = [...listed];
+  if (listed.length < issues.length) messages.push(`${issues.length - listed.length} more fixture problems are not listed.`);
+  return messages.map((message) => ({ severity: "error", code: "FIXTURE_INVALID", message, refs: ["fixtures"] }));
+}
+
+/** The fixture content, or (for an invalid fixture file) empty content and one blocking finding per problem. */
+function loadFixtures(path: string): { fixture: FixtureContent; findings: Finding[] } {
+  try {
+    return { fixture: buildFixtureContent(loadFixtureData(path)), findings: [] };
+  } catch (error) {
+    if (!(error instanceof FixtureError)) throw error;
+    return { fixture: emptyFixtureContent(), findings: fixtureFindings(error.issues) };
+  }
+}
+
 /** Build the staged release content from the fictional fixtures plus the supplied candidate registry. */
 export function buildStagedRelease(options: BuildOptions = {}): StagedBuild {
-  const fixture = buildFixtureContent(loadFixtureData(options.fixturePath ?? DEFAULT_FIXTURE_PATH));
+  const { fixture, findings: fixtureProblems } = loadFixtures(options.fixturePath ?? DEFAULT_FIXTURE_PATH);
   const includeCandidate = options.includeCandidate ?? true;
   const candidate = includeCandidate
     ? buildCandidateContent(options.sourceRoot ?? defaultSourceRoot())
@@ -87,6 +108,6 @@ export function buildStagedRelease(options: BuildOptions = {}): StagedBuild {
     layoutCategories: candidate.layoutCategories,
     visualProfiles: VISUAL_PROFILES,
   };
-  const findings = [...candidate.findings, ...validateRelease(content)];
+  const findings = [...fixtureProblems, ...candidate.findings, ...validateRelease(content)];
   return { content, findings, stats: candidate.stats };
 }

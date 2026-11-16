@@ -120,6 +120,7 @@
       "id": "FX-R4",
       "componentId": "CARPET_KIT",
       "partNo": "FAKE-CK-2002",
+      "qtyPerReplacement": 1,
       "unit": "KIT",
       "constraint": { "variant": ["V04"], "carpet": ["BOTANY"], "seam": ["POST"] },
       "locations": { "kind": "FLOOR", "ids": ["FLOOR:FULL-CABIN"] },
@@ -132,6 +133,7 @@
       "id": "FX-R-700-PRE-FWD-PANEL",
       "componentId": "CARPET_PANEL",
       "partNo": "FAKE-700-PRE-FWD-PANEL",
+      "qtyPerReplacement": 1,
       "unit": "PANEL",
       "constraint": { "subtype": ["FX-700"], "seam": ["PRE"] },
       "locations": { "kind": "FLOOR", "ids": ["FLOOR:FWD"] },
@@ -144,6 +146,7 @@
       "id": "FX-R-V09-AFT-PANEL-DRAFT",
       "componentId": "CARPET_PANEL",
       "partNo": "FAKE-V09-AFT-PANEL-DRAFT",
+      "qtyPerReplacement": 1,
       "unit": "PANEL",
       "constraint": { "variant": ["V09"] },
       "locations": { "kind": "FLOOR", "ids": ["FLOOR:AFT"] },
@@ -168,6 +171,7 @@
       "effectiveFrom": "2025-07-22",
       "effectiveTo": "2026-12-31",
       "source": "FX-DOC-DEV",
+      "released": true,
       "note": "Deviation approval; expires 2026-12-31 inclusive."
     }
   ],

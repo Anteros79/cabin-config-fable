@@ -11,7 +11,6 @@ import type {
   KitChild,
   Layout,
   LayoutRevision,
-  LocationSelector,
   MaintenanceVariant,
   Part,
   PendingChange,
@@ -21,79 +20,26 @@ import type {
   TailAssignment,
   Vocabulary,
 } from "../domain/types.ts";
+import { type FixtureData, FixtureError, parseFixtureData, type SeatSpec } from "./fixtureSchema.ts";
 
-interface SeatSpec {
-  rows: number;
-  omit: string[];
-  exitRows: number[];
-  elrRows: number[];
-}
-
-interface FixtureData {
-  note: string;
-  vocabulary: Vocabulary;
-  sources: { id: string; kind: string; revision: string; title: string; effectiveFrom: string | null; expiresOn: string | null; released: boolean }[];
-  subtypes: { id: string; name: string }[];
-  seatSpecs: Record<string, SeatSpec>;
-  variants: {
-    id: string;
-    subtype: string;
-    hardware: string | null;
-    elr: string | null;
-    layoutNote: string | null;
-    power: boolean | null;
-    cabinHeight: string | null;
-    statusNote: string;
-    seatSpec: string | null;
-    released: boolean;
-  }[];
-  aircraft: { tail: string; subtype: string; note: string }[];
-  assignments: {
-    tail: string;
-    variant: string;
-    carpet: string | null;
-    seam: string | null;
-    from: string;
-    to: string | null;
-    source: string;
-    status?: "planned";
-  }[];
-  components: ComponentDef[];
-  seatRuleSource: string;
-  carpetRuleSource: string;
-  ruleEffectiveFrom: string;
-  partOverrides: Record<string, string>;
-  variantOmissions: Record<string, { noBinRules?: boolean; backrestExitSource?: string; aftPanelUnreleased?: boolean }>;
-  extraParts: { partNo: string; description: string }[];
-  extraRules: {
-    id: string;
-    componentId: string;
-    partNo: string;
-    unit: string;
-    constraint: ContextConstraint;
-    locations: LocationSelector;
-    effectiveFrom: string;
-    effectiveTo?: string | null;
-    source: string;
-    released: boolean;
-    note?: string;
-  }[];
-  pendingChanges: PendingChange[];
-  substitutes: {
-    id: string;
-    componentId: string;
-    primaryPartNo: string;
-    altPartNo: string;
-    qtyPerReplacement: number;
-    unit: string;
-    constraint: ContextConstraint;
-    locations?: LocationSelector;
-    effectiveFrom: string;
-    effectiveTo: string | null;
-    source: string;
-    note?: string;
-  }[];
-  kitChildren: { parentPartNo: string; childPartNo: string; qty: number; unit: string; source: string }[];
+/** Fixture content with nothing in it: what a release gets from a fixture file that is invalid. */
+export function emptyFixtureContent(): FixtureContent {
+  return {
+    vocabulary: { carpets: [], seams: [], upholsteries: [], units: [] },
+    sources: [],
+    subtypes: [],
+    aircraft: [],
+    variants: [],
+    layouts: [],
+    layoutRevisions: [],
+    assignments: [],
+    components: [],
+    parts: [],
+    rules: [],
+    substitutes: [],
+    kitChildren: [],
+    pendingChanges: [],
+  };
 }
 
 export interface FixtureContent {
@@ -116,6 +62,13 @@ export interface FixtureContent {
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 const ZONES = ["ELR", "STD", "EXIT"] as const;
 const ns = "fixture" as const;
+/** Seat components the builder generates rules for, and so the only ones a seat part override can name. */
+const SEAT_COMPONENTS = ["CUSHION", "BACKREST"];
+/** The forward floor area is rows 1 to FWD_LAST_ROW; the aft area is the last AFT_ROWS rows; mid is what lies between. */
+const FWD_LAST_ROW = 5;
+const AFT_ROWS = 10;
+/** Fewest rows for which the forward, mid and aft areas are each at least one row and do not overlap. */
+const MIN_SEAT_ROWS = FWD_LAST_ROW + 1 + AFT_ROWS;
 
 function zoneOf(spec: SeatSpec, row: number): (typeof ZONES)[number] {
   if (spec.exitRows.includes(row)) return "EXIT";
@@ -125,9 +78,9 @@ function zoneOf(spec: SeatSpec, row: number): (typeof ZONES)[number] {
 
 function floorAreas(rows: number): { id: string; label: string; from: number; to: number }[] {
   return [
-    { id: "FWD", label: "Forward floor area", from: 1, to: 5 },
-    { id: "MID", label: "Mid floor area", from: 6, to: rows - 10 },
-    { id: "AFT", label: "Aft floor area", from: rows - 9, to: rows },
+    { id: "FWD", label: "Forward floor area", from: 1, to: FWD_LAST_ROW },
+    { id: "MID", label: "Mid floor area", from: FWD_LAST_ROW + 1, to: rows - AFT_ROWS },
+    { id: "AFT", label: "Aft floor area", from: rows - AFT_ROWS + 1, to: rows },
   ];
 }
 
@@ -229,8 +182,87 @@ function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, source
   };
 }
 
+/** Is `code` (`<row><letter>`) a seat of the spec's full row-and-letter grid, before omissions? */
+function gridHas(spec: SeatSpec, code: string): boolean {
+  const match = /^([1-9][0-9]*)([A-Z])$/.exec(code);
+  return match !== null && Number(match[1]) <= spec.rows && LETTERS.includes(match[2] ?? "");
+}
+
+/** `zone|letter` pairs that at least one seat of the spec has, i.e. the seat rules the builder generates. */
+function reachableSeats(spec: SeatSpec): Set<string> {
+  const reachable = new Set<string>();
+  for (let row = 1; row <= spec.rows; row++) {
+    for (const letter of LETTERS) if (!spec.omit.includes(`${row}${letter}`)) reachable.add(`${zoneOf(spec, row)}|${letter}`);
+  }
+  return reachable;
+}
+
+/**
+ * Cross-reference problems in schema-valid fixture data, one `path: message` line each. Every check
+ * guards a key the builder would otherwise ignore or a value it would turn into nonsense.
+ */
+export function fixtureReferenceIssues(data: FixtureData): string[] {
+  const issues: string[] = [];
+  const variants = new Map(data.variants.map((v) => [v.id, v]));
+  const componentIds = new Set(data.components.map((c) => c.id));
+
+  for (const [id, spec] of Object.entries(data.seatSpecs)) {
+    if (spec.rows < MIN_SEAT_ROWS) {
+      issues.push(`seatSpecs.${id}.rows: ${spec.rows} rows is fewer than the ${MIN_SEAT_ROWS} the forward, mid and aft floor areas need.`);
+    }
+    for (const code of spec.omit) {
+      if (!gridHas(spec, code)) issues.push(`seatSpecs.${id}.omit: seat ${code} is not in this ${spec.rows}-row layout (letters ${LETTERS.join("")}).`);
+    }
+  }
+  data.variants.forEach((v, i) => {
+    if (v.seatSpec !== null && !Object.hasOwn(data.seatSpecs, v.seatSpec)) issues.push(`variants.${i}.seatSpec: seat spec ${v.seatSpec} is not defined.`);
+  });
+  for (const id of Object.keys(data.variantOmissions)) {
+    if (!variants.has(id)) issues.push(`variantOmissions.${id}: variant ${id} does not exist.`);
+  }
+  for (const key of Object.keys(data.partOverrides)) {
+    const problem = overrideProblem(key, data, variants, componentIds);
+    if (problem) issues.push(`partOverrides.${key}: ${problem}`);
+  }
+  const seenParts = new Set<string>();
+  data.extraParts.forEach((p, i) => {
+    if (seenParts.has(p.partNo)) issues.push(`extraParts.${i}.partNo: part ${p.partNo} is listed more than once.`);
+    seenParts.add(p.partNo);
+  });
+  return issues;
+}
+
+/** Why a part override key matches no rule the builder generates, or null when it does. */
+function overrideProblem(key: string, data: FixtureData, variants: Map<string, FixtureData["variants"][number]>, componentIds: Set<string>): string | null {
+  const fields = key.split("|");
+  const variant = variants.get(fields[0] ?? "");
+  if (!variant) return `variant ${fields[0]} does not exist.`;
+  if (!variant.released || variant.seatSpec === null) return `variant ${variant.id} is not released with a seat spec, so no rule uses this override.`;
+  if (fields.length === 2 && fields[1] === "CARPET_KIT") return null;
+  if (fields.length !== 4) return "expected VARIANT|ZONE|LETTER|COMPONENT or VARIANT|CARPET_KIT.";
+  const [, zone = "", letter = "", component = ""] = fields;
+  if (!(ZONES as readonly string[]).includes(zone)) return `zone ${zone} is not one of ${ZONES.join(", ")}.`;
+  if (!LETTERS.includes(letter)) return `seat letter ${letter} is not one of ${LETTERS.join(", ")}.`;
+  if (!SEAT_COMPONENTS.includes(component) || !componentIds.has(component))
+    return `component ${component} is not a seat component (${SEAT_COMPONENTS.join(", ")}).`;
+  const spec = data.seatSpecs[variant.seatSpec];
+  if (spec && !reachableSeats(spec).has(`${zone}|${letter}`)) return `no seat of variant ${variant.id} is in zone ${zone} with letter ${letter}.`;
+  return null;
+}
+
+/** Read, parse and validate the fixture file. Throws `FixtureError` listing every problem. */
 export function loadFixtureData(path: string): FixtureData {
-  return JSON.parse(readFileSync(path, "utf8")) as FixtureData;
+  let json: unknown;
+  try {
+    json = JSON.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    throw new FixtureError([`fixture: cannot be read as JSON (${error instanceof Error ? error.message : String(error)}).`]);
+  }
+  const parsed = parseFixtureData(json);
+  if (parsed.data === null) throw new FixtureError(parsed.issues);
+  const issues = fixtureReferenceIssues(parsed.data);
+  if (issues.length > 0) throw new FixtureError(issues);
+  return parsed.data;
 }
 
 export function buildFixtureContent(data: FixtureData): FixtureContent {
@@ -405,7 +437,7 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
       namespace: ns,
       componentId: r.componentId,
       partNo: r.partNo,
-      qtyPerReplacement: 1,
+      qtyPerReplacement: r.qtyPerReplacement,
       unit: r.unit,
       constraint: r.constraint,
       locations: r.locations,
@@ -426,7 +458,7 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
     unit: s.unit,
     constraint: s.constraint,
     locations: s.locations,
-    released: true,
+    released: s.released,
     effectiveFrom: s.effectiveFrom,
     effectiveTo: s.effectiveTo,
     sourceId: s.source,
@@ -440,8 +472,29 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
     sourceId: k.source,
   }));
 
+  const vocabulary: Vocabulary = {
+    carpets: [...data.vocabulary.carpets],
+    seams: [...data.vocabulary.seams],
+    upholsteries: [...data.vocabulary.upholsteries],
+    units: [...data.vocabulary.units],
+  };
+  const components: ComponentDef[] = data.components.map((c) => ({
+    id: c.id,
+    name: c.name,
+    locationKind: c.locationKind,
+    maxReplacementsPerLocation: c.maxReplacementsPerLocation,
+    countNote: c.countNote,
+  }));
+  const pendingChanges: PendingChange[] = data.pendingChanges.map((p) => ({
+    id: p.id,
+    ruleId: p.ruleId,
+    note: p.note,
+    sourceId: p.sourceId,
+    proposedEffectiveFrom: p.proposedEffectiveFrom,
+  }));
+
   return {
-    vocabulary: data.vocabulary,
+    vocabulary,
     sources,
     subtypes,
     aircraft,
@@ -449,11 +502,11 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
     layouts,
     layoutRevisions,
     assignments,
-    components: data.components,
+    components,
     parts: [...parts.values()].sort((a, b) => compareCodePoints(a.partNo, b.partNo)),
     rules,
     substitutes,
     kitChildren,
-    pendingChanges: data.pendingChanges,
+    pendingChanges,
   };
 }
