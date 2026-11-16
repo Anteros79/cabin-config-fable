@@ -135,11 +135,28 @@ describe("buildStates", () => {
     expect(buildStates(ws).scene.get("SEAT:3A")?.components[resolved.componentId]).toBe("alternate");
   });
 
-  it("a location shows a record first, then an unresolved component, then an alternate", () => {
+  it("a location shows an unresolved component first, then a record, then an alternate", () => {
     expect(aggregateStatus([])).toBe("none");
     expect(aggregateStatus(["alternate", "none"])).toBe("alternate");
     expect(aggregateStatus(["alternate", "unresolved"])).toBe("unresolved");
-    expect(aggregateStatus(["unresolved", "recorded", "alternate"])).toBe("recorded");
+    expect(aggregateStatus(["alternate", "recorded"])).toBe("recorded");
+    expect(aggregateStatus(["unresolved", "recorded", "alternate"])).toBe("unresolved");
+    expect(aggregateStatus(["recorded", "unresolved"])).toBe("unresolved");
+  });
+
+  it("a seat with one component recorded and another unresolved still needs attention: it shows unresolved", () => {
+    const ws = workspace([recordAt("SEAT:3A", "CUSHION")]);
+    ws.resolution = {
+      ...snap.resolution,
+      components: snap.resolution.components.map((c) =>
+        c.locationId === "SEAT:3A" && c.componentId === "BACKREST"
+          ? { locationId: c.locationId, componentId: c.componentId, status: "NO_MATCH" as const, message: "none", excluded: [] }
+          : c,
+      ),
+    };
+    const { scene, flags } = buildStates(ws);
+    expect(scene.get("SEAT:3A")?.components).toEqual({ CUSHION: "recorded", BACKREST: "unresolved" });
+    expect(flags.get("SEAT:3A")).toMatchObject({ recorded: 1, unresolved: 1, status: "unresolved" });
   });
 
   it("without a resolution or records there is nothing to show", () => {
@@ -168,10 +185,10 @@ describe("seatLabelFor", () => {
 
   it("appends recorded and unresolved counts with correct plurals", () => {
     const loc = location("FLOOR:FULL-CABIN");
-    expect(seatLabelFor(loc, { recorded: 1, unresolved: 1, resolved: 0, alternate: 0, status: "recorded" })).toBe(
+    expect(seatLabelFor(loc, { recorded: 1, unresolved: 1, resolved: 0, alternate: 0, status: "unresolved" })).toBe(
       `${loc.label}, 1 replacement recorded, 1 component unresolved`,
     );
-    expect(seatLabelFor(loc, { recorded: 2, unresolved: 3, resolved: 0, alternate: 0, status: "recorded" })).toBe(
+    expect(seatLabelFor(loc, { recorded: 2, unresolved: 3, resolved: 0, alternate: 0, status: "unresolved" })).toBe(
       `${loc.label}, 2 replacements recorded, 3 components unresolved`,
     );
     expect(seatLabelFor(loc, { recorded: 0, unresolved: 0, resolved: 2, alternate: 1, status: "alternate" })).toBe(

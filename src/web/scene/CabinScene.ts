@@ -215,8 +215,12 @@ export class CabinScene {
   private frames = new Map<string, THREE.BufferGeometry>();
   /** the canvas height in CSS pixels, read by the outline and badge shaders for their pixel minimums */
   private viewport: ViewportUniform = { value: 0 };
-  private floorMeshes: { mesh: THREE.Mesh; locationId: string | null; overlay: THREE.Mesh | null }[] = [];
+  private floorMeshes: { mesh: THREE.Mesh; locationId: string | null }[] = [];
+  /** the aisle strip: the full-cabin floor's pick target; never drawn (its tint is an instance of floorTint) */
   private fullCabinOverlay: THREE.Mesh | null = null;
+  /** every floor-area tint and the aisle strip's, as instances of one flat unit plane: one draw call (WEB-20) */
+  private floorTint: THREE.InstancedMesh | null = null;
+  private floorTintEntries: { locationId: string; matrix: THREE.Matrix4 }[] = [];
   private binSides: { side: "L" | "R"; door: THREE.InstancedMesh; body: THREE.InstancedMesh; locations: CabinLocation[]; extras: THREE.Object3D[] }[] = [];
   private contextSides: { side: "L" | "R"; wallMaterial: THREE.MeshStandardMaterial }[] = [];
   private states = new Map<string, LocationState>();
@@ -495,6 +499,7 @@ export class CabinScene {
     this.layoutResources.disposeAll();
     this.seatMeshes = [];
     this.floorMeshes = [];
+    this.floorTintEntries = [];
     this.binSides = [];
     this.contextSides = [];
     this.paletteMaterials = [];
@@ -625,16 +630,9 @@ export class CabinScene {
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(x, 0, 0);
       this.groups.floor.add(mesh);
-      let overlay: THREE.Mesh | null = null;
-      if (locationId) {
-        overlay = new THREE.Mesh(own(new THREE.PlaneGeometry(lx - 0.06, halfW * 2 - 0.06)), own(createOverlayMaterial(0.34)));
-        overlay.rotation.x = -Math.PI / 2;
-        overlay.position.set(x, 0.006, 0);
-        overlay.visible = false;
-        overlay.renderOrder = 4;
-        this.groups.floor.add(overlay);
-      }
-      this.floorMeshes.push({ mesh, locationId, overlay });
+      if (locationId)
+        this.floorTintEntries.push({ locationId, matrix: new THREE.Matrix4().makeScale(lx - 0.06, 1, halfW * 2 - 0.06).setPosition(x, 0.006, 0) });
+      this.floorMeshes.push({ mesh, locationId });
     };
     const areas = layout.locations.filter((l) => l.kind === "FLOOR" && l.floor?.areaType === "AREA");
     if (areas.length > 0) for (const a of areas) addFloor(a.placement.x, a.placement.lx, a.id);
@@ -647,13 +645,24 @@ export class CabinScene {
     // The aisle strip shows the full-cabin floor's status and is its pick target (WEB-18): the area under it is reached
     // anywhere else across the cabin width.
     if (layout.locations.some((l) => l.id === FULL_CABIN)) {
-      this.fullCabinOverlay = new THREE.Mesh(own(new THREE.PlaneGeometry(length - 0.1, 0.42)), own(createOverlayMaterial(0.4)));
+      this.fullCabinOverlay = new THREE.Mesh(own(new THREE.PlaneGeometry(length - 0.1, 0.42)), own(new THREE.MeshBasicMaterial()));
       this.fullCabinOverlay.rotation.x = -Math.PI / 2;
       this.fullCabinOverlay.position.set(length / 2, 0.009, 0);
       this.fullCabinOverlay.visible = false;
-      this.fullCabinOverlay.renderOrder = 4;
       this.groups.floor.add(this.fullCabinOverlay);
+      // listed after the areas, so its tint is drawn over theirs
+      this.floorTintEntries.push({ locationId: FULL_CABIN, matrix: new THREE.Matrix4().makeScale(length - 0.1, 1, 0.42).setPosition(length / 2, 0.009, 0) });
     } else this.fullCabinOverlay = null;
+    if (this.floorTintEntries.length > 0) {
+      const plane = own(new THREE.PlaneGeometry(1, 1));
+      plane.rotateX(-Math.PI / 2);
+      const tint = own(new THREE.InstancedMesh(plane, own(createOverlayMaterial(0.36)), this.floorTintEntries.length));
+      tint.setColorAt(0, WHITE);
+      tint.renderOrder = 4;
+      tint.frustumCulled = false;
+      this.groups.floor.add(tint);
+      this.floorTint = tint;
+    } else this.floorTint = null;
     // narrow aisle borders
     const border = paletteStd("aisleBorder", 0.35, 0.6);
     for (const sign of [1, -1]) {
@@ -996,16 +1005,19 @@ export class CabinScene {
         if (o.instanceColor) o.instanceColor.needsUpdate = true;
       }
     }
-    for (const f of this.floorMeshes) {
-      if (!f.overlay || !f.locationId) continue;
-      const c = status ? colourFor(this.statusOf(f.locationId)) : null;
-      f.overlay.visible = Boolean(c);
-      if (c) (f.overlay.material as THREE.MeshBasicMaterial).color.copy(c);
-    }
-    if (this.fullCabinOverlay) {
-      const c = status ? colourFor(this.statusOf(FULL_CABIN)) : null;
-      this.fullCabinOverlay.visible = Boolean(c);
-      if (c) (this.fullCabinOverlay.material as THREE.MeshBasicMaterial).color.copy(c);
+    if (this.floorTint) {
+      // packed and counted like the headrest tint
+      let tints = 0;
+      for (const f of this.floorTintEntries) {
+        const c = status ? colourFor(this.statusOf(f.locationId)) : null;
+        if (!c) continue;
+        this.floorTint.setMatrixAt(tints, f.matrix);
+        this.floorTint.setColorAt(tints++, c);
+      }
+      this.floorTint.count = tints;
+      this.floorTint.visible = tints > 0;
+      this.floorTint.instanceMatrix.needsUpdate = true;
+      if (this.floorTint.instanceColor) this.floorTint.instanceColor.needsUpdate = true;
     }
     for (const b of this.binSides) {
       b.locations.forEach((l, i) => {

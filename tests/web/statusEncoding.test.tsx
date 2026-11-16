@@ -6,6 +6,8 @@ import type { VisitRecord } from "../../src/domain/types.ts";
 import { Cabin3D } from "../../src/web/components/Cabin3D.tsx";
 import { CabinMap } from "../../src/web/components/CabinMap.tsx";
 import { buildStates, type LocationStatus, STATUS_ENCODING, type Workspace } from "../../src/web/model.ts";
+import { STATUS_COLOUR } from "../../src/web/scene/materials.ts";
+import { BADGE_GLYPHS } from "../../src/web/scene/textures.ts";
 import { fixtureRelease, snapshotFor } from "../helpers.ts";
 
 // jsdom has no WebGL; the legend does not need a scene.
@@ -134,9 +136,23 @@ describe("STATUS_ENCODING", () => {
           );
           const differentGlyph = STATUS_ENCODING[a].glyph !== STATUS_ENCODING[b].glyph;
           expect(difference >= 15 || differentGlyph, `${a} and ${b} under ${kind}: ΔE ${difference.toFixed(1)}, same glyph`).toBe(true);
+          // and the colours alone are distinguishable too, so a glyph too small to read still leaves the colour
+          expect(difference, `${a} and ${b} under ${kind}`).toBeGreaterThanOrEqual(15);
         }
       }
     }
+  });
+});
+
+describe("the scene uses the same encoding", () => {
+  test("each 3D status colour is exactly its --status-* token", () => {
+    for (const s of ["recorded", "unresolved", "alternate"] as const) {
+      expect(`#${STATUS_COLOUR[s].getHexString()}`).toBe(tokenHex(STATUS_ENCODING[s].token).toLowerCase());
+    }
+  });
+
+  test("every glyph has a cell in the badge atlas", () => {
+    for (const s of STATUSES) expect(BADGE_GLYPHS, s).toContain(STATUS_ENCODING[s].glyph);
   });
 });
 

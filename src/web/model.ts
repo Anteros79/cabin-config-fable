@@ -29,10 +29,13 @@ export const GLYPH_PATHS: Record<Exclude<StatusGlyph, "none">, string> = {
   alternate: "M6 9.5h11M14 6.5l3 3-3 3M18 14.5H7M10 11.5l-3 3 3 3",
 };
 
-/** The status a whole location shows: a record wins, then an unresolved component, then an eligible alternate. */
+/**
+ * The status a whole location shows: an unresolved component wins (the location still needs attention, even with other
+ * parts recorded), then a record, then an eligible alternate.
+ */
 export function aggregateStatus(statuses: Iterable<LocationStatus>): LocationStatus {
   let out: LocationStatus = "none";
-  const rank: Record<LocationStatus, number> = { none: 0, alternate: 1, unresolved: 2, recorded: 3 };
+  const rank: Record<LocationStatus, number> = { none: 0, alternate: 1, recorded: 2, unresolved: 3 };
   for (const s of statuses) if (rank[s] > rank[out]) out = s;
   return out;
 }
