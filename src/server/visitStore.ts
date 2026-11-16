@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../domain/canonical.ts";
 import { sha256Hex } from "../domain/hash.ts";
 import { buildReport } from "../domain/report.ts";
-import type { Report, Visit, VisitEvent, VisitRecord, VisitSnapshot, VisitSummary } from "../domain/types.ts";
+import type { Report, Visit, VisitEvent, VisitRecord, VisitSnapshot, VisitState, VisitSummary } from "../domain/types.ts";
 import { DomainError, deriveRecord } from "../domain/visitLogic.ts";
 import { isSameFile } from "./config.ts";
 import { inspectStore } from "./referenceStore.ts";
@@ -130,12 +130,12 @@ export interface ListOptions {
 }
 
 export interface VisitMutationResult {
-  visit: Visit;
+  visit: VisitState;
   replayed: boolean;
 }
 
 export interface CompletionResult {
-  visit: Visit;
+  visit: VisitState;
   report: Report;
   alreadyCompleted: boolean;
   replayed: boolean;
@@ -323,9 +323,13 @@ export class VisitStore {
     };
   }
 
-  /** Must be called inside a transaction. */
-  private loadVisit(id: string): Visit {
-    const row = this.db.prepare("SELECT * FROM visits WHERE id = ?").get(id) as Row | undefined;
+  /** Everything but the snapshot. Must be called inside a transaction. */
+  private loadVisitState(id: string): VisitState {
+    const row = this.db
+      .prepare(
+        "SELECT id, number, tail, check_date, technician, status, version, created_at, updated_at, completed_at, reference_release_id, lookup_state, variant_id, layout_revision_id, snapshot_sha256 FROM visits WHERE id = ?",
+      )
+      .get(id) as Row | undefined;
     if (!row) throw new DomainError("VISIT_NOT_FOUND", "Visit not found.", 404);
     const records = (this.db.prepare("SELECT * FROM visit_records WHERE visit_id = ? ORDER BY created_at, location_id, component_id").all(id) as Row[]).map(
       (r) => this.recordOf(r),
@@ -335,11 +339,22 @@ export class VisitStore {
     );
     return {
       ...this.summaryOf(row, records.length),
-      snapshot: JSON.parse(String(row.snapshot_json)) as VisitSnapshot,
       snapshotSha256: String(row.snapshot_sha256),
       records,
       events,
     };
+  }
+
+  /** Must be called inside a transaction. */
+  private loadSnapshot(id: string): VisitSnapshot {
+    const row = this.db.prepare("SELECT snapshot_json FROM visits WHERE id = ?").get(id) as { snapshot_json: string } | undefined;
+    if (!row) throw new DomainError("VISIT_NOT_FOUND", "Visit not found.", 404);
+    return JSON.parse(row.snapshot_json) as VisitSnapshot;
+  }
+
+  /** Must be called inside a transaction. */
+  private loadVisit(id: string): Visit {
+    return { ...this.loadVisitState(id), snapshot: this.loadSnapshot(id) };
   }
 
   createVisit(snapshot: VisitSnapshot, technician: unknown, options: MutationOptions = {}): VisitMutationResult {
@@ -427,10 +442,10 @@ export class VisitStore {
     const requestHash = sha256Hex(canonicalJson({ op: "upsert", visitId, input, expectedRecordVersion: expectedRecordVersion ?? null }));
     return this.write(() => {
       const prior = this.replay(options.idempotencyKey, `visit:${visitId}`, requestHash);
-      if (prior) return { visit: this.loadVisit(visitId), replayed: true };
-      const visit = this.loadVisit(visitId);
+      if (prior) return { visit: this.loadVisitState(visitId), replayed: true };
+      const visit = this.loadVisitState(visitId);
       if (visit.status !== "DRAFT") throw new DomainError("VISIT_LOCKED", "This visit is completed and locked.", 409);
-      const derived = deriveRecord(visit.snapshot, input);
+      const derived = deriveRecord(this.loadSnapshot(visitId), input);
       const existing = visit.records.find((r) => r.locationId === derived.locationId && r.componentId === derived.componentId);
       if (expectedRecordVersion !== undefined && expectedRecordVersion !== (existing?.version ?? 0)) {
         throw new DomainError(
@@ -483,7 +498,7 @@ export class VisitStore {
         now,
       );
       this.remember(options.idempotencyKey, `visit:${visitId}`, requestHash, { ok: true }, now);
-      return { visit: this.loadVisit(visitId), replayed: false };
+      return { visit: this.loadVisitState(visitId), replayed: false };
     });
   }
 
@@ -499,8 +514,8 @@ export class VisitStore {
     const requestHash = sha256Hex(canonicalJson({ op: "remove", visitId, locationId, componentId, expectedRecordVersion: expectedRecordVersion ?? null }));
     return this.write(() => {
       const prior = this.replay(options.idempotencyKey, `visit:${visitId}`, requestHash);
-      if (prior) return { visit: this.loadVisit(visitId), replayed: true };
-      const visit = this.loadVisit(visitId);
+      if (prior) return { visit: this.loadVisitState(visitId), replayed: true };
+      const visit = this.loadVisitState(visitId);
       if (visit.status !== "DRAFT") throw new DomainError("VISIT_LOCKED", "This visit is completed and locked.", 409);
       const existing = visit.records.find((r) => r.locationId === locationId && r.componentId === componentId);
       if (!existing) throw new DomainError("RECORD_NOT_FOUND", "That replacement is not recorded on this visit (it may already have been removed).", 404);
@@ -513,7 +528,7 @@ export class VisitStore {
       this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
       this.event(visitId, "RECORD_REMOVED", { locationId, componentId, recordVersion: existing.version }, now);
       this.remember(options.idempotencyKey, `visit:${visitId}`, requestHash, { ok: true }, now);
-      return { visit: this.loadVisit(visitId), replayed: false };
+      return { visit: this.loadVisitState(visitId), replayed: false };
     });
   }
 
@@ -525,7 +540,7 @@ export class VisitStore {
   completeVisit(visitId: string, expectedVisitVersion: number | undefined, options: MutationOptions = {}): CompletionResult {
     const now = options.now ?? new Date().toISOString();
     return this.write(() => {
-      const visit = this.loadVisit(visitId);
+      const visit = this.loadVisitState(visitId);
       if (visit.status === "COMPLETED") {
         return { visit, report: this.storedReport(visitId), alreadyCompleted: true, replayed: Boolean(options.idempotencyKey) };
       }
@@ -536,8 +551,9 @@ export class VisitStore {
       }
       if (visit.records.length === 0) throw new DomainError("EMPTY_VISIT", "Record at least one replacement before completing the visit.", 409);
       // Re-derive every record from the frozen snapshot: what is locked must be what the rules produce.
+      const snapshot = this.loadSnapshot(visitId);
       for (const record of visit.records) {
-        const derived = deriveRecord(visit.snapshot, {
+        const derived = deriveRecord(snapshot, {
           locationId: record.locationId,
           componentId: record.componentId,
           selection: record.selection,
@@ -555,8 +571,8 @@ export class VisitStore {
       }
       this.db.prepare("UPDATE visits SET status = 'COMPLETED', completed_at = ?, updated_at = ?, version = version + 1 WHERE id = ?").run(now, now, visitId);
       this.event(visitId, "COMPLETED", { records: visit.records.length }, now);
-      const completed = this.loadVisit(visitId);
-      const report = buildReport(completed, "FINAL", now);
+      const completed = this.loadVisitState(visitId);
+      const report = buildReport({ ...completed, snapshot }, "FINAL", now);
       const reportJson = canonicalJson(report);
       this.db
         .prepare("INSERT INTO reports(visit_id, schema, generated_at, basis_sha256, report_json) VALUES (?, ?, ?, ?, ?)")
@@ -591,16 +607,16 @@ export class VisitStore {
   }
 
   /** Later advisories and corrections are appended as linked events; visit content is not edited. */
-  addLinkedEvent(visitId: string, type: unknown, note: unknown, author: unknown, options: MutationOptions = {}): Visit {
+  addLinkedEvent(visitId: string, type: unknown, note: unknown, author: unknown, options: MutationOptions = {}): VisitState {
     if (type !== "ADVISORY" && type !== "CORRECTION_NOTE") throw new DomainError("INVALID_EVENT", "Event type must be ADVISORY or CORRECTION_NOTE.");
     if (typeof note !== "string" || note.trim().length === 0 || note.length > 2000)
       throw new DomainError("INVALID_EVENT", "A note of 1-2000 characters is required.");
     const by = typeof author === "string" ? author.trim().slice(0, 80) : "";
     const now = options.now ?? new Date().toISOString();
     return this.write(() => {
-      this.loadVisit(visitId);
+      this.loadVisitState(visitId);
       this.event(visitId, type, { note: note.trim(), author: by }, now);
-      return this.loadVisit(visitId);
+      return this.loadVisitState(visitId);
     });
   }
 

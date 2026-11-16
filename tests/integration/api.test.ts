@@ -30,6 +30,35 @@ async function pdfText(bytes: Buffer): Promise<{ pages: number; text: string }> 
   return { pages: doc.numPages, text: parts.join("\n").replace(/\s+/g, " ") };
 }
 
+describe("mutation responses", () => {
+  it("omit the snapshot and stay small", async () => {
+    const app = makeApp();
+    const created = json(await post(app, "/api/visits", { tail: "N100TL", checkDate: "2026-11-12" }));
+    expect(created.visit.snapshot).toBeDefined();
+    const res = await put(app, `/api/visits/${created.visit.id}/records`, { record: CUSHION_3A });
+    expect(res.statusCode).toBe(200);
+    expect("snapshot" in json(res).visit).toBe(false);
+    expect(res.rawPayload.length).toBeLessThan(8_000);
+    expect(json(res).visit.records).toHaveLength(1);
+    expect(json(res).visit.snapshotSha256).toBe(created.visit.snapshotSha256);
+    const removed = await post(app, `/api/visits/${created.visit.id}/records/remove`, {
+      locationId: CUSHION_3A.locationId,
+      componentId: CUSHION_3A.componentId,
+    });
+    expect("snapshot" in json(removed).visit).toBe(false);
+    await put(app, `/api/visits/${created.visit.id}/records`, { record: CUSHION_3A });
+    const done = await post(app, `/api/visits/${created.visit.id}/complete`, { confirm: true });
+    expect(done.statusCode).toBe(200);
+    expect("snapshot" in json(done).visit).toBe(false);
+    expect(json(done).report.schema).toBeDefined();
+    const ev = await post(app, `/api/visits/${created.visit.id}/events`, { type: "ADVISORY", note: "n", author: "a" });
+    expect("snapshot" in json(ev).visit).toBe(false);
+    const got = json(await app.app.inject(`/api/visits/${created.visit.id}`));
+    expect(got.visit.snapshot).toBeDefined();
+    await app.close();
+  });
+});
+
 describe("lookup API", () => {
   it("returns each state with an explicit reason and never a guessed configuration", async () => {
     const app = makeApp();

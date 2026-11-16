@@ -565,6 +565,9 @@ export interface Visit extends VisitSummary {
   events: VisitEvent[];
 }
 
+/** A visit without its frozen snapshot: what write responses carry. */
+export type VisitState = Omit<Visit, "snapshot">;
+
 export interface ReportTotalLine {
   partNo: string;
   description: string;

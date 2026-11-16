@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LookupResult, RecordInput, Visit, VisitRecord, VisualProfile } from "../../domain/types.ts";
-import { ApiError, api, newKey, type VisitEnvelope } from "../api.ts";
+import { ApiError, api, newKey, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
 import { Inspector, type SaveState } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import type { Workspace } from "../model.ts";
@@ -165,14 +165,21 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
   };
 
   /** Runs a write with one idempotency key that is reused on retry, and reports the outcome honestly. */
-  const mutate = (target: string, label: string, op: (key: string) => Promise<VisitEnvelope>, after?: (res: VisitEnvelope) => void) => {
+  const mutate = (
+    target: string,
+    label: string,
+    op: (key: string) => Promise<VisitEnvelope | VisitStateEnvelope>,
+    after?: (res: VisitEnvelope | VisitStateEnvelope) => void,
+  ) => {
     const key = newKey();
     const attempt = async () => {
       setSaveState({ status: "saving", message: `${label}…`, target });
       try {
         const res = await op(key);
         pending.current = null;
-        setVisit(res.visit);
+        // Writes return the visit without its snapshot; keep the one loaded by the initial GET.
+        const next = res.visit;
+        setVisit((current) => ("snapshot" in next ? next : current && current.id === next.id ? { ...next, snapshot: current.snapshot } : current));
         setSaveState({
           status: "saved",
           message: res.replayed ? "Saved. The earlier attempt had already been stored; nothing was duplicated." : "Saved.",

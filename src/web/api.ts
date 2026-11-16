@@ -10,6 +10,7 @@ import type {
   SourceArtifact,
   Visit,
   VisitEvent,
+  VisitState,
   VisitSummary,
   VisualProfile,
 } from "../domain/types.ts";
@@ -131,6 +132,11 @@ export interface VisitEnvelope {
   referenceNow?: { releaseId: string | null; changedSinceVisit: boolean };
   replayed?: boolean;
 }
+/** What a write returns: the visit without its frozen snapshot. Keep the snapshot from the initial GET. */
+export interface VisitStateEnvelope {
+  visit: VisitState;
+  replayed?: boolean;
+}
 export interface ReportEnvelope {
   report: Report;
   basisSha256: string | null;
@@ -158,15 +164,16 @@ export const api = {
   createVisit: (tail: string, checkDate: string, technician: string, idempotencyKey: string) =>
     request<VisitEnvelope>("POST", "/api/visits", { tail, checkDate, technician, idempotencyKey }),
   upsertRecord: (id: string, record: RecordInput, expectedRecordVersion: number, idempotencyKey: string) =>
-    request<VisitEnvelope>("PUT", `/api/visits/${id}/records`, { record, expectedRecordVersion, idempotencyKey }),
+    request<VisitStateEnvelope>("PUT", `/api/visits/${id}/records`, { record, expectedRecordVersion, idempotencyKey }),
   removeRecord: (id: string, locationId: string, componentId: string, expectedRecordVersion: number, idempotencyKey: string) =>
-    request<VisitEnvelope>("POST", `/api/visits/${id}/records/remove`, { locationId, componentId, expectedRecordVersion, idempotencyKey }),
+    request<VisitStateEnvelope>("POST", `/api/visits/${id}/records/remove`, { locationId, componentId, expectedRecordVersion, idempotencyKey }),
   complete: (id: string, expectedVisitVersion: number, idempotencyKey: string) =>
-    request<{ visit: Visit; report: Report; alreadyCompleted: boolean }>("POST", `/api/visits/${id}/complete`, {
+    request<{ visit: VisitState; report: Report; alreadyCompleted: boolean }>("POST", `/api/visits/${id}/complete`, {
       confirm: true,
       expectedVisitVersion,
       idempotencyKey,
     }),
   report: (id: string) => request<ReportEnvelope>("GET", `/api/visits/${id}/report`),
-  addEvent: (id: string, type: string, note: string, author: string) => request<{ visit: Visit }>("POST", `/api/visits/${id}/events`, { type, note, author }),
+  addEvent: (id: string, type: string, note: string, author: string) =>
+    request<{ visit: VisitState }>("POST", `/api/visits/${id}/events`, { type, note, author }),
 };
