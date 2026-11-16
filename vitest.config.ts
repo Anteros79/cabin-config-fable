@@ -1,6 +1,10 @@
 import { defineConfig } from "vitest/config";
 
-// Three projects so each tier gets its own timeout. Phase 4 adds a `web` project.
+// Projects give each tier its own timeout. Phase 4 adds a `web` project.
+// Files whose assertions are wall-clock/CPU bounds live in `perf`: the other projects exclude them, and the
+// `perf` runs alone: serial files, in its own sequence group that starts only after every other project has finished.
+const PERF_FILES = ["tests/unit/scale.test.ts", "tests/unit/kits.test.ts", "tests/unit/xlsx.test.ts"];
+
 export default defineConfig({
   test: {
     projects: [
@@ -8,9 +12,21 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["tests/unit/**/*.test.ts"],
+          exclude: [...PERF_FILES, "**/node_modules/**"],
           testTimeout: 5000,
           hookTimeout: 5000,
           pool: "forks",
+        },
+      },
+      {
+        test: {
+          name: "perf",
+          include: PERF_FILES,
+          testTimeout: 5000,
+          hookTimeout: 5000,
+          pool: "forks",
+          fileParallelism: false,
+          sequence: { groupOrder: 1 },
         },
       },
       {
