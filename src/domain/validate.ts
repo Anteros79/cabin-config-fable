@@ -400,6 +400,18 @@ export function validateRelease(input: unknown): Finding[] {
     if (p.sourceId !== null && !sources.has(p.sourceId)) err("ORPHAN", `Pending change ${p.id} cites unknown source ${p.sourceId}.`, [p.id]);
   }
   findings.push(...validateKits(content.kitChildren, parts, units, sources));
+  // A kit child citing an unreleased source makes every rule or alternate that needs it ineligible at lookup (D3).
+  const sourceById = new Map(content.sources.map((s) => [s.id, s]));
+  for (const k of content.kitChildren) {
+    const source = sourceById.get(k.sourceId);
+    if (source && !source.released) {
+      warn(
+        "KIT_SOURCE_UNRELEASED",
+        `Kit line ${k.parentPartNo}>${k.childPartNo} cites unreleased source ${k.sourceId}; no lookup can select ${k.parentPartNo} or any kit containing it.`,
+        [`${k.parentPartNo}>${k.childPartNo}`],
+      );
+    }
+  }
 
   for (const c of content.layoutCategories) {
     for (const x of c.crosswalk)

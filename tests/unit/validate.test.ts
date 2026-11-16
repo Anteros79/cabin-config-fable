@@ -317,6 +317,25 @@ describe("referential findings", () => {
   });
 });
 
+describe("kit child sources (DOM-04)", () => {
+  it("KIT_SOURCE_UNRELEASED: a kit child citing an unreleased source is a warning", () => {
+    const findings = validateRelease(
+      fixtureContent((c) => {
+        const draft = must(
+          c.sources.find((s) => !s.released),
+          "an unreleased source",
+        );
+        must(
+          c.kitChildren.find((k) => k.childPartNo === "FAKE-P-41"),
+          "kit line",
+        ).sourceId = draft.id;
+      }),
+    );
+    expectFinding(findings, "KIT_SOURCE_UNRELEASED", "warning", "FAKE-CK-2000>FAKE-P-41");
+    expect(withCode(findings, "KIT_SOURCE_UNRELEASED")).toHaveLength(1);
+  });
+});
+
 describe("the unmodified fixture", () => {
   it("yields exactly these conflicts, the only new ones naming the deliberate FX-700/PRE forward-panel rule", () => {
     const conflicts = stagedFull()

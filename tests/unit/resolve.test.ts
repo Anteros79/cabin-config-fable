@@ -2,7 +2,20 @@ import { describe, expect, it } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
 import { buildIndex, isStrictlyMoreSpecific, isSubset } from "../../src/domain/specificity.ts";
 import type { ApplicabilityRule, ReleaseContent } from "../../src/domain/types.ts";
-import { asRelease, entry, fixtureContent, fixtureRelease, partAt, resolutionAt, cushionRule as rule, withCushionRules as withRules } from "../helpers.ts";
+import { deriveRecord } from "../../src/domain/visitLogic.ts";
+import {
+  asRelease,
+  entry,
+  fixtureContent,
+  fixtureRelease,
+  KIT_ALTERNATE,
+  KIT_PRIMARY,
+  partAt,
+  resolutionAt,
+  cushionRule as rule,
+  snapshotFor,
+  withCushionRules as withRules,
+} from "../helpers.ts";
 
 const release = fixtureRelease();
 
@@ -357,6 +370,106 @@ describe("every exclusion is kept (DOM-01)", () => {
     const r = lookup(release, "N090TL", "2026-11-12");
     const backrest = component(r, "SEAT:12A", "BACKREST");
     expect(backrest.status === "NO_MATCH" && backrest.excluded.map((x) => x.sourceId)).toEqual(["FX-DOC-OLD"]);
+  });
+});
+
+describe("source validity on variants, layouts and kit children (DOM-04)", () => {
+  const someFixtureSource = fixtureContent().sources.find((s) => s.id === "FX-DOC-A")!;
+  const dead = { ...someFixtureSource, id: "X-DEAD", released: false, expiresOn: "2020-01-01" };
+  const carpetKitRule = (r: ReturnType<typeof lookup>) =>
+    entry(r.resolution!.rules, (resolutionAt(r, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId);
+
+  it("a variant citing a dead source is SOURCE_INVALID", () => {
+    const rel = fixtureRelease((c) => {
+      c.sources.push(dead);
+      c.variants.find((v) => v.id === "V01")!.sourceId = "X-DEAD";
+    });
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    expect(r.state).toBe("SOURCE_INVALID");
+    expect(r.reasonCode).toBe("VARIANT_SOURCE_INVALID");
+    expect(r.message).toMatch(/X-DEAD/);
+    expect(r.message).toMatch(/not released/);
+    expect(r.message).toMatch(/expired after 2020-01-01/);
+    expect(r.context).toBeUndefined();
+    expect(r.resolution).toBeUndefined();
+  });
+
+  it("a variant citing a missing source is SOURCE_INVALID, naming the source", () => {
+    const rel = fixtureRelease((c) => (c.variants.find((v) => v.id === "V01")!.sourceId = "X-GONE"));
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    expect(r.state).toBe("SOURCE_INVALID");
+    expect(r.reasonCode).toBe("VARIANT_SOURCE_INVALID");
+    expect(r.message).toMatch(/X-GONE is not in the reference release/);
+  });
+
+  it("a layout revision citing a dead source is SOURCE_INVALID", () => {
+    const rel = fixtureRelease((c) => {
+      c.sources.push(dead);
+      const assigned = c.assignments.find((a) => a.tail === "N100TL")!.layoutRevisionId;
+      c.layoutRevisions.find((x) => x.id === assigned)!.sourceId = "X-DEAD";
+    });
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    expect(r.state).toBe("SOURCE_INVALID");
+    expect(r.reasonCode).toBe("LAYOUT_SOURCE_INVALID");
+    expect(r.message).toMatch(/X-DEAD/);
+  });
+
+  it("an alternate whose kit child cites a dead source is excluded with the reason", () => {
+    const rel = fixtureRelease((c) => {
+      c.sources.push(dead);
+      for (const k of c.kitChildren) if (k.parentPartNo === "FAKE-CK-2000") k.sourceId = "X-DEAD";
+    });
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    expect(r.state).toBe("RESOLVED");
+    const kit = carpetKitRule(r);
+    expect(kit.partNo).toBe("FAKE-CK-2001"); // the primary is unaffected
+    expect(kit.substitutes).toEqual([]);
+    expect(kit.excludedSubstitutes[0]?.altPartNo).toBe("FAKE-CK-2000");
+    expect(kit.excludedSubstitutes[0]?.reasons[0]?.code).toBe("KIT_SOURCE_INVALID");
+    expect(kit.excludedSubstitutes[0]?.reasons[0]?.message).toMatch(/FAKE-P-39.*X-DEAD/);
+    // the dead source is frozen with the snapshot so the report can cite it
+    expect(r.resolution!.sources["X-DEAD"]).toBeDefined();
+  });
+
+  it("deriveRecord refuses that alternate", () => {
+    const rel = fixtureRelease((c) => {
+      c.sources.push(dead);
+      for (const k of c.kitChildren) if (k.parentPartNo === "FAKE-CK-2000") k.sourceId = "X-DEAD";
+    });
+    const snap = snapshotFor(rel, "N100TL", "2026-11-12");
+    expect(() => deriveRecord(snap, KIT_ALTERNATE)).toThrow(expect.objectContaining({ code: "SUBSTITUTE_NOT_APPROVED" }));
+    // the primary can still be recorded
+    expect(deriveRecord(snap, KIT_PRIMARY).lines.map((l) => l.partNo)).toEqual(["FAKE-CK-2001"]);
+  });
+
+  it("a primary part whose kit child at depth two cites a dead source excludes the rule", () => {
+    const rel = fixtureRelease((c) => {
+      c.sources.push(dead);
+      c.kitChildren.push(
+        { parentPartNo: "FAKE-CK-2001", childPartNo: "FAKE-P-39", qty: 1, unit: "PANEL", sourceId: "FX-DOC-B" },
+        { parentPartNo: "FAKE-P-39", childPartNo: "FAKE-P-40", qty: 1, unit: "PANEL", sourceId: "X-DEAD" },
+      );
+    });
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    const comp = resolutionAt(r, "FLOOR:FULL-CABIN", "CARPET_KIT");
+    expect(comp.status).toBe("NO_MATCH");
+    expect(r.state).toBe("PARTIAL");
+    const excluded = comp.excluded?.find((x) => x.partNo === "FAKE-CK-2001");
+    expect(excluded?.reasons.map((x) => x.code)).toEqual(["KIT_SOURCE_INVALID"]);
+    expect(excluded?.reasons[0]?.message).toMatch(/FAKE-P-40.*X-DEAD/);
+    expect(r.resolution!.sources["X-DEAD"]).toBeDefined();
+  });
+
+  it("a source effective exactly on the check date is valid; the day before it is not", () => {
+    const rel = fixtureRelease((c) => {
+      c.sources.push({ ...someFixtureSource, id: "X-NEW", effectiveFrom: "2026-11-12" });
+      c.variants.find((v) => v.id === "V01")!.sourceId = "X-NEW";
+    });
+    expect(lookup(rel, "N100TL", "2026-11-12").state).toBe("RESOLVED");
+    const before = lookup(rel, "N100TL", "2026-11-11");
+    expect(before.state).toBe("SOURCE_INVALID");
+    expect(before.reasonCode).toBe("VARIANT_SOURCE_INVALID");
+    expect(before.message).toMatch(/effective from 2026-11-12/);
   });
 });
 

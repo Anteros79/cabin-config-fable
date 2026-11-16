@@ -376,7 +376,9 @@ export interface ExclusionReason {
     | "SOURCE_NOT_YET_EFFECTIVE"
     | "SOURCE_EXPIRED"
     | "APPROVAL_NOT_YET_EFFECTIVE"
-    | "APPROVAL_EXPIRED";
+    | "APPROVAL_EXPIRED"
+    /** A mandatory kit child, at any depth below the part, cites a source that is not valid on the date. */
+    | "KIT_SOURCE_INVALID";
   message: string;
 }
 

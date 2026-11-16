@@ -52,7 +52,7 @@ One layout serves several variants (fixture `FX-L-S176-800@1` serves V04–V08);
 | UNCONFIGURED | Known tail with no assignment (`NO_ASSIGNMENTS`) or none covering the date (`DATE_GAP`) |
 | OVERLAP | More than one released assignment covers the date. None is selected |
 | PLANNED | Only a planned assignment, an unreleased variant or a planned or candidate layout revision covers the date |
-| SOURCE_INVALID | Configuration source missing, unreleased, not yet effective or expired; or aircraft/variant/layout disagree |
+| SOURCE_INVALID | The source of the assignment (`CONFIGURATION_SOURCE_INVALID`), the variant (`VARIANT_SOURCE_INVALID`) or the layout revision (`LAYOUT_SOURCE_INVALID`) is missing, unreleased, not yet effective or expired; or aircraft/variant/layout disagree |
 | PARTIAL | Configuration resolved; some components have no single applicable part |
 | RESOLVED | Configuration resolved; every component has one applicable part |
 | SERVICE_UNAVAILABLE | Reference store cannot be read (HTTP 503) |
@@ -61,7 +61,7 @@ A planned assignment beside a released one is reported as an advisory and never 
 
 ## Applicability and specificity
 
-For each location and component, candidate rules are those whose component matches, whose context constraint accepts the assignment, and whose location selector covers the location. A rule is excluded, with the reason kept, when it is unreleased, outside its own dates, or its source is missing, unreleased, not yet effective or expired. Every exclusion is kept on the component whatever its outcome (resolved, ambiguous or no match), with the rule, its part and the source it cites; the inspector, the report, the PDF and the preparation list show them under a resolved component as "Rules not used". Substitute approvals are checked the same way against their own scope, dates and approval source.
+For each location and component, candidate rules are those whose component matches, whose context constraint accepts the assignment, and whose location selector covers the location. A rule is excluded, with the reason kept, when it is unreleased, outside its own dates, or its source is missing, unreleased, not yet effective or expired. Every exclusion is kept on the component whatever its outcome (resolved, ambiguous or no match), with the rule, its part and the source it cites; the inspector, the report, the PDF and the preparation list show them under a resolved component as "Rules not used". Substitute approvals are checked the same way against their own scope, dates and approval source. An otherwise eligible rule is also excluded (`KIT_SOURCE_INVALID`, naming the child part and source) when any mandatory kit child of its primary part, at any depth, cites a source that fails the same check; an alternate whose kit has such a child moves to the excluded alternates with the same reason. Validation warns (`KIT_SOURCE_UNRELEASED`) about a kit child citing an unreleased source.
 
 **Specificity is logical implication** (`src/domain/specificity.ts`). A rule's match set is every situation it accepts: (variant, layout revision, location, carpet, seam, upholstery). Rule A beats rule B only if A's match set is a strict subset of B's.
 

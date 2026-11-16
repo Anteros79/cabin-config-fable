@@ -29,8 +29,8 @@ export function normalizeTail(raw: unknown): string {
   return typeof raw === "string" ? raw.trim().toUpperCase() : "";
 }
 
-function sourceExclusions(source: SourceArtifact | undefined, date: IsoDate): ExclusionReason[] {
-  if (!source) return [{ code: "SOURCE_MISSING", message: "The cited source is not in the reference release." }];
+function sourceExclusions(sourceId: string, source: SourceArtifact | undefined, date: IsoDate): ExclusionReason[] {
+  if (!source) return [{ code: "SOURCE_MISSING", message: `Source ${sourceId} is not in the reference release.` }];
   const reasons: ExclusionReason[] = [];
   if (!source.released) reasons.push({ code: "SOURCE_NOT_RELEASED", message: `Source ${source.id} rev ${source.revision} is not released.` });
   if (source.effectiveFrom !== null && date < source.effectiveFrom) {
@@ -48,7 +48,7 @@ export function ruleExclusions(index: ReleaseIndex, rule: ApplicabilityRule, dat
   if (!rule.released) reasons.push({ code: "NOT_RELEASED", message: `Rule ${rule.id} is not released; an unreleased change grants no eligibility.` });
   if (date < rule.effectiveFrom) reasons.push({ code: "RULE_NOT_YET_EFFECTIVE", message: `Rule ${rule.id} is effective from ${rule.effectiveFrom}.` });
   if (rule.effectiveTo !== null && date > rule.effectiveTo) reasons.push({ code: "RULE_EXPIRED", message: `Rule ${rule.id} ended after ${rule.effectiveTo}.` });
-  return [...reasons, ...sourceExclusions(index.sources.get(rule.sourceId), date)];
+  return [...reasons, ...sourceExclusions(rule.sourceId, index.sources.get(rule.sourceId), date)];
 }
 
 export function substituteExclusions(index: ReleaseIndex, sub: SubstituteApproval, date: IsoDate): ExclusionReason[] {
@@ -57,7 +57,36 @@ export function substituteExclusions(index: ReleaseIndex, sub: SubstituteApprova
   if (date < sub.effectiveFrom) reasons.push({ code: "APPROVAL_NOT_YET_EFFECTIVE", message: `Approval ${sub.id} is effective from ${sub.effectiveFrom}.` });
   if (sub.effectiveTo !== null && date > sub.effectiveTo)
     reasons.push({ code: "APPROVAL_EXPIRED", message: `Approval ${sub.id} expired after ${sub.effectiveTo}.` });
-  return [...reasons, ...sourceExclusions(index.sources.get(sub.sourceId), date)];
+  return [...reasons, ...sourceExclusions(sub.sourceId, index.sources.get(sub.sourceId), date)];
+}
+
+/**
+ * Why the mandatory kit below `partNo` cannot be used on this date: one `KIT_SOURCE_INVALID` reason per
+ * kit line, at any depth, whose source fails the source check, and the ids of those sources. Each
+ * parent is walked once, so shared sub-kits are not repeated and a cyclic definition cannot loop
+ * (cycles are reported by `validateKits` and handled by kit expansion).
+ */
+export function kitSourceExclusions(index: ReleaseIndex, partNo: string, date: IsoDate): { reasons: ExclusionReason[]; sourceIds: string[] } {
+  const reasons: ExclusionReason[] = [];
+  const sourceIds: string[] = [];
+  const walked = new Set<string>();
+  const walk = (parent: string) => {
+    if (walked.has(parent)) return;
+    walked.add(parent);
+    for (const line of index.kitChildrenByParent.get(parent) ?? []) {
+      const problems = sourceExclusions(line.sourceId, index.sources.get(line.sourceId), date);
+      if (problems.length > 0) {
+        reasons.push({
+          code: "KIT_SOURCE_INVALID",
+          message: `Kit child ${line.childPartNo} of ${parent} cites source ${line.sourceId}, which is not valid on ${date}: ${problems.map((p) => p.message).join(" ")}`,
+        });
+        if (!sourceIds.includes(line.sourceId)) sourceIds.push(line.sourceId);
+      }
+      walk(line.childPartNo);
+    }
+  };
+  walk(partNo);
+  return { reasons, sourceIds };
 }
 
 function base(tail: string, checkDate: string, releaseId: string | null) {
@@ -198,9 +227,20 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     return invalid(seatSetOnly ? "SEAT_SET_NOT_SUPPLIED" : "INCONSISTENT_CONFIGURATION", problems.join(" "));
   }
   const configurationSource = index.sources.get(assignment.sourceId);
-  const sourceProblems = sourceExclusions(configurationSource, checkDate);
+  const sourceProblems = sourceExclusions(assignment.sourceId, configurationSource, checkDate);
   if (!configurationSource || sourceProblems.length > 0) {
     return invalid("CONFIGURATION_SOURCE_INVALID", `The configuration source is not valid on ${checkDate}: ${sourceProblems.map((r) => r.message).join(" ")}`);
+  }
+  // The variant and the layout revision are released data too: their sources must be valid on the date (D3).
+  const cited: [string, string, string][] = [
+    ["VARIANT_SOURCE_INVALID", `Variant ${variant.id}`, variant.sourceId],
+    ["LAYOUT_SOURCE_INVALID", `Layout revision ${layoutRevision.id}`, layoutRevision.sourceId],
+  ];
+  for (const [reasonCode, owner, sourceId] of cited) {
+    const problems = sourceExclusions(sourceId, index.sources.get(sourceId), checkDate);
+    if (problems.length > 0) {
+      return invalid(reasonCode, `${owner} cites source ${sourceId}, which is not valid on ${checkDate}: ${problems.map((r) => r.message).join(" ")}`);
+    }
   }
 
   const context: ResolvedContext = {
@@ -254,13 +294,17 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
   };
 
   // Rules whose context constraints accept this assignment, with their eligibility on the date.
-  const inContext = new Map<string, { rule: ApplicabilityRule; locations: Set<string>; exclusions: ExclusionReason[] }[]>();
+  // An otherwise eligible rule is excluded when a kit child of its primary part cites an invalid source (D3).
+  const inContext = new Map<string, { rule: ApplicabilityRule; locations: Set<string>; exclusions: ExclusionReason[]; kitSourceIds: string[] }[]>();
   for (const rule of index.release.rules) {
     if (!matchesContext(rule.constraint, ctx)) continue;
     const locations = index.ruleMatch.get(rule.id)?.pairs.get(pairKey);
     if (!locations) continue;
+    let exclusions = ruleExclusions(index, rule, date);
+    let kitSourceIds: string[] = [];
+    if (exclusions.length === 0) ({ reasons: exclusions, sourceIds: kitSourceIds } = kitSourceExclusions(index, rule.partNo, date));
     const list = inContext.get(rule.componentId) ?? [];
-    list.push({ rule, locations, exclusions: ruleExclusions(index, rule, date) });
+    list.push({ rule, locations, exclusions, kitSourceIds });
     inContext.set(rule.componentId, list);
   }
 
@@ -276,7 +320,12 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
       if (!matchesContext(sub.constraint, ctx)) continue;
       const covered = index.substituteMatch.get(sub.id)?.pairs.get(pairKey);
       if (!covered) continue;
-      const exclusions = substituteExclusions(index, sub, date);
+      let exclusions = substituteExclusions(index, sub, date);
+      if (exclusions.length === 0) {
+        const kit = kitSourceExclusions(index, sub.altPartNo, date);
+        exclusions = kit.reasons;
+        for (const id of kit.sourceIds) noteSource(id);
+      }
       if (exclusions.length > 0) {
         excludedSubstitutes.push({ id: sub.id, altPartNo: sub.altPartNo, reasons: exclusions });
         noteSource(sub.sourceId);
@@ -335,12 +384,17 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
       const covering = (inContext.get(componentId) ?? []).filter((c) => c.locations.has(location.id));
       const eligible = covering.filter((c) => c.exclusions.length === 0).map((c) => c.rule);
       // Every exclusion is kept, whatever the outcome, with the source it cites (DOM-01).
-      const excluded: ExcludedRule[] = covering
-        .filter((c) => c.exclusions.length > 0)
-        .map((c) => ({ ruleId: c.rule.id, partNo: c.rule.partNo, sourceId: c.rule.sourceId, reasons: c.exclusions }));
-      excluded.forEach((e) => {
-        noteSource(e.sourceId ?? null);
-      });
+      const excludedEntries = covering.filter((c) => c.exclusions.length > 0);
+      const excluded: ExcludedRule[] = excludedEntries.map((c) => ({
+        ruleId: c.rule.id,
+        partNo: c.rule.partNo,
+        sourceId: c.rule.sourceId,
+        reasons: c.exclusions,
+      }));
+      for (const c of excludedEntries) {
+        noteSource(c.rule.sourceId);
+        for (const id of c.kitSourceIds) noteSource(id);
+      }
       if (eligible.length === 0) {
         counts.noMatch += 1;
         components.push({
