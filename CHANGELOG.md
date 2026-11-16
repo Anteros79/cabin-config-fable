@@ -18,7 +18,7 @@ The platinum-hardening release. It closes the findings of the audit in [`docs/au
 
 ### Phase 0: foundation
 
-- The nine data originals are vendored in `fixtures/originals/`, so a clean clone sets up, starts and tests with nothing outside the repository; one resolver decides the source root, and an empty `CABIN_KIT_SOURCE_ROOT` means unset (TST-01, IMP-12, IMP-14).
+- The nine data originals are vendored in `fixtures/originals/`, so a clean clone sets up, imports and starts with nothing outside the repository (one test still needs the images in `../../`: see Known limits in the README); one resolver decides the source root, and an empty `CABIN_KIT_SOURCE_ROOT` means unset (TST-01, IMP-12, IMP-14).
 - Dependencies patched (`@fastify/static` 10, `sharp` 0.35, `pdfjs-dist` 5.5.207 pinned for tests); `npm audit --omit=dev` is clean.
 - Biome lint and format, `.editorconfig`, `.nvmrc`, `npm run check`, TypeScript project references with `noUncheckedIndexedAccess`, separate server and web type environments, coverage thresholds and a GitHub Actions workflow (TST-09, TST-10).
 - All string ordering in domain, importer and server code is by code point, and `canonicalJson`/`contentHash` live in the domain (DOM-11, SRV-13).

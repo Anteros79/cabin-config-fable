@@ -16,7 +16,7 @@ Cabin Kit helps an aircraft appearance technician bring only the replacement par
 
 ## Quick start
 
-Requires Node.js 24 or later (uses the built-in `node:sqlite` and runs TypeScript directly; no native modules to compile). Network access is needed once, for `npm ci`. The nine data originals the import reads are vendored in `fixtures/originals/`, so a fresh clone needs nothing from outside the repository.
+Requires Node.js 24 or later (uses the built-in `node:sqlite` and runs TypeScript directly; no native modules to compile). Network access is needed once, for `npm ci`. The nine data originals the import reads are vendored in `fixtures/originals/`, so a fresh clone sets up and starts with nothing from outside the repository. The 14 images are not vendored; see Known limits for what that breaks.
 
 ```bash
 git clone <this repository> cabin-kit && cd cabin-kit
@@ -144,4 +144,5 @@ What is true at 2.0.0:
 - The browser tests run on the Chromium bundled with Playwright. WebKit was run once on the workflow and accessibility specs and three of its checks fail; Firefox could not be started on the reference machine. See "Not verified" in [verification/README.md](verification/README.md).
 - The CI workflow (Linux, WebGL in software) has never run: nothing has been pushed. Every result here comes from one machine (Apple M4 Pro, macOS).
 - The scene stays within the budgets in `budgets.json` (32 draw calls and 525,000 triangles on the 176-seat layout, checked by the browser tests); frame rate was measured only on that machine.
+- **A clean clone outside the development folder fails one test.** `originals:verify` looks for the 14 images in `../../` whenever that folder exists, so in such a clone (CI included) `npm test`, `npm run check`, `npm run verify` and `npm run originals:verify` report the images missing. Setting `CABIN_KIT_SOURCE_ROOT` to the folder with the originals avoids it. Setup, import, start and the browser tests are not affected.
 - An import accepts a large workbook only up to its caps (4 MiB per XML part, 100,000 elements); a legitimate larger workbook is refused with a message, and an accepted one near the caps can use about 300 MB.
