@@ -10,6 +10,10 @@ interface Column {
 const MARGIN = 40;
 const FOOTER_SPACE = 34;
 const HEADER_SPACE = 30;
+/** A work-item or event note longer than this is printed once, in full, in a Notes section. */
+const LONG_NOTE = 160;
+/** pdfkit supports `scope` on a header cell; the bundled types do not list it yet. */
+const COLUMN_SCOPE = { scope: "Column" } as NonNullable<Parameters<PDFKit.PDFDocument["struct"]>[1]>;
 
 /** Standard PDF fonts are WinAnsi only; anything else is replaced so the document never fails. */
 function safe(text: unknown): string {
@@ -37,6 +41,10 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       size: "LETTER",
       margins: { top: MARGIN + HEADER_SPACE, bottom: MARGIN + FOOTER_SPACE, left: MARGIN, right: MARGIN },
       bufferPages: true,
+      pdfVersion: "1.7",
+      lang: "en-GB",
+      displayTitle: true,
+      tagged: true,
       info: {
         Title: `Cabin Kit report - visit ${report.visit.number} - ${report.visit.tail}`,
         Subject: "Fictional demonstration appearance-check report",
@@ -55,21 +63,41 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
     const ensure = (h: number) => {
       if (doc.y + h > bottom()) doc.addPage();
     };
-    const heading = (text: string) => {
+    // Logical structure: everything meaningful sits under one Document element; rules, fills and the
+    // page header and footer are artifacts so a screen reader skips them.
+    const root = doc.struct("Document");
+    doc.addStructure(root);
+    const tagged = (type: string, draw: () => void) => {
+      root.add(doc.struct(type, {}, draw));
+    };
+    const artifact = (type: "Layout" | "Pagination", draw: () => void) => {
+      doc.markContent("Artifact", { type });
+      draw();
+      doc.endMarkedContent();
+    };
+    const heading = (text: string, level: "H1" | "H2" = "H2") => {
       ensure(40);
-      doc.moveDown(0.6).font("Helvetica-Bold").fontSize(12).fillColor("#12264d").text(safe(text), MARGIN, doc.y, { width });
-      doc
-        .moveTo(MARGIN, doc.y + 2)
-        .lineTo(MARGIN + width, doc.y + 2)
-        .lineWidth(0.7)
-        .strokeColor("#12264d")
-        .stroke();
+      doc.moveDown(0.6);
+      tagged(level, () => {
+        doc.font("Helvetica-Bold").fontSize(12).fillColor("#12264d").text(safe(text), MARGIN, doc.y, { width });
+      });
+      artifact("Layout", () => {
+        doc
+          .moveTo(MARGIN, doc.y + 2)
+          .lineTo(MARGIN + width, doc.y + 2)
+          .lineWidth(0.7)
+          .strokeColor("#12264d")
+          .stroke();
+      });
       doc.moveDown(0.5).fillColor("#000000");
     };
     const para = (text: string, size = 9, font = "Helvetica") => {
       doc.font(font).fontSize(size);
-      ensure(doc.heightOfString(safe(text), { width }) + 4);
-      doc.text(safe(text), MARGIN, doc.y, { width });
+      // A paragraph may be longer than a page, so only a first line has to fit before it starts.
+      ensure(Math.min(doc.heightOfString(safe(text), { width }), doc.currentLineHeight() * 2) + 4);
+      tagged("P", () => {
+        doc.font(font).fontSize(size).text(safe(text), MARGIN, doc.y, { width });
+      });
       doc.moveDown(0.3);
     };
     const pairs = (items: [string, string][]) => {
@@ -81,35 +109,63 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
         const h = Math.max(...row.map(([, v]) => doc.font("Helvetica").heightOfString(safe(v), { width: colW - labelW - 8 }))) + 4;
         ensure(h);
         const y = doc.y;
-        row.forEach(([k, v], c) => {
-          const x = MARGIN + c * colW;
-          doc.font("Helvetica-Bold").fillColor("#444444").text(safe(k), x, y, { width: labelW });
-          doc
-            .font("Helvetica")
-            .fillColor("#000000")
-            .text(safe(v), x + labelW, y, { width: colW - labelW - 8 });
+        tagged("P", () => {
+          row.forEach(([k, v], c) => {
+            const x = MARGIN + c * colW;
+            doc.font("Helvetica-Bold").fillColor("#444444").text(safe(k), x, y, { width: labelW });
+            doc
+              .font("Helvetica")
+              .fillColor("#000000")
+              .text(safe(v), x + labelW, y, { width: colW - labelW - 8 });
+          });
         });
         doc.y = y + h;
       }
     };
-    const table = (columns: Column[], rows: string[][], fontSize = 8) => {
+    const table = (name: string, columns: Column[], rows: string[][], fontSize = 8) => {
       const pad = 3;
-      const drawHeader = () => {
+      const usable = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
+      ensure(40);
+      const tbl = doc.struct("Table");
+      root.add(tbl);
+      const drawHeader = (repeat: boolean) => {
         doc.font("Helvetica-Bold").fontSize(fontSize);
         const h = Math.max(...columns.map((c) => doc.heightOfString(safe(c.header), { width: c.width - pad * 2 }))) + pad * 2;
         const y = doc.y;
-        doc.rect(MARGIN, y, width, h).fill("#e3e9f5");
-        let x = MARGIN;
-        doc.fillColor("#12264d");
-        for (const c of columns) {
-          doc.text(safe(c.header), x + pad, y + pad, { width: c.width - pad * 2, align: c.align ?? "left" });
-          x += c.width;
+        artifact("Layout", () => {
+          doc.rect(MARGIN, y, width, h).fill("#e3e9f5");
+        });
+        const cell = (c: Column, x: number) => {
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(fontSize)
+            .fillColor("#12264d")
+            .text(safe(c.header), x + pad, y + pad, { width: c.width - pad * 2, align: c.align ?? "left" });
+        };
+        if (repeat) {
+          // A header repeated after a page break is decoration; the real header row is read once.
+          artifact("Pagination", () => {
+            let x = MARGIN;
+            for (const c of columns) {
+              cell(c, x);
+              x += c.width;
+            }
+          });
+        } else {
+          const tr = doc.struct("TR");
+          tbl.add(tr);
+          let x = MARGIN;
+          for (const c of columns) {
+            const cx = x;
+            tr.add(doc.struct("TH", COLUMN_SCOPE, () => cell(c, cx)));
+            x += c.width;
+          }
+          tr.end();
         }
         doc.fillColor("#000000");
         doc.y = y + h;
       };
-      ensure(40);
-      drawHeader();
+      drawHeader(false);
       rows.forEach((row, index) => {
         doc.font("Helvetica").fontSize(fontSize);
         const cells = row.map((cell, i) => {
@@ -118,46 +174,93 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
           return { column, text: safe(cell) };
         });
         const h = Math.max(...cells.map(({ column, text }) => doc.heightOfString(text, { width: column.width - pad * 2 }))) + pad * 2;
+        if (h > usable) throw new Error(`pdf: row taller than a page in ${name}`);
         if (doc.y + h > bottom()) {
           doc.addPage();
-          drawHeader();
+          drawHeader(true);
           doc.font("Helvetica").fontSize(fontSize);
         }
         const y = doc.y;
-        if (index % 2 === 1) doc.rect(MARGIN, y, width, h).fill("#f6f8fc").fillColor("#000000");
+        if (index % 2 === 1) {
+          artifact("Layout", () => {
+            doc.rect(MARGIN, y, width, h).fill("#f6f8fc");
+          });
+        }
+        const tr = doc.struct("TR");
+        tbl.add(tr);
         let x = MARGIN;
         for (const { column, text } of cells) {
-          doc.fillColor("#000000").text(text, x + pad, y + pad, { width: column.width - pad * 2, align: column.align ?? "left" });
+          const cx = x;
+          tr.add(
+            doc.struct("TD", {}, () => {
+              doc
+                .font("Helvetica")
+                .fontSize(fontSize)
+                .fillColor("#000000")
+                .text(text, cx + pad, y + pad, { width: column.width - pad * 2, align: column.align ?? "left" });
+            }),
+          );
           x += column.width;
         }
-        doc
-          .moveTo(MARGIN, y + h)
-          .lineTo(MARGIN + width, y + h)
-          .lineWidth(0.3)
-          .strokeColor("#c5cbd8")
-          .stroke();
+        tr.end();
+        artifact("Layout", () => {
+          doc
+            .moveTo(MARGIN, y + h)
+            .lineTo(MARGIN + width, y + h)
+            .lineWidth(0.3)
+            .strokeColor("#c5cbd8")
+            .stroke();
+        });
         doc.y = y + h;
       });
+      tbl.end();
       doc.moveDown(0.5);
+    };
+
+    /** Long notes are printed once in a Notes section; the table cell points at them. */
+    const notes: { label: string; text: string }[] = [];
+    const noteCell = (prefix: string, location: string, text: string): string => {
+      if (text.length <= LONG_NOTE) return text;
+      const label = `${prefix}${notes.length + 1}`;
+      notes.push({ label, text: `${label}. ${location}: ${text}` });
+      return `See note ${label}`;
+    };
+    const printNotes = (title: string) => {
+      if (notes.length === 0) return;
+      heading(title);
+      for (const n of notes) para(n.text);
+      notes.length = 0;
     };
 
     // Title block
     const final = report.reportKind === "FINAL";
-    doc.font("Helvetica-Bold").fontSize(17).fillColor("#12264d").text("Cabin Kit after-action report", MARGIN, doc.y, { width });
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .fillColor(final ? "#1b6b3a" : "#a14a00")
-      .text(final ? "FINAL - visit completed and locked" : "DRAFT PREVIEW - visit not completed; content may still change", { width });
+    tagged("H1", () => {
+      doc.font("Helvetica-Bold").fontSize(17).fillColor("#12264d").text("Cabin Kit after-action report", MARGIN, doc.y, { width });
+    });
+    tagged("P", () => {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .fillColor(final ? "#1b6b3a" : "#a14a00")
+        .text(final ? "FINAL - visit completed and locked" : "DRAFT PREVIEW - visit not completed; content may still change", MARGIN, doc.y, { width });
+    });
     doc.moveDown(0.4);
-    doc.rect(MARGIN, doc.y, width, 34).fill("#fff4d6");
-    doc
-      .fillColor("#5c4300")
-      .font("Helvetica-Bold")
-      .fontSize(8)
-      .text(safe(report.authorityNotice), MARGIN + 6, doc.y + 6, { width: width - 12 });
+    const notice = safe(report.authorityNotice);
+    doc.font("Helvetica-Bold").fontSize(8);
+    const noticeHeight = doc.heightOfString(notice, { width: width - 12 }) + 12;
+    const noticeY = doc.y;
+    artifact("Layout", () => {
+      doc.rect(MARGIN, noticeY, width, noticeHeight).fill("#fff4d6");
+    });
+    tagged("P", () => {
+      doc
+        .fillColor("#5c4300")
+        .font("Helvetica-Bold")
+        .fontSize(8)
+        .text(notice, MARGIN + 6, noticeY + 6, { width: width - 12 });
+    });
     doc.fillColor("#000000");
-    doc.y += 14;
+    doc.y = noticeY + noticeHeight + 8;
 
     heading("Visit");
     pairs([
@@ -198,6 +301,7 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
     if (report.totals.length === 0) para("No replacements recorded.");
     else {
       table(
+        "aggregate part totals",
         [
           { header: "Part number", width: 110 },
           { header: "Description", width: 150 },
@@ -222,6 +326,7 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
     if (report.work.length === 0) para("No replacements recorded.");
     else {
       table(
+        "work recorded by location",
         [
           { header: "Location", width: 88 },
           { header: "Component", width: 72 },
@@ -238,7 +343,7 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
           w.lines.map((l) => `${l.partNo} ${l.qty} ${l.unit}${l.role === "MANDATORY_CHILD" ? " (required)" : ""}`).join("\n"),
           [
             ...new Set([sourceLabel(report, w.ruleSourceId), sourceLabel(report, w.selectionSourceId)]),
-            w.note ? `Note: ${w.note}` : "",
+            w.note ? (w.note.length > LONG_NOTE ? noteCell("", `${w.locationLabel} / ${w.componentId}`, w.note) : `Note: ${w.note}`) : "",
             ...w.pendingChanges.map((p) => `Pending change: ${p.note}`),
           ]
             .filter(Boolean)
@@ -247,10 +352,13 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       );
     }
 
+    printNotes("Notes");
+
     heading(`Unresolved applicability gaps (${report.counts.unresolvedComponents} components)`);
     if (report.gaps.length === 0) para("None. Every component in the frozen configuration had one applicable primary part.");
     else {
       table(
+        "unresolved applicability gaps",
         [
           { header: "Component", width: 80 },
           { header: "Status", width: 62 },
@@ -264,6 +372,7 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
 
     heading("Sources, revisions and validity");
     table(
+      "sources, revisions and validity",
       [
         { header: "Source", width: 92 },
         { header: "Rev", width: 44 },
@@ -286,14 +395,16 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
     if (linkedEvents.length > 0) {
       heading("Linked advisories and corrections (added after the fact)");
       table(
+        "linked advisories and corrections",
         [
           { header: "When (UTC)", width: 120 },
           { header: "Type", width: 90 },
           { header: "By", width: 80 },
           { header: "Note", width: width - 290 },
         ],
-        linkedEvents.map((e) => [e.at, e.type, String(e.payload.author ?? ""), String(e.payload.note ?? "")]),
+        linkedEvents.map((e) => [e.at, e.type, String(e.payload.author ?? ""), noteCell("E", `${e.at} / ${e.type}`, String(e.payload.note ?? ""))]),
       );
+      printNotes("Notes on linked advisories and corrections");
       para("Linked events do not alter the locked report content above.", 7);
     }
 
@@ -305,28 +416,30 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       const savedTop = doc.page.margins.top;
       doc.page.margins.bottom = 0;
       doc.page.margins.top = 0;
-      doc.font("Helvetica").fontSize(7.5).fillColor("#555555");
-      doc.text(
-        safe(`Cabin Kit report | Visit #${report.visit.number} | ${report.visit.tail} | ${report.visit.checkDate} | ${final ? "FINAL" : "DRAFT PREVIEW"}`),
-        MARGIN,
-        MARGIN - 6,
-        { width, lineBreak: false },
-      );
-      doc
-        .moveTo(MARGIN, MARGIN + 6)
-        .lineTo(MARGIN + width, MARGIN + 6)
-        .lineWidth(0.4)
-        .strokeColor("#999999")
-        .stroke();
-      const fy = doc.page.height - MARGIN - 14;
-      doc
-        .moveTo(MARGIN, fy - 4)
-        .lineTo(MARGIN + width, fy - 4)
-        .lineWidth(0.4)
-        .strokeColor("#999999")
-        .stroke();
-      doc.text("FICTIONAL DEMONSTRATION - not an approved maintenance record", MARGIN, fy, { width: width - 90, lineBreak: false });
-      doc.text(`Page ${i + 1} of ${range.count}`, MARGIN + width - 90, fy, { width: 90, align: "right", lineBreak: false });
+      artifact("Pagination", () => {
+        doc.font("Helvetica").fontSize(7.5).fillColor("#555555");
+        doc.text(
+          safe(`Cabin Kit report | Visit #${report.visit.number} | ${report.visit.tail} | ${report.visit.checkDate} | ${final ? "FINAL" : "DRAFT PREVIEW"}`),
+          MARGIN,
+          MARGIN - 6,
+          { width, lineBreak: false },
+        );
+        doc
+          .moveTo(MARGIN, MARGIN + 6)
+          .lineTo(MARGIN + width, MARGIN + 6)
+          .lineWidth(0.4)
+          .strokeColor("#999999")
+          .stroke();
+        const fy = doc.page.height - MARGIN - 14;
+        doc
+          .moveTo(MARGIN, fy - 4)
+          .lineTo(MARGIN + width, fy - 4)
+          .lineWidth(0.4)
+          .strokeColor("#999999")
+          .stroke();
+        doc.text("FICTIONAL DEMONSTRATION - not an approved maintenance record", MARGIN, fy, { width: width - 90, lineBreak: false });
+        doc.text(`Page ${i + 1} of ${range.count}`, MARGIN + width - 90, fy, { width: 90, align: "right", lineBreak: false });
+      });
       doc.page.margins.bottom = savedBottom;
       doc.page.margins.top = savedTop;
     }

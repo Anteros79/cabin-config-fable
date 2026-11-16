@@ -36,8 +36,8 @@ export default defineConfig({
       provider: "v8",
       include: ["src/domain/**", "src/importer/**", "src/server/**"],
       reporter: ["text-summary", "lcov"],
-      // Baseline measured 89.48% lines / 76.37% branches, rounded down to 5. Phases 1-3 raise these.
-      thresholds: { lines: 85, branches: 75 },
+      // Measured after Task 1.10: 90.66% lines / 78.19% branches, rounded down to 5. Later phases raise these.
+      thresholds: { lines: 90, branches: 75 },
     },
   },
 });
