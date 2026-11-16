@@ -1,11 +1,11 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lookup } from "../src/domain/resolve.ts";
 import type { ApplicabilityRule, LookupResult, ReferenceRelease, ReleaseContent, Visit, VisitRecord, VisitSnapshot } from "../src/domain/types.ts";
 import { validateRelease } from "../src/domain/validate.ts";
 import { buildSnapshot, deriveRecord } from "../src/domain/visitLogic.ts";
-import { buildStagedRelease, contentHash, type StagedBuild } from "../src/importer/assemble.ts";
+import { buildStagedRelease, contentHash, DEFAULT_FIXTURE_PATH, type StagedBuild } from "../src/importer/assemble.ts";
 import { importReference } from "../src/importer/cli.ts";
 import { type AppHandle, createApp } from "../src/server/app.ts";
 import { resolveServerConfig } from "../src/server/config.ts";
@@ -15,7 +15,7 @@ import { VisitStore } from "../src/server/visitStore.ts";
  * Content hash of the release the importer stages from the committed fixtures and originals (PF-2).
  * A task that moves it on purpose updates it here and records old → new in CHANGELOG.md and its commit body.
  */
-export const EXPECTED_CONTENT_HASH = "0a22902d1f024b39f2c2b9507768ffd060f8deb19637ace96fb8063c5c66da5b";
+export const EXPECTED_CONTENT_HASH = "3be1fb71ae4816a9125230678dba6f4338e0d7281958354eea0b0193d40b15ff";
 
 let fullBuild: StagedBuild | null = null;
 let fixtureBuild: StagedBuild | null = null;
@@ -168,6 +168,19 @@ export function tempDir(prefix = "cabin-kit-test-"): string {
 
 export function cleanupTempDirs(): void {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+}
+
+/**
+ * A temp copy of fixtures/fixture-data.json with one harmless change (a part description carries `tag`), for a
+ * test that needs a different but valid release. The committed fixture file is never edited.
+ */
+export function changedFixturePath(tag: string): string {
+  const data = JSON.parse(readFileSync(DEFAULT_FIXTURE_PATH, "utf8")) as { extraParts: { description: string }[] };
+  const part = at(data.extraParts, 0);
+  part.description = `${part.description} (${tag})`;
+  const path = join(tempDir("cabin-kit-fx-"), "fixture-data.json");
+  writeFileSync(path, JSON.stringify(data));
+  return path;
 }
 
 export interface TestStores {

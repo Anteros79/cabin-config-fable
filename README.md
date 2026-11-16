@@ -47,7 +47,7 @@ Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Reco
 | --- | --- |
 | `npm run setup` | Install locked dependencies, build, import reference data, seed two sample visits |
 | `npm start` | Start the server (`CABIN_KIT_PORT`, default 4310) |
-| `npm run reference:import` | Stage, validate and atomically activate a new reference release. Never touches visits |
+| `npm run reference:import` | Stage, validate and atomically activate a new reference release. Never touches visits. When the data equals the active release (the `--label` does not count), nothing is staged and it says so |
 | `npm run reference:status` / `reference:findings` | Releases, active release, import findings |
 | `npm run reference:reset -- --yes` | Rebuild the reference store only (stop the server first) |
 | `npm run sample:seed` | Add one completed and one draft sample visit, only if the visit store is empty |

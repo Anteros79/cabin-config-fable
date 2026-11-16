@@ -2,13 +2,14 @@ import { chmodSync, existsSync, linkSync, mkdirSync, readFileSync, symlinkSync, 
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, expect, it } from "vitest";
+import { contentHash, legacyContentHash } from "../../src/domain/hash.ts";
 import { lookup } from "../../src/domain/resolve.ts";
 import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { importReference } from "../../src/importer/cli.ts";
 import { canonicalPath, isSameFile, resolveServerConfig, resolveStoreConfig } from "../../src/server/config.ts";
 import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStoreError, resetReferenceStore } from "../../src/server/referenceStore.ts";
 import { StorageError, VisitStore } from "../../src/server/visitStore.ts";
-import { at, CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeApp, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
+import { at, CUSHION_3A, changedFixturePath, cleanupTempDirs, KIT_ALTERNATE, makeApp, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -156,8 +157,14 @@ describe("staged import and atomic activation", () => {
   });
 });
 
+/** A second import with changed (valid) fixtures, so it stages a new release instead of being a no-op. */
 function importReferenceInto(stores: { referencePath: string; visitsPath: string }) {
-  return importReference({ referencePath: stores.referencePath, visitsPath: stores.visitsPath, includeCandidate: false, label: "second" });
+  return importReference({
+    referencePath: stores.referencePath,
+    visitsPath: stores.visitsPath,
+    includeCandidate: false,
+    fixturePath: changedFixturePath("second"),
+  });
 }
 
 describe("reference import and reset never touch visit history", () => {
@@ -348,6 +355,38 @@ describe("release integrity", () => {
     expect(refCode(() => store.loadActive())).toBe("RELEASE_CORRUPT");
     expect(refCode(() => store.loadRelease(String(store.activeReleaseId())))).toBe("RELEASE_CORRUPT");
     store.close();
+  });
+
+  it("a reference store built before the label left the hash still loads (PF-5)", () => {
+    // Stage a release as the importer did before: its recorded hash covers the label.
+    const dir = tempDir();
+    const stores = { referencePath: join(dir, "reference.sqlite"), visitsPath: join(dir, "visits.sqlite") };
+    const old = buildStagedRelease({ includeCandidate: false, label: "Imported before the hash change" });
+    const legacy = legacyContentHash(old.content);
+    expect(legacy).not.toBe(contentHash(old.content));
+    const writer = ReferenceStore.openOrCreate(stores.referencePath, stores.visitsPath);
+    const { id } = writer.stage(old.content, old.findings, old.stats);
+    writer.activate(id);
+    writer.close();
+    const db = new DatabaseSync(stores.referencePath);
+    db.exec(
+      `DROP TRIGGER release_hash_frozen; UPDATE release SET content_hash = '${legacy}'; CREATE TRIGGER release_hash_frozen BEFORE UPDATE OF id, seq, content_hash, created_at ON release BEGIN SELECT RAISE(ABORT, 'RELEASE_IMMUTABLE'); END;`,
+    );
+    db.close();
+
+    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const release = store.loadActive();
+    expect(release).toMatchObject({ id, contentHash: legacy, label: "Imported before the hash change" });
+    expect(store.activeContentHash()).toBe(legacy);
+    store.close();
+    // The first import after the upgrade records the new hash once; the next one is a no-op.
+    const upgraded = importReference({ ...stores, includeCandidate: false });
+    expect(upgraded).toMatchObject({ unchanged: false, activated: true });
+    expect(importReference({ ...stores, includeCandidate: false })).toMatchObject({ unchanged: true, releaseId: upgraded.releaseId });
+    const after = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    expect(after.loadRelease(id).contentHash).toBe(legacy);
+    expect(after.activeContentHash()).toBe(contentHash(old.content));
+    after.close();
   });
 
   it("the cached release cannot be mutated", () => {

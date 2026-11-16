@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { geometryDeclaration, isKnownSeatLetter, seatPlacement, sideOf } from "../domain/geometry.ts";
 import type { AircraftSubtype, CabinLocation, Finding, Layout, LayoutCategory, LayoutRevision, RangeClaim, RowLabel, SourceArtifact } from "../domain/types.ts";
-import { checkOriginals, ORIGINAL_FILES, ORIGINALS_MANIFEST_PATH } from "./originals.ts";
+import { ORIGINAL_FILES, ORIGINALS_MANIFEST_PATH, readOriginals } from "./originals.ts";
 import { parseCsv } from "./readers/csv.ts";
 import { normaliseForQuote, readDocxParagraphs } from "./readers/docx.ts";
 import { columnName, readXlsx } from "./readers/xlsx.ts";
@@ -325,10 +325,12 @@ function compareTable(args: {
 export interface CandidateOptions {
   /** Stage originals that differ from the manifest, reporting the difference as a warning instead of an error. */
   acceptChanged?: boolean;
-  manifestPath?: string;
 }
 
 const NOT_READ = "not read: file missing";
+/** Fixed text: the reader's message goes to the finding and the stats, never into hashed content. */
+const UNREADABLE_STATUS = "invalid: could not be read";
+const INVALID_JSON_STATUS = "invalid: not valid JSON";
 const RTF_STATUS = "not parsed: narrative evidence, hash recorded";
 /** Replaced by every path that parses the file; it remains only when the import stopped on an unexpected error. */
 const NOT_REACHED = "invalid: not parsed, the import stopped before reaching this file";
@@ -398,33 +400,15 @@ export function buildCandidateContent(sourceRoot: string, options: CandidateOpti
 function stageCandidate(sourceRoot: string, options: CandidateOptions, out: CandidateContent): void {
   const { findings, stats, sources } = out;
   const bytesOf = new Map<string, Uint8Array>();
-  findings.push(...checkOriginals(sourceRoot, options.manifestPath ?? ORIGINALS_MANIFEST_PATH, { acceptChanged: options.acceptChanged ?? false }));
+  // One read per original: the bytes verified against the manifest are the bytes staged and parsed.
+  const originals = readOriginals(sourceRoot, ORIGINALS_MANIFEST_PATH, { acceptChanged: options.acceptChanged ?? false });
+  findings.push(...originals.findings);
 
-  // A path that is not a regular file is reported by checkOriginals (SOURCE_FILE_MISSING) and recorded here as not read.
+  // Missing and unreadable originals are reported by readOriginals and recorded here with their status.
   const register = (id: string, file: string, kind: string, title: string, revision: string, note?: string) => {
-    const path = join(sourceRoot, file);
-    let isFile = false;
-    try {
-      isFile = statSync(path).isFile();
-    } catch {
-      isFile = false;
-    }
-    let bytes: Uint8Array | null = null;
-    let parseStatus = isFile ? NOT_REACHED : NOT_READ;
-    if (isFile) {
-      try {
-        bytes = readFileSync(path);
-        bytesOf.set(id, bytes);
-      } catch (e) {
-        parseStatus = `invalid: could not be read (${(e as Error).message})`;
-        findings.push({
-          severity: "error",
-          code: "SOURCE_UNREADABLE",
-          message: `Supplied file "${file}" could not be read: ${(e as Error).message}`,
-          refs: [id],
-        });
-      }
-    }
+    const bytes = originals.bytes.get(file) ?? null;
+    if (bytes) bytesOf.set(id, bytes);
+    const parseStatus = bytes ? NOT_REACHED : originals.unreadable.has(file) ? UNREADABLE_STATUS : NOT_READ;
     sources.push({
       id,
       namespace: "candidate",
@@ -493,8 +477,7 @@ function stageCandidate(sourceRoot: string, options: CandidateOptions, out: Cand
       JSON.parse(text);
       return { status: "parsed: valid JSON (a template; not imported)", jsonError: null };
     } catch (e) {
-      const jsonError = (e as Error).message;
-      return { status: `invalid: not valid JSON (${jsonError})`, jsonError };
+      return { status: INVALID_JSON_STATUS, jsonError: (e as Error).message };
     }
   };
   const spaceNamed = readTemplate("CAND-SRC-TEMPLATE-JSON", "The space-named template JSON");
@@ -526,7 +509,13 @@ function stageCandidate(sourceRoot: string, options: CandidateOptions, out: Cand
   }
 
   const statusOf = (id: string) => sources.find((x) => x.id === id)?.file?.parseStatus;
-  stats.templates = { spaceNamed: statusOf("CAND-SRC-TEMPLATE-JSON"), gemini: statusOf("CAND-SRC-GEMINI-JSON"), byteIdentical: identicalTemplates };
+  stats.templates = {
+    spaceNamed: statusOf("CAND-SRC-TEMPLATE-JSON"),
+    gemini: statusOf("CAND-SRC-GEMINI-JSON"),
+    spaceNamedError: spaceNamed?.jsonError ?? null,
+    geminiError: gemini?.jsonError ?? null,
+    byteIdentical: identicalTemplates,
+  };
 
   // Populated registry: parsed, then its shape checked before any property is read.
   let registry: Registry | null = null;
@@ -538,7 +527,8 @@ function stageCandidate(sourceRoot: string, options: CandidateOptions, out: Cand
       parsed = JSON.parse(registryText);
     } catch (e) {
       parsedOk = false;
-      setStatus("CAND-SRC-REGISTRY-JSON", `invalid: not valid JSON (${(e as Error).message})`);
+      setStatus("CAND-SRC-REGISTRY-JSON", INVALID_JSON_STATUS);
+      stats.registryJsonError = (e as Error).message;
       findings.push({
         severity: "error",
         code: "REGISTRY_UNREADABLE",

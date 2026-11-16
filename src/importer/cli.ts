@@ -1,5 +1,9 @@
 import { existsSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { canonicalJson } from "../domain/canonical.ts";
+import { contentHash } from "../domain/hash.ts";
+import type { Finding } from "../domain/types.ts";
+import { hasBlockingFindings } from "../domain/validate.ts";
 import { resolveStoreConfig } from "../server/config.ts";
 import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStoreError, resetReferenceStore } from "../server/referenceStore.ts";
 import { VisitStore } from "../server/visitStore.ts";
@@ -74,11 +78,21 @@ export interface ImportOutcome {
   releaseId: string;
   status: "validated" | "rejected";
   activated: boolean;
+  /** True when nothing was staged: the build equals the active release, or repeats the most recent rejected one. */
+  unchanged: boolean;
   findingCounts: Record<string, number>;
   visitsUnchanged: boolean | null;
 }
 
-/** Stage, validate and (if clean) activate a new release. Shared by the CLI, the server and tests. */
+/** Findings as stored (a JSON round trip drops undefined fields), in a form that compares by value. */
+const findingsKey = (findings: Finding[]): string => canonicalJson(JSON.parse(JSON.stringify(findings)));
+
+/**
+ * Build and validate a release in memory, then stage and (if clean) activate it. Nothing is staged when
+ * the build has no blocking finding and its content hash equals the active release's, or when it has
+ * blocking findings and repeats the most recent rejected release (same hash, same findings): the
+ * outcome then names the existing release with `unchanged: true`. Shared by the CLI, the server and tests.
+ */
 export function importReference(options: {
   referencePath: string;
   visitsPath: string;
@@ -104,13 +118,25 @@ export function importReference(options: {
       includeCandidate,
       acceptChanged: options.acceptChanged,
     });
+    const findingCounts: Record<string, number> = {};
+    for (const f of staged.findings) findingCounts[f.severity] = (findingCounts[f.severity] ?? 0) + 1;
+    const outcome = (releaseId: string, status: ImportOutcome["status"], activated: boolean, unchanged: boolean): ImportOutcome => {
+      const after = visitFingerprint(options.visitsPath, options.referencePath);
+      return { releaseId, status, activated, unchanged, findingCounts, visitsUnchanged: before === null ? null : before === after };
+    };
+    const hash = contentHash(staged.content);
+    if (hasBlockingFindings(staged.findings)) {
+      const rejected = store.latestRejected();
+      if (rejected && rejected.contentHash === hash && findingsKey(rejected.findings) === findingsKey(staged.findings))
+        return outcome(rejected.id, "rejected", false, true);
+    } else {
+      const activeId = store.activeReleaseId();
+      if (activeId !== null && store.activeContentHash() === hash) return outcome(activeId, "validated", false, true);
+    }
     const { id, status } = store.stage(staged.content, staged.findings, staged.stats);
     const activate = (options.activate ?? true) && status === "validated";
     if (activate) store.activate(id);
-    const findingCounts: Record<string, number> = {};
-    for (const f of staged.findings) findingCounts[f.severity] = (findingCounts[f.severity] ?? 0) + 1;
-    const after = visitFingerprint(options.visitsPath, options.referencePath);
-    return { releaseId: id, status, activated: activate, findingCounts, visitsUnchanged: before === null ? null : before === after };
+    return outcome(id, status, activate, false);
   } finally {
     store.close();
   }
@@ -166,7 +192,9 @@ function main(argv: string[]): number {
     });
     console.log(`Reference store : ${stores.referencePath}`);
     console.log(`Source root     : ${sourceRoot}`);
-    console.log(`Release         : ${outcome.releaseId} (${outcome.status}${outcome.activated ? ", now active" : ", not activated"})`);
+    if (outcome.unchanged && outcome.status === "validated") console.log(`Reference data unchanged: release ${outcome.releaseId} is already active.`);
+    else if (outcome.unchanged) console.log(`Release         : ${outcome.releaseId} (rejected before with the same content and findings; nothing staged)`);
+    else console.log(`Release         : ${outcome.releaseId} (${outcome.status}${outcome.activated ? ", now active" : ", not activated"})`);
     console.log(`Findings        : ${JSON.stringify(outcome.findingCounts)}`);
     console.log(
       `Visit history   : ${outcome.visitsUnchanged === null ? "no visit store present" : outcome.visitsUnchanged ? "unchanged (fingerprint verified)" : "CHANGED - investigate"}`,

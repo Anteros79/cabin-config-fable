@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { deepFreeze } from "../domain/canonical.ts";
-import { contentHash } from "../domain/hash.ts";
+import { contentHash, legacyContentHash } from "../domain/hash.ts";
 import type { Finding, ReferenceRelease, ReleaseContent } from "../domain/types.ts";
 import { hasBlockingFindings } from "../domain/validate.ts";
 import { isSameFile } from "./config.ts";
@@ -381,6 +381,22 @@ export class ReferenceStore {
     return (this.db.prepare("SELECT release_id FROM active_release WHERE singleton = 1").get() as { release_id: string } | undefined)?.release_id ?? null;
   }
 
+  /** The recorded content hash of the active release, or null when none is active. */
+  activeContentHash(): string | null {
+    const row = this.db.prepare("SELECT r.content_hash FROM active_release a JOIN release r ON r.id = a.release_id WHERE a.singleton = 1").get() as
+      | { content_hash: string }
+      | undefined;
+    return row?.content_hash ?? null;
+  }
+
+  /** The most recently staged rejected release, with its recorded hash and findings, or null when there is none. */
+  latestRejected(): { id: string; contentHash: string; findings: Finding[] } | null {
+    const row = this.db.prepare("SELECT id, content_hash, findings_json FROM release WHERE status = 'rejected' ORDER BY seq DESC LIMIT 1").get() as
+      | { id: string; content_hash: string; findings_json: string }
+      | undefined;
+    return row ? { id: row.id, contentHash: row.content_hash, findings: JSON.parse(row.findings_json) as Finding[] } : null;
+  }
+
   listReleases(): ReleaseSummary[] {
     const rows = this.db.prepare("SELECT * FROM release ORDER BY seq DESC").all() as Record<string, string | number | null>[];
     return rows.map((r) => {
@@ -517,10 +533,11 @@ interface StoredRelease {
 
 /**
  * The one place a stored release is checked against its recorded content hash. A release whose
- * reassembled content hashes differently was changed after staging and is never served.
+ * reassembled content hashes differently was changed after staging and is never served. Releases
+ * staged before the label was taken out of the hash carry `legacyContentHash`, which is accepted too.
  */
 function assertReleaseHash(releaseId: string, content: ReleaseContent, storedHash: string): void {
-  if (contentHash(content) !== storedHash) {
+  if (contentHash(content) !== storedHash && legacyContentHash(content) !== storedHash) {
     throw new ReferenceStoreError("RELEASE_CORRUPT", `Release ${releaseId} does not match its recorded content hash. It will not be used.`);
   }
 }

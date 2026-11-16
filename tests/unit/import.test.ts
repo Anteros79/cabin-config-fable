@@ -2,10 +2,12 @@ import { cpSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { validateRelease } from "../../src/domain/validate.ts";
-import { buildStagedRelease, defaultSourceRoot } from "../../src/importer/assemble.ts";
+import { buildStagedRelease, canonicalJson, contentHash, defaultSourceRoot } from "../../src/importer/assemble.ts";
 import { ORIGINAL_FILES } from "../../src/importer/candidate.ts";
+import { importReference } from "../../src/importer/cli.ts";
 import { parseCsv } from "../../src/importer/readers/csv.ts";
-import { at, cleanupTempDirs, errorsOf, fixtureContent, stagedFull, tempDir } from "../helpers.ts";
+import { ReferenceStore } from "../../src/server/referenceStore.ts";
+import { at, changedFixturePath, cleanupTempDirs, errorsOf, fixtureContent, stagedFull, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -47,12 +49,12 @@ describe("staged import of fixtures and the supplied candidate registry", () => 
     const { content, stats } = stagedFull();
     const templates = stats.templates as { spaceNamed: string; gemini: string; byteIdentical: boolean };
     expect(templates.byteIdentical).toBe(true);
-    expect(templates.spaceNamed).toMatch(/^invalid: not valid JSON \(/);
-    expect(templates.gemini).toMatch(/^invalid: not valid JSON \(/);
+    expect(templates.spaceNamed).toBe("invalid: not valid JSON");
+    expect(templates.gemini).toBe("invalid: not valid JSON");
     for (const id of ["CAND-SRC-TEMPLATE-JSON", "CAND-SRC-GEMINI-JSON"]) {
       const source = content.sources.find((s) => s.id === id)!;
       expect(source.file!.bytes).toBe(548);
-      expect(source.file!.parseStatus).toMatch(/^invalid: not valid JSON \(/);
+      expect(source.file!.parseStatus).toBe("invalid: not valid JSON");
       expect(content.layoutRevisions.some((r) => r.sourceId === id)).toBe(false);
     }
   });
@@ -284,5 +286,99 @@ describe("release validation blocks bad reference data", () => {
     );
     expect(findings.filter((f) => f.code === "EQUAL_RULES" && f.severity === "conflict")).toHaveLength(1);
     expect(findings.filter((f) => f.code === "ASSIGNMENT_OVERLAP" && f.severity === "conflict")).toHaveLength(1);
+  });
+});
+
+/** A temp copy of the nine originals at a fresh path. */
+function copyOfOriginals(): string {
+  const root = tempDir("cabin-kit-src-");
+  for (const file of Object.values(ORIGINAL_FILES)) cpSync(join(defaultSourceRoot(), file), join(root, file));
+  return root;
+}
+
+function tempStores() {
+  const dir = tempDir();
+  return { referencePath: join(dir, "reference.sqlite"), visitsPath: join(dir, "visits.sqlite") };
+}
+
+function releasesOf(stores: { referencePath: string; visitsPath: string }) {
+  const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+  try {
+    return store.listReleases();
+  } finally {
+    store.close();
+  }
+}
+
+/** A fixture file that is not valid JSON; `variant` changes the bytes (and so the finding) but not the content. */
+function brokenFixturePath(variant: string): string {
+  const path = join(tempDir("cabin-kit-fx-"), "fixture-data.json");
+  writeFileSync(path, `{ "note": "${variant}", `);
+  return path;
+}
+
+describe("stable content hash and no-op re-import (IMP-09, IMP-10)", () => {
+  it("the hash is the same with a different label", () => {
+    const a = buildStagedRelease({ includeCandidate: false, label: "a" });
+    const b = buildStagedRelease({ includeCandidate: false, label: "b" });
+    expect(a.content.label).toBe("a");
+    expect(contentHash(a.content)).toBe(contentHash(b.content));
+  });
+
+  it("the hash does not contain engine error text; the finding and the stats keep it", () => {
+    const { content, findings, stats } = stagedFull();
+    const templates = stats.templates as { spaceNamedError: string; geminiError: string };
+    expect(templates.spaceNamedError).toBeTruthy();
+    expect(templates.geminiError).toBe(templates.spaceNamedError);
+    const hashed = canonicalJson(content);
+    expect(hashed).not.toMatch(/Unexpected token|is not valid JSON|in JSON at position/);
+    expect(hashed).not.toContain(templates.spaceNamedError);
+    const notImported = findings.filter((f) => f.code === "TEMPLATE_NOT_IMPORTED");
+    expect(notImported).toHaveLength(2);
+    for (const f of notImported) expect(f.message).toContain(templates.spaceNamedError);
+  });
+
+  it("the hash is the same from a source root at a different path", () => {
+    const one = buildStagedRelease({ sourceRoot: copyOfOriginals() });
+    const two = buildStagedRelease({ sourceRoot: copyOfOriginals() });
+    expect(contentHash(one.content)).toBe(contentHash(two.content));
+    expect(contentHash(one.content)).toBe(contentHash(stagedFull().content));
+  });
+
+  it("importing identical inputs twice creates one release", () => {
+    const stores = tempStores();
+    const first = importReference({ ...stores });
+    expect(first).toMatchObject({ status: "validated", activated: true, unchanged: false });
+    const second = importReference({ ...stores, label: "a different label" });
+    expect(second).toMatchObject({ releaseId: first.releaseId, status: "validated", activated: false, unchanged: true });
+    expect(releasesOf(stores).map((r) => [r.id, r.status])).toEqual([[first.releaseId, "active"]]);
+  });
+
+  it("two rejected runs with the same bad input record one rejected release", () => {
+    const stores = tempStores();
+    const fixturePath = brokenFixturePath("one");
+    const first = importReference({ ...stores, fixturePath, includeCandidate: false });
+    expect(first).toMatchObject({ status: "rejected", activated: false, unchanged: false });
+    const second = importReference({ ...stores, fixturePath, includeCandidate: false });
+    expect(second).toMatchObject({ releaseId: first.releaseId, status: "rejected", activated: false, unchanged: true });
+    expect(releasesOf(stores).map((r) => r.id)).toEqual([first.releaseId]);
+    // Different bad input with the same (empty) fixture content still records its own findings.
+    const third = importReference({ ...stores, fixturePath: brokenFixturePath("two"), includeCandidate: false });
+    expect(third).toMatchObject({ status: "rejected", unchanged: false });
+    expect(third.releaseId).not.toBe(first.releaseId);
+    expect(releasesOf(stores)).toHaveLength(2);
+  });
+
+  it("a changed input after an unchanged import still stages and activates", () => {
+    const stores = tempStores();
+    const first = importReference({ ...stores, includeCandidate: false });
+    expect(importReference({ ...stores, includeCandidate: false }).unchanged).toBe(true);
+    const changed = importReference({ ...stores, includeCandidate: false, fixturePath: changedFixturePath("changed") });
+    expect(changed).toMatchObject({ status: "validated", activated: true, unchanged: false });
+    expect(changed.releaseId).not.toBe(first.releaseId);
+    expect(releasesOf(stores).map((r) => [r.id, r.status])).toEqual([
+      [changed.releaseId, "active"],
+      [first.releaseId, "superseded"],
+    ]);
   });
 });

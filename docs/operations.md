@@ -37,7 +37,7 @@ The server has no login. It listens on the loopback address by default and refus
 
 | Command | Effect |
 | --- | --- |
-| `npm run reference:import` | Stage a release from the fixtures and the supplied originals, validate it, and make it active if there are no errors |
+| `npm run reference:import` | Stage a release from the fixtures and the supplied originals, validate it, and make it active if there are no errors. Unchanged data stages nothing: it prints `Reference data unchanged: release <id> is already active.` and exits 0. A repeat of the last rejected run reports that release again |
 | `npm run reference:status` | Show the active release and entity counts |
 | `npm run reference:findings` | List validation findings for the active release |
 | `npm run reference:reset` | Rebuild the reference store from scratch |

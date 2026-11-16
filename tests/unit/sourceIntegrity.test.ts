@@ -1,11 +1,11 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, test } from "vitest";
 import type { Finding } from "../../src/domain/types.ts";
 import { buildStagedRelease, defaultSourceRoot, PROJECT_ROOT } from "../../src/importer/assemble.ts";
 import { ORIGINAL_FILES } from "../../src/importer/candidate.ts";
 import { importReference } from "../../src/importer/cli.ts";
-import { checkOriginals } from "../../src/importer/originals.ts";
+import { checkOriginals, isRegularFile, readOriginals } from "../../src/importer/originals.ts";
 import { cleanupTempDirs, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
@@ -109,6 +109,89 @@ describe("originals are verified against the manifest (IMP-03)", () => {
     expect(candidates.filter((s) => s.file?.parseStatus === "not read: file missing").map((s) => s.id)).toEqual(["CAND-SRC-CONFIG-CSV", "CAND-SRC-DOCX"]);
     // the files that are present are still read
     expect(candidates.find((s) => s.id === "CAND-SRC-SEATS-CSV")?.file?.parseStatus).toMatch(/^parsed: 837 records/);
+  });
+
+  test.each([
+    ["missing", (_path: string) => {}, /cannot be read \(ENOENT\)/],
+    ["not JSON", (path: string) => writeFileSync(path, "{"), /is not valid JSON/],
+    ["without a files list", (path: string) => writeFileSync(path, "{}"), /has no "files" list/],
+  ])("a manifest that is %s is SOURCE_MANIFEST_UNREADABLE, and missing originals are still reported", (_name, make, reason) => {
+    const path = join(tempDir("cabin-kit-manifest-"), "originals-manifest.json");
+    make(path);
+    const root = copyOfOriginals((r) => {
+      rmSync(join(r, ORIGINAL_FILES.docx));
+      rmSync(join(r, ORIGINAL_FILES.seatsCsv));
+      mkdirSync(join(r, ORIGINAL_FILES.seatsCsv));
+    });
+    const findings = checkOriginals(root, path);
+    const unreadable = withCode(findings, "SOURCE_MANIFEST_UNREADABLE");
+    expect(unreadable).toHaveLength(1);
+    expect(unreadable[0]?.severity).toBe("error");
+    expect(unreadable[0]?.message).toMatch(reason);
+    expect(
+      withCode(findings, "SOURCE_FILE_MISSING")
+        .map((f) => f.refs?.[0])
+        .sort(),
+    ).toEqual([ORIGINAL_FILES.docx, ORIGINAL_FILES.seatsCsv].sort());
+    expect(findings).toHaveLength(3);
+  });
+
+  test("an unreadable manifest is named by its project-relative path, not an absolute machine path", () => {
+    const missing = join(PROJECT_ROOT, "evidence", "no-such-manifest.json");
+    const [finding] = withCode(checkOriginals(defaultSourceRoot(), missing), "SOURCE_MANIFEST_UNREADABLE");
+    expect(finding?.refs).toEqual(["evidence/no-such-manifest.json"]);
+    expect(finding?.message).not.toContain(PROJECT_ROOT);
+  });
+
+  test('a file "not listed in the originals manifest" is SOURCE_HASH_CHANGED (error), even with --accept-changed', () => {
+    const manifest = JSON.parse(readFileSync(MANIFEST, "utf8")) as { files: { path: string }[] };
+    manifest.files = manifest.files.filter((f) => f.path !== ORIGINAL_FILES.rtf);
+    const path = join(tempDir("cabin-kit-manifest-"), "originals-manifest.json");
+    writeFileSync(path, JSON.stringify(manifest));
+    for (const acceptChanged of [false, true]) {
+      const findings = checkOriginals(defaultSourceRoot(), path, { acceptChanged });
+      expect(findings.map((f) => [f.severity, f.code, f.refs])).toEqual([["error", "SOURCE_HASH_CHANGED", [ORIGINAL_FILES.rtf]]]);
+      expect(findings[0]?.message).toContain("is not listed in the originals manifest");
+    }
+  });
+
+  test.skipIf(process.getuid?.() === 0)("an original that cannot be read is SOURCE_UNREADABLE; checkOriginals and the build never throw", () => {
+    const root = copyOfOriginals();
+    const path = join(root, ORIGINAL_FILES.rtf);
+    chmodSync(path, 0o000);
+    try {
+      let findings: Finding[] = [];
+      expect(() => {
+        findings = checkOriginals(root, MANIFEST);
+      }).not.toThrow();
+      expect(findings.map((f) => [f.severity, f.code, f.refs])).toEqual([["error", "SOURCE_UNREADABLE", [ORIGINAL_FILES.rtf]]]);
+      expect(findings[0]?.message).toMatch(/\(EACCES\)/);
+      expect(findings[0]?.message).not.toContain(root);
+      const build = buildStagedRelease({ sourceRoot: root });
+      expect(withCode(build.findings, "SOURCE_UNREADABLE")).toHaveLength(1);
+      expect(withCode(build.findings, "IMPORT_INTERNAL")).toEqual([]);
+      expect(build.content.sources.find((s) => s.id === "CAND-SRC-RTF")?.file).toMatchObject({ bytes: 0, parseStatus: "invalid: could not be read" });
+    } finally {
+      chmodSync(path, 0o644);
+    }
+  });
+
+  test("the bytes staged are the bytes verified: one read per original", () => {
+    const root = copyOfOriginals((r) => writeFileSync(join(r, ORIGINAL_FILES.rtf), "changed"));
+    const read = readOriginals(root, MANIFEST, { acceptChanged: true });
+    expect([...read.bytes.keys()].sort()).toEqual(Object.values(ORIGINAL_FILES).sort());
+    const { content } = buildStagedRelease({ sourceRoot: root, acceptChanged: true });
+    const rtf = content.sources.find((s) => s.id === "CAND-SRC-RTF")?.file;
+    expect(rtf).toMatchObject({ bytes: 7 });
+    expect(withCode(read.findings, "SOURCE_HASH_CHANGED")[0]?.message).toContain(`SHA-256 ${rtf?.sha256.slice(0, 12)}`);
+  });
+
+  test("isRegularFile is true only for a regular file", () => {
+    const dir = tempDir();
+    writeFileSync(join(dir, "f"), "x");
+    expect(isRegularFile(join(dir, "f"))).toBe(true);
+    expect(isRegularFile(dir)).toBe(false);
+    expect(isRegularFile(join(dir, "absent"))).toBe(false);
   });
 
   test("a non-existent source root fails before any store file is created", () => {

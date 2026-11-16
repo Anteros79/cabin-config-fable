@@ -158,6 +158,19 @@ describe("importer CLI", () => {
     expect(accepted.stdout).toMatch(/"warning":1/);
   });
 
+  test("importing unchanged reference data again stages nothing and exits 0", async () => {
+    const { dataDir, referencePath, run } = await importedStore();
+    const before = ReferenceStore.open(referencePath, join(dataDir, "visits.sqlite"), { readOnly: true });
+    const active = before.activeReleaseId();
+    before.close();
+    const again = await run(["import", "--label", "renamed"]);
+    expect(again.code).toBe(0);
+    expect(again.stdout).toContain(`Reference data unchanged: release ${active} is already active.`);
+    const after = ReferenceStore.open(referencePath, join(dataDir, "visits.sqlite"), { readOnly: true });
+    expect(after.listReleases().map((r) => r.id)).toEqual([active]);
+    after.close();
+  });
+
   test("a non-existent --source-root exits 1 and creates no store file", async () => {
     const dataDir = tempDir("cabin-kit-cli-");
     const r = await runCli(CLI, ["import", "--source-root", join(dataDir, "no-such-root")], dataDir);
