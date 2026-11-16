@@ -413,15 +413,31 @@ describe("store edge cases (TST-09)", () => {
     expect(found("c%d")).toEqual(["c%d"]);
   });
 
-  it("a technician of only whitespace is stored empty; one with a control character is refused with INVALID_TECHNICIAN", () => {
+  it("a technician of only whitespace is stored empty; one with a control, format or line-separator character is refused with INVALID_TECHNICIAN", () => {
     const store = openVisits(makeStores());
     expect(store.createVisit(snap(), " \t \n ").visit.technician).toBe("");
     expect(store.createVisit(snap(), "  Demo tech\t").visit.technician).toBe("Demo tech");
-    for (const tech of ["Demo\ttech", "Demo\ntech", "Demo\u0000", "Demo\u0007tech", "Demo\u007ftech", "Demo\u0085tech", "Demo\u009btech"]) {
+    for (const tech of [
+      "Demo\ttech",
+      "Demo\ntech",
+      "Demo\u0000",
+      "Demo\u0007tech",
+      "Demo\u007ftech",
+      "Demo\u0085tech",
+      "Demo\u009btech",
+      "Demo\u202etech", // right-to-left override
+      "Demo\u2028tech", // line separator
+      "Demo\u2029tech", // paragraph separator
+      "Demo\u200btech", // zero-width space
+      "Demo\ufefftech", // zero-width no-break space
+    ]) {
       expect(() => store.createVisit(snap(), tech), JSON.stringify(tech)).toThrow(expect.objectContaining({ code: "INVALID_TECHNICIAN", status: 422 }));
     }
     expect(store.createVisit(snap(), "Zoë O’Brien-Łukasz").visit.technician).toBe("Zoë O’Brien-Łukasz");
-    expect(store.counts().visits).toBe(3);
+    // zero-width joiner and non-joiner are part of how some names are written
+    expect(store.createVisit(snap(), "Anu\u200dpama").visit.technician).toBe("Anu\u200dpama");
+    expect(store.createVisit(snap(), "Mi\u200cnoo").visit.technician).toBe("Mi\u200cnoo");
+    expect(store.counts().visits).toBe(5);
   });
 
   it("a visit stored with a control character in its technician still opens, lists, reports and completes", () => {

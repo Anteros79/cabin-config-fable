@@ -124,10 +124,12 @@ BEGIN SELECT RAISE(ABORT, 'EVENT_IMMUTABLE'); END;
 `;
 
 /**
- * A technician name may not contain a control character (C0, DEL or C1), checked after surrounding whitespace is trimmed.
+ * A technician name may not contain a control character (C0, DEL or C1), a format character (such as a bidi override or a
+ * zero-width space) or a line or paragraph separator, checked after surrounding whitespace is trimmed. The zero-width
+ * non-joiner and joiner (U+200C, U+200D) are allowed: some names are written with them.
  * Only new visits are checked: a name stored before this rule is read, listed, reported and completed as it is.
  */
-const CONTROL_CHARACTER = /\p{Cc}/u;
+const HIDDEN_CHARACTER = /[\p{Cc}\p{Zl}\p{Zp}]|(?![\u200C\u200D])\p{Cf}/u;
 
 /** Retry keys older than this are pruned when the store opens. */
 export const IDEMPOTENCY_RETENTION_DAYS = 30;
@@ -428,8 +430,11 @@ export class VisitStore {
       throw new DomainError("INVALID_TECHNICIAN", "Technician must be text.");
     const tech = (typeof technician === "string" ? technician : "").trim();
     if (tech.length > 80) throw new DomainError("INVALID_TECHNICIAN", "Technician must be at most 80 characters.");
-    if (CONTROL_CHARACTER.test(tech))
-      throw new DomainError("INVALID_TECHNICIAN", "The technician name contains a control character, such as a tab or line break. Remove it and try again.");
+    if (HIDDEN_CHARACTER.test(tech))
+      throw new DomainError(
+        "INVALID_TECHNICIAN",
+        "The technician name contains a hidden or control character, such as a tab, a line break or an invisible formatting mark. Remove it and try again.",
+      );
     const now = options.now ?? new Date().toISOString();
     const snapshotJson = canonicalJson(snapshot);
     const snapshotSha = sha256Hex(snapshotJson);

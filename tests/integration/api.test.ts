@@ -63,11 +63,11 @@ describe("linked events API", () => {
 });
 
 describe("visit creation API", () => {
-  it("a technician with a control character is 422 INVALID_TECHNICIAN in the error envelope, and nothing is stored", async () => {
+  it("a technician with a hidden or control character is 422 INVALID_TECHNICIAN in the error envelope, and nothing is stored", async () => {
     const app = makeApp();
     const res = await post(app, "/api/visits", { tail: "N100TL", checkDate: "2026-11-12", technician: "Demo\ttech" });
     expect(res.statusCode).toBe(422);
-    expect(json(res)).toEqual({ error: { code: "INVALID_TECHNICIAN", message: expect.stringContaining("control character"), details: null } });
+    expect(json(res)).toEqual({ error: { code: "INVALID_TECHNICIAN", message: expect.stringContaining("hidden or control character"), details: null } });
     expect(json(await app.app.inject("/api/visits")).total).toBe(0);
   });
 });

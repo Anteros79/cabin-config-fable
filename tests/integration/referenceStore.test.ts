@@ -157,7 +157,8 @@ describe("staged import and atomic activation", () => {
     expectWhole(loaded);
     expect(cushionPart(loaded)).toBe("FAKE-SC-1001");
 
-    // The same through loadRelease, the other way round: B is read while A is made active again.
+    // A by-id read is unaffected by activation: B is read while connection 2 makes A active again. (loadRelease never
+    // reads the active pointer, so this shows only that the release named is the one returned, whole.)
     const reader2 = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     const loadedB = reader2.loadRelease(releaseB, { onAfterHead: () => writer.activate(releaseA) });
     expect(writer.activeReleaseId()).toBe(releaseA);

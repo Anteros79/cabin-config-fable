@@ -107,6 +107,18 @@ class Worker {
     });
   }
 
+  /** The worker's exit code, or a failure naming the worker when it has not exited within the line timeout. */
+  private exitCode(): Promise<number | null> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`${this.name} did not exit within ${LINE_TIMEOUT_MS} ms; stderr: ${this.stderr || "(empty)"}`)),
+        LINE_TIMEOUT_MS,
+      );
+    });
+    return Promise.race([this.exited, timeout]).finally(() => clearTimeout(timer));
+  }
+
   async ready(): Promise<void> {
     expect(await this.next('"ready"'), this.name).toBe("ready");
   }
@@ -124,7 +136,7 @@ class Worker {
     let line = await this.next("its result");
     if (line === "started") line = await this.next("its result");
     const outcome = JSON.parse(line) as Outcome;
-    expect(await this.exited, `${this.name}: ${this.stderr}`).toBe(0);
+    expect(await this.exitCode(), `${this.name}: ${this.stderr}`).toBe(0);
     return outcome;
   }
 }

@@ -102,7 +102,8 @@ describe("CheckView writes", () => {
 
   it("a technician name the server refuses (INVALID_TECHNICIAN) is shown as a plain alert, with no retry and no navigation", async () => {
     const result = lookup(release, "N100TL", "2026-11-12");
-    const message = "The technician name contains a control character, such as a tab or line break. Remove it and try again.";
+    const message =
+      "The technician name contains a hidden or control character, such as a tab, a line break or an invisible formatting mark. Remove it and try again.";
     const sent = stubFetch((method, url): Answer => {
       if (url.startsWith("/api/tails")) return { body: { tails: [] } };
       if (url.startsWith("/api/lookup")) return { body: result };

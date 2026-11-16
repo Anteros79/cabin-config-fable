@@ -2,16 +2,16 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { createServer, type Server } from "node:net";
 import { join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { PROJECT_ROOT } from "../../src/server/config.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import { VisitStore } from "../../src/server/visitStore.ts";
-import { CUSHION_3A, cleanupTempDirs, makeStores, snapshotFor, tempDir } from "../helpers.ts";
+import { CUSHION_3A, makeStores, snapshotFor, tempDir } from "../helpers.ts";
 
+/** Every child spawned by the current test; any still running afterwards is killed, before helpers remove its data dir. */
 const children: ChildProcess[] = [];
-afterAll(() => {
-  for (const child of children) if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-  cleanupTempDirs();
+afterEach(() => {
+  for (const child of children.splice(0)) if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
 });
 
 const MAIN = join(PROJECT_ROOT, "src", "server", "main.ts");
@@ -71,6 +71,7 @@ function runTool(args: string[], dataDir: string): Promise<Exit> {
     env: cleanEnv({ CABIN_KIT_DATA_DIR: dataDir }),
     stdio: ["ignore", "pipe", "pipe"],
   });
+  children.push(child);
   return collect(child).done;
 }
 
@@ -103,7 +104,9 @@ describe("server process", () => {
 
   it("sample:seed and the server read the same CABIN_KIT_DATA_DIR: the server reports the seeded visits", async () => {
     const dataDir = tempDir("cabin-kit-main-");
-    const seeded = await collect(spawn(process.execPath, [SEED], { env: cleanEnv({ CABIN_KIT_DATA_DIR: dataDir }), stdio: ["ignore", "pipe", "pipe"] })).done;
+    const seed = spawn(process.execPath, [SEED], { env: cleanEnv({ CABIN_KIT_DATA_DIR: dataDir }), stdio: ["ignore", "pipe", "pipe"] });
+    children.push(seed);
+    const seeded = await collect(seed).done;
     expect(seeded.stderr).toBe("");
     expect(seeded.code).toBe(0);
     const server = startMain(dataDir);
