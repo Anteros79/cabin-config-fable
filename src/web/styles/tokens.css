@@ -166,6 +166,8 @@
 
   /* the selected seat: an ink ring for the 3:1 contrast, the select colour inside it as in the 3D view */
   --shadow-select: inset 0 0 0 2px var(--text-strong), inset 0 0 0 5px var(--select);
+  /* toasts float above the page */
+  --shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.28);
 
   /* durations */
   --dur-fast: 150ms;

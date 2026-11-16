@@ -25,11 +25,57 @@ declare global {
   }
 }
 
-const CAMERA_BUTTONS: { view: PresetView; label: string; hint: string }[] = [
-  { view: "cutaway", label: "Cutaway", hint: "Whole cabin from outside; the near bins are ghosted" },
-  { view: "overhead", label: "Overhead", hint: "Whole cabin from above" },
-  { view: "aisle", label: "Aisle", hint: "Standing in the aisle looking aft" },
+/** The five camera presets, shown as one segmented control. Focus and Focus rear need a selected location. */
+const PRESET_BUTTONS: { view: PresetView; label: string; hint: string; needsSelection: boolean }[] = [
+  { view: "cutaway", label: "Cutaway", hint: "Whole cabin from outside; the near bins are ghosted", needsSelection: false },
+  { view: "overhead", label: "Overhead", hint: "Whole cabin from above", needsSelection: false },
+  { view: "aisle", label: "Aisle", hint: "Standing in the aisle looking aft", needsSelection: false },
+  { view: "focus", label: "Focus", hint: "Zoom to the selected location", needsSelection: true },
+  { view: "focus-rear", label: "Focus rear", hint: "Zoom to the rear of the selected seat", needsSelection: true },
 ];
+
+const NUDGES = [
+  ["left", "Rotate left", "⟲"],
+  ["right", "Rotate right", "⟳"],
+  ["up", "Tilt up", "↑"],
+  ["down", "Tilt down", "↓"],
+  ["in", "Zoom in", "+"],
+  ["out", "Zoom out", "−"],
+] as const;
+
+/** Below this width the toolbar is one scrolling row and Light and style folds into a disclosure. */
+export const NARROW_TOOLBAR = "(max-width: 699px)";
+const narrowQuery = (): MediaQueryList | null => (typeof window.matchMedia === "function" ? window.matchMedia(NARROW_TOOLBAR) : null);
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => narrowQuery()?.matches ?? false);
+  useEffect(() => {
+    const mq = narrowQuery();
+    if (!mq) return;
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
+  return narrow;
+}
+
+/** The first-use hint over the canvas, shown until it is dismissed once in this browser. */
+export const FIRST_USE_HINT = "Drag to orbit · Pinch or Ctrl+scroll to zoom · Click a seat to select";
+const FIRST_USE_HINT_KEY = "cabin-kit.hint.3d";
+function firstUseHintWanted(): boolean {
+  try {
+    return localStorage.getItem(FIRST_USE_HINT_KEY) === null;
+  } catch {
+    return false;
+  }
+}
+function dismissFirstUseHint(): void {
+  try {
+    localStorage.setItem(FIRST_USE_HINT_KEY, "dismissed");
+  } catch {
+    /* storage blocked: the hint goes for this page only */
+  }
+}
 
 /** The wheel hint shows for this long, at most once per browser session. */
 export const WHEEL_HINT_MS = 2000;
@@ -246,37 +292,100 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   const toggle = (key: keyof Layers) => setLayers((l) => ({ ...l, [key]: !l[key] }));
   const activeProfile = visualProfiles.find((p) => p.id === profile);
   const keysId = useId();
+  const toolbarId = useId();
+  const narrow = useNarrow();
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(false);
+  const [firstHint, setFirstHint] = useState(firstUseHintWanted);
+  const styleControls = (
+    <>
+      <label className="tool-field">
+        <span>Colours</span>
+        <select value={colourMode} onChange={(e) => setColourMode(e.target.value as ColourMode)}>
+          <option value="status">Work status</option>
+          <option value="tier">Tier / zone</option>
+          <option value="none">Appearance only</option>
+        </select>
+      </label>
+      <label className="tool-field">
+        <span>Light</span>
+        <select value={light} onChange={(e) => setLight(e.target.value as LightMode)}>
+          <option value="neutral">Neutral</option>
+          <option value="blue">Blue cabin light</option>
+        </select>
+      </label>
+      <label className="tool-field">
+        <span>Visual family</span>
+        <select value={profile} onChange={(e) => setProfile(e.target.value)}>
+          {visualProfiles.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </>
+  );
 
   return (
     <div className="viewer3d">
-      <fieldset className="toolbar" aria-label="3D view controls">
-        <fieldset className="tool-group" aria-label="Camera">
-          {CAMERA_BUTTONS.map((b) => (
-            <button key={b.view} type="button" title={b.hint} onClick={() => camera(b.view)} disabled={!ready}>
-              {b.label}
+      {/* biome-ignore lint/a11y/useSemanticElements: groups of buttons and fields, not one form fieldset */}
+      <div className="toolbar" role="group" aria-label="3D view controls">
+        <div className="toolbar-row">
+          {/* biome-ignore lint/a11y/useSemanticElements: a group of buttons with a visible label */}
+          <div className="tool-group" role="group" aria-labelledby={`${toolbarId}-view`}>
+            <span className="group-label" id={`${toolbarId}-view`}>
+              View
+            </span>
+            <span className="segmented">
+              {PRESET_BUTTONS.map((b) => (
+                <button key={b.view} type="button" title={b.hint} onClick={() => camera(b.view)} disabled={!ready || (b.needsSelection && !selection)}>
+                  {b.label}
+                </button>
+              ))}
+            </span>
+            <button type="button" onClick={() => camera("cutaway")} disabled={!ready} title="Back to the default view">
+              Reset
             </button>
-          ))}
-          <button type="button" onClick={() => camera("focus")} disabled={!ready || !selection} title="Zoom to the selected location">
-            Focus
+          </div>
+          {/* biome-ignore lint/a11y/useSemanticElements: a group of toggle buttons with a visible label */}
+          <div className="tool-group" role="group" aria-labelledby={`${toolbarId}-layers`}>
+            <span className="group-label" id={`${toolbarId}-layers`}>
+              Layers
+            </span>
+            {(["seats", "floor", "bins", "context"] as const).map((key) => (
+              <button key={key} type="button" className="toggle" aria-pressed={layers[key]} onClick={() => toggle(key)}>
+                {key === "context" ? "Context (walls)" : key.charAt(0).toUpperCase() + key.slice(1)}
+              </button>
+            ))}
+          </div>
+          {narrow ? (
+            <button type="button" className="disclosure" aria-expanded={styleOpen} aria-controls={`${toolbarId}-style`} onClick={() => setStyleOpen((o) => !o)}>
+              Light and style
+            </button>
+          ) : (
+            // biome-ignore lint/a11y/useSemanticElements: a group of fields with a visible label
+            <div className="tool-group" role="group" aria-labelledby={`${toolbarId}-style-label`}>
+              <span className="group-label" id={`${toolbarId}-style-label`}>
+                Light and style
+              </span>
+              {styleControls}
+            </div>
+          )}
+          <button type="button" className="disclosure" aria-expanded={moveOpen} aria-controls={`${toolbarId}-move`} onClick={() => setMoveOpen((o) => !o)}>
+            Move camera
           </button>
-          <button type="button" onClick={() => camera("focus-rear")} disabled={!ready || !selection} title="Zoom to the rear of the selected seat">
-            Focus rear
-          </button>
-          <button type="button" onClick={() => camera("cutaway")} disabled={!ready} title="Back to the default view">
-            Reset
-          </button>
-        </fieldset>
-        <fieldset className="tool-group" aria-label="Move camera">
-          {(
-            [
-              ["left", "Rotate left", "⟲"],
-              ["right", "Rotate right", "⟳"],
-              ["up", "Tilt up", "↑"],
-              ["down", "Tilt down", "↓"],
-              ["in", "Zoom in", "+"],
-              ["out", "Zoom out", "−"],
-            ] as const
-          ).map(([action, label, glyph]) => (
+        </div>
+        {narrow && (
+          // biome-ignore lint/a11y/useSemanticElements: the disclosure's panel, a group of fields
+          <div className="tool-panel" id={`${toolbarId}-style`} role="group" aria-label="Light and style" hidden={!styleOpen}>
+            {styleControls}
+          </div>
+        )}
+        {/* For keyboard and switch users: the same moves as the arrow, plus and minus keys on the canvas. */}
+        {/* biome-ignore lint/a11y/useSemanticElements: the disclosure's panel, a group of buttons */}
+        <div className="tool-panel" id={`${toolbarId}-move`} role="group" aria-label="Move camera" hidden={!moveOpen}>
+          {NUDGES.map(([action, label, glyph]) => (
             <button
               key={action}
               type="button"
@@ -289,44 +398,8 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
               <span aria-hidden="true">{glyph}</span>
             </button>
           ))}
-        </fieldset>
-        <fieldset className="tool-group" aria-label="Layers">
-          <span className="group-label" aria-hidden="true">
-            Layers
-          </span>
-          {(["seats", "floor", "bins", "context"] as const).map((key) => (
-            <label key={key} className="check">
-              <input type="checkbox" checked={layers[key]} onChange={() => toggle(key)} />
-              {key === "context" ? "Context (walls)" : key.charAt(0).toUpperCase() + key.slice(1)}
-            </label>
-          ))}
-        </fieldset>
-        <label className="tool-group select">
-          <span>Colours</span>
-          <select value={colourMode} onChange={(e) => setColourMode(e.target.value as ColourMode)}>
-            <option value="status">Work status</option>
-            <option value="tier">Tier / zone</option>
-            <option value="none">Appearance only</option>
-          </select>
-        </label>
-        <label className="tool-group select">
-          <span>Light</span>
-          <select value={light} onChange={(e) => setLight(e.target.value as LightMode)}>
-            <option value="neutral">Neutral</option>
-            <option value="blue">Blue cabin light</option>
-          </select>
-        </label>
-        <label className="tool-group select">
-          <span>Visual family</span>
-          <select value={profile} onChange={(e) => setProfile(e.target.value)}>
-            {visualProfiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </fieldset>
+        </div>
+      </div>
       <div className="canvas-wrap">
         {/* biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: role="application" makes screen readers pass the camera keys to the focusable canvas (WEB-14) */}
         <canvas
@@ -349,6 +422,20 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           <li>Use the Map and list tab to select locations by keyboard.</li>
         </ul>
         {!ready && <p className="canvas-note">Starting 3D…</p>}
+        {firstHint && (
+          <div className="first-hint">
+            <p>{FIRST_USE_HINT}</p>
+            <button
+              type="button"
+              onClick={() => {
+                dismissFirstUseHint();
+                setFirstHint(false);
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        )}
         {/* always present, so setting its text is announced */}
         <p className="canvas-hint" role="status">
           {wheelHint ? WHEEL_HINT : ""}

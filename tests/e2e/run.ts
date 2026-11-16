@@ -107,6 +107,11 @@ async function startVisitUi(page: Page, tail: string, date: string, technician =
   await page.waitForFunction(() => /#\/visit\/[0-9a-f-]{36}$/.test(location.hash));
   return page.evaluate(() => location.hash.split("/")[2] ?? "");
 }
+/** The six nudge buttons live in the toolbar's "Move camera" disclosure (Task 5.8); open it if it is closed. */
+async function openMoveCamera(page: Page, how: "click" | "tap" = "click"): Promise<void> {
+  const button = page.locator(".toolbar button.disclosure", { hasText: "Move camera" });
+  if ((await button.getAttribute("aria-expanded")) !== "true") await (how === "tap" ? button.tap() : button.click());
+}
 async function openMap(page: Page): Promise<void> {
   await page.click("#tab-map");
   await page.waitForSelector(".cabin-map");
@@ -353,7 +358,7 @@ try {
     equal(rows, SIX, "totals in the page");
     const body = (await page.textContent("article.report"))!;
     expect(
-      body.includes("Keyboard Tech") && body.includes("N100TL") && body.includes("2026-11-12") && body.includes("V01"),
+      body.includes("Keyboard Tech") && body.includes("N100TL") && body.includes("12 Nov 2026") && body.includes("V01"),
       "visit and configuration context present",
     );
     expect(body.includes("Not an approved maintenance authority"), "authority notice present");
@@ -391,7 +396,9 @@ try {
       for (const t of json.report.totals)
         expect(f.includes(flat(`${t.partNo}${t.description}${t.quantity}${t.unit}`)), `${label} carries total ${t.partNo} ${t.quantity} ${t.unit}`);
       expect(!f.includes("FAKE-CK-20011KIT"), `${label} does not total the primary kit`);
-      for (const s of ["N100TL", "2026-11-12", "KeyboardTech", "Seat3A", json.report.visit.id]) expect(f.includes(s), `${label} contains ${s}`);
+      // the page writes the check date in words (Task 5.8); the server PDF still writes it as stored
+      const checkDate = label === "server PDF" ? "2026-11-12" : "12Nov2026";
+      for (const s of ["N100TL", checkDate, "KeyboardTech", "Seat3A", json.report.visit.id]) expect(f.includes(s), `${label} contains ${s}`);
       expect(/FINAL/.test(text), `${label} is marked final`);
     }
   });
@@ -511,7 +518,7 @@ try {
     await settle(page);
     await page.evaluate(() => document.querySelector("canvas")!.scrollIntoView({ block: "center" }));
     const point = await page.evaluate(() => window.__cabinKit!.scene!.screenPointOf("BIN:R-03"));
-    const layer = (name: string) => page.click(`.toolbar [aria-label=Layers] label:has-text('${name}') input`);
+    const layer = (name: string) => page.getByRole("group", { name: "Layers" }).getByRole("button", { name }).click();
     await layer("Bins");
     await settle(page, 200);
     equal(((await sceneInfo(page)).layers as { bins: boolean }).bins, false, "bins layer hidden");
@@ -578,6 +585,7 @@ try {
     await page.keyboard.press("Home");
     await settle(page, 400);
     equal(await position(), home, "Home/Reset restores the default cutaway");
+    await openMoveCamera(page);
     await page.click(".toolbar button[aria-label='Rotate left']");
     await page.click(".toolbar button[aria-label='Zoom in']");
     await settle(page, 300);
@@ -797,7 +805,7 @@ try {
     await page.setViewportSize({ width: 1440, height: 900 });
     await settle(page, 500);
     await page.selectOption(".toolbar label:has-text('Light') select", "blue");
-    await page.click(".toolbar [aria-label=Layers] label:has-text('Context') input");
+    await page.getByRole("group", { name: "Layers" }).getByRole("button", { name: "Context (walls)" }).click();
     await settle(page, 300);
     await openMap(page);
     const hidden = await sceneInfo(page);
@@ -816,7 +824,7 @@ try {
     equal([shown.light, (shown.layers as { context: boolean }).context], ["blue", true], "light and layers kept");
     sameCamera(await cameraOf(page), moved, "after a tab switch");
     await page.selectOption(".toolbar label:has-text('Light') select", "neutral");
-    await page.click(".toolbar [aria-label=Layers] label:has-text('Context') input");
+    await page.getByRole("group", { name: "Layers" }).getByRole("button", { name: "Context (walls)" }).click();
     await page.click(".toolbar button:has-text('Reset')");
   });
   await check("a right click and a long press never pick; the aisle strip picks the full-cabin floor", async () => {
@@ -842,6 +850,17 @@ try {
     await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent?.startsWith("Aft floor area"));
     await sceneSet(page, "setLayers", { seats: true, floor: true, bins: true, context: false });
     await page.click(".toolbar button:has-text('Reset')");
+  });
+
+  await check("the first-use hint over the canvas goes after Got it and stays gone after a reload (WEB-21)", async () => {
+    const hint = page.locator(".first-hint");
+    expect((await hint.count()) === 1, "hint shown until dismissed");
+    await hint.getByRole("button", { name: "Got it" }).click();
+    expect((await hint.count()) === 0, "Got it removes the hint");
+    expect((await page.evaluate(() => localStorage.getItem("cabin-kit.hint.3d"))) !== null, "the dismissal is remembered");
+    await page.reload();
+    await waitFor3D(page);
+    expect((await page.locator(".first-hint").count()) === 0, "not shown again after a reload");
   });
 
   // ---------------------------------------------------------------------------------------
@@ -1027,7 +1046,7 @@ try {
     await lookupUi(page, "N300TL", "2026-11-12");
     await page.goto(`${server.url}/#/visit/${draftId}`);
     await page.waitForSelector("#work-h");
-    expect((await page.textContent("#visit-h"))!.includes("N100TL · 2026-11-12"), "visit still N100TL");
+    expect((await page.textContent("#visit-h"))!.includes("N100TL · 12 Nov 2026"), "visit still N100TL");
     expect((await page.textContent(".panel.config"))!.includes("V01"), "visit still V01");
   });
   await check("stale edit from a second window is reported as a conflict and reloaded", async () => {
@@ -1528,6 +1547,8 @@ try {
     hasTouch: true,
     userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
   });
+  // the first-use hint is checked on the desktop; here it would cover the canvas in captures and taps
+  await mobile.addInitScript(() => localStorage.setItem("cabin-kit.hint.3d", "dismissed"));
   const m = await mobile.newPage();
   let mobileVisit = "";
   await check("mobile: lookup, start visit, no horizontal overflow", async () => {
@@ -1620,6 +1641,7 @@ try {
     await cdp.detach();
     // from the default view, which a resize re-frames, orbit by hand
     await m.tap(".toolbar button:has-text('Reset')");
+    await openMoveCamera(m, "tap");
     await m.tap(".toolbar button[aria-label='Rotate left']");
     await settle(m, 500);
     const moved = await cameraOf(m);

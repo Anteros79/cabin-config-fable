@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.ts";
+import { EmptyState } from "../components/EmptyState.tsx";
 import { ScrollRegion } from "../components/ScrollRegion.tsx";
+import { Skeleton } from "../components/Skeleton.tsx";
+import { formatDate, relativeTime } from "../format.ts";
 import { useResource } from "../hooks/useResource.ts";
 import { formatRoute, type NavigateOptions, type Route } from "../routes.ts";
 
@@ -37,6 +40,9 @@ export function VisitsView({
       : list.error.kind === "network"
         ? "The server could not be reached. Saved visits are still stored; retry when the connection is back."
         : list.error.message;
+  const filtered = routeStatus !== null || routeQ !== "";
+  // "5 min ago" is worked out when the list is drawn; it is not a clock
+  const now = new Date();
   const go = (next: Partial<Extract<Route, { name: "visits" }>>) => navigate(formatRoute({ name: "visits", status: routeStatus, q: routeQ, page, ...next }));
 
   const total = data?.total ?? 0;
@@ -49,7 +55,7 @@ export function VisitsView({
   }, [outOfRange, navigate, routeStatus, routeQ, pages]);
 
   return (
-    <section className="panel" aria-labelledby="visits-h">
+    <section className="panel" aria-labelledby="visits-h" aria-busy={busy}>
       <h2 id="visits-h" tabIndex={-1}>
         Saved visits
       </h2>
@@ -85,9 +91,10 @@ export function VisitsView({
         </div>
       )}
       <p role="status" className="fine">
-        {busy ? "Loading…" : `${total} visit${total === 1 ? "" : "s"}${total > 0 ? ` · page ${page} of ${pages}` : ""}`}
+        {busy ? "" : `${total} visit${total === 1 ? "" : "s"}${pages > 1 ? ` · page ${page} of ${pages}` : ""}`}
       </p>
-      {data && data.items.length > 0 && (
+      {busy && <Skeleton thing="saved visits" shape="table" />}
+      {!busy && data && data.items.length > 0 && (
         <ScrollRegion label="Saved visits table">
           <table>
             <caption className="sr-only">Saved visits, newest first</caption>
@@ -100,7 +107,7 @@ export function VisitsView({
                 <th scope="col">Variant</th>
                 <th scope="col">Records</th>
                 <th scope="col">Technician</th>
-                <th scope="col">Last changed (UTC)</th>
+                <th scope="col">Last changed</th>
                 <th scope="col">Open</th>
               </tr>
             </thead>
@@ -109,14 +116,18 @@ export function VisitsView({
                 <tr key={v.id}>
                   <th scope="row">#{v.number}</th>
                   <td>{v.tail}</td>
-                  <td>{v.checkDate}</td>
+                  <td>{formatDate(v.checkDate)}</td>
                   <td>
                     <span className={`pill ${v.status === "DRAFT" ? "draft" : "recorded"}`}>{v.status === "DRAFT" ? "Draft" : "Completed"}</span>
                   </td>
                   <td>{v.variantId}</td>
                   <td>{v.recordCount}</td>
                   <td>{v.technician || "—"}</td>
-                  <td>{v.updatedAt.replace("T", " ").slice(0, 19)}</td>
+                  <td>
+                    <time dateTime={v.updatedAt} title={v.updatedAt}>
+                      {relativeTime(v.updatedAt, now)}
+                    </time>
+                  </td>
                   <td>
                     <a href={`#/visit/${v.id}`}>{v.status === "DRAFT" ? "Resume" : "View"}</a> · <a href={`#/visit/${v.id}/report`}>Report</a>
                   </td>
@@ -126,21 +137,35 @@ export function VisitsView({
           </table>
         </ScrollRegion>
       )}
-      {data && data.items.length === 0 && !busy && !outOfRange && <p>No visits match.</p>}
-      <nav className="pager" aria-label="Visit pages">
-        <button type="button" disabled={page === 1 || busy} onClick={() => go({ page: 1 })}>
-          First
-        </button>
-        <button type="button" disabled={page === 1 || busy} onClick={() => go({ page: Math.max(1, page - 1) })}>
-          Previous
-        </button>
-        <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => go({ page: page + 1 })}>
-          Next
-        </button>
-        <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => go({ page: pages })}>
-          Last
-        </button>
-      </nav>
+      {data &&
+        data.items.length === 0 &&
+        !busy &&
+        !outOfRange &&
+        (filtered ? (
+          <EmptyState title="No visits match this filter." action={{ label: "Clear filter", href: "#/visits" }}>
+            <p>Saved visits are searched by tail, technician, check date, variant and visit number.</p>
+          </EmptyState>
+        ) : (
+          <EmptyState title="No visits yet." action={{ label: "Start a check", href: "#/check" }}>
+            <p>A visit is saved as a draft when you start it from an appearance check.</p>
+          </EmptyState>
+        ))}
+      {pages > 1 && (
+        <nav className="pager" aria-label="Visit pages">
+          <button type="button" disabled={page === 1 || busy} onClick={() => go({ page: 1 })}>
+            First
+          </button>
+          <button type="button" disabled={page === 1 || busy} onClick={() => go({ page: Math.max(1, page - 1) })}>
+            Previous
+          </button>
+          <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => go({ page: page + 1 })}>
+            Next
+          </button>
+          <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => go({ page: pages })}>
+            Last
+          </button>
+        </nav>
+      )}
     </section>
   );
 }

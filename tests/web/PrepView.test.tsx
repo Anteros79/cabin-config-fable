@@ -19,9 +19,9 @@ describe("PrepView", () => {
     stubFetch((_method, url): Answer => (url.includes("tail=N100TL") ? slow.promise : { body: second }));
     const view = render(<PrepView visitId={null} tail="N100TL" date="2026-11-12" />);
     view.rerender(<PrepView visitId={null} tail="N200TL" date="2026-06-30" />);
-    await screen.findByRole("heading", { name: /N200TL · 2026-06-30/ });
+    await screen.findByRole("heading", { name: /N200TL · 30 Jun 2026/ });
     slow.resolve({ body: first });
     await act(async () => {});
-    expect(screen.getByRole("heading", { name: /N200TL · 2026-06-30/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /N200TL · 30 Jun 2026/ })).toBeInTheDocument();
   });
 });

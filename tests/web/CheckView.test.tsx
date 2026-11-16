@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
 import type { Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
+import { ToastProvider } from "../../src/web/components/Toasts.tsx";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
 import { CUSHION_3A, fixtureRelease, KIT_PRIMARY, snapshotFor, visitWith } from "../helpers.ts";
 import { type Answer, deferred, stubFetch } from "./fetchStub.ts";
@@ -280,5 +281,76 @@ describe("CheckView writes", () => {
     const [first, other, retry] = removals;
     expect(retry?.body?.idempotencyKey).toBe(first?.body?.idempotencyKey);
     expect(other?.body?.idempotencyKey).not.toBe(first?.body?.idempotencyKey);
+  });
+});
+
+describe("CheckView undo after Remove", () => {
+  const renderWithToasts = () =>
+    render(
+      <ToastProvider>
+        <CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />
+      </ToastProvider>,
+    );
+  const inputOf = (r: VisitRecord) => ({
+    locationId: r.locationId,
+    componentId: r.componentId,
+    selection: r.selection,
+    substituteId: r.substituteId,
+    quantity: r.quantity,
+    note: r.note,
+  });
+
+  it("Undo after Remove re-creates the record through the write queue, with its own key and version 0", async () => {
+    const sent = stubFetch((method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (method === "GET") return { body: { visit: base } };
+      if (url.endsWith("/records/remove")) return { body: { visit: stateOf(base, { version: base.version + 1, records: [kit] }), replayed: false } };
+      return { body: { visit: stateOf(base, { version: base.version + 2, records: [kit, { ...cushion, version: 1 }] }), replayed: false } };
+    });
+    renderWithToasts();
+    fireEvent.click(await screen.findByRole("button", { name: removeLabel(cushion) }));
+    await screen.findByText(`Removed ${cushion.locationLabel} / ${cushion.componentName}.`);
+    await waitFor(() => expect(workCount(document.body)).toContain("(1)"));
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(workCount(document.body)).toContain("(2)"));
+    const [removal, undo] = sent.filter((s) => s.method !== "GET");
+    expect(undo?.method).toBe("PUT");
+    expect(undo?.url).toBe(`/api/visits/${base.id}/records`);
+    expect(undo?.body).toMatchObject({ record: inputOf(cushion), expectedRecordVersion: 0 });
+    expect(undo?.body?.idempotencyKey).toEqual(expect.any(String));
+    expect(undo?.body?.idempotencyKey).not.toBe(removal?.body?.idempotencyKey);
+    await screen.findByText(`Restored ${cushion.locationLabel} / ${cushion.componentName}.`);
+  });
+
+  it("an undo that conflicts shows the normal conflict message and reloads", async () => {
+    let gets = 0;
+    stubFetch((method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (method === "GET") {
+        gets += 1;
+        return { body: { visit: base } };
+      }
+      if (url.endsWith("/records/remove")) return { body: { visit: stateOf(base, { version: base.version + 1, records: [kit] }), replayed: false } };
+      return { status: 409, body: { error: { code: "STALE_RECORD", message: "The record changed since it was read.", details: null } } };
+    });
+    renderWithToasts();
+    fireEvent.click(await screen.findByRole("button", { name: removeLabel(cushion) }));
+    fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    await screen.findByText("Not saved: The record changed since it was read. The current saved work has been reloaded.");
+    await waitFor(() => expect(gets).toBe(2));
+  });
+
+  it("a removal whose outcome is unknown offers no Undo", async () => {
+    stubFetch((method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (method === "GET") return { body: { visit: base } };
+      return "reject";
+    });
+    renderWithToasts();
+    fireEvent.click(await screen.findByRole("button", { name: removeLabel(cushion) }));
+    await waitFor(() => expect(screen.getByRole("button", { name: removeLabel(cushion) })).toBeEnabled());
+    await act(async () => {});
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByText(/^Removed /)).toBeNull();
   });
 });

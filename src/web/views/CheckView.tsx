@@ -4,7 +4,10 @@ import type { RecordInput, VisitRecord, VisualProfile } from "../../domain/types
 import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
 import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { Inspector } from "../components/Inspector.tsx";
+import { Skeleton } from "../components/Skeleton.tsx";
+import { useToast } from "../components/Toasts.tsx";
 import { Viewer } from "../components/Viewer.tsx";
+import { formatDate, formatDateTime } from "../format.ts";
 import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
@@ -52,6 +55,9 @@ function bannerText(target: "create" | "complete", status: SaveStatus): string {
 /** A visit answer older than the copy on screen (a write answer overtook the read) is not applied. */
 const olderVisit = (incoming: VisitEnvelope, shown: VisitEnvelope): boolean =>
   incoming.visit.id === shown.visit.id && incoming.visit.version < shown.visit.version;
+
+/** "Seat 3A / Seat cushion": how a record is named in a toast. */
+const recordName = (r: VisitRecord): string => `${r.locationLabel} / ${r.componentName}`;
 
 function today(): string {
   const d = new Date();
@@ -101,6 +107,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   const [lastDraft, setLastDraft] = useState<string | null>(recall);
   // A lookup the route cannot hold (an empty tail, which the server reports as invalid input), tied to the route it was made on.
   const [unrouted, setUnrouted] = useState<{ tail: string; date: string; route: string } | null>(null);
+  const toast = useToast();
 
   // The pointer to the last draft is only offered while that draft still exists and is still a draft.
   useEffect(() => {
@@ -332,12 +339,38 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     const id = visit.id;
     const target = recordTarget(r.locationId, r.componentId);
     const request = { locationId: r.locationId, componentId: r.componentId, expectedRecordVersion: r.version };
-    await writes.run(
+    const removed = await writes.run(
       target,
       (key) => api.removeRecord(id, request.locationId, request.componentId, request.expectedRecordVersion, key),
       canonicalJson(request),
     );
     reloadOnConflict(target);
+    // Undo is offered only for a removal the server confirmed; an unknown outcome keeps its own "Retry safely".
+    if (removed) toast.show(`Removed ${recordName(r)}.`, { action: { label: "Undo", run: () => void undoRemove(id, r) } });
+  };
+  /**
+   * Puts a removed record back: the same record sent again through the write queue, as a new record (version 0), so it
+   * gets its own idempotency key. Nothing is sent while that record has a save in flight or an outcome that is not known.
+   */
+  const undoRemove = async (id: string, r: VisitRecord) => {
+    const target = recordTarget(r.locationId, r.componentId);
+    const phase = writes.statusOf(target).phase;
+    if (phase === "saving" || phase === "unknown") return;
+    const input: RecordInput = {
+      locationId: r.locationId,
+      componentId: r.componentId,
+      selection: r.selection,
+      substituteId: r.substituteId,
+      quantity: r.quantity,
+      note: r.note,
+    };
+    const restored = await writes.run(target, (key) => api.upsertRecord(id, input, 0, key), canonicalJson({ record: input, expectedRecordVersion: 0 }));
+    const status = writes.statusOf(target);
+    reloadOnConflict(target);
+    if (restored) toast.show(`Restored ${recordName(r)}.`);
+    else if (status.phase === "conflict") toast.show(`${describeSaveStatus(status)} The current saved work has been reloaded.`);
+    else if (canRetry(status)) toast.show(describeSaveStatus(status), { action: { label: "Retry safely", run: () => void retry(target) } });
+    else if (status.phase !== "idle") toast.show(describeSaveStatus(status));
   };
   const finishCompletion = (res: WriteResult) => {
     remember(null);
@@ -361,7 +394,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   };
 
   const location = workspace?.layout.locations.find((l) => l.id === selection) ?? null;
-  const info = lookup ? (STATE_TEXT[lookup.state] ?? { title: lookup.state, tone: "bad" as const }) : null;
+  const info = lookup ? (STATE_TEXT[lookup.state] ?? { title: "The lookup could not be completed", tone: "bad" as const }) : null;
   const ctx = visitId ? visit?.snapshot.context : lookup?.context;
   const counts = (visitId ? visit?.snapshot.resolution : lookup?.resolution)?.counts;
   const bannerTarget = visitId ? "complete" : "create";
@@ -435,9 +468,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
             )}
             {lookup && info && (
               <div className={`status-card ${info.tone}`} data-state={lookup.state} data-seq={lookupSeq}>
-                <h3>
-                  {info.title} <span className="code">{lookup.state}</span>
-                </h3>
+                <h3>{info.title}</h3>
                 <p>{lookup.message}</p>
                 {lookup.assignmentsConsidered && lookup.assignmentsConsidered.length > 0 && !lookup.context && (
                   <table className="compact">
@@ -447,7 +478,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                         <th scope="col">Variant</th>
                         <th scope="col">Status</th>
                         <th scope="col">Effective (inclusive)</th>
-                        <th scope="col">Covers {lookup.checkDate}</th>
+                        <th scope="col">Covers {formatDate(lookup.checkDate)}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -459,7 +490,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                             {a.reason ? ` (${a.reason})` : ""}
                           </td>
                           <td>
-                            {a.effectiveFrom} to {a.effectiveTo ?? "open"}
+                            {formatDate(a.effectiveFrom)} to {a.effectiveTo ? formatDate(a.effectiveTo) : "open"}
                           </td>
                           <td>{a.coversDate ? "yes" : "no"}</td>
                         </tr>
@@ -484,11 +515,11 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       )}
 
       {visitId && (
-        <section className="panel visit-head" aria-labelledby="visit-h">
+        <section className="panel visit-head" aria-labelledby="visit-h" aria-busy={visitLoading && !visit}>
           <h2 id="visit-h" tabIndex={-1}>
-            {visit ? `Visit #${visit.number} · ${visit.tail} · ${visit.checkDate}` : "Visit"}
+            {visit ? `Visit #${visit.number} · ${visit.tail} · ${formatDate(visit.checkDate)}` : "Visit"}
           </h2>
-          {visitLoading && !visit && <p role="status">Loading visit…</p>}
+          {visitLoading && !visit && <Skeleton thing="visit" shape="workspace" />}
           {visitError && (
             <div className="alert" role="alert">
               <p>{visitError}</p>
@@ -504,8 +535,11 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                   <span className={`pill ${visit.status === "DRAFT" ? "draft" : "recorded"}`}>
                     {visit.status === "DRAFT" ? "Draft" : "Completed and locked"}
                   </span>{" "}
-                  Technician: {visit.technician || "not entered"} · Configuration frozen {visit.snapshot.capturedAt.slice(0, 19).replace("T", " ")} UTC from
-                  release {visit.referenceReleaseId}.
+                  Technician: {visit.technician || "not entered"} · Configuration frozen{" "}
+                  <time dateTime={visit.snapshot.capturedAt} title={visit.snapshot.capturedAt}>
+                    {formatDateTime(visit.snapshot.capturedAt)}
+                  </time>{" "}
+                  from release {visit.referenceReleaseId}.
                 </p>
                 <p className="fine">
                   This visit keeps its own frozen configuration and parts rules. Looking up another tail or date never changes it.
@@ -565,7 +599,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
               </dd>
               <dt>Effective</dt>
               <dd>
-                {ctx.assignment.effectiveFrom} to {ctx.assignment.effectiveTo ?? "open"}
+                {formatDate(ctx.assignment.effectiveFrom)} to {ctx.assignment.effectiveTo ? formatDate(ctx.assignment.effectiveTo) : "open"}
               </dd>
               <dt>Source</dt>
               <dd>
@@ -650,7 +684,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                   >
                     <p>
                       {visit.records.length} record{visit.records.length === 1 ? "" : "s"} will be locked into the after-action report for {visit.tail} on{" "}
-                      {visit.checkDate}. Completed visits cannot be edited.
+                      {formatDate(visit.checkDate)}. Completed visits cannot be edited.
                       {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
                     </p>
                     {/* the expected visit version is taken at the click: a queued or unresolved save would make it stale */}

@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import type { VisualProfile } from "../../domain/types.ts";
 import { api, type LayoutSummary } from "../api.ts";
+import { EmptyState } from "../components/EmptyState.tsx";
 import { Inspector } from "../components/Inspector.tsx";
 import { ScrollRegion } from "../components/ScrollRegion.tsx";
+import { Skeleton } from "../components/Skeleton.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
@@ -62,8 +64,26 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
   }
 
   if (layoutId) {
-    if (!detail || !workspace) return <p role="status">Loading layout…</p>;
+    if (!detail || !workspace) {
+      return (
+        <section className="panel" aria-label="Layout" aria-busy="true">
+          <Skeleton thing="layout" shape="workspace" />
+        </section>
+      );
+    }
     const rev = detail.layoutRevision;
+    if (rev.seatSetStatus !== "complete") {
+      return (
+        <section className="panel" aria-labelledby="layout-h">
+          <h2 id="layout-h" tabIndex={-1}>
+            {rev.name}
+          </h2>
+          <EmptyState title="This layout has no seat set." action={{ label: "All layouts", href: "#/layouts" }}>
+            <p>The supplied registry names this layout ({rev.id}) but gives no seat positions, so there is nothing to show in 3D or on a map.</p>
+          </EmptyState>
+        </section>
+      );
+    }
     const location = rev.locations.find((l) => l.id === selection) ?? null;
     return (
       <div className="check-view">
@@ -119,7 +139,13 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
     );
   }
 
-  if (!list) return <p role="status">Loading layouts…</p>;
+  if (!list) {
+    return (
+      <section className="panel" aria-label="Layouts" aria-busy="true">
+        <Skeleton thing="layouts" shape="table" />
+      </section>
+    );
+  }
   const groups: [string, string, LayoutSummary[]][] = [
     [
       "Candidate layouts from the supplied registry",

@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
 import { rulesNotUsedLine } from "../../domain/report.ts";
+import type { LookupState } from "../../domain/types.ts";
 import { api } from "../api.ts";
 import { ScrollRegion } from "../components/ScrollRegion.tsx";
+import { Skeleton } from "../components/Skeleton.tsx";
+import { formatDate, formatDateTime, LOOKUP_STATE_LABEL } from "../format.ts";
 import { canRetry, describeSaveStatus, useMutations } from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
 import { contentKeyed } from "../model.ts";
+
+/** A timestamp in words, with the stored value kept on the element. */
+const Time = ({ iso }: { iso: string }) => (
+  <time dateTime={iso} title={iso}>
+    {formatDateTime(iso)}
+  </time>
+);
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
@@ -58,7 +68,13 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
       </section>
     );
   }
-  if (!data) return <p role="status">Loading report…</p>;
+  if (!data) {
+    return (
+      <section className="panel" aria-label="Report" aria-busy="true">
+        <Skeleton thing="report" shape="report" />
+      </section>
+    );
+  }
   const { report, linkedEvents, basisSha256 } = data;
   const c = report.configuration;
   const final = report.reportKind === "FINAL";
@@ -99,19 +115,23 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
           <dt>Visit number</dt>
           <dd>#{report.visit.number}</dd>
           <dt>Status</dt>
-          <dd>{report.visit.status}</dd>
+          <dd>{report.visit.status === "COMPLETED" ? "Completed" : "Draft"}</dd>
           <dt>Tail</dt>
           <dd>{report.visit.tail}</dd>
           <dt>Appearance-check date</dt>
-          <dd>{report.visit.checkDate}</dd>
+          <dd>{formatDate(report.visit.checkDate)}</dd>
           <dt>Technician</dt>
           <dd>{report.visit.technician || "(not entered)"}</dd>
-          <dt>Created (UTC)</dt>
-          <dd>{report.visit.createdAt}</dd>
-          <dt>Completed (UTC)</dt>
-          <dd>{report.visit.completedAt ?? "not completed"}</dd>
-          <dt>Report generated (UTC)</dt>
-          <dd>{report.generatedAt}</dd>
+          <dt>Created</dt>
+          <dd>
+            <Time iso={report.visit.createdAt} />
+          </dd>
+          <dt>Completed</dt>
+          <dd>{report.visit.completedAt ? <Time iso={report.visit.completedAt} /> : "not completed"}</dd>
+          <dt>Report generated</dt>
+          <dd>
+            <Time iso={report.generatedAt} />
+          </dd>
           <dt>Visit id</dt>
           <dd className="mono">{report.visit.id}</dd>
         </dl>
@@ -123,7 +143,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
           <dt>Data namespace</dt>
           <dd>{c.namespace} (fictional fixture)</dd>
           <dt>Lookup state</dt>
-          <dd>{c.lookupState}</dd>
+          <dd>{LOOKUP_STATE_LABEL[c.lookupState as LookupState] ?? c.lookupState}</dd>
           <dt>Subtype</dt>
           <dd>{c.subtype}</dd>
           <dt>Maintenance variant</dt>
@@ -144,7 +164,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
           <dd>{c.upholstery ?? "not stated"}</dd>
           <dt>Assignment effective</dt>
           <dd>
-            {c.assignmentEffectiveFrom} to {c.assignmentEffectiveTo ?? "open"} (inclusive)
+            {formatDate(c.assignmentEffectiveFrom)} to {c.assignmentEffectiveTo ? formatDate(c.assignmentEffectiveTo) : "open"} (inclusive)
           </dd>
           <dt>Configuration source</dt>
           <dd>{source(c.configurationSourceId)}</dd>
@@ -331,7 +351,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
                   <td>{s.title}</td>
                   <td>{s.released ? "yes" : "NO"}</td>
                   <td>
-                    {s.effectiveFrom ?? "not stated"} / {s.expiresOn ?? "no expiry"}
+                    {s.effectiveFrom ? formatDate(s.effectiveFrom) : "not stated"} / {s.expiresOn ? formatDate(s.expiresOn) : "no expiry"}
                   </td>
                 </tr>
               ))}
@@ -349,7 +369,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
           <ul>
             {linkedEvents.map((e) => (
               <li key={e.seq}>
-                <strong>{e.type === "ADVISORY" ? "Advisory" : "Correction note"}</strong> {e.at}{" "}
+                <strong>{e.type === "ADVISORY" ? "Advisory" : "Correction note"}</strong> <Time iso={e.at} />{" "}
                 {String(e.payload.author ?? "") && `by ${String(e.payload.author)}`}: {String(e.payload.note ?? "")}
               </li>
             ))}

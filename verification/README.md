@@ -61,9 +61,7 @@ The E2E run checks that the JSON, the server PDF and the printed PDF carry the s
 
 Method: `captures/` holds 19 real renders from this build (`captures/captures.json` records release, layout, profile, light, camera and layers for each). `comparisons/` holds 12 sheets placing a supplied original on the left and a render on the right (`comparisons/index.json`). I looked at each sheet and judged each feature. The judgments are mine, by eye. Nothing was measured, because no dimensions were supplied.
 
-The three rows marked "(5.6)" were re-judged after Task 5.6 (curved sidewall with recessed windows, arched ceiling with light channels, in the context layer) against sheets 09, 10 and 11 regenerated from that commit's renders the same way; they are not committed either.
-
-The six rows marked "(5.3)" were re-judged after Task 5.3 (environment light, physical upholstery with stitched normal maps, contact shading) against sheets regenerated from that commit's renders with `npm run test:e2e && npm run comparisons`; those regenerated captures and sheets are not committed, so the files in `captures/` and `comparisons/` may predate the judgment.
+Every row below was re-judged after Task 5.8 (the last task of Phase 5), row by row, against all 12 sheets regenerated from that commit's renders with `npm run test:e2e && npm run comparisons`. Those regenerated captures and sheets are not committed (Task 6.2 decides what evidence is tracked), so the files in `captures/` and `comparisons/` may predate the judgment. Task 5.8 changed the application shell, not the scene, and no judgment moved. The fresh renders show no interface overlay: the first-use hint over the canvas is dismissed before the captures are taken. The "(5.3)" and "(5.6)" marks say which task last changed the feature.
 
 PASS means the feature is present and reads as the same thing. PARTIAL means present but visibly different. FAIL means absent or wrong. UNKNOWN means the originals do not settle what is correct.
 
@@ -98,7 +96,7 @@ PASS means the feature is present and reads as the same thing. PARTIAL means pre
 | True colours | — | — | UNKNOWN | Every photograph is under tinted or strong light |
 | Which family belongs to which layout | — | — | UNKNOWN | No supplied file says |
 
-Summary: 8 PASS, 13 PARTIAL, 2 FAIL, 5 UNKNOWN. The model is recognisable as the cabin in the photographs and works as a spatial index for picking seats, floor areas and bins. It is not a faithful reproduction. The headrest shape is now the weakest point; the material finish is closer but less glossy than the photographed leather.
+Summary (re-judged after Task 5.8): 8 PASS, 13 PARTIAL, 2 FAIL, 5 UNKNOWN. Still PARTIAL: the headrest (a thick rounded block, not the slim curved pad), the band edge, the stitching pattern, the concept colour, leather gloss, the flat rear-shell panels, bin detail, windows, the shallow evenly lit ceiling, and both lights (the blue is dimmer and greyer; the neutral has no hard sunlit highlights). The two FAIL rows are deliberate omissions (brand marks, galleys). The model is recognisable as the cabin in the photographs and works as a spatial index for picking seats, floor areas and bins. It is not a faithful reproduction. The headrest shape is now the weakest point; the material finish is closer but less glossy than the photographed leather.
 
 ## Not verified
 

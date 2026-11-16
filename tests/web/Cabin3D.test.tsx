@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, expect, test, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Cabin3D, hoverLabelPosition, WHEEL_HINT, WHEEL_HINT_MS } from "../../src/web/components/Cabin3D.tsx";
 import { Viewer } from "../../src/web/components/Viewer.tsx";
 import { buildStates, type Workspace } from "../../src/web/model.ts";
@@ -189,4 +189,75 @@ test("the canvas lets a vertical touch drag scroll the page", () => {
   const css = styleFile("viewer.css");
   const rule = /\.canvas-wrap canvas \{([^}]*)\}/.exec(css)?.[1] ?? "";
   expect(rule).toMatch(/touch-action:\s*pan-y;/);
+});
+
+describe("the 3D toolbar", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("groups each have a visible label: View holds the five presets, Layers holds toggle buttons", async () => {
+    renderCabin(workspace);
+    await ready();
+    const view = screen.getByRole("group", { name: "View" });
+    expect(within(view).getByText("View")).toBeVisible();
+    for (const name of ["Cutaway", "Overhead", "Aisle", "Focus", "Focus rear"]) expect(within(view).getByRole("button", { name })).toBeInTheDocument();
+    fireEvent.click(within(view).getByRole("button", { name: "Overhead" }));
+    expect(calls("setCamera").at(-1)?.args[0]).toBe("overhead");
+
+    const layers = screen.getByRole("group", { name: "Layers" });
+    const context = within(layers).getByRole("button", { name: "Context (walls)" });
+    expect(context).toHaveAttribute("aria-pressed", "false");
+    expect(within(layers).getByRole("button", { name: "Seats" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(context);
+    expect(context).toHaveAttribute("aria-pressed", "true");
+    expect(calls("setLayers").at(-1)?.args[0]).toMatchObject({ context: true });
+    expect(screen.getByRole("group", { name: "Light and style" })).toBeInTheDocument();
+  });
+
+  test("the six nudge buttons sit in a Move camera disclosure and stay reachable", async () => {
+    renderCabin(workspace);
+    await ready();
+    const disclosure = screen.getByRole("button", { name: "Move camera" });
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Rotate left" })).toBeNull();
+    fireEvent.click(disclosure);
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+    const panel = document.getElementById(disclosure.getAttribute("aria-controls") ?? "");
+    expect(panel).not.toBeNull();
+    for (const name of ["Rotate left", "Rotate right", "Tilt up", "Tilt down", "Zoom in", "Zoom out"])
+      expect(within(panel as HTMLElement).getByRole("button", { name })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Rotate left" }));
+    expect(calls("nudge").map((c) => c.args[0])).toEqual(["left"]);
+  });
+
+  test("on a narrow screen Light and style is one disclosure", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({ matches: query === "(max-width: 699px)", media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    );
+    renderCabin(workspace);
+    await ready();
+    const disclosure = screen.getByRole("button", { name: "Light and style" });
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("combobox", { name: "Light" })).toBeNull();
+    fireEvent.click(disclosure);
+    expect(screen.getByRole("combobox", { name: "Light" })).toBeInTheDocument();
+  });
+
+  test("the first-use hint shows until Got it is pressed once", async () => {
+    const first = renderCabin(workspace);
+    await ready();
+    expect(screen.getByText("Drag to orbit · Pinch or Ctrl+scroll to zoom · Click a seat to select")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Got it" }));
+    expect(screen.queryByText(/^Drag to orbit ·/)).toBeNull();
+    expect(localStorage.getItem("cabin-kit.hint.3d")).not.toBeNull();
+    first.unmount();
+    renderCabin(workspace);
+    await ready();
+    expect(screen.queryByText(/^Drag to orbit ·/)).toBeNull();
+  });
 });

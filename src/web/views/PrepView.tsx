@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { rulesNotUsedLine } from "../../domain/report.ts";
 import { api } from "../api.ts";
+import { EmptyState } from "../components/EmptyState.tsx";
 import { ScrollRegion } from "../components/ScrollRegion.tsx";
+import { Skeleton } from "../components/Skeleton.tsx";
+import { formatDate } from "../format.ts";
 import { useResource } from "../hooks/useResource.ts";
 import { contentKeyed } from "../model.ts";
 
@@ -61,9 +64,9 @@ export function PrepView({ visitId, tail, date }: Props) {
     : `/api/preparation?tail=${encodeURIComponent(tail ?? "")}&date=${encodeURIComponent(date ?? "")}&format=csv`;
 
   return (
-    <section className="panel prep" aria-labelledby="prep-h">
+    <section className="panel prep" aria-labelledby="prep-h" aria-busy={!prep && !error}>
       <h2 id="prep-h" tabIndex={-1}>
-        Preparation: applicable parts{prep ? ` · ${prep.tail} · ${prep.checkDate}` : ""}
+        Preparation: applicable parts{prep ? ` · ${prep.tail} · ${formatDate(prep.checkDate)}` : ""}
       </h2>
       {error && (
         <div className="alert" role="alert">
@@ -78,7 +81,7 @@ export function PrepView({ visitId, tail, date }: Props) {
           <a href="#/check">Go to the appearance check</a>
         </div>
       )}
-      {!prep && !error && <p role="status">Loading…</p>}
+      {!prep && !error && <Skeleton thing="preparation list" shape="table" />}
       {prep && (
         <>
           <p>
@@ -123,88 +126,111 @@ export function PrepView({ visitId, tail, date }: Props) {
             Showing {lines.length} of {prep.lines.length} lines · {prep.counts.parts} distinct primary parts · {prep.counts.resolvedComponents} resolved
             components · {prep.counts.unresolvedComponents} unresolved · {prep.counts.alternates} alternates · {prep.counts.pendingChanges} pending changes
           </p>
-          <ScrollRegion label="Applicable parts table">
-            <table id="prep-table">
-              <thead>
-                <tr>
-                  <th scope="col">Primary part</th>
-                  <th scope="col">Component</th>
-                  <th scope="col">Per replacement</th>
-                  <th scope="col">Applies at (coverage)</th>
-                  <th scope="col">Source and validity</th>
-                  <th scope="col">Alternates and required supplements</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((l) => (
-                  <tr key={l.ruleId} data-part={l.partNo}>
-                    <th scope="row">
-                      <span className="partno">{l.partNo}</span>
-                      <br />
-                      <span className="fine">{l.description}</span>
-                    </th>
-                    <td>{l.componentName}</td>
-                    <td>
-                      {l.qtyPerReplacement} {l.unit}
-                      {l.requiredSupplements.map((s) => (
-                        <span key={s.partNo}>
-                          <br />+ {s.qty} {s.unit} {s.partNo}
-                        </span>
-                      ))}
-                    </td>
-                    <td>{l.coverageSummary}</td>
-                    <td>
-                      {l.source ? `${l.source.id} rev ${l.source.revision}` : "—"}
-                      <br />
-                      <span className="fine">
-                        Rule {l.ruleEffectiveFrom} to {l.ruleEffectiveTo ?? "open"}
-                        {l.source?.expiresOn ? `; source expires ${l.source.expiresOn}` : ""}
-                      </span>
-                      {l.pendingChanges.map((p) => (
-                        <span key={p.id} className="advisory-inline">
-                          <br />
-                          Pending change: {p.note}
-                        </span>
-                      ))}
-                      {l.excludedRules.map((x) => (
-                        <span key={x.ruleId} className="fine excluded">
-                          <br />
-                          {rulesNotUsedLine([x])} ({x.locationSummary})
-                        </span>
-                      ))}
-                    </td>
-                    <td>
-                      {l.alternates.length === 0 && l.excludedAlternates.length === 0 && "—"}
-                      {l.alternates.map((a) => (
-                        <div key={a.substituteId} className="alt-block">
-                          Alternate <span className="partno">{a.altPartNo}</span> {a.qtyPerReplacement} {a.unit}
-                          <br />
-                          <span className="fine">
-                            Approval {a.approvalSource ? `${a.approvalSource.id} rev ${a.approvalSource.revision}` : a.substituteId}, {a.effectiveFrom} to{" "}
-                            {a.effectiveTo ?? "open"}
-                          </span>
-                          {a.requiredSupplements.length > 0 && (
-                            <ul className="plain">
-                              {a.requiredSupplements.map((s) => (
-                                <li key={s.partNo}>
-                                  Required: <span className="partno">{s.partNo}</span> × {s.qty} {s.unit}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                      {l.excludedAlternates.map((x) => (
-                        <div key={x.id} className="fine excluded">
-                          Not available: {x.altPartNo} — {x.reasons.map((r) => r.message).join(" ")}
-                        </div>
-                      ))}
-                    </td>
+          {lines.length === 0 ? (
+            prep.lines.length > 0 ? (
+              <EmptyState title="No parts match this filter.">
+                <p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setText("");
+                      setComponent("");
+                      setOnly("");
+                    }}
+                  >
+                    Clear filter
+                  </button>
+                </p>
+              </EmptyState>
+            ) : (
+              <EmptyState title="No applicable parts.">
+                <p>No parts rule applies to this configuration. Any unresolved components are listed below.</p>
+              </EmptyState>
+            )
+          ) : (
+            <ScrollRegion label="Applicable parts table">
+              <table id="prep-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Primary part</th>
+                    <th scope="col">Component</th>
+                    <th scope="col">Per replacement</th>
+                    <th scope="col">Applies at (coverage)</th>
+                    <th scope="col">Source and validity</th>
+                    <th scope="col">Alternates and required supplements</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </ScrollRegion>
+                </thead>
+                <tbody>
+                  {lines.map((l) => (
+                    <tr key={l.ruleId} data-part={l.partNo}>
+                      <th scope="row">
+                        <span className="partno">{l.partNo}</span>
+                        <br />
+                        <span className="fine">{l.description}</span>
+                      </th>
+                      <td>{l.componentName}</td>
+                      <td>
+                        {l.qtyPerReplacement} {l.unit}
+                        {l.requiredSupplements.map((s) => (
+                          <span key={s.partNo}>
+                            <br />+ {s.qty} {s.unit} {s.partNo}
+                          </span>
+                        ))}
+                      </td>
+                      <td>{l.coverageSummary}</td>
+                      <td>
+                        {l.source ? `${l.source.id} rev ${l.source.revision}` : "—"}
+                        <br />
+                        <span className="fine">
+                          Rule {formatDate(l.ruleEffectiveFrom)} to {l.ruleEffectiveTo ? formatDate(l.ruleEffectiveTo) : "open"}
+                          {l.source?.expiresOn ? `; source expires ${formatDate(l.source.expiresOn)}` : ""}
+                        </span>
+                        {l.pendingChanges.map((p) => (
+                          <span key={p.id} className="advisory-inline">
+                            <br />
+                            Pending change: {p.note}
+                          </span>
+                        ))}
+                        {l.excludedRules.map((x) => (
+                          <span key={x.ruleId} className="fine excluded">
+                            <br />
+                            {rulesNotUsedLine([x])} ({x.locationSummary})
+                          </span>
+                        ))}
+                      </td>
+                      <td>
+                        {l.alternates.length === 0 && l.excludedAlternates.length === 0 && "—"}
+                        {l.alternates.map((a) => (
+                          <div key={a.substituteId} className="alt-block">
+                            Alternate <span className="partno">{a.altPartNo}</span> {a.qtyPerReplacement} {a.unit}
+                            <br />
+                            <span className="fine">
+                              Approval {a.approvalSource ? `${a.approvalSource.id} rev ${a.approvalSource.revision}` : a.substituteId},{" "}
+                              {formatDate(a.effectiveFrom)} to {a.effectiveTo ? formatDate(a.effectiveTo) : "open"}
+                            </span>
+                            {a.requiredSupplements.length > 0 && (
+                              <ul className="plain">
+                                {a.requiredSupplements.map((s) => (
+                                  <li key={s.partNo}>
+                                    Required: <span className="partno">{s.partNo}</span> × {s.qty} {s.unit}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                        {l.excludedAlternates.map((x) => (
+                          <div key={x.id} className="fine excluded">
+                            Not available: {x.altPartNo} — {x.reasons.map((r) => r.message).join(" ")}
+                          </div>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollRegion>
+          )}
 
           <h3>Unresolved gaps ({prep.counts.unresolvedComponents} components)</h3>
           {prep.gaps.length === 0 ? (

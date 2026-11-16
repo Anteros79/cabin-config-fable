@@ -41,7 +41,7 @@ describe("VisitsView", () => {
     const navigate = vi.fn();
     render(<VisitsView status="DRAFT" q="N100" page={9999} navigate={navigate} />);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("#/visits?status=DRAFT&q=N100&page=3", { replace: true }));
-    expect(screen.queryByText("No visits match.")).toBeNull();
+    expect(screen.queryByText("No visits match this filter.")).toBeNull();
   });
 
   it("an empty list on a later page goes back to the first page", async () => {
@@ -49,5 +49,48 @@ describe("VisitsView", () => {
     const navigate = vi.fn();
     render(<VisitsView status={null} q="" page={4} navigate={navigate} />);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("#/visits", { replace: true }));
+  });
+
+  it("an empty store and an empty filter show different messages, each with its next step", async () => {
+    stubFetch((): Answer => ({ body: { items: [], total: 0 } }));
+    const view = render(<VisitsView status={null} q="" page={1} navigate={vi.fn()} />);
+    await screen.findByText("No visits yet.");
+    expect(screen.getByRole("link", { name: "Start a check" })).toHaveAttribute("href", "#/check");
+    expect(screen.queryByText("No visits match this filter.")).toBeNull();
+    view.unmount();
+    render(<VisitsView status="DRAFT" q="N9" page={1} navigate={vi.fn()} />);
+    await screen.findByText("No visits match this filter.");
+    expect(screen.getByRole("link", { name: "Clear filter" })).toHaveAttribute("href", "#/visits");
+    expect(screen.queryByText("No visits yet.")).toBeNull();
+  });
+
+  it("the pager is hidden when everything fits on one page", async () => {
+    stubFetch((): Answer => ({ body: { items: [item(1), item(2)], total: 2 } }));
+    const view = render(<VisitsView status={null} q="" page={1} navigate={vi.fn()} />);
+    await screen.findByText("2 visits");
+    expect(screen.queryByRole("navigation", { name: "Visit pages" })).toBeNull();
+    view.unmount();
+    stubFetch((): Answer => ({ body: { items: [item(1)], total: 60 } }));
+    render(<VisitsView status={null} q="" page={1} navigate={vi.fn()} />);
+    await screen.findByText(/page 1 of 3/);
+    expect(screen.getByRole("navigation", { name: "Visit pages" })).toBeInTheDocument();
+  });
+
+  it("dates read as words; the machine value stays on the time element", async () => {
+    stubFetch((): Answer => ({ body: { items: [item(1)], total: 1 } }));
+    const { container } = render(<VisitsView status={null} q="" page={1} navigate={vi.fn()} />);
+    await screen.findByText("12 Nov 2026");
+    const time = container.querySelector("time");
+    expect(time).toHaveAttribute("dateTime", "2026-11-12T10:00:00.000Z");
+    expect(time).toHaveAttribute("title", "2026-11-12T10:00:00.000Z");
+    expect(container.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("while loading, the table is a placeholder hidden from assistive technology and the panel is busy", () => {
+    stubFetch((): Answer => deferred<{ body: unknown }>().promise);
+    const { container } = render(<VisitsView status={null} q="" page={1} navigate={vi.fn()} />);
+    expect(container.querySelector("section")).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelector("[data-skeleton]")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Loading saved visits")).toHaveClass("sr-only");
   });
 });

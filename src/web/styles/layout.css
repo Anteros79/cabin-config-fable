@@ -178,3 +178,113 @@ main:focus {
     border-bottom: 3px solid Highlight;
   }
 }
+
+/* toasts: short notes about what just happened, bottom left, above everything; no motion */
+.toasts {
+  position: fixed;
+  left: var(--space-6);
+  bottom: var(--space-6);
+  z-index: 20;
+  max-width: min(32rem, calc(100vw - 2rem));
+}
+.toasts ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  background: var(--hint-bg);
+  color: var(--hint-text);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-raised);
+}
+.toast-message {
+  flex: 1;
+}
+.toast button {
+  min-height: var(--control-height-compact);
+  padding: var(--step-020) var(--step-055);
+}
+.toast .toast-action {
+  font-weight: 600;
+}
+
+/* loading placeholders: blocks the size of what they stand for; hidden from assistive technology */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sk-block {
+  background: var(--surface-2);
+  border-radius: var(--radius-1);
+}
+.sk-line {
+  height: 1em;
+  width: 70%;
+}
+.sk-line.sk-short {
+  width: 40%;
+}
+.sk-wide {
+  width: 50%;
+}
+.sk-heading {
+  height: 1.5em;
+  width: 35%;
+}
+.sk-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+.sk-canvas {
+  flex: 3 1 24rem;
+  height: clamp(300px, 52vh, 560px);
+}
+.sk-side {
+  flex: 1 1 16rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sk-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sk-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sk-table-head {
+  height: 2.2em;
+}
+.sk-table-row {
+  height: 2.4em;
+  background: var(--surface-muted);
+}
+
+/* empty lists: what is missing and the next step */
+.empty-state {
+  padding: var(--space-6);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-muted);
+}
+.empty-state .empty-title {
+  margin-top: 0;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.empty-state p:last-child {
+  margin-bottom: 0;
+}

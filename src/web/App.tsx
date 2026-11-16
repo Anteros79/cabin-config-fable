@@ -2,6 +2,7 @@ import { Component, type ReactNode, useCallback, useEffect, useRef, useState } f
 import type { VisualProfile } from "../domain/types.ts";
 import { ApiError, api, type Health } from "./api.ts";
 import { ThemeControl } from "./components/ThemeControl.tsx";
+import { ToastProvider } from "./components/Toasts.tsx";
 import { useResource } from "./hooks/useResource.ts";
 import { isInPageAnchor, type NavigateOptions, parseRoute, type Route } from "./routes.ts";
 import { CheckView } from "./views/CheckView.tsx";
@@ -204,7 +205,7 @@ export function App() {
   ];
 
   return (
-    <>
+    <ToastProvider>
       {/* A button, not a link: following "#main" would replace the route in the address bar. */}
       <button type="button" className="skip" onClick={() => mainRef.current?.focus()}>
         Skip to content
@@ -276,6 +277,6 @@ export function App() {
           {health?.reference.releaseId ? ` Reference release ${health.reference.releaseId}.` : ""}
         </p>
       </footer>
-    </>
+    </ToastProvider>
   );
 }
