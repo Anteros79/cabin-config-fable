@@ -104,7 +104,7 @@ export async function request<T>(method: string, url: string, body?: unknown, op
       return payload as T;
     }
     const p = payload as { state?: string } | null;
-    if (readable && p?.state) return payload as T; // lookup answers carry their own state even on 503
+    if (!isWrite && readable && p?.state) return payload as T; // lookup answers carry their own state even on 503
     if (isWrite && response.status >= 500 && !(readable && isEnvelope(payload) && NOT_SAVED_CODES.has(payload.error.code))) {
       // A 5xx that is not the server's own envelope may come from a proxy after the write was applied.
       throw new ApiError("network", response.status, "OUTCOME_UNKNOWN", "The server answer could not be trusted; the outcome is unknown.");

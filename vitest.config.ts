@@ -73,6 +73,7 @@ export default defineConfig({
         branches: 60,
         "src/domain/**": { lines: 90, branches: 85 },
         "src/importer/**": { lines: 85, branches: 75 },
+        "src/server/**": { lines: 85, branches: 75 },
         "src/web/**": { lines: 10, branches: 10 },
       },
     },

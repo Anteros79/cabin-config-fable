@@ -146,6 +146,12 @@ describe("request", () => {
     await expect(api.lookup("N100TL", "2026-11-12")).resolves.toMatchObject({ state: "REFERENCE_UNAVAILABLE" });
   });
 
+  it("a state body on a failed write is not treated as a lookup answer", async () => {
+    stubFetch({ status: 503, body: { state: "REFERENCE_UNAVAILABLE" } });
+    const err = await failure(api.upsertRecord("v1", record, 0, "key-key-key-1"));
+    expect(err.kind).toBe("network");
+  });
+
   it("addEvent sends the idempotency key", async () => {
     stubFetch({ body: { visit: {}, replayed: false } });
     await api.addEvent("v1", "NOTE", "text", "Sam", "key-key-key-2");

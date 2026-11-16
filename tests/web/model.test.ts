@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CabinLocation } from "../../src/domain/types.ts";
+import type { CabinLocation, VisitRecord } from "../../src/domain/types.ts";
 import { buildStates, componentsAt, describeSeat, seatLabelFor, type Workspace } from "../../src/web/model.ts";
 import { at, fixtureRelease, snapshotFor } from "../helpers.ts";
 
@@ -10,6 +10,23 @@ const location = (id: string): CabinLocation => {
   if (!found) throw new Error(`fixture has no location ${id}`);
   return found;
 };
+
+const recordAt = (locationId: string, componentId: string): VisitRecord => ({
+  locationId,
+  componentId,
+  selection: "PRIMARY",
+  substituteId: null,
+  quantity: 1,
+  note: "",
+  version: 1,
+  ruleId: "R",
+  primaryPartNo: "P",
+  locationLabel: locationId,
+  componentName: componentId,
+  lines: [],
+  createdAt: "2026-11-12T12:01:00.000Z",
+  updatedAt: "2026-11-12T12:01:00.000Z",
+});
 
 const workspace = (records: Workspace["records"] = []): Workspace => ({
   mode: "visit",
@@ -33,7 +50,7 @@ describe("componentsAt", () => {
   });
 
   it("attaches the record for the location and component", () => {
-    const record = { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", substituteId: null, quantity: 1, note: "", version: 1 } as never;
+    const record = recordAt("SEAT:3A", "CUSHION");
     const cushion = componentsAt(workspace([record]), location("SEAT:3A")).find((v) => v.componentId === "CUSHION");
     expect(cushion?.record).toBe(record);
   });
@@ -56,7 +73,7 @@ describe("buildStates", () => {
   });
 
   it("a record marks its component as recorded", () => {
-    const record = { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", substituteId: null, quantity: 1, note: "", version: 1 } as never;
+    const record = recordAt("SEAT:3A", "CUSHION");
     const { scene, flags } = buildStates(workspace([record]));
     expect(scene.get("SEAT:3A")?.components.CUSHION).toBe("recorded");
     expect(flags.get("SEAT:3A")?.recorded).toBe(1);
@@ -71,9 +88,7 @@ describe("buildStates", () => {
     };
     expect(buildStates(ws).scene.get(first.locationId)?.components[first.componentId]).toBe("unresolved");
     expect(buildStates(ws).flags.get(first.locationId)?.unresolved).toBe(1);
-    ws.records = [
-      { locationId: first.locationId, componentId: first.componentId, selection: "PRIMARY", substituteId: null, quantity: 1, note: "", version: 1 } as never,
-    ];
+    ws.records = [recordAt(first.locationId, first.componentId)];
     expect(buildStates(ws).scene.get(first.locationId)?.components[first.componentId]).toBe("recorded");
   });
 
@@ -108,9 +123,11 @@ describe("seatLabelFor", () => {
   });
 
   it("names the maintenance zone and tier of a seat", () => {
-    const loc = location("SEAT:3A");
-    const label = seatLabelFor(loc, undefined);
-    if (loc.seat?.maintenanceZone) expect(label).toContain(`zone ${loc.seat.maintenanceZone}`);
-    if (loc.seat?.commercialTier) expect(label).toContain(loc.seat.commercialTier);
+    const base = location("SEAT:3A");
+    const loc: CabinLocation = {
+      ...base,
+      seat: { ...(base.seat as NonNullable<CabinLocation["seat"]>), maintenanceZone: "Z9", commercialTier: "TIER-X" },
+    };
+    expect(seatLabelFor(loc, undefined)).toBe(`${loc.label}, zone Z9, TIER-X`);
   });
 });
