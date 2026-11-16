@@ -310,7 +310,8 @@ describe("styles", () => {
 
   it("styles: the user's font size is respected and table headers are not sticky", () => {
     expect(css).not.toMatch(/font-size:\s*15px/);
-    expect(rulesFor(css, "html").join("")).toMatch(/font-size:\s*93\.75%;/);
+    expect(rulesFor(css, "html").join("")).toMatch(/font-size:\s*var\(--font-size-root\);/);
+    expect(lightTokens().get("--font-size-root")).toBe("93.75%");
     expect(css).not.toMatch(/position:\s*sticky;\s*top:\s*0;/);
     expect(css).not.toMatch(/--sel:/);
   });

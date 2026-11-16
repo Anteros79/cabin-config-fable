@@ -8,7 +8,7 @@
 
 /* 15px at the browser default of 16px; a larger setting scales everything */
 html {
-  font-size: 93.75%;
+  font-size: var(--font-size-root);
 }
 * {
   box-sizing: border-box;
@@ -22,27 +22,27 @@ h3,
 h4,
 h5 {
   line-height: 1.2;
-  margin: 0 0 0.4rem;
+  margin: 0 0 var(--step-040);
 }
 h1 {
-  font-size: 1.25rem;
+  font-size: var(--font-size-125);
 }
 h2 {
-  font-size: 1.3rem;
+  font-size: var(--font-size-130);
 }
 h3 {
-  font-size: 1.05rem;
-  margin-top: 0.9rem;
+  font-size: var(--font-size-105);
+  margin-top: var(--step-090);
 }
 h4 {
-  font-size: 0.98rem;
+  font-size: var(--font-size-098);
 }
 h5 {
-  font-size: 0.9rem;
-  margin-top: 0.7rem;
+  font-size: var(--font-size-090);
+  margin-top: var(--step-070);
 }
 p {
-  margin: 0.35rem 0;
+  margin: var(--space-3) 0;
 }
 a {
   color: var(--accent);
@@ -78,7 +78,7 @@ button.skip:hover:not(:disabled) {
   color: var(--accent-contrast);
 }
 .boot-note {
-  padding: 2rem;
+  padding: var(--step-200);
 }
 
 /* building blocks */
@@ -97,7 +97,7 @@ button.skip:hover:not(:disabled) {
 .partno,
 .code {
   font-family: var(--font-mono);
-  font-size: 0.9em;
+  font-size: var(--font-size-mono);
 }
 .mono {
   overflow-wrap: anywhere;
@@ -108,7 +108,7 @@ button.skip:hover:not(:disabled) {
 }
 .code {
   color: var(--text-muted);
-  font-size: 0.78em;
+  font-size: var(--font-size-code);
 }
 .count {
   color: var(--text-muted);
@@ -116,12 +116,12 @@ button.skip:hover:not(:disabled) {
 }
 .pill {
   display: inline-block;
-  padding: 0.05rem var(--space-4);
+  padding: var(--step-005) var(--space-4);
   border-radius: var(--radius-3);
-  font-size: 0.78rem;
+  font-size: var(--font-size-078);
   font-weight: 700;
   border: 1px solid currentColor;
-  margin-left: 0.3rem;
+  margin-left: var(--step-030);
   vertical-align: middle;
 }
 .pill.recorded,
@@ -145,7 +145,7 @@ button.skip:hover:not(:disabled) {
 .save-banner,
 .confirm {
   border-radius: var(--radius-2);
-  padding: 0.55rem 0.75rem;
+  padding: var(--step-055) var(--step-075);
   margin: var(--space-4) 0;
   border: 1px solid;
 }
@@ -163,8 +163,8 @@ button.skip:hover:not(:disabled) {
   border-color: var(--border-subtle);
 }
 .notice ul {
-  margin: 0.2rem 0;
-  padding-left: 1.1rem;
+  margin: var(--step-020) 0;
+  padding-left: var(--step-110);
 }
 .advisory,
 .status-card.warn,
@@ -175,13 +175,13 @@ button.skip:hover:not(:disabled) {
 }
 dialog.confirm {
   max-width: min(34rem, calc(100vw - 2rem));
-  padding: 0.9rem 1.1rem;
+  padding: var(--step-090) var(--step-110);
 }
 dialog.confirm::backdrop {
   background: var(--backdrop);
 }
 dialog.confirm h2 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-110);
 }
 .advisory-inline {
   color: var(--warning);
@@ -204,21 +204,21 @@ dialog.confirm h2 {
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
   color: var(--warning-text);
-  padding: var(--space-4) 0.7rem;
+  padding: var(--space-4) var(--step-070);
   border-radius: var(--radius-2);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-090);
 }
 
 dl.facts {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: var(--space-1) var(--space-6);
-  margin: 0.4rem 0;
+  margin: var(--step-040) 0;
 }
 dl.facts dt {
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: var(--font-size-086);
 }
 dl.facts dd {
   margin: 0;
@@ -232,7 +232,7 @@ dl.facts.wide {
 }
 dl.facts.wide dt {
   break-after: avoid;
-  margin-top: 0.2rem;
+  margin-top: var(--step-020);
 }
 dl.facts.wide dd {
   break-before: avoid;
@@ -247,7 +247,7 @@ dl.facts.wide .pair {
 table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.9rem;
+  font-size: var(--font-size-090);
 }
 th,
 td {
@@ -268,12 +268,12 @@ th.num {
   text-align: right;
 }
 table.compact {
-  margin-top: 0.4rem;
+  margin-top: var(--step-040);
 }
 caption {
   text-align: left;
   font-weight: 600;
-  padding-bottom: 0.2rem;
+  padding-bottom: var(--step-020);
 }
 .table-scroll {
   overflow-x: auto;
@@ -287,7 +287,7 @@ ul.plain {
 
 @media (max-width: 720px) {
   html {
-    font-size: 96.875%;
+    font-size: var(--font-size-root-touch);
   }
 }
 

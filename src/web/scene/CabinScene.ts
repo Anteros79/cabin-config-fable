@@ -85,6 +85,8 @@ const BIN_STATUS_COLOUR = {
 };
 /** Floor frames: selection 10 cm in the select colour; hover 6 cm in the theme's outline colour with 2 cm of ink inside it. */
 const SELECTION_FRAME = [{ width: 0.1, colour: SELECT_COLOUR }] as const;
+/** A CSS colour as lower-case six-digit hex: one spelling per colour, for comparisons and cache keys. */
+const hex6 = (colour: string) => `#${new THREE.Color(colour).getHexString()}`;
 const hoverFrame = (outline: string) =>
   [
     { width: 0.06, colour: outline },
@@ -221,7 +223,7 @@ export class CabinScene {
   private palette: ProfilePalette = PALETTES["photo-navy-band"];
   private light: LightMode = "neutral";
   /** what the page theme gives the scene: set by setTheme() */
-  private theme: SceneTheme = { ...LIGHT_SCENE_THEME };
+  private theme: SceneTheme = { background: hex6(LIGHT_SCENE_THEME.background), outline: hex6(LIGHT_SCENE_THEME.outline), wash: hex6(LIGHT_SCENE_THEME.wash) };
   private colourMode: ColourMode = "status";
   private layout: LayoutRevision | null = null;
   private seats: SeatEntry[] = [];
@@ -981,19 +983,20 @@ export class CabinScene {
     this.lights.fill.intensity = blue ? 0.8 : 0;
     this.renderer.toneMappingExposure = blue ? 1.05 : 1.0;
     this.groups.context.traverse((o) => {
-      if (o.userData.wash) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.set(blue ? "#6f8dff" : this.theme.outline);
+      if (o.userData.wash) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.set(blue ? "#6f8dff" : this.theme.wash);
     });
   }
 
   /**
-   * Follow the page theme (WEB-16): the background in neutral light, the hover outline, and the ceiling wash, which
-   * takes the outline colour (white on the light page, a softer white on the dark one). Status and select colours stay.
+   * Follow the page theme (WEB-16): the background in neutral light, the hover outline and the ceiling wash. Status and
+   * select colours stay. Colours are compared and kept as six-digit hex, so "#fff" and "#ffffff" are the same theme.
    */
   setTheme(theme: SceneTheme): void {
-    if (theme.background === this.theme.background && theme.outline === this.theme.outline) return;
-    this.theme = { ...theme };
-    (this.hoverMarks.hull.material as THREE.MeshBasicMaterial).color.set(theme.outline);
-    this.hoverMarks.rings = hoverFrame(theme.outline);
+    const next: SceneTheme = { background: hex6(theme.background), outline: hex6(theme.outline), wash: hex6(theme.wash) };
+    if (next.background === this.theme.background && next.outline === this.theme.outline && next.wash === this.theme.wash) return;
+    this.theme = next;
+    (this.hoverMarks.hull.material as THREE.MeshBasicMaterial).color.set(next.outline);
+    this.hoverMarks.rings = hoverFrame(next.outline);
     if (this.hoverMarks.location) this.placeMarks(this.hoverMarks, this.hoverMarks.location, "hover");
     this.applyLight();
     this.invalidate();
@@ -1207,7 +1210,7 @@ export class CabinScene {
     const p = location.placement;
     if (location.kind === "FLOOR") {
       // the hover frame's colour follows the theme, so a frame is kept per colour
-      const key = `${location.id}|${kind}|${marks.rings[0]?.colour ?? ""}`;
+      const key = `${location.id}|${kind}|${hex6(marks.rings[0]?.colour ?? "#000000")}`;
       let geometry = this.frames.get(key);
       if (!geometry) {
         geometry = this.layoutResources.track(frameGeometry(p.lx, p.lz, marks.rings));

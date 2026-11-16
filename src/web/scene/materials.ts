@@ -92,15 +92,17 @@ export const STATUS_COLOUR = {
 /** The selection outline and floor frame: the `--select` token, the same in every theme; a test holds the two equal. */
 export const SELECT_COLOUR = "#b97c00";
 
-/** What the scene takes from the page theme (CabinScene.setTheme): the `--scene-bg` and `--scene-outline` tokens. */
+/** What the scene takes from the page theme (CabinScene.setTheme): the `--scene-bg`, `--scene-outline` and `--scene-wash` tokens. */
 export interface SceneTheme {
   /** the background in neutral cabin light (blue cabin light keeps its own) */
   background: string;
-  /** the hover outline's outer hull and floor frame, and the ceiling wash in neutral light */
+  /** the hover outline's outer hull and floor frame */
   outline: string;
+  /** the ceiling wash in neutral light (blue cabin light keeps its own) */
+  wash: string;
 }
 /** The light theme's values, which the scene starts with; a test holds them equal to tokens.css. */
-export const LIGHT_SCENE_THEME: SceneTheme = { background: "#eef0f4", outline: "#ffffff" };
+export const LIGHT_SCENE_THEME: SceneTheme = { background: "#eef0f4", outline: "#ffffff", wash: "#ffffff" };
 
 /** Tier and zone tints on the seat pan in the "Tier / zone" colour mode, keyed by commercial tier or maintenance zone. */
 export const TIER_COLOUR: Record<string, THREE.Color> = {

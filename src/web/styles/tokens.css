@@ -87,6 +87,7 @@
   /* the 3D view and what is drawn over it */
   --scene-bg: #eef0f4;
   --scene-outline: #ffffff;
+  --scene-wash: #ffffff;
   --legend-bg: rgba(255, 255, 255, 0.9);
   --overlay-bg: rgba(20, 26, 46, 0.82);
   --overlay-text: #ffffff;
@@ -106,6 +107,30 @@
   --space-6: 0.8rem;
   --space-7: 1rem;
   --space-8: 1.5rem;
+  /* off-scale steps the layout already uses, named by hundredths of a rem; kept so nothing moves */
+  --step-005: 0.05rem;
+  --step-010: 0.1rem;
+  --step-020: 0.2rem;
+  --step-030: 0.3rem;
+  --step-040: 0.4rem;
+  --step-045: 0.45rem;
+  --step-055: 0.55rem;
+  --step-070: 0.7rem;
+  --step-075: 0.75rem;
+  --step-085: 0.85rem;
+  --step-090: 0.9rem;
+  --step-110: 1.1rem;
+  --step-120: 1.2rem;
+  --step-200: 2rem;
+
+  /* control sizes: the minimum heights of buttons, fields and seats */
+  --control-height: 2.35rem;
+  --control-height-touch: 2.75rem;
+  --control-height-compact: 2.05rem;
+  --seat-height: 2.3rem;
+  --radio-height: 2.2rem;
+  --save-state-height: 1.2rem;
+  --hover-label-height: 1.4rem;
 
   /* radii */
   --radius-1: 2px;
@@ -115,8 +140,28 @@
   /* type */
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* the root size: 15px at the browser default of 16px, a touch larger on a phone; a larger setting scales everything */
+  --font-size-root: 93.75%;
+  --font-size-root-touch: 96.875%;
+  /* sizes named by hundredths of a rem */
+  --font-size-130: 1.3rem;
+  --font-size-125: 1.25rem;
+  --font-size-110: 1.1rem;
+  --font-size-105: 1.05rem;
+  --font-size-098: 0.98rem;
+  --font-size-090: 0.9rem;
+  --font-size-088: 0.88rem;
+  --font-size-086: 0.86rem;
+  /* small text (hints, labels, the footer) and fine print (notes, counts): 0.01rem apart, but merging them moves line
+     breaks and row heights on every screen, so both stay */
   --font-size-small: 0.85rem;
   --font-size-fine: 0.84rem;
+  --font-size-082: 0.82rem;
+  --font-size-080: 0.8rem;
+  --font-size-078: 0.78rem;
+  /* relative to the surrounding text: monospace part numbers and codes */
+  --font-size-mono: 0.9em;
+  --font-size-code: 0.78em;
   --line-height: 1.45;
 
   /* the selected seat: an ink ring for the 3:1 contrast, the select colour inside it as in the 3D view */
@@ -171,6 +216,7 @@
     --info-text: #d9cfff;
     --scene-bg: #1b2030;
     --scene-outline: #e3e7f0;
+    --scene-wash: #d5dae6;
     --legend-bg: rgba(24, 28, 40, 0.9);
     --overlay-bg: rgba(6, 8, 14, 0.85);
     --hint-bg: #e8ecf5;
@@ -226,6 +272,7 @@
   --info-text: #d9cfff;
   --scene-bg: #1b2030;
   --scene-outline: #e3e7f0;
+  --scene-wash: #d5dae6;
   --legend-bg: rgba(24, 28, 40, 0.9);
   --overlay-bg: rgba(6, 8, 14, 0.85);
   --hint-bg: #e8ecf5;

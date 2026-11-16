@@ -33,6 +33,27 @@ describe("stylesheet files", () => {
     expect(found).toEqual([]);
   });
 
+  test("no raw font size, space step, control size, radius, shadow or duration outside tokens.css and print.css", () => {
+    // Enforced: these properties take their lengths and times from tokens. Not enforced, as structure rather than design
+    // steps: layout dimensions (width, height, max-width, max-height, grid tracks, columns, flex bases), positions
+    // (top, left, right, bottom, inset, vertical-align), border and outline widths and offsets, and gradient stops.
+    const ENFORCED =
+      /^(font-size|margin(-\w+)?|padding(-\w+)?|(row-|column-)?gap|min-height|min-width|border(-\w+)*-radius|box-shadow|transition(-\w+)?|animation(-\w+)?)$/;
+    // structural values that stay literal: zero, auto, keywords, 100%, !important
+    const ALLOWED = /^(0|auto|none|inherit|100%|!important|-?var\(--[\w-]+\))$/;
+    const found: string[] = [];
+    for (const { name, css } of styleFiles()) {
+      if (LITERALS_ALLOWED.has(name)) continue;
+      css.split("\n").forEach((line, i) => {
+        const m = /^\s*([a-z-]+)\s*:\s*([^;{]+);/.exec(line.replace(/\/\*.*?\*\//g, ""));
+        if (!m?.[1] || !ENFORCED.test(m[1])) return;
+        const values = (m[2] ?? "").replace(/,/g, " ").trim().split(/\s+/);
+        if (values.some((v) => !ALLOWED.test(v))) found.push(`${name}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    expect(found).toEqual([]);
+  });
+
   test("every var(--x) used is defined", () => {
     const css = allCss();
     const defined = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
@@ -180,6 +201,6 @@ describe("themes", () => {
 describe("the 3D view uses the same colours", () => {
   test("the select colour and the scene's starting theme are the light tokens", () => {
     expect(SELECT_COLOUR).toBe(light.get("--select"));
-    expect(LIGHT_SCENE_THEME).toEqual({ background: light.get("--scene-bg"), outline: light.get("--scene-outline") });
+    expect(LIGHT_SCENE_THEME).toEqual({ background: light.get("--scene-bg"), outline: light.get("--scene-outline"), wash: light.get("--scene-wash") });
   });
 });

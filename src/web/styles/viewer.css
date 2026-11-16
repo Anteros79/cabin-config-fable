@@ -10,7 +10,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  padding: 0.4rem var(--space-4) 0;
+  padding: var(--step-040) var(--space-4) 0;
 }
 .tabs [role="tab"] {
   border-bottom-left-radius: 0;
@@ -28,7 +28,7 @@
   margin-left: auto;
   font-size: var(--font-size-fine);
   color: var(--text-muted);
-  padding: 0 0.4rem;
+  padding: 0 var(--step-040);
 }
 .viewer .alert {
   margin: var(--space-4);
@@ -39,7 +39,7 @@
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 0.9rem;
+  gap: var(--step-040) var(--step-090);
   align-items: flex-end;
   border: 0;
   margin: 0 0 var(--space-4);
@@ -58,7 +58,7 @@
 }
 .tool-group .group-label,
 .tool-group.select span {
-  font-size: 0.8rem;
+  font-size: var(--font-size-080);
   font-weight: 600;
   color: var(--text-muted);
   padding: 0;
@@ -70,13 +70,13 @@
 }
 .toolbar button,
 .toolbar select {
-  min-height: 2.05rem;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.9rem;
+  min-height: var(--control-height-compact);
+  padding: var(--step-020) var(--step-055);
+  font-size: var(--font-size-090);
 }
 .toolbar .check {
-  min-height: 2.05rem;
-  font-size: 0.9rem;
+  min-height: var(--control-height-compact);
+  font-size: var(--font-size-090);
 }
 .canvas-wrap {
   position: relative;
@@ -104,7 +104,7 @@
   bottom: 0.75rem;
   transform: translateX(-50%);
   margin: 0;
-  padding: 0.2rem var(--space-5);
+  padding: var(--step-020) var(--space-5);
   white-space: nowrap;
   pointer-events: none;
   background: var(--hint-bg);
@@ -130,12 +130,12 @@
   top: 0;
   white-space: nowrap;
   margin: 0;
-  padding: 0.1rem var(--space-4);
+  padding: var(--step-010) var(--space-4);
   border-radius: var(--radius-2);
   background: var(--overlay-bg);
   color: var(--overlay-text);
   font-size: var(--font-size-small);
-  min-height: 1.4rem;
+  min-height: var(--hover-label-height);
   pointer-events: none;
 }
 .hover-label:empty,
@@ -151,10 +151,10 @@
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2rem 0.7rem;
+  gap: var(--step-020) var(--step-070);
   background: var(--legend-bg);
   border-radius: var(--radius-2);
-  font-size: 0.8rem;
+  font-size: var(--font-size-080);
   pointer-events: none;
 }
 /* a status: a disc in its --status-* colour with an ink glyph, as on the 3D badges (STATUS_ENCODING) */
@@ -181,13 +181,13 @@
 .status-key li {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--step-030);
 }
 .status-key {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2rem 0.9rem;
-  margin: 0 0 0.4rem;
+  gap: var(--step-020) var(--step-090);
+  margin: 0 0 var(--step-040);
   padding: 0;
   list-style: none;
   font-size: var(--font-size-small);

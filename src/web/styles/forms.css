@@ -8,7 +8,7 @@ textarea {
 }
 button,
 .button {
-  min-height: 2.35rem;
+  min-height: var(--control-height);
   padding: var(--space-3) var(--space-6);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-2);
@@ -47,19 +47,19 @@ button.link {
   background: none;
   color: var(--accent);
   text-decoration: underline;
-  padding: 0.2rem 0;
+  padding: var(--step-020) 0;
   min-height: 0;
 }
 button.icon {
-  min-width: 2.35rem;
-  padding: 0.2rem;
-  font-size: 1.1rem;
+  min-width: var(--control-height);
+  padding: var(--step-020);
+  font-size: var(--font-size-110);
 }
 input,
 select,
 textarea {
-  min-height: 2.35rem;
-  padding: 0.3rem var(--space-4);
+  min-height: var(--control-height);
+  padding: var(--step-030) var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-2);
   background: var(--surface-1);
@@ -74,8 +74,8 @@ textarea {
 .check {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  min-height: 2.35rem;
+  gap: var(--step-030);
+  min-height: var(--control-height);
   padding: 0 var(--space-3);
 }
 .check input {
@@ -89,7 +89,7 @@ textarea {
   flex-direction: column;
   gap: var(--space-1);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-090);
 }
 .field.inline {
   flex-direction: row;
@@ -115,7 +115,7 @@ textarea {
 .note-form {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-5) 0.9rem;
+  gap: var(--space-5) var(--step-090);
   align-items: flex-end;
 }
 
@@ -124,7 +124,7 @@ textarea {
   .button,
   input,
   select {
-    min-height: 2.75rem;
+    min-height: var(--control-height-touch);
   }
   .lookup-form .field,
   .lookup-form button {

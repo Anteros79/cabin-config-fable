@@ -2,7 +2,7 @@
 .cabin-map {
   display: grid;
   grid-template-columns: minmax(17rem, 24rem) 1fr;
-  gap: 0.4rem 1.2rem;
+  gap: var(--step-040) var(--step-120);
   align-items: start;
 }
 .cabin-map .goto {
@@ -33,16 +33,16 @@ fieldset.bin-side {
 .seat-grid {
   max-height: min(64vh, 46rem);
   overflow-y: auto;
-  padding: 0.3rem;
+  padding: var(--step-030);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-2);
 }
 .seat-row {
   display: grid;
   grid-template-columns: 2rem repeat(3, minmax(2.3rem, 1fr)) 0.7rem repeat(3, minmax(2.3rem, 1fr));
-  gap: 0.2rem;
+  gap: var(--step-020);
   align-items: center;
-  margin-bottom: 0.2rem;
+  margin-bottom: var(--step-020);
 }
 .seat-row .after-aisle {
   grid-column-start: 6;
@@ -52,7 +52,7 @@ fieldset.bin-side {
   top: -0.3rem;
   background: var(--surface-1);
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: var(--font-size-082);
   color: var(--text-muted);
   padding: var(--space-1) 0;
   z-index: 1;
@@ -62,13 +62,13 @@ fieldset.bin-side {
 }
 .row-label {
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: var(--font-size-086);
   text-align: right;
-  padding-right: 0.3rem;
+  padding-right: var(--step-030);
   color: var(--text-muted);
 }
 .cell.empty {
-  min-height: 2.3rem;
+  min-height: var(--seat-height);
   border: 1px dashed var(--border-empty);
   border-radius: var(--radius-2);
   background: repeating-linear-gradient(45deg, var(--empty-cell-a), var(--empty-cell-a) 4px, var(--empty-cell-b) 4px, var(--empty-cell-b) 8px);
@@ -77,9 +77,9 @@ fieldset.bin-side {
   width: 100%;
 }
 .skipped {
-  margin: 0.3rem 0;
-  padding: 0.2rem var(--space-4);
-  font-size: 0.82rem;
+  margin: var(--step-030) 0;
+  padding: var(--step-020) var(--space-4);
+  font-size: var(--font-size-082);
   background: var(--surface-muted);
   border-radius: var(--radius-2);
   color: var(--text-muted);
@@ -87,8 +87,8 @@ fieldset.bin-side {
 }
 button.loc {
   position: relative;
-  min-height: 2.3rem;
-  padding: 0.2rem 0.3rem;
+  min-height: var(--seat-height);
+  padding: var(--step-020) var(--step-030);
   background: var(--surface-control);
   border-color: var(--border-seat);
   gap: var(--space-1);
@@ -156,10 +156,10 @@ button.loc .status-glyph {
 .loc-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: var(--step-030);
 }
 .loc-list button.loc {
-  padding: 0.3rem var(--space-5);
+  padding: var(--step-030) var(--space-5);
   text-align: left;
 }
 .bin-columns {
@@ -180,7 +180,7 @@ button.loc .status-glyph {
   }
   button.loc,
   .cell.empty {
-    min-height: 2.75rem;
+    min-height: var(--control-height-touch);
   }
 }
 

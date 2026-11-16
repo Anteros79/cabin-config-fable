@@ -4,9 +4,9 @@
 }
 .attributes,
 .notes {
-  margin: 0.3rem 0;
-  padding-left: 1.1rem;
-  font-size: 0.88rem;
+  margin: var(--step-030) 0;
+  padding-left: var(--step-110);
+  font-size: var(--font-size-088);
 }
 .component-card {
   border-top: 1px solid var(--border-subtle);
@@ -25,7 +25,7 @@
 }
 .supplements {
   margin: var(--space-1) 0;
-  padding-left: 1.1rem;
+  padding-left: var(--step-110);
 }
 .excluded {
   color: var(--danger);
@@ -34,27 +34,27 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-2);
   padding: var(--space-4) var(--space-5);
-  margin: var(--space-5) 0 0.2rem;
+  margin: var(--space-5) 0 var(--step-020);
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: var(--step-045);
   min-width: 0;
 }
 .record-form legend {
   font-weight: 700;
-  padding: 0 0.3rem;
+  padding: 0 var(--step-030);
 }
 .choices {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: var(--step-010);
 }
 .radio {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  min-height: 2.2rem;
+  min-height: var(--radio-height);
 }
 .radio input {
   min-height: 0;
@@ -62,9 +62,9 @@
   height: 1.1rem;
 }
 .save-state {
-  min-height: 1.2rem;
-  font-size: 0.86rem;
-  margin: 0.2rem 0;
+  min-height: var(--save-state-height);
+  font-size: var(--font-size-086);
+  margin: var(--step-020) 0;
 }
 .save-state.saved {
   color: var(--success);
@@ -78,14 +78,14 @@
 }
 .records {
   list-style: none;
-  margin: 0.3rem 0 var(--space-5);
+  margin: var(--step-030) 0 var(--space-5);
   padding: 0;
 }
 .records li {
   display: flex;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: 0.4rem 0;
+  padding: var(--step-040) 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 .records li > div:first-child {
@@ -94,22 +94,22 @@
 }
 .row-actions {
   display: flex;
-  gap: 0.3rem;
+  gap: var(--step-030);
   flex-shrink: 0;
   align-items: flex-start;
 }
 .pager {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--step-040);
   margin-top: var(--space-5);
 }
 .findings {
   list-style: none;
   padding: 0;
-  margin: 0.3rem 0;
+  margin: var(--step-030) 0;
 }
 .finding {
-  padding: 0.3rem var(--space-4);
+  padding: var(--step-030) var(--space-4);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-2);
   margin-bottom: var(--space-2);
@@ -131,7 +131,7 @@
   margin-bottom: var(--space-5);
 }
 .alt-block {
-  margin-bottom: 0.3rem;
+  margin-bottom: var(--step-030);
 }
 
 @media (max-width: 720px) {

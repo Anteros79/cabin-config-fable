@@ -55,6 +55,30 @@ describe("theme choice", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  test("a change of the system colour scheme is reported to listeners until they stop listening", () => {
+    const handlers = new Set<() => void>();
+    const query = {
+      matches: false,
+      media: "(prefers-color-scheme: dark)",
+      addEventListener: vi.fn((_: string, h: () => void) => handlers.add(h)),
+      removeEventListener: vi.fn((_: string, h: () => void) => handlers.delete(h)),
+    };
+    const matchMedia = vi.fn(() => query);
+    vi.stubGlobal("matchMedia", matchMedia);
+    try {
+      const listener = vi.fn();
+      const stop = onThemeChange(listener);
+      expect(matchMedia).toHaveBeenCalledWith("(prefers-color-scheme: dark)");
+      for (const h of handlers) h();
+      expect(listener).toHaveBeenCalledTimes(1);
+      stop();
+      expect(handlers.size).toBe(0);
+      expect(query.removeEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe("the header's theme control", () => {

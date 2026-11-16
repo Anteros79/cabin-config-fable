@@ -43,12 +43,13 @@ export function onThemeChange(listener: () => void): () => void {
   };
 }
 
-/** The 3D view's colours as the page now has them (`--scene-bg`, `--scene-outline`), or null without the stylesheet. */
-export function sceneThemeTokens(): { background: string; outline: string } | null {
+/** The 3D view's colours as the page now has them (`--scene-bg`, `--scene-outline`, `--scene-wash`), or null without the stylesheet. */
+export function sceneThemeTokens(): { background: string; outline: string; wash: string } | null {
   const style = getComputedStyle(document.documentElement);
   const background = style.getPropertyValue("--scene-bg").trim();
   const outline = style.getPropertyValue("--scene-outline").trim();
-  return background && outline ? { background, outline } : null;
+  const wash = style.getPropertyValue("--scene-wash").trim();
+  return background && outline && wash ? { background, outline, wash } : null;
 }
 
 applyTheme(storedTheme());
