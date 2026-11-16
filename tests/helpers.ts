@@ -15,7 +15,7 @@ import { VisitStore } from "../src/server/visitStore.ts";
  * Content hash of the release the importer stages from the committed fixtures and originals (PF-2).
  * A task that moves it on purpose updates it here and records old → new in CHANGELOG.md and its commit body.
  */
-export const EXPECTED_CONTENT_HASH = "3be1fb71ae4816a9125230678dba6f4338e0d7281958354eea0b0193d40b15ff";
+export const EXPECTED_CONTENT_HASH = "9cf6c6d29e468c944381a11f9042c89f2ad30cfd07d852720796ce14b2d8ed72";
 
 let fullBuild: StagedBuild | null = null;
 let fixtureBuild: StagedBuild | null = null;

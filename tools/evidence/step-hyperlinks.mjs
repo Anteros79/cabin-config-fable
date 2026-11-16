@@ -5,14 +5,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EVIDENCE_DIR, F, writeJson } from './lib/common.mjs';
 
-const CURL_ARGS = ['-sI', '-L', '--max-time', '15'];
+const CURL_ARGS = ['-sI', '-L', '--proto', '=http,https', '--max-redirs', '3', '--max-time', '10'];
 
 function curlHead(url) {
   let stdout = '';
   let exitCode = 0;
   let error = null;
   try {
-    stdout = execFileSync('curl', [...CURL_ARGS, url], { encoding: 'utf8', timeout: 30000, maxBuffer: 4 * 1024 * 1024 });
+    stdout = execFileSync('curl', [...CURL_ARGS, url], { encoding: 'utf8', timeout: 20000, maxBuffer: 4 * 1024 * 1024 });
   } catch (e) {
     exitCode = typeof e.status === 'number' ? e.status : -1;
     stdout = typeof e.stdout === 'string' ? e.stdout : '';
@@ -38,7 +38,8 @@ function curlHead(url) {
 export function run(ctx) {
   const targets = ctx.results.docx.hyperlinks.distinct_targets;
   const rtfLinks = ctx.results.rtf.hyperlinks;
-  const skip = process.env.CABIN_KIT_SKIP_NETWORK === '1';
+  // Network access is off unless the build was started with --online.
+  const skip = ctx.online !== true;
   const prevPath = join(EVIDENCE_DIR, 'extracts', 'hyperlinks-check.json');
   let previous = null;
   if (skip && existsSync(prevPath)) {
@@ -51,7 +52,7 @@ export function run(ctx) {
     if (skip) {
       const old = previous?.results?.find((r) => r.target_url === t.target_url && r.requested);
       if (old) return { ...base, check: old.check, requested: true, reused_from_previous_run: true, checked_at: old.checked_at, command: old.command, result: old.result };
-      return { ...base, check: 'not checked (network skipped by CABIN_KIT_SKIP_NETWORK=1)', requested: false };
+      return { ...base, check: 'not checked (network off; run with --online)', requested: false };
     }
     const result = curlHead(t.target_url);
     return {
@@ -68,8 +69,8 @@ export function run(ctx) {
     purpose: 'Reachability note only. A status code says a host answered a HEAD request; it does not verify content, currency, authority or approval.',
     policy: {
       requested: 'hyperlinks whose host is public (no SharePoint / Office 365 / Outlook / internal marker)',
-      never_requested: 'sharepoint.com, office365.com, outlook, and other private or authenticated hosts',
-      command: `curl ${CURL_ARGS.join(' ')} <url> (one invocation per distinct URL)`,
+      never_requested: 'sharepoint.com, office365.com, outlook, other private or authenticated hosts, and any bare IP address (including loopback and link-local)',
+      command: `curl ${CURL_ARGS.join(' ')} <url> (one invocation per distinct URL), only when run with --online`,
     },
     network_skipped: skip,
     rtf_hyperlink_count: rtfLinks.length,

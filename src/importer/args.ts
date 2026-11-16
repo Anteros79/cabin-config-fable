@@ -1,3 +1,5 @@
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 export interface OptionSpec {
@@ -38,4 +40,10 @@ export function parseCliArgs<S extends Record<string, OptionSpec>>(argv: string[
     }
   }
   return values as Parsed<S>;
+}
+
+/** True when the module at `moduleUrl` is the process entry point, also when it was started through a symlinked path. */
+export function isEntryPoint(moduleUrl: string, metaMain: boolean | undefined): boolean {
+  if (metaMain !== undefined) return metaMain;
+  return process.argv[1] !== undefined && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(moduleUrl));
 }

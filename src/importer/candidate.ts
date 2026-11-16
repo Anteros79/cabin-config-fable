@@ -802,7 +802,7 @@ function buildLayouts(configs: Json[], rows: Json[], seats: Json[], schemaVersio
         id: `SEAT:${code}`,
         kind: "SEAT",
         label: `Seat ${code}`,
-        componentIds: ["CUSHION", "BACKREST"],
+        componentIds: [],
         seat: {
           printedRow,
           letter,

@@ -56,7 +56,7 @@ Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Reco
 | `npm run test:e2e` | 62 browser checks with the installed Google Chrome (disposable stores, free port) |
 | `npm run verify` | Typecheck, all tests, comparison sheets, original-hash recheck |
 | `npm run originals:verify` | Re-hash the 23 supplied originals against the manifest |
-| `npm run evidence:build` | Regenerate the evidence inventory, extracts and registers from the originals |
+| `npm run evidence:build` | Regenerate the evidence inventory, extracts and registers from the originals. Offline by default; `-- --online` adds the public-hyperlink reachability check. Step names run a subset, with the steps it needs |
 
 Configuration (one resolver, shared by the server, the import CLI and the tests):
 

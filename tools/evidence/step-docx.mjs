@@ -2,14 +2,17 @@
 import { F, writeJson, writeText } from './lib/common.mjs';
 import { loadSources } from './lib/sources.mjs';
 
-const PRIVATE_HOST = /(sharepoint\.com|office365\.com|outlook\.|office\.com|onedrive|live\.com|microsoftonline|teams\.microsoft|\.local$|\.internal$|\.corp$|^localhost$|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\.)/i;
+const PRIVATE_HOST = /(sharepoint\.com|office365\.com|outlook\.|office\.com|onedrive|live\.com|microsoftonline|teams\.microsoft|\.local$|\.internal$|\.corp$|^localhost$|\.localhost$|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\.|^127\.|^169\.254\.|^0\.0\.0\.0$)/i;
+
+/** A bare IP address: IPv4 dotted quad, or IPv6 in brackets. Covers loopback (127/8, ::1), link-local (169.254/16, fe80::/10), unique-local (fc00::/7) and 0.0.0.0, and refuses every other address too. */
+const IP_LITERAL = /^(\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:.]+\])$/i;
 
 export function classifyUrl(target) {
   let url;
   try { url = new URL(target); } catch { return { host: null, scheme: null, access_class: 'unparseable', reason: 'not a valid absolute URL' }; }
   const host = url.hostname;
   if (!/^https?:$/.test(url.protocol)) return { host, scheme: url.protocol, access_class: 'not-http', reason: 'non-HTTP scheme' };
-  if (PRIVATE_HOST.test(host)) return { host, scheme: url.protocol, access_class: 'private', reason: 'tenant/authenticated host (SharePoint, Outlook/Office 365 or internal network)' };
+  if (PRIVATE_HOST.test(host) || IP_LITERAL.test(host)) return { host, scheme: url.protocol, access_class: 'private', reason: 'tenant/authenticated host, internal network or bare IP address (SharePoint, Outlook/Office 365, loopback, link-local, private range)' };
   return { host, scheme: url.protocol, access_class: 'public', reason: 'public web host with no tenant/authentication marker' };
 }
 

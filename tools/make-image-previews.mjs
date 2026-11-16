@@ -1,6 +1,8 @@
 // Creates faithful working previews of the supplied images.
 // - evidence/image-previews/full/: lossless PNG decodes of the AVIF/WebP originals at native size.
 // - evidence/image-previews/view/: downscaled JPEG copies of all 14 images for quick inspection.
+// Each preview is named after its whole source name plus the preview extension (`x.jpg.png`), so two sources that
+// differ only by extension cannot collide.
 // These are review-generated derivatives, not additional evidence. Originals are only read.
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -46,7 +48,7 @@ for (const name of images) {
     height: meta.height,
     previews: [],
   };
-  const base = name.replace(/\.[^.]+$/, "");
+  const base = name;
   if (meta.format === "heif" || meta.format === "avif" || meta.format === "webp") {
     const file = join("full", `${base}.png`);
     await sharp(bytes)

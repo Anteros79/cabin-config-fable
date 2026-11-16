@@ -259,6 +259,8 @@ describe("referential findings", () => {
       content.variants.find((v) => v.id === "V01"),
       "V01",
     );
+    // Candidate seats carry no components of their own (Task 3.8); give them the fixture cushion so a rule can reach them.
+    for (const seat of rev.locations) if (seat.kind === "SEAT") seat.componentIds = ["CUSHION"];
     content.variants.push({ ...v01, id: "X-CAND-V", namespace: "candidate", subtypeId: rev.subtypeId, layoutRevisionIds: [rev.id] });
     content.rules.push(cushionOverAllSeats(content, "X-REACH", { variant: ["X-CAND-V"] }));
     const hits = withCode(validateRelease(content), "NAMESPACE").filter((f) => f.refs?.includes("X-REACH"));

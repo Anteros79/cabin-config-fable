@@ -54,7 +54,8 @@ export default defineConfig({
       reporter: ["text-summary", "lcov"],
       // Global: measured after Task 1.10 (90.66% lines / 78.19% branches), rounded down to 5. Later phases raise these.
       // src/domain: the plan's floor from Task 2.8 on (measured then at about 97% lines / 87% branches).
-      thresholds: { lines: 90, branches: 75, "src/domain/**": { lines: 90, branches: 85 } },
+      // src/importer: the plan's floor from Task 3.8 on.
+      thresholds: { lines: 90, branches: 75, "src/domain/**": { lines: 90, branches: 85 }, "src/importer/**": { lines: 85, branches: 75 } },
     },
   },
 });

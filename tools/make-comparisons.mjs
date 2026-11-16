@@ -1,16 +1,32 @@
 // Builds side-by-side comparison sheets: a supplied original (left) and an actual render of this
 // build (right). Output: verification/comparisons/*.jpg. Originals are only read.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+//   node tools/make-comparisons.mjs [--stamp]
+// The sheets are rendered into a temporary folder next to the output and swapped in only when every sheet rendered;
+// a failed run leaves the previous output untouched. index.json carries `generatedAt` only with --stamp, so a plain
+// run on unchanged inputs writes the same bytes.
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { parseCliArgs, UsageError } from "../src/importer/args.ts";
 import { resolveImageRoot } from "../src/importer/originals.ts";
+
+let stamp;
+try {
+  stamp = parseCliArgs(process.argv.slice(2), { stamp: { type: "boolean" } }).stamp === true;
+} catch (e) {
+  if (!(e instanceof UsageError)) throw e;
+  console.error(`${e.message}\nUsage: node tools/make-comparisons.mjs [--stamp]`);
+  process.exit(64);
+}
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = resolveImageRoot();
 const captures = join(projectRoot, "verification", "captures");
 const out = join(projectRoot, "verification", "comparisons");
-mkdirSync(out, { recursive: true });
+const staging = `${out}.tmp-${process.pid}`;
+rmSync(staging, { recursive: true, force: true });
+mkdirSync(staging, { recursive: true });
 
 const PAIRS = [
   {
@@ -86,39 +102,54 @@ const label = (text, width) =>
   );
 
 const index = [];
-for (const pair of PAIRS) {
-  const left = await sharp(readFileSync(join(sourceRoot, pair.original)))
-    .rotate()
-    .flatten({ background: "#ffffff" })
-    .resize(W, H, { fit: "contain", background: "#20232e" })
-    .toBuffer();
-  const right = await sharp(readFileSync(join(captures, pair.capture)))
-    .flatten({ background: "#ffffff" })
-    .resize(W, H, { fit: "contain", background: "#20232e" })
-    .toBuffer();
-  const file = `${pair.id}.jpg`;
-  await sharp({ create: { width: W * 2 + 12, height: H + 34 + 34, channels: 3, background: "#ffffff" } })
-    .composite([
-      { input: label(pair.topic, W * 2 + 12), left: 0, top: 0 },
-      { input: label(`Supplied original: ${pair.original}`, W), left: 0, top: 34 },
-      { input: label(`This build: ${pair.capture}`, W), left: W + 12, top: 34 },
-      { input: left, left: 0, top: 68 },
-      { input: right, left: W + 12, top: 68 },
-    ])
-    .jpeg({ quality: 88 })
-    .toFile(join(out, file));
-  index.push({ file, ...pair });
+try {
+  for (const pair of PAIRS) {
+    const left = await sharp(readFileSync(join(sourceRoot, pair.original)))
+      .rotate()
+      .flatten({ background: "#ffffff" })
+      .resize(W, H, { fit: "contain", background: "#20232e" })
+      .toBuffer();
+    const right = await sharp(readFileSync(join(captures, pair.capture)))
+      .flatten({ background: "#ffffff" })
+      .resize(W, H, { fit: "contain", background: "#20232e" })
+      .toBuffer();
+    const file = `${pair.id}.jpg`;
+    await sharp({ create: { width: W * 2 + 12, height: H + 34 + 34, channels: 3, background: "#ffffff" } })
+      .composite([
+        { input: label(pair.topic, W * 2 + 12), left: 0, top: 0 },
+        { input: label(`Supplied original: ${pair.original}`, W), left: 0, top: 34 },
+        { input: label(`This build: ${pair.capture}`, W), left: W + 12, top: 34 },
+        { input: left, left: 0, top: 68 },
+        { input: right, left: W + 12, top: 68 },
+      ])
+      .jpeg({ quality: 88 })
+      .toFile(join(staging, file));
+    index.push({ file, ...pair });
+  }
+  writeFileSync(
+    join(staging, "index.json"),
+    JSON.stringify(
+      {
+        note: "Left: supplied original (read only, resized for the sheet). Right: actual render of this build.",
+        ...(stamp ? { generatedAt: new Date().toISOString() } : {}),
+        sheets: index,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  // Every sheet rendered: swap the folder in.
+  const previous = `${out}.old-${process.pid}`;
+  rmSync(previous, { recursive: true, force: true });
+  try {
+    renameSync(out, previous);
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+  }
+  renameSync(staging, out);
+  rmSync(previous, { recursive: true, force: true });
+} catch (e) {
+  rmSync(staging, { recursive: true, force: true });
+  throw e;
 }
-writeFileSync(
-  join(out, "index.json"),
-  JSON.stringify(
-    {
-      note: "Left: supplied original (read only, resized for the sheet). Right: actual render of this build.",
-      generatedAt: new Date().toISOString(),
-      sheets: index,
-    },
-    null,
-    2,
-  ) + "\n",
-);
 console.log(`${index.length} comparison sheets written to ${out}`);

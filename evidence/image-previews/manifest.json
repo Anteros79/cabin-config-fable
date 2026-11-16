@@ -10,7 +10,7 @@
       "height": 521,
       "previews": [
         {
-          "file": "view/Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.jpg",
+          "file": "view/Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -23,11 +23,11 @@
       "height": 1048,
       "previews": [
         {
-          "file": "full/barrier.png",
+          "file": "full/barrier.webp.png",
           "kind": "lossless decode at native size"
         },
         {
-          "file": "view/barrier.jpg",
+          "file": "view/barrier.webp.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -40,7 +40,7 @@
       "height": 750,
       "previews": [
         {
-          "file": "view/carpet.jpg",
+          "file": "view/carpet.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -53,7 +53,7 @@
       "height": 3456,
       "previews": [
         {
-          "file": "view/forward galley flight deck.jpg",
+          "file": "view/forward galley flight deck.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -66,7 +66,7 @@
       "height": 1281,
       "previews": [
         {
-          "file": "view/rear galley.jpg",
+          "file": "view/rear galley.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -79,7 +79,7 @@
       "height": 641,
       "previews": [
         {
-          "file": "view/recarro 2.jpg",
+          "file": "view/recarro 2.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -92,7 +92,7 @@
       "height": 416,
       "previews": [
         {
-          "file": "view/seats 1.jpg",
+          "file": "view/seats 1.jpeg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -105,7 +105,7 @@
       "height": 324,
       "previews": [
         {
-          "file": "view/seats 2 .jpg",
+          "file": "view/seats 2 .jpeg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -118,7 +118,7 @@
       "height": 480,
       "previews": [
         {
-          "file": "view/seats 3.jpg",
+          "file": "view/seats 3.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -131,7 +131,7 @@
       "height": 1667,
       "previews": [
         {
-          "file": "view/seats 4.jpg",
+          "file": "view/seats 4.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -144,7 +144,7 @@
       "height": 3024,
       "previews": [
         {
-          "file": "view/seats 5.jpg",
+          "file": "view/seats 5.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -157,11 +157,11 @@
       "height": 1080,
       "previews": [
         {
-          "file": "full/seats 6.png",
+          "file": "full/seats 6.avif.png",
           "kind": "lossless decode at native size"
         },
         {
-          "file": "view/seats 6.jpg",
+          "file": "view/seats 6.avif.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -174,7 +174,7 @@
       "height": 720,
       "previews": [
         {
-          "file": "view/seats 8.jpg",
+          "file": "view/seats 8.jpg.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
@@ -187,11 +187,11 @@
       "height": 1067,
       "previews": [
         {
-          "file": "full/southwest seats-7.png",
+          "file": "full/southwest seats-7.webp.png",
           "kind": "lossless decode at native size"
         },
         {
-          "file": "view/southwest seats-7.jpg",
+          "file": "view/southwest seats-7.webp.jpg",
           "kind": "downscaled inspection copy (max 1400 px)"
         }
       ]
