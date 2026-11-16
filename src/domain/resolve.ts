@@ -1,7 +1,7 @@
 import { isIsoDate, withinInclusive } from "./dates.ts";
 import { KitError } from "./kits.ts";
 import { compareCodePoints } from "./order.ts";
-import { type AssignmentContext, buildIndex, isReleasedPair, matchesContext, type ReleaseIndex, undominated } from "./specificity.ts";
+import { type AssignmentContext, buildIndex, isIndexOf, isReleasedPair, matchesContext, type ReleaseIndex, substituteKey, undominated } from "./specificity.ts";
 import type {
   Aircraft,
   ApplicabilityRule,
@@ -157,8 +157,12 @@ export function isReleasedConfiguration(assignment: TailAssignment, variant: Mai
 /**
  * Resolve the effective configuration and applicable parts for a tail on a date.
  * Never guesses: gaps, overlaps, planned layouts and invalid sources are reported as such.
+ * `shared` is an index of this release already built (for instance by `validateRelease`); without it
+ * the index is built here, or taken from the cache when the release is frozen. An index of another
+ * release is refused.
  */
-export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unknown): LookupResult {
+export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unknown, shared?: ReleaseIndex): LookupResult {
+  if (shared && !isIndexOf(shared, release)) throw new Error("lookup was given the index of a different release.");
   const tail = normalizeTail(rawTail);
   const checkDate = typeof rawDate === "string" ? rawDate.trim() : "";
   const common = base(tail, checkDate, release.id);
@@ -174,7 +178,7 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     return { ...common, state: "INVALID_INPUT", reasonCode: "DATE_INVALID", message: "The check date must be a real calendar date (YYYY-MM-DD)." };
   }
 
-  const index = buildIndex(release);
+  const index = shared ?? buildIndex(release);
   const aircraft = index.aircraft.get(tail);
   if (!aircraft) {
     return { ...common, state: "UNKNOWN_TAIL", reasonCode: "TAIL_NOT_IN_REFERENCE", message: `Tail ${tail} is not in the reference data.` };
@@ -361,18 +365,20 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
   // Rules whose context constraints accept this assignment, with their eligibility on the date.
   // A rule is also excluded when a kit child of its primary part cites an invalid source (D3) or the
   // kit cannot be expanded (DOM-08); those reasons are always listed, beside any other.
+  // Each component's rules are kept in id order, so every list built from them (exclusions, candidates,
+  // dominated rules) is the same whatever the order of the release's rules.
   const inContext = new Map<string, { rule: ApplicabilityRule; locations: Set<string>; exclusions: ExclusionReason[]; kitSourceIds: string[] }[]>();
   for (const rule of index.release.rules) {
     if (!matchesContext(rule.constraint, ctx)) continue;
     const locations = index.ruleMatch.get(rule.id)?.pairs.get(pairKey);
     if (!locations) continue;
     const kit = kitExclusions(index, rule.partNo, date);
-    const exclusions = [...ruleExclusions(index, rule, date), ...kit.reasons];
-    const kitSourceIds = kit.sourceIds;
-    const list = inContext.get(rule.componentId) ?? [];
-    list.push({ rule, locations, exclusions, kitSourceIds });
-    inContext.set(rule.componentId, list);
+    const entry = { rule, locations, exclusions: [...ruleExclusions(index, rule, date), ...kit.reasons], kitSourceIds: kit.sourceIds };
+    const list = inContext.get(rule.componentId);
+    if (list) list.push(entry);
+    else inContext.set(rule.componentId, [entry]);
   }
+  for (const list of inContext.values()) list.sort((a, b) => compareCodePoints(a.rule.id, b.rule.id));
 
   const rules: Record<string, FrozenRule> = {};
   const components: ComponentResolution[] = [];
@@ -382,8 +388,9 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
     const ruleLocations = index.ruleMatch.get(rule.id)?.pairs.get(pairKey) ?? new Set<string>();
     const substitutes: FrozenSubstitute[] = [];
     const excludedSubstitutes: ExcludedSubstitute[] = [];
-    for (const sub of index.release.substitutes) {
-      if (sub.componentId !== rule.componentId || sub.primaryPartNo !== rule.partNo) continue;
+    // the approvals for this component and part, in id order
+    for (const sub of index.substitutesByKey.get(substituteKey(rule.componentId, rule.partNo)) ?? []) {
+      if (sub.componentId !== rule.componentId || sub.primaryPartNo !== rule.partNo) continue; // the key alone can collide
       if (!matchesContext(sub.constraint, ctx)) continue;
       const covered = index.substituteMatch.get(sub.id)?.pairs.get(pairKey);
       // only where the substitute can stand in for this rule: at least one location both cover (DOM-17)

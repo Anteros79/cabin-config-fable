@@ -7,13 +7,15 @@ import { structuralFindings } from "./schema.ts";
 import {
   buildIndex,
   buildMatchSet,
+  compileSelector,
   intersectMatchSets,
+  isIndexOf,
   isStrictlyMoreSpecific,
   isSubset,
-  locationMatches,
   type MatchSet,
   matchSetsEqual,
   matchSetsIntersect,
+  type ReleaseIndex,
   reachableRevisions,
 } from "./specificity.ts";
 import type { ApplicabilityRule, ContextConstraint, Finding, LocationSelector, ReleaseContent, SourceArtifact } from "./types.ts";
@@ -56,8 +58,12 @@ function sourceCovers(source: SourceArtifact | undefined, from: string, to: stri
  * and activation proceeds, because the resolver refuses the affected lookups instead of guessing.
  * Structure (shape, enums, dates, quantity bounds, tail form) is checked first by the schema; when
  * it fails only those findings are returned, because the semantic checks assume sound structure.
+ * `shared` is an index of this same content to use instead of building one, so a caller that goes on
+ * to look up tails in it (`lookup` takes the same index) indexes the release once. An index of other
+ * content is refused.
  */
-export function validateRelease(input: unknown): Finding[] {
+export function validateRelease(input: unknown, shared?: ReleaseIndex): Finding[] {
+  if (shared && !isIndexOf(shared, input as ReleaseContent)) throw new Error("validateRelease was given the index of a different release.");
   const structural = structuralFindings(input);
   if (structural.length > 0) return structural;
   const content = input as ReleaseContent;
@@ -88,7 +94,7 @@ export function validateRelease(input: unknown): Finding[] {
   const aircraft = new Map(content.aircraft.map((a) => [a.tail, a]));
   const variants = new Map(content.variants.map((v) => [v.id, v]));
   const layouts = new Set(content.layouts.map((l) => l.id));
-  const index = buildIndex(content);
+  const index = shared ?? buildIndex(content);
   const revisions = index.layoutRevisions;
   const components = new Map(content.components.map((c) => [c.id, c]));
   const parts = new Map(content.parts.map((p) => [p.partNo, p]));
@@ -234,9 +240,7 @@ export function validateRelease(input: unknown): Finding[] {
     if (a.seam !== null && !seams.includes(a.seam)) err("VOCABULARY", `Assignment ${ref} uses unknown seam ${a.seam}.`, [ref]);
     if (a.upholstery !== null && !upholsteries.includes(a.upholstery)) err("VOCABULARY", `Assignment ${ref} uses unknown upholstery ${a.upholstery}.`, [ref]);
   }
-  const byTail = new Map<string, typeof content.assignments>();
-  for (const a of content.assignments) byTail.set(a.tail, [...(byTail.get(a.tail) ?? []), a]);
-  for (const [tail, list] of byTail) {
+  for (const [tail, list] of index.assignmentsByTail) {
     const released = list.filter((a) => a.status === "released");
     for (const [i, a] of released.entries()) {
       for (const b of released.slice(i + 1)) {
@@ -276,7 +280,10 @@ export function validateRelease(input: unknown): Finding[] {
       err("ROW_RANGE_INVALID", `${ref} has row range ${rowFrom ?? "(none)"} to ${rowTo ?? "(none)"}; give both bounds, first not after last.`, [ownerId]);
     const reached = reachableRevisions(content, revisions, constraint);
     if (reached.length === 0) return;
-    const matchesSome = (probe: LocationSelector) => reached.some((rev) => rev.locations.some((loc) => locationMatches(probe, loc)));
+    const matchesSome = (probe: LocationSelector) => {
+      const matches = compileSelector(probe);
+      return reached.some((rev) => rev.locations.some(matches));
+    };
     for (const id of selector.ids ?? [])
       if (!matchesSome({ kind, ids: [id] }))
         err("SELECTOR_ID_UNKNOWN", `${ref} selects ${id}, which is not a ${kind} location in any layout revision it can reach.`, [ownerId, id]);
@@ -302,7 +309,7 @@ export function validateRelease(input: unknown): Finding[] {
     constraintOk(r.constraint, ref, r.id);
     selectorOk(r.locations, r.constraint, ref, r.id);
     // reachability and namespace use every listed pair, released or not, so staged data still validates
-    const listed = buildMatchSet(content, revisions, r.constraint, r.locations, r.componentId, "listed");
+    const listed = buildMatchSet(index, r.constraint, r.locations, r.componentId, "listed");
     if (listed.empty) err("UNREACHABLE_RULE", `${ref} cannot match any location in any configuration (unreachable).`, [r.id]);
     else {
       if (ruleSet(r.id).empty)
@@ -316,9 +323,8 @@ export function validateRelease(input: unknown): Finding[] {
     }
   }
   // equal or incomparable released rules for the same component with overlapping validity can never be resolved
-  const byComponent = new Map<string, typeof content.rules>();
-  for (const r of content.rules) if (r.released) byComponent.set(r.componentId, [...(byComponent.get(r.componentId) ?? []), r]);
-  for (const list of byComponent.values()) {
+  for (const all of index.rulesByComponent.values()) {
+    const list = all.filter((r) => r.released);
     const bySignature = new Map<string, typeof content.rules>();
     for (const r of list) {
       const set = ruleSet(r.id);
@@ -327,7 +333,9 @@ export function validateRelease(input: unknown): Finding[] {
         .map(([k, v]) => `${k}:${v.size}`)
         .sort()
         .join(";");
-      bySignature.set(sig, [...(bySignature.get(sig) ?? []), r]);
+      const same = bySignature.get(sig);
+      if (same) same.push(r);
+      else bySignature.set(sig, [r]);
     }
     for (const group of bySignature.values()) {
       for (const [i, a] of group.entries()) {
@@ -398,10 +406,10 @@ export function validateRelease(input: unknown): Finding[] {
     // the index's usable set decides; the listed set is built only to tell staged data from unreachable data
     const subSet = index.substituteMatch.get(s.id) ?? NO_MATCH;
     if (subSet.empty) {
-      if (buildMatchSet(content, revisions, s.constraint, s.locations, s.componentId, "listed").empty)
+      if (buildMatchSet(index, s.constraint, s.locations, s.componentId, "listed").empty)
         err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
       else warn("SUBSTITUTE_UNRELEASED_ONLY", `${ref} reaches only unreleased configurations, so no lookup can offer it until they are released.`, [s.id]);
-    } else if (!content.rules.some((r) => r.componentId === s.componentId && r.partNo === s.primaryPartNo && matchSetsIntersect(ruleSet(r.id), subSet)))
+    } else if (!(index.rulesByComponent.get(s.componentId) ?? []).some((r) => r.partNo === s.primaryPartNo && matchSetsIntersect(ruleSet(r.id), subSet)))
       warn("SUBSTITUTE_UNREACHABLE", `${ref} covers no location where a rule selects ${s.primaryPartNo}, so it can never be offered.`, [s.id]);
   }
   const ruleIds = new Set(content.rules.map((r) => r.id));

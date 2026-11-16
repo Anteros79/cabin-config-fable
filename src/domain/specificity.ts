@@ -1,4 +1,5 @@
 import { buildKitIndex, type KitIndex } from "./kits.ts";
+import { compareCodePoints } from "./order.ts";
 import type {
   Aircraft,
   AircraftSubtype,
@@ -64,11 +65,15 @@ export interface ReleaseIndex {
   locations: Map<string, Map<string, CabinLocation>>;
   components: Map<string, ComponentDef>;
   parts: Map<string, Part>;
+  /** Per layout revision, the locations listing each component, in layout order. Match sets scan only these. */
+  locationsByComponent: Map<string /* revisionId */, Map<string /* componentId */, CabinLocation[]>>;
   assignmentsByTail: Map<string, TailAssignment[]>;
   /** Kit expansion, memoised per part; shared by lookup, kit-source checks and validation. */
   kits: KitIndex;
   pendingByRule: Map<string, PendingChange[]>;
   rulesByComponent: Map<string, ApplicabilityRule[]>;
+  /** Substitute approvals by `substituteKey(componentId, primaryPartNo)`, each list ordered by id. */
+  substitutesByKey: Map<string /* componentId|primaryPartNo */, SubstituteApproval[]>;
   ruleMatch: Map<string, MatchSet>;
   substituteMatch: Map<string, MatchSet>;
   dominance: Map<string, boolean>;
@@ -118,36 +123,53 @@ export function parsePrintedRow(label: string): number | null {
 }
 
 export function selectLocations(selector: LocationSelector, revision: LayoutRevision): CabinLocation[] {
-  return revision.locations.filter((loc) => locationMatches(selector, loc));
+  return revision.locations.filter(compileSelector(selector));
 }
 
-export function locationMatches(selector: LocationSelector, loc: CabinLocation): boolean {
-  if (loc.kind !== selector.kind) return false;
-  if (selector.ids && !selector.ids.includes(loc.id)) return false;
-  if (selector.zones) {
-    if (!loc.seat || loc.seat.maintenanceZone === null || !selector.zones.includes(loc.seat.maintenanceZone)) return false;
-  }
-  if (selector.letters) {
-    if (!loc.seat || !selector.letters.includes(loc.seat.letter)) return false;
-  }
-  if (selector.sides) {
-    const side = loc.seat?.side ?? loc.bin?.side;
-    if (!side || !selector.sides.includes(side)) return false;
-  }
+/**
+ * A location selector as a predicate, with each value list turned into a `Set` once. Build it once
+ * per rule or substitute and apply it to many locations.
+ */
+export function compileSelector(selector: LocationSelector): (loc: CabinLocation) => boolean {
+  const set = (values: readonly string[] | undefined) => (values ? new Set<string>(values) : null);
+  const ids = set(selector.ids);
+  const zones = set(selector.zones);
+  const letters = set(selector.letters);
+  const sides = set(selector.sides);
+  const floorAreaTypes = set(selector.floorAreaTypes);
   // null (from unvalidated data) and undefined both mean "no bound" (DOM-19)
   const rowFrom: number | null = selector.rowFrom ?? null;
   const rowTo: number | null = selector.rowTo ?? null;
-  if (rowFrom !== null || rowTo !== null) {
-    if (!loc.seat) return false;
-    const row = parsePrintedRow(loc.seat.printedRow);
-    if (row === null) return false;
-    if (rowFrom !== null && row < rowFrom) return false;
-    if (rowTo !== null && row > rowTo) return false;
-  }
-  if (selector.floorAreaTypes) {
-    if (!loc.floor || !selector.floorAreaTypes.includes(loc.floor.areaType)) return false;
-  }
-  return true;
+  return (loc) => {
+    if (loc.kind !== selector.kind) return false;
+    if (ids && !ids.has(loc.id)) return false;
+    if (zones) {
+      if (!loc.seat || loc.seat.maintenanceZone === null || !zones.has(loc.seat.maintenanceZone)) return false;
+    }
+    if (letters) {
+      if (!loc.seat || !letters.has(loc.seat.letter)) return false;
+    }
+    if (sides) {
+      const side = loc.seat?.side ?? loc.bin?.side;
+      if (!side || !sides.has(side)) return false;
+    }
+    if (rowFrom !== null || rowTo !== null) {
+      if (!loc.seat) return false;
+      const row = parsePrintedRow(loc.seat.printedRow);
+      if (row === null) return false;
+      if (rowFrom !== null && row < rowFrom) return false;
+      if (rowTo !== null && row > rowTo) return false;
+    }
+    if (floorAreaTypes) {
+      if (!loc.floor || !floorAreaTypes.has(loc.floor.areaType)) return false;
+    }
+    return true;
+  };
+}
+
+/** Does `selector` select `loc`? For one-off checks; compile the selector (`compileSelector`) to test many locations. */
+export function locationMatches(selector: LocationSelector, loc: CabinLocation): boolean {
+  return compileSelector(selector)(loc);
 }
 
 function variantSatisfies(constraint: ContextConstraint, variant: MaintenanceVariant, layoutRevisionId: string): boolean {
@@ -180,25 +202,30 @@ export function reachableRevisions(release: ReleaseContent, revisions: Map<strin
  */
 export type PairScope = "usable" | "listed";
 
+/** What a match set is built from: the release, its layout revisions by id, and their locations by component. */
+export type MatchSetSource = Pick<ReleaseIndex, "release" | "layoutRevisions" | "locationsByComponent">;
+
 export function buildMatchSet(
-  release: ReleaseContent,
-  revisions: Map<string, LayoutRevision>,
+  source: MatchSetSource,
   constraint: ContextConstraint,
   selector: LocationSelector | undefined,
   componentId: string,
   scope: PairScope = "usable",
 ): MatchSet {
   const pairs = new Map<string, Set<string>>();
-  for (const variant of release.variants) {
+  const matches = selector ? compileSelector(selector) : null;
+  // several variants may share a layout revision: its selected locations are computed once (and the set shared, never mutated)
+  const selected = new Map<string, Set<string>>();
+  for (const variant of source.release.variants) {
     for (const revisionId of variant.layoutRevisionIds) {
       if (!variantSatisfies(constraint, variant, revisionId)) continue;
-      const revision = revisions.get(revisionId);
+      const revision = source.layoutRevisions.get(revisionId);
       if (!revision || (scope === "usable" && !isUsablePair(variant, revision))) continue;
-      const ids = new Set<string>();
-      for (const loc of revision.locations) {
-        if (!loc.componentIds.includes(componentId)) continue;
-        if (selector && !locationMatches(selector, loc)) continue;
-        ids.add(loc.id);
+      let ids = selected.get(revisionId);
+      if (!ids) {
+        ids = new Set<string>();
+        for (const loc of source.locationsByComponent.get(revisionId)?.get(componentId) ?? []) if (!matches || matches(loc)) ids.add(loc.id);
+        selected.set(revisionId, ids);
       }
       if (ids.size > 0) pairs.set(`${variant.id}|${revisionId}`, ids);
     }
@@ -307,20 +334,33 @@ export function buildIndex(release: ReleaseContent): ReleaseIndex {
   if (cached) return cached;
   const layoutRevisions = toMap(release.layoutRevisions, (r) => r.id);
   const locations = new Map<string, Map<string, CabinLocation>>();
+  const locationsByComponent = new Map<string, Map<string, CabinLocation[]>>();
   for (const revision of release.layoutRevisions) {
     locations.set(
       revision.id,
       toMap(revision.locations, (l) => l.id),
     );
+    const byComponent = new Map<string, CabinLocation[]>();
+    for (const loc of revision.locations) {
+      for (const componentId of new Set(loc.componentIds)) {
+        const list = byComponent.get(componentId);
+        if (list) list.push(loc);
+        else byComponent.set(componentId, [loc]);
+      }
+    }
+    locationsByComponent.set(revision.id, byComponent);
   }
+  const source: MatchSetSource = { release, layoutRevisions, locationsByComponent };
   const ruleMatch = new Map<string, MatchSet>();
   for (const rule of release.rules) {
-    ruleMatch.set(rule.id, buildMatchSet(release, layoutRevisions, rule.constraint, rule.locations, rule.componentId));
+    ruleMatch.set(rule.id, buildMatchSet(source, rule.constraint, rule.locations, rule.componentId));
   }
   const substituteMatch = new Map<string, MatchSet>();
   for (const sub of release.substitutes) {
-    substituteMatch.set(sub.id, buildMatchSet(release, layoutRevisions, sub.constraint, sub.locations, sub.componentId));
+    substituteMatch.set(sub.id, buildMatchSet(source, sub.constraint, sub.locations, sub.componentId));
   }
+  const substitutesByKey = group(release.substitutes, (s) => substituteKey(s.componentId, s.primaryPartNo));
+  for (const list of substitutesByKey.values()) list.sort((a, b) => compareCodePoints(a.id, b.id));
   const parts = toMap(release.parts, (p) => p.partNo);
   const index: ReleaseIndex = {
     release,
@@ -331,18 +371,40 @@ export function buildIndex(release: ReleaseContent): ReleaseIndex {
     layouts: toMap(release.layouts, (l) => l.id),
     layoutRevisions,
     locations,
+    locationsByComponent,
     components: toMap(release.components, (c) => c.id),
     parts,
     assignmentsByTail: group(release.assignments, (a) => a.tail),
     kits: buildKitIndex(release.kitChildren, parts),
     pendingByRule: group(release.pendingChanges, (p) => p.ruleId),
     rulesByComponent: group(release.rules, (r) => r.componentId),
+    substitutesByKey,
     ruleMatch,
     substituteMatch,
     dominance: new Map(),
   };
   if (isCacheable(release)) indexCache.set(release, index);
   return index;
+}
+
+/** The `substitutesByKey` key of the approvals that may stand in for `primaryPartNo` on `componentId`. */
+export function substituteKey(componentId: string, primaryPartNo: string): string {
+  return `${componentId}|${primaryPartNo}`;
+}
+
+/**
+ * Is `index` an index of exactly this content: built from the same object, or from a copy that shares
+ * every entity array and the vocabulary (a `ReferenceRelease` spread from its content)? Callers that
+ * accept an index to share (`validateRelease`, `lookup`) refuse any other.
+ */
+export function isIndexOf(index: ReleaseIndex, content: ReleaseContent): boolean {
+  if (index.release === content) return true;
+  if (typeof content !== "object" || content === null) return false;
+  const indexed = index.release as unknown as Record<string, unknown>;
+  const given = content as unknown as Record<string, unknown>;
+  const keys = new Set([...Object.keys(indexed), ...Object.keys(given)]);
+  const isObject = (value: unknown) => typeof value === "object" && value !== null;
+  return [...keys].every((key) => !(isObject(indexed[key]) || isObject(given[key])) || indexed[key] === given[key]);
 }
 
 /** Is rule a strictly more specific than rule b? Cached per release. */

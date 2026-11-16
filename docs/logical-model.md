@@ -70,8 +70,61 @@ Printed rows are numbers only when the label is one to three digits (`parsePrint
 - Variant, subtype and hardware are dependent, so those constraints are reduced to the feasible (variant, layout revision) pairs taken from the release. Pairs come from released variants and usable layout revisions only: the variant lists the revision and the revision is neither planned nor candidate (`isUsablePair`). Unreleased data therefore never changes which of two released rules is more specific, nor the conflicts validation reports.
 - Location selectors are expanded to exact location ids per layout revision.
 - Carpet, seam and upholstery are independent; an unconstrained dimension accepts "unknown", a constrained one does not.
+- A rule that reaches only unreleased configurations (an unreleased variant, a planned or candidate layout revision) has an empty match set: no lookup can use it, and validation warns (`RULE_UNRELEASED_ONLY`; for an approval, `SUBSTITUTE_UNRELEASED_ONLY`). Whether a rule or approval refers to something real (`UNREACHABLE_RULE`, `UNREACHABLE_SUBSTITUTE`, namespaces) is still checked against every pair a variant lists, released or not, so staged data validates. Lookup tells a released configuration from a planned one by status alone (`isReleasedPair`), so a released assignment pairing a variant with a revision it does not list stays `INCONSISTENT_CONFIGURATION`, never `PLANNED`.
 - Exactly one undominated rule → resolved. Several (equal or incomparable) → AMBIGUOUS, no part selected. None eligible → NO_MATCH.
 - Numeric priority, selector count and insertion order are not used. Validity dates filter eligibility and are not part of specificity.
+
+**The exclusion rule.** A candidate rule is excluded, never silently dropped, when any of these holds on the check date; every reason that holds is listed, in this order: `NOT_RELEASED`, `RULE_NOT_YET_EFFECTIVE`, `RULE_EXPIRED`, then the source reasons (`SOURCE_MISSING`, `SOURCE_NOT_RELEASED`, `SOURCE_NOT_YET_EFFECTIVE`, `SOURCE_EXPIRED`), then the kit reasons (`KIT_SOURCE_INVALID` per kit line whose source fails, `KIT_INVALID`). Substitute approvals use the same rule with `APPROVAL_NOT_YET_EFFECTIVE` and `APPROVAL_EXPIRED`. An excluded rule grants nothing, and its exclusion is kept on the component (`excluded`) whatever the outcome. A copy of any rule marked unreleased therefore changes no component's status or selected rule; it only appears in `excluded` wherever the original was a candidate.
+
+**Order independence.** Lookup results do not depend on the order of rules, approvals, kit lines or locations in the release: each component's candidate rules are taken in rule-id order (so `excluded`, ambiguous `candidates` and `dominatedRuleIds` are in id order), a frozen rule's alternates and excluded alternates are in approval-id order, and each kit's lines are walked in child part number, unit, then source order. A cyclic kit is reported (`KIT_CYCLE`, and in a `KIT_INVALID` reason) starting at the cycle's smallest part number by `compareCodePoints`, so the same release always reports and freezes the same text whichever part was expanded first. Only the order of `components` in a resolution follows the layout's location order.
+
+**Indexing.** `buildIndex` derives everything lookup and validation need once per release: entity maps, each layout revision's locations by component (`locationsByComponent`), approvals by component and primary part (`substitutesByKey`), rules by component, match sets (each selector's value lists turned into sets once per rule), memoised kit expansion and dominance. Frozen releases (as the reference store loads them) are cached; anything else is indexed afresh. `validateRelease(content, index)` and `lookup(release, tail, date, index)` accept an index already built so a caller can share one; an index of different content is refused. Grouping is linear (get-or-create, then push).
+
+## Findings
+
+Validation (`validateRelease`) returns findings with a severity: `error` blocks activation; `conflict` is recorded and the release activates, because lookup refuses the affected cases instead of guessing; `warning` and `info` are advisory. Codes added in Phase 2 of the hardening plan:
+
+| Code | Severity | Meaning |
+| --- | --- | --- |
+| `SCHEMA_INVALID` | error | Content fails the strict structural schema (unknown or misspelt key, wrong type, bad enum, date or quantity bound). When any is found only these are returned, at most 50 listed and the rest summarised |
+| `CONSTRAINT_VALUE_UNKNOWN` | error | A rule or approval constrains a variant, layout revision, subtype, hardware, carpet, seam or upholstery that does not exist |
+| `SELECTOR_ID_UNKNOWN` | error | A location selector names a location id that is not a location of that kind in any layout revision the constraint can reach |
+| `SELECTOR_VALUE_UNMATCHED` | error | A selector zone, letter, side, floor area type or row range matches no location of that kind it can reach |
+| `ROW_RANGE_INVALID` | error | A selector gives only one row bound, or a first row after the last |
+| `CANDIDATE_HAS_FIXTURE_DATA` | error | A candidate layout revision contains fixture floor or bin locations or fixture maintenance zones |
+| `ASSIGNMENT_INCONSISTENT` | conflict | A released configuration whose aircraft, variant and layout revision disagree (subtype, unlisted revision, incomplete seat set); its lookups are refused |
+| `RULES_INCOMPARABLE` | conflict | Two released rules for one component overlap in scope and validity but neither is more specific, and no third rule more specific than both covers their overlap for the whole shared validity with a source valid throughout; the affected components are reported as ambiguous |
+| `SUBSTITUTE_UNREACHABLE` | warning | An approval covers no location where a rule selects its primary part, so it can never be offered |
+| `RULE_UNRELEASED_ONLY` | warning | A rule reaches only unreleased configurations; no lookup can use it until they are released |
+| `SUBSTITUTE_UNRELEASED_ONLY` | warning | The same for a substitute approval |
+| `KIT_SOURCE_UNRELEASED` | warning | A kit line cites an unreleased source; no lookup can select its parent part or any kit containing it |
+| `KIT_TOO_DEEP` | error | A kit nests deeper than `MAX_KIT_DEPTH` levels (reported once, not once per kit above it) |
+| `KIT_QTY_OVERFLOW` | error | An expanded kit quantity is not a safe integer or exceeds `MAX_DERIVED_QTY` |
+| `KIT_UNIT_UNDER_NON_COUNT` | warning | A kit line whose child is itself a kit uses a unit that does not count items, yet multiplies the kit below it |
+| `KIT_CYCLE` | error | A cyclic kit definition, named from its smallest part number (existing code; its text is now canonical) |
+| `SEAT_LETTER_UNKNOWN` | error | A seat letter outside A-F, which the geometry frame cannot place |
+| `SEAT_SIDE_MISMATCH` | error | A seat whose `side` disagrees with the side its letter is on |
+
+Not findings, but codes added in the same phase:
+
+| Code | Kind | Meaning |
+| --- | --- | --- |
+| `KIT_SOURCE_INVALID` | exclusion reason | A kit child of the rule's or alternate's part, at any depth, cites a source that is not valid on the check date; carries that `sourceId` |
+| `KIT_INVALID` | exclusion reason | The kit below the part cannot be expanded (cycle, too deep, quantity too large) |
+| `VARIANT_SOURCE_INVALID`, `LAYOUT_SOURCE_INVALID` | lookup reason (`SOURCE_INVALID`) | The variant's or layout revision's source is not valid on the check date |
+| `QUANTITY_TOO_LARGE` | record refusal (HTTP 422) | A computed line quantity is not a safe integer or exceeds `MAX_DERIVED_QTY` |
+| `SNAPSHOT_INCONSISTENT` | error response (HTTP 500) | A record or gap refers to a location absent from the frozen layout, or a location has an unknown kind |
+
+## Numeric limits
+
+Defined in `src/domain/limits.ts` and enforced by the schema, kit expansion and record derivation.
+
+| Limit | Value | Applies to |
+| --- | --- | --- |
+| `MAX_QTY` | 10,000 | Any quantity in reference data (rule, approval and kit-line quantities); quantities are whole numbers of at least 1 |
+| `MAX_REPLACEMENTS_PER_LOCATION` | 1,000 | A component's declared replacement limit per location |
+| `MAX_DERIVED_QTY` | 1,000,000 | Any computed quantity: an expanded kit line, and a record's line quantity |
+| `MAX_KIT_DEPTH` | 8 | Kit nesting levels below a part |
 
 ## Alternates and kits
 
@@ -85,7 +138,7 @@ At creation the whole context is copied into the visit: assignment, variant, lay
 
 Backward compatibility: fields added after a snapshot was frozen are absent from it; every reader defaults them; nothing rewrites a stored snapshot. For example, snapshots frozen before report schema 2 have no `excluded` list on resolved or ambiguous components and no `sourceId` on a no-match exclusion; readers treat the list as empty and cite no source for it.
 
-Report schema 2 (`cabin-kit.report/2`) adds `excludedRules` to each work item and `sourceIds` to each gap, and `sources` lists every source the report cites: work items (rule, selection, mandatory children, pending changes), their excluded rules, and gaps (ambiguous candidates and no-match exclusions). A stored `/1` report is immutable and is returned exactly as stored; readers treat its missing fields as empty. Work items are ordered by physical position (seats by physical row then letter, then floor areas, then bins); gap location ids follow the same order. A record whose location is absent from the snapshot, or a location of unknown kind, is refused as `SNAPSHOT_INCONSISTENT` (HTTP 500), never placed silently. The preparation overview's `counts.parts` is the number of distinct primary part numbers.
+Report schema 2 (`cabin-kit.report/2`) adds `excludedRules` to each work item and `sourceIds` to each gap, and `sources` lists every source the report cites: work items (rule, selection, mandatory children, pending changes), their excluded rules, and gaps (ambiguous candidates and no-match exclusions). A stored `/1` report is immutable and is returned exactly as stored; readers treat its missing fields as empty. Work items are ordered by physical position: seats by physical row then letter, then floor areas by first row, then bins by module, each tie broken by location id; gap location ids follow the same order. A record whose location is absent from the snapshot, or a location of unknown kind, is refused as `SNAPSHOT_INCONSISTENT` (HTTP 500), never placed silently. The preparation overview's `counts.parts` is the number of distinct primary part numbers.
 
 | Operation | Guarantee |
 | --- | --- |

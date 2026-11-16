@@ -52,11 +52,26 @@ const order = (a: ExpandedChild, b: ExpandedChild) =>
 const qtyOk = (qty: number) => Number.isSafeInteger(qty) && qty <= MAX_DERIVED_QTY;
 
 /**
- * Index the kit structure of a release. Each part's expansion at multiplier 1 is computed once, on
- * first use, depth-first with an explicit stack and an in-progress set for cycle detection, and kept
- * (failures too, as the `KitError` to rethrow). Shared sub-kits are therefore expanded once, and the
- * total cost is linear in the kit lines and the size of the expansions. A part whose kit fails throws
- * from `expand` only; building the index never throws, so one broken kit cannot stop a lookup.
+ * A closed cycle of part numbers (first equals last) rotated to start at its smallest part number
+ * (`compareCodePoints`). Where a walk enters a cycle depends on which part is expanded first; the
+ * canonical form does not, so a release always reports and freezes the same `KIT_CYCLE` text.
+ */
+export function canonicalCycle(cycle: readonly string[]): string[] {
+  const open = cycle.slice(0, -1);
+  const smallest = open.reduce<string | null>((min, partNo) => (min === null || compareCodePoints(partNo, min) < 0 ? partNo : min), null);
+  if (smallest === null) return [...cycle];
+  const start = open.indexOf(smallest);
+  return [...open.slice(start), ...open.slice(0, start), smallest];
+}
+
+/**
+ * Index the kit structure of a release. Each parent's lines are ordered by child part number, unit,
+ * then source id, so results never depend on the order of `kitChildren`. Each part's expansion at
+ * multiplier 1 is computed once, on first use, depth-first with an explicit stack and an in-progress
+ * set for cycle detection, and kept (failures too, as the `KitError` to rethrow). Shared sub-kits
+ * are therefore expanded once, and the total cost is linear in the kit lines and the size of the
+ * expansions. A part whose kit fails throws from `expand` only; building the index never throws, so
+ * one broken kit cannot stop a lookup.
  */
 export function buildKitIndex(kitChildren: readonly KitChild[], parts: ReadonlyMap<string, Part>): KitIndex {
   const byParent = new Map<string, KitChild[]>();
@@ -64,6 +79,10 @@ export function buildKitIndex(kitChildren: readonly KitChild[], parts: ReadonlyM
     const list = byParent.get(line.parentPartNo);
     if (list) list.push(line);
     else byParent.set(line.parentPartNo, [line]);
+  }
+  // each parent's lines in a fixed order, so walks (and any cycle they meet) do not depend on input order
+  for (const lines of byParent.values()) {
+    lines.sort((a, b) => compareCodePoints(a.childPartNo, b.childPartNo) || compareCodePoints(a.unit, b.unit) || compareCodePoints(a.sourceId, b.sourceId));
   }
   const done = new Map<string, Expansion>();
 
@@ -132,8 +151,9 @@ export function buildKitIndex(kitChildren: readonly KitChild[], parts: ReadonlyM
         }
         if (inProgress.has(line.childPartNo)) {
           const from = stack.findIndex((f) => f.partNo === line.childPartNo);
-          const cycle = [...stack.slice(from).map((f) => f.partNo), line.childPartNo];
-          failure = new KitError("KIT_CYCLE", line.childPartNo, `Cyclic kit definition: ${cycle.join(" -> ")}`);
+          const cycle = canonicalCycle([...stack.slice(from).map((f) => f.partNo), line.childPartNo]);
+          const [first = line.childPartNo] = cycle;
+          failure = new KitError("KIT_CYCLE", first, `Cyclic kit definition: ${cycle.join(" -> ")}`);
           break;
         }
         inProgress.add(line.childPartNo);
@@ -245,14 +265,16 @@ export function validateKits(
   const graph = new Map<string, string[]>();
   for (const k of kitChildren) {
     if (k.parentPartNo === k.childPartNo) continue;
-    graph.set(k.parentPartNo, [...(graph.get(k.parentPartNo) ?? []), k.childPartNo]);
+    const next = graph.get(k.parentPartNo);
+    if (next) next.push(k.childPartNo);
+    else graph.set(k.parentPartNo, [k.childPartNo]);
   }
   const state = new Map<string, 1 | 2>();
   const reported = new Set<string>();
   const visit = (node: string, trail: string[]) => {
     if (state.get(node) === 2) return;
     if (state.get(node) === 1) {
-      const cycle = [...trail.slice(trail.indexOf(node)), node];
+      const cycle = canonicalCycle([...trail.slice(trail.indexOf(node)), node]);
       const key = [...cycle].sort().join("|");
       if (!reported.has(key)) {
         reported.add(key);

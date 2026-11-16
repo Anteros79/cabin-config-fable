@@ -27,13 +27,17 @@ export function summarizeLocations(locations: CabinLocation[]): string {
         odd.push(l.seat!.code);
         continue;
       }
-      byLetter.set(l.seat!.letter, [...(byLetter.get(l.seat!.letter) ?? []), row]);
+      const rows = byLetter.get(l.seat!.letter);
+      if (rows) rows.push(row);
+      else byLetter.set(l.seat!.letter, [row]);
     }
     // merge letters that share the same row set
     const bySet = new Map<string, string[]>();
     for (const [letter, rows] of [...byLetter.entries()].sort(([a], [b]) => compareCodePoints(a, b))) {
       const key = ranges(rows);
-      bySet.set(key, [...(bySet.get(key) ?? []), letter]);
+      const letters = bySet.get(key);
+      if (letters) letters.push(letter);
+      else bySet.set(key, [letter]);
     }
     for (const [rowText, letters] of bySet) {
       parts.push(`Seat${letters.length > 1 ? "s" : ""} ${letters.join("/")} row${rowText.includes("-") || rowText.includes(",") ? "s" : ""} ${rowText}`);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildKitIndex, KitError, validateKits } from "../../src/domain/kits.ts";
+import { buildKitIndex, canonicalCycle, KitError, validateKits } from "../../src/domain/kits.ts";
 import { MAX_DERIVED_QTY, MAX_KIT_DEPTH, MAX_QTY } from "../../src/domain/limits.ts";
 import { kitSourceExclusions, lookup } from "../../src/domain/resolve.ts";
 import { buildIndex } from "../../src/domain/specificity.ts";
@@ -116,9 +116,31 @@ describe("kit expansion", () => {
     const lines = [line("X", "K"), line("K", "A"), line("A", "K")];
     const error = kitErrorOf(() => index(lines).expand("X", 1));
     expect(error.code).toBe("KIT_CYCLE");
-    expect(error.message).toMatch(/K -> A -> K/);
+    expect(error.message).toMatch(/A -> K -> A/); // canonical: starts at the smallest part number
     const content = fixtureContent((c) => c.kitChildren.push(line("FAKE-P-39", "FAKE-CK-2000", 1, "PANEL", "FX-DOC-B")));
     expect(codesOf(content, "error")).toEqual(["KIT_CYCLE"]);
+  });
+
+  it("a KIT_CYCLE message starts at the cycle's smallest part number, whichever part is expanded first", () => {
+    const lines = [line("X", "M"), line("M", "Z"), line("Z", "B"), line("B", "M")];
+    const canonical = "Cyclic kit definition: B -> M -> Z -> B";
+    for (const first of ["X", "M", "Z", "B"]) {
+      const kits = index(lines);
+      const error = kitErrorOf(() => kits.expand(first, 1));
+      expect(error.message).toBe(canonical);
+      expect(error.partNo).toBe("B");
+      // every other part on or above the cycle then fails with the same text
+      for (const other of ["X", "M", "Z", "B"]) expect(kitErrorOf(() => kits.expand(other, 1)).message).toBe(canonical);
+    }
+    const parts = partsOf(lines);
+    const messages = (kitLines: KitChild[]) =>
+      validateKits(kitLines, parts, ["EA"], new Set(["S"]))
+        .filter((f) => f.code === "KIT_CYCLE")
+        .map((f) => [f.message, f.refs]);
+    expect(messages(lines)).toEqual([[`${canonical}.`, ["B", "M", "Z", "B"]]]);
+    expect(messages([...lines].reverse())).toEqual(messages(lines));
+    expect(canonicalCycle(["Z", "B", "Z"])).toEqual(["B", "Z", "B"]);
+    expect(canonicalCycle([])).toEqual([]);
   });
 
   it("an expanded quantity above MAX_DERIVED_QTY is KIT_QTY_OVERFLOW in validation and KitError in the index", () => {

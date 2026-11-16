@@ -73,13 +73,18 @@ export function buildPreparation(snapshot: VisitSnapshot): PrepOverview {
   const passedOver = new Map<string, Map<string, { excluded: ExcludedRule; locationIds: string[] }>>();
   for (const c of resolution.components) {
     if (c.status !== "RESOLVED") continue;
-    coverage.set(c.ruleId, [...(coverage.get(c.ruleId) ?? []), c.locationId]);
+    const covered = coverage.get(c.ruleId);
+    if (covered) covered.push(c.locationId);
+    else coverage.set(c.ruleId, [c.locationId]);
     for (const e of excludedOf(c)) {
-      const byRule = passedOver.get(c.ruleId) ?? new Map<string, { excluded: ExcludedRule; locationIds: string[] }>();
-      const entry = byRule.get(e.ruleId) ?? { excluded: e, locationIds: [] };
-      entry.locationIds.push(c.locationId);
-      byRule.set(e.ruleId, entry);
-      passedOver.set(c.ruleId, byRule);
+      let byRule = passedOver.get(c.ruleId);
+      if (!byRule) {
+        byRule = new Map();
+        passedOver.set(c.ruleId, byRule);
+      }
+      const entry = byRule.get(e.ruleId);
+      if (entry) entry.locationIds.push(c.locationId);
+      else byRule.set(e.ruleId, { excluded: e, locationIds: [c.locationId] });
     }
   }
   const lines: PrepLine[] = [];

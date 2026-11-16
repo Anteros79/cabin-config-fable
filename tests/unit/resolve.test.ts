@@ -527,6 +527,65 @@ describe("substitute scope", () => {
     expect(entry(rb.resolution!.rules, ruleB).substitutes).toEqual([]);
     expect(entry(rb.resolution!.rules, ruleB).excludedSubstitutes).toEqual([]);
   });
+
+  it("is never attached through a colliding index key: component and primary part must both match", () => {
+    // rule (CUSHION, "P|Q") and approval ("CUSHION|P", "Q") share the index key "CUSHION|P|Q"; seat 3A
+    // lists both components, so the approval's scope does meet the rule's there
+    const rel = withRules([rule("X-PIPE", "P|Q", { variant: ["V01"] }, { kind: "SEAT" })], (c) => {
+      c.layoutRevisions
+        .find((r) => r.id === "FX-L-S176-MAX8@1")!
+        .locations.find((l) => l.id === "SEAT:3A")!
+        .componentIds.push("CUSHION|P");
+      c.parts.push({ partNo: "Q", namespace: "fixture", description: "Q" });
+      c.substitutes.push({
+        id: "X-SUB-PIPE",
+        namespace: "fixture",
+        componentId: "CUSHION|P",
+        primaryPartNo: "Q",
+        altPartNo: "FAKE-SC-1002",
+        qtyPerReplacement: 1,
+        unit: "EA",
+        constraint: { variant: ["V01"] },
+        released: true,
+        effectiveFrom: "2024-01-01",
+        effectiveTo: null,
+        sourceId: "FX-DOC-A",
+      });
+    });
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    expect(partAt(r, "SEAT:3A", "CUSHION")).toBe("P|Q");
+    expect(entry(r.resolution!.rules, "X-PIPE").substitutes).toEqual([]);
+    expect(entry(r.resolution!.rules, "X-PIPE").excludedSubstitutes).toEqual([]);
+  });
+
+  it("lists alternates in approval-id order whatever the order of the release's approvals", () => {
+    const approval = (id: string) => ({
+      id,
+      namespace: "fixture" as const,
+      componentId: "CUSHION",
+      primaryPartNo: "FAKE-SC-1001",
+      altPartNo: "FAKE-SC-1002",
+      qtyPerReplacement: 1,
+      unit: "EA",
+      constraint: { variant: ["V01"] },
+      released: true,
+      effectiveFrom: "2024-01-01",
+      effectiveTo: null,
+      sourceId: "FX-DOC-A",
+    });
+    for (const ids of [
+      ["X-SUB-B", "X-SUB-A", "X-SUB-C"],
+      ["X-SUB-C", "X-SUB-B", "X-SUB-A"],
+    ]) {
+      const r = lookup(
+        fixtureRelease((c) => c.substitutes.push(...ids.map(approval))),
+        "N100TL",
+        "2026-11-12",
+      );
+      const ruleId = (resolutionAt(r, "SEAT:3A", "CUSHION") as { ruleId: string }).ruleId;
+      expect(entry(r.resolution!.rules, ruleId).substitutes.map((s) => s.id)).toEqual(["X-SUB-A", "X-SUB-B", "X-SUB-C"]);
+    }
+  });
 });
 
 describe("dates and assignments considered (DOM-21)", () => {
