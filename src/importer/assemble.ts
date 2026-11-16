@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { Finding, ReleaseContent, VisualProfile } from "../domain/types.ts";
 import { validateRelease } from "../domain/validate.ts";
 import { buildCandidateContent } from "./candidate.ts";
+import { resolveSourceRoot } from "./originals.ts";
 import { buildFixtureContent, loadFixtureData } from "./fixtures.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -12,7 +13,7 @@ export const DEFAULT_FIXTURE_PATH = join(PROJECT_ROOT, "fixtures", "fixture-data
 
 /** Default location of the supplied originals: the development folder two levels above the project. */
 export function defaultSourceRoot(): string {
-  return resolve(process.env.CABIN_KIT_SOURCE_ROOT ?? join(PROJECT_ROOT, "..", ".."));
+  return resolve(resolveSourceRoot());
 }
 
 export const VISUAL_PROFILES: VisualProfile[] = [

@@ -7,10 +7,11 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { resolveImageRoot } from "../src/importer/originals.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, "..");
-const sourceRoot = resolve(process.env.CABIN_KIT_SOURCE_ROOT ?? join(projectRoot, "..", ".."));
+const sourceRoot = resolveImageRoot();
 const outFull = join(projectRoot, "evidence", "image-previews", "full");
 const outView = join(projectRoot, "evidence", "image-previews", "view");
 mkdirSync(outFull, { recursive: true });

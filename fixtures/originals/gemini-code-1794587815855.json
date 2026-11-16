@@ -1,0 +1,15 @@
+{
+  "schema_metadata": {
+    "schema_name": "southwest_airlines_737_lopa_registry",
+    "schema_version": "2026.1",
+    "normalization_form": "3NF (Third Normal Form)",
+    "entities": {
+      "lopa_configurations": { "primary_key": ["lopa_id"], "record_count": 5 },
+      "lopa_rows": { "primary_key": ["lopa_id", "row_number"], "record_count": 147 },
+      "lopa_seats": { "primary_key": ["lopa_id", "row_number", "seat_letter"], "record_count": 837 }
+    }
+  },
+  "lopa_configurations": [ ... ],
+  "lopa_rows": [ ... ],
+  "lopa_seats": [ ... ]
+}

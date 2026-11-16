@@ -14,6 +14,7 @@ import type {
   RowLabel,
   SourceArtifact,
 } from "../domain/types.ts";
+import { ORIGINAL_FILES } from "./originals.ts";
 import { parseCsv } from "./readers/csv.ts";
 import { normaliseForQuote, readDocxParagraphs } from "./readers/docx.ts";
 import { readXlsx } from "./readers/xlsx.ts";
@@ -23,17 +24,7 @@ import { readXlsx } from "./readers/xlsx.ts";
  * tails, parts or applicability. Every value keeps its raw claim and a locator. Differences
  * between sources are reported as findings; no source is declared the winner.
  */
-export const ORIGINAL_FILES = {
-  registryJson: "southwest_737_lopa_normalized.json",
-  templateJson: "southwest 737 lopa normalized.json",
-  geminiJson: "gemini-code-1794587815855.json",
-  configCsv: "southwest_737_lopa_configurations.csv",
-  seatsCsv: "southwest_737_lopa_seats.csv",
-  rowsXlsx: "southwest_737_lopa_rows.xlsx",
-  schemaCsv: "cabin schema architecture.csv",
-  rtf: "Southwest Cabin Configuration Standard.rtf",
-  docx: "Current Aircraft Seat Configurations.docx",
-} as const;
+export { ORIGINAL_FILES };
 
 const CONFIG_FIELDS = [
   "lopa_id", "boeing_model", "icao_code", "iata_code", "configuration_name", "interior_generation", "seat_hardware_model",

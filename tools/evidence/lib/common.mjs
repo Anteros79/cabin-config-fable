@@ -4,52 +4,31 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DATA_ORIGINALS, IMAGE_ORIGINALS, ORIGINAL_FILES, resolveImageRoot } from '../../../src/importer/originals.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 export const PROJECT_DIR = resolve(HERE, '..', '..', '..');
-export const SOURCE_ROOT = process.env.CABIN_KIT_SOURCE_ROOT
-  ? resolve(process.env.CABIN_KIT_SOURCE_ROOT)
-  : resolve(PROJECT_DIR, '..', '..');
+// The evidence tools hash all 23 originals, images included, so they use the image root.
+export const SOURCE_ROOT = resolve(resolveImageRoot());
 export const EVIDENCE_DIR = join(PROJECT_DIR, 'evidence');
 
 export const F = Object.freeze({
-  TEMPLATE_JSON: 'southwest 737 lopa normalized.json',
-  REGISTRY_JSON: 'southwest_737_lopa_normalized.json',
-  RTF: 'Southwest Cabin Configuration Standard.rtf',
-  GEMINI_JSON: 'gemini-code-1794587815855.json',
-  SCHEMA_CSV: 'cabin schema architecture.csv',
-  SEATS_CSV: 'southwest_737_lopa_seats.csv',
-  ROWS_XLSX: 'southwest_737_lopa_rows.xlsx',
-  CONFIG_CSV: 'southwest_737_lopa_configurations.csv',
-  DOCX: 'Current Aircraft Seat Configurations.docx',
+  TEMPLATE_JSON: ORIGINAL_FILES.templateJson,
+  REGISTRY_JSON: ORIGINAL_FILES.registryJson,
+  RTF: ORIGINAL_FILES.rtf,
+  GEMINI_JSON: ORIGINAL_FILES.geminiJson,
+  SCHEMA_CSV: ORIGINAL_FILES.schemaCsv,
+  SEATS_CSV: ORIGINAL_FILES.seatsCsv,
+  ROWS_XLSX: ORIGINAL_FILES.rowsXlsx,
+  CONFIG_CSV: ORIGINAL_FILES.configCsv,
+  DOCX: ORIGINAL_FILES.docx,
 });
 
 // Exact file names as supplied (spaces and spelling preserved).
 export const ORIGINALS = Object.freeze([
-  { name: F.TEMPLATE_JSON, group: 'document' },
-  { name: F.REGISTRY_JSON, group: 'document' },
-  { name: F.RTF, group: 'document' },
-  { name: F.GEMINI_JSON, group: 'document' },
-  { name: F.SCHEMA_CSV, group: 'document' },
-  { name: F.SEATS_CSV, group: 'document' },
-  { name: F.ROWS_XLSX, group: 'document' },
-  { name: F.CONFIG_CSV, group: 'document' },
-  { name: F.DOCX, group: 'document' },
-  { name: 'Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png', group: 'image' },
-  { name: 'barrier.webp', group: 'image' },
-  { name: 'carpet.jpg', group: 'image' },
-  { name: 'forward galley flight deck.jpg', group: 'image' },
-  { name: 'rear galley.jpg', group: 'image' },
-  { name: 'recarro 2.jpg', group: 'image' },
-  { name: 'seats 1.jpeg', group: 'image' },
-  { name: 'seats 2 .jpeg', group: 'image' },
-  { name: 'seats 3.jpg', group: 'image' },
-  { name: 'seats 4.jpg', group: 'image' },
-  { name: 'seats 5.jpg', group: 'image' },
-  { name: 'seats 6.avif', group: 'image' },
-  { name: 'seats 8.jpg', group: 'image' },
-  { name: 'southwest seats-7.webp', group: 'image' },
+  ...DATA_ORIGINALS.map((name) => ({ name, group: 'document' })),
+  ...IMAGE_ORIGINALS.map((name) => ({ name, group: 'image' })),
 ]);
 
 const cache = new Map();
