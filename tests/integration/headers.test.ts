@@ -1,10 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { CONTENT_SECURITY_POLICY } from "../../src/server/http/headers.ts";
-import { cleanupTempDirs, makeApp, tempDir } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { makeApp, tempDir } from "../helpers.ts";
 
 describe("headers, caching, compression and static serving", () => {
   let handle: ReturnType<typeof makeApp>;
@@ -15,11 +13,20 @@ describe("headers, caching, compression and static serving", () => {
     writeFileSync(join(webRoot, "assets", "app-abc123.js"), "export const x = 1;\n");
     handle = makeApp({ webRoot });
   });
-  afterAll(() => handle.close());
 
   it("every response carries the security header set", async () => {
-    for (const url of ["/api/health", "/", "/assets/app-abc123.js", "/api/nope"]) {
-      const r = await handle.app.inject({ url });
+    const requests = [
+      { url: "/api/health" },
+      { url: "/" },
+      { url: "/assets/app-abc123.js" },
+      { url: "/api/nope" },
+      { url: "/assets/missing.js" },
+      { method: "POST" as const, url: "/api/visits", headers: { "content-type": "application/json" }, payload: "{nope" },
+      { method: "POST" as const, url: "/api/visits", headers: { origin: "http://x.test" }, payload: {} },
+    ];
+    for (const request of requests) {
+      const r = await handle.app.inject(request);
+      const url = `${request.method ?? "GET"} ${request.url} (${r.statusCode})`;
       expect(r.headers["content-security-policy"], url).toBe(CONTENT_SECURITY_POLICY);
       expect(r.headers["x-frame-options"], url).toBe("DENY");
       expect(r.headers["referrer-policy"], url).toBe("no-referrer");

@@ -123,6 +123,12 @@ CREATE TRIGGER events_immutable_delete BEFORE DELETE ON visit_events
 BEGIN SELECT RAISE(ABORT, 'EVENT_IMMUTABLE'); END;
 `;
 
+/**
+ * A technician name may not contain a control character (C0, DEL or C1), checked after surrounding whitespace is trimmed.
+ * Only new visits are checked: a name stored before this rule is read, listed, reported and completed as it is.
+ */
+const CONTROL_CHARACTER = /\p{Cc}/u;
+
 /** Retry keys older than this are pruned when the store opens. */
 export const IDEMPOTENCY_RETENTION_DAYS = 30;
 
@@ -422,6 +428,8 @@ export class VisitStore {
       throw new DomainError("INVALID_TECHNICIAN", "Technician must be text.");
     const tech = (typeof technician === "string" ? technician : "").trim();
     if (tech.length > 80) throw new DomainError("INVALID_TECHNICIAN", "Technician must be at most 80 characters.");
+    if (CONTROL_CHARACTER.test(tech))
+      throw new DomainError("INVALID_TECHNICIAN", "The technician name contains a control character, such as a tab or line break. Remove it and try again.");
     const now = options.now ?? new Date().toISOString();
     const snapshotJson = canonicalJson(snapshot);
     const snapshotSha = sha256Hex(snapshotJson);

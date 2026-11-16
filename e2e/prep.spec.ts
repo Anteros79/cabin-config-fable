@@ -4,8 +4,12 @@ import { expect, test } from "./fixtures.ts";
 test("preparation overview: lists every applicable part, filters, and says coverage is not work done", async ({ page }) => {
   await page.goto("/#/prep?tail=N100TL&date=2026-11-12");
   const rows = page.locator("#prep-table tbody tr");
-  await expect(rows.first()).toBeVisible();
-  expect(await rows.count(), "lists all applicable parts").toBeGreaterThan(50);
+  const served = (await (await page.request.get("/api/preparation?tail=N100TL&date=2026-11-12")).json()) as { lines: { partNo: string }[] };
+  expect(served.lines.length).toBeGreaterThan(50);
+  await expect(rows, "a row for every applicable part line the server lists").toHaveCount(served.lines.length);
+  expect(await rows.evaluateAll((trs) => trs.map((tr) => tr.getAttribute("data-part"))), "the same parts, in the same order").toEqual(
+    served.lines.map((l) => l.partNo),
+  );
   await expect(page.locator(".prep .advisory")).toContainText("not replacements made");
   await page.locator(".prep input[type=search]").fill("FAKE-P-41");
   await expect(rows).toHaveCount(1);
@@ -28,5 +32,6 @@ test("preparation CSV export: its filename and its content", async ({ page }) =>
   const csv = readFileSync(await download.path(), "utf8");
   expect(csv).toContain("ALTERNATE,FAKE-CK-2000");
   expect(csv).toContain("REQUIRED_SUPPLEMENT,FAKE-P-39");
-  expect(csv.split("\n").filter(Boolean).length, "a header and a line per applicable part").toBeGreaterThan(50);
+  const served = (await (await page.request.get("/api/preparation?tail=N100TL&date=2026-11-12")).json()) as { lines: unknown[] };
+  expect(csv.split("\n").filter((l) => l.startsWith("PRIMARY,")).length, "a PRIMARY line per applicable part line").toBe(served.lines.length);
 });

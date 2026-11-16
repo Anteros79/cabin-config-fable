@@ -1,14 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it, test } from "vitest";
-import { cleanupTempDirs, makeApp } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { beforeAll, describe, expect, it, test } from "vitest";
+import { makeApp } from "../helpers.ts";
 
 describe("query string and path parameter validation", () => {
   let handle: ReturnType<typeof makeApp>;
   beforeAll(() => {
     handle = makeApp();
   });
-  afterAll(() => handle.close());
   const get = (url: string) => handle.app.inject({ url });
 
   test.each(["limit=abc", "limit=0", "limit=201", "limit=1.5", "offset=-1", "offset=x", "bogus=1", `q=${"a".repeat(101)}`])(

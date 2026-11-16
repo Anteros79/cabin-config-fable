@@ -100,6 +100,27 @@ describe("CheckView writes", () => {
     expect(screen.getAllByRole("link", { name: "Preparation parts list" })).toHaveLength(1);
   });
 
+  it("a technician name the server refuses (INVALID_TECHNICIAN) is shown as a plain alert, with no retry and no navigation", async () => {
+    const result = lookup(release, "N100TL", "2026-11-12");
+    const message = "The technician name contains a control character, such as a tab or line break. Remove it and try again.";
+    const sent = stubFetch((method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (url.startsWith("/api/lookup")) return { body: result };
+      if (method === "POST") return { status: 422, body: { error: { code: "INVALID_TECHNICIAN", message, details: null } } };
+      throw new Error(`unexpected ${method} ${url}`);
+    });
+    const navigate = vi.fn();
+    render(<CheckView visitId={null} navigate={navigate} visualProfiles={[]} />);
+    fireEvent.change(screen.getByLabelText("Technician (optional)"), { target: { value: "Demo\ttech" } });
+    fireEvent.click(screen.getByRole("button", { name: "Look up configuration" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start visit (saves a draft)" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain(`Not saved: ${message}`);
+    expect(within(alert).queryByRole("button", { name: "Retry safely" })).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(sent.filter((s) => s.method === "POST").map((s) => s.body?.technician)).toEqual(["Demo\ttech"]);
+  });
+
   it("Start visit is disabled while the visit is being created", async () => {
     const result = lookup(release, "N100TL", "2026-11-12");
     const answer = deferred<{ status: number; body: unknown }>();

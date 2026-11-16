@@ -442,19 +442,19 @@ export class ReferenceStore {
   }
 
   /** Load one release in a single read transaction. Releases are immutable, so results are cached (deep-frozen). */
-  loadRelease(releaseId: string): ReferenceRelease {
+  loadRelease(releaseId: string, hooks: LoadHooks = {}): ReferenceRelease {
     const cached = this.cache.get(releaseId);
     if (cached) return cached;
-    const stored = this.inReadTransaction(() => this.readRelease(releaseId));
+    const stored = this.inReadTransaction(() => this.readRelease(releaseId, hooks));
     return this.admit(stored);
   }
 
   /** The active release, read consistently: pointer and content come from the same read transaction. */
-  loadActive(): ReferenceRelease {
+  loadActive(hooks: LoadHooks = {}): ReferenceRelease {
     const result = this.inReadTransaction(() => {
       const id = (this.db.prepare("SELECT release_id FROM active_release WHERE singleton = 1").get() as { release_id: string } | undefined)?.release_id;
       if (!id) throw new ReferenceStoreError("NO_ACTIVE_RELEASE", "No reference release is active. Run the reference import.");
-      return this.cache.get(id) ?? this.readRelease(id);
+      return this.cache.get(id) ?? this.readRelease(id, hooks);
     });
     return "storedHash" in result ? this.admit(result) : result;
   }
@@ -489,11 +489,12 @@ export class ReferenceStore {
   }
 
   /** Reassembles one release from its entity rows. No transaction of its own: callers provide it. */
-  private readRelease(releaseId: string): StoredRelease {
+  private readRelease(releaseId: string, hooks: LoadHooks): StoredRelease {
     const head = this.db.prepare("SELECT id, content_hash, activated_at FROM release WHERE id = ?").get(releaseId) as
       | { id: string; content_hash: string; activated_at: string | null }
       | undefined;
     if (!head) throw new ReferenceStoreError("RELEASE_NOT_FOUND", `Release ${releaseId} does not exist.`);
+    hooks.onAfterHead?.();
     const rows = this.db.prepare("SELECT entity_type, data_json FROM release_entity WHERE release_id = ? ORDER BY position").all(releaseId) as {
       entity_type: EntityType;
       data_json: string;
@@ -522,6 +523,12 @@ export class ReferenceStore {
     };
     return { id: head.id, storedHash: head.content_hash, activatedAt: head.activated_at, content };
   }
+}
+
+/** Test seam for loading a release. Production callers pass nothing. */
+export interface LoadHooks {
+  /** Runs inside the read transaction, after the release's head row is read and before its entities are (an uncached read only). */
+  onAfterHead?: () => void;
 }
 
 interface StoredRelease {

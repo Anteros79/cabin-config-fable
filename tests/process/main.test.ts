@@ -16,6 +16,7 @@ afterAll(() => {
 
 const MAIN = join(PROJECT_ROOT, "src", "server", "main.ts");
 const BACKUP = join(PROJECT_ROOT, "tools", "backup-visits.ts");
+const SEED = join(PROJECT_ROOT, "tools", "seed-sample-visits.ts");
 
 /** The parent environment without any CABIN_KIT_* variable, so a child never sees ./data or a developer's settings. */
 function cleanEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
@@ -55,7 +56,14 @@ function startMain(dataDir: string, extra: Record<string, string> = {}) {
     });
     output.done.then((exit) => reject(new Error(`server exited ${exit.code} before listening: ${exit.stderr}`)));
   });
-  return { child, done: output.done, listening };
+  /** The port the server printed once it is listening. */
+  const port = async (): Promise<number> => {
+    await listening;
+    const found = /listening on http:\/\/[^:]+:(\d+)/.exec(output.stdout());
+    if (!found) throw new Error(`no port in: ${output.stdout()}`);
+    return Number(found[1]);
+  };
+  return { child, done: output.done, listening, port };
 }
 
 function runTool(args: string[], dataDir: string): Promise<Exit> {
@@ -91,6 +99,21 @@ describe("server process", () => {
     expect(exit.code).toBe(0);
     expect(exit.stdout).not.toContain("Reference store created");
     expect(releaseCount(dataDir)).toBe(1);
+  });
+
+  it("sample:seed and the server read the same CABIN_KIT_DATA_DIR: the server reports the seeded visits", async () => {
+    const dataDir = tempDir("cabin-kit-main-");
+    const seeded = await collect(spawn(process.execPath, [SEED], { env: cleanEnv({ CABIN_KIT_DATA_DIR: dataDir }), stdio: ["ignore", "pipe", "pipe"] })).done;
+    expect(seeded.stderr).toBe("");
+    expect(seeded.code).toBe(0);
+    const server = startMain(dataDir);
+    const res = await fetch(`http://127.0.0.1:${await server.port()}/api/health`);
+    const health = (await res.json()) as { status: string; visits: { visits: number; drafts: number; completed: number } };
+    server.child.kill("SIGTERM");
+    expect((await server.done).code).toBe(0);
+    expect(health.status).toBe("ok");
+    expect(health.visits).toMatchObject({ visits: 2, drafts: 1, completed: 1 });
+    expect(releaseCount(dataDir)).toBe(1); // the server used the seed's reference store instead of importing its own
   });
 
   it("SIGTERM exits 0 within 5 s", async () => {

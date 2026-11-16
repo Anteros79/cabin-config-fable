@@ -3,14 +3,12 @@ import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { Report, Visit } from "../../src/domain/types.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import { STORE_BUSY_TIMEOUT_MS } from "../../src/server/storageError.ts";
 import type { VisitStore } from "../../src/server/visitStore.ts";
-import { at, CUSHION_3A, cleanupTempDirs, makeStores, openVisits, snapshotFor, type TestStores } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { at, CUSHION_3A, makeStores, openVisits, snapshotFor, type TestStores } from "../helpers.ts";
 
 const workerPath = join(dirname(fileURLToPath(import.meta.url)), "worker.ts");
 const BACKREST_3A = { ...CUSHION_3A, componentId: "BACKREST" };
@@ -29,6 +27,14 @@ interface Outcome {
   records?: number;
 }
 
+/** How long a worker may take to print its next line: well under the 60 s test timeout, so a hung worker is named, not timed out. */
+const LINE_TIMEOUT_MS = 15_000;
+/** Every worker spawned by the current test; any still running afterwards is killed, whether the test passed or failed. */
+const live: Worker[] = [];
+afterEach(() => {
+  for (const worker of live.splice(0)) worker.kill();
+});
+
 /** One operation in a separate OS process with its own database connection, driven line by line (see worker.ts). */
 class Worker {
   private readonly child: ChildProcessWithoutNullStreams;
@@ -36,12 +42,16 @@ class Worker {
   private readonly waiting: { resolve: (line: string) => void; reject: (e: Error) => void }[] = [];
   private stderr = "";
   private exit: number | null | undefined;
+  private spawnError: Error | undefined;
   private readonly exited: Promise<number | null>;
   readonly op: string;
+  readonly name: string;
 
-  constructor(stores: TestStores, visitId: string, op: string, payload: unknown) {
+  constructor(stores: TestStores, visitId: string, op: string, payload: unknown, index: number) {
     this.op = op;
     this.child = spawn(process.execPath, [workerPath, stores.visitsPath, stores.referencePath, visitId, op, JSON.stringify(payload)]);
+    this.name = `worker ${index} (${op}, pid ${this.child.pid ?? "none"})`;
+    live.push(this);
     this.child.stderr.on("data", (d) => (this.stderr += d));
     createInterface({ input: this.child.stdout }).on("line", (line) => {
       const waiter = this.waiting.shift();
@@ -49,28 +59,56 @@ class Worker {
       else this.lines.push(line);
     });
     this.exited = new Promise((resolve, reject) => {
-      this.child.on("error", reject);
+      this.child.on("error", (e) => {
+        this.spawnError = e;
+        for (const waiter of this.waiting.splice(0)) waiter.reject(this.failure());
+        reject(e);
+      });
       this.child.on("close", (code) => {
         this.exit = code;
         for (const waiter of this.waiting.splice(0)) waiter.reject(this.failure());
         resolve(code);
       });
     });
+    // A spawn error reaches the test through the next line it waits for; this keeps it from also being an unhandled rejection.
+    this.exited.catch(() => undefined);
+  }
+
+  kill(): void {
+    if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill("SIGKILL");
   }
 
   private failure(): Error {
-    return new Error(`worker ${this.op} exited (${this.exit}) before its next line: ${this.stderr}`);
+    if (this.spawnError) return new Error(`${this.name} could not start: ${this.spawnError.message}`);
+    return new Error(`${this.name} exited (${this.exit}) before its next line: ${this.stderr}`);
   }
 
-  private next(): Promise<string> {
+  /** The worker's next line, or a failure naming the worker and the line it was expected to print. */
+  private next(expected: string): Promise<string> {
     const line = this.lines.shift();
     if (line !== undefined) return Promise.resolve(line);
-    if (this.exit !== undefined) return Promise.reject(this.failure());
-    return new Promise((resolve, reject) => this.waiting.push({ resolve, reject }));
+    if (this.exit !== undefined || this.spawnError) return Promise.reject(this.failure());
+    return new Promise((resolve, reject) => {
+      const waiter = {
+        resolve: (l: string) => {
+          clearTimeout(timer);
+          resolve(l);
+        },
+        reject: (e: Error) => {
+          clearTimeout(timer);
+          reject(e);
+        },
+      };
+      const timer = setTimeout(() => {
+        this.waiting.splice(this.waiting.indexOf(waiter), 1);
+        reject(new Error(`${this.name} did not print ${expected} within ${LINE_TIMEOUT_MS} ms; stderr: ${this.stderr || "(empty)"}`));
+      }, LINE_TIMEOUT_MS);
+      this.waiting.push(waiter);
+    });
   }
 
   async ready(): Promise<void> {
-    expect(await this.next()).toBe("ready");
+    expect(await this.next('"ready"'), this.name).toBe("ready");
   }
 
   go(): void {
@@ -78,22 +116,22 @@ class Worker {
   }
 
   async started(): Promise<void> {
-    expect(await this.next()).toBe("started");
+    expect(await this.next('"started"'), this.name).toBe("started");
   }
 
   async result(): Promise<Outcome> {
     // "started" may still be unread when the release did not wait for it (inOrder).
-    let line = await this.next();
-    if (line === "started") line = await this.next();
+    let line = await this.next("its result");
+    if (line === "started") line = await this.next("its result");
     const outcome = JSON.parse(line) as Outcome;
-    expect(await this.exited, this.stderr).toBe(0);
+    expect(await this.exited, `${this.name}: ${this.stderr}`).toBe(0);
     return outcome;
   }
 }
 
 /** Spawn every worker, then wait until each one has its store open: from here on nothing runs until a "go". */
 async function spawnReady(stores: TestStores, visitId: string, specs: [op: string, payload: unknown][]): Promise<Worker[]> {
-  const workers = specs.map(([op, payload]) => new Worker(stores, visitId, op, payload));
+  const workers = specs.map(([op, payload], index) => new Worker(stores, visitId, op, payload, index));
   await Promise.all(workers.map((w) => w.ready()));
   return workers;
 }
@@ -110,9 +148,9 @@ async function inOrder(workers: Worker[]): Promise<Outcome[]> {
 
 /**
  * Release every worker in one tick while this test holds the store's write lock, and keep holding it until each worker
- * has printed "started" (written synchronously just before it calls the store). So every operation is in flight before
- * any of them can take the write lock: the race window is open for all of them at once, proven rather than hoped for.
- * Which one SQLite lets in first is not asserted.
+ * has printed "started" (written synchronously just before it calls the store). What this proves: every worker had passed
+ * "started", and none had committed (the visit version is unchanged), before the lock was released. Which one SQLite lets
+ * in first, and how far each got before blocking on the lock, is not asserted.
  */
 async function together(stores: TestStores, visitId: string, workers: Worker[]): Promise<Outcome[]> {
   const gate = new DatabaseSync(stores.visitsPath, { timeout: STORE_BUSY_TIMEOUT_MS });
@@ -153,9 +191,13 @@ const workKeys = (report: Report) => report.work.map(keyOf).sort();
 const recordKeys = (visit: Visit) => visit.records.map(keyOf).sort();
 const eventTypes = (visit: Visit) => visit.events.map((e) => e.type);
 
-/** Every record's part lines carry its own quantity: no half-written row. */
+/** The visit has records, each with part lines, and every line carries its record's quantity: no half-written row. */
 function expectWholeRecords(visit: Visit): void {
-  for (const record of visit.records) expect(record.lines.every((line) => line.qty === record.quantity)).toBe(true);
+  expect(visit.records.length, "a visit with no records proves nothing here").toBeGreaterThan(0);
+  for (const record of visit.records) {
+    expect(record.lines.length, `${keyOf(record)} has no part lines`).toBeGreaterThan(0);
+    expect(record.lines.every((line) => line.qty === record.quantity)).toBe(true);
+  }
 }
 
 /**
@@ -248,7 +290,6 @@ describe("separate-process races, released in a fixed order", () => {
       ]),
     );
     expect(expectOneEditorWins(store, id, a as Outcome, b as Outcome)).toBe("a");
-    store.close();
   });
 
   it("two editors of one record, B then A: B's edit stands and A gets STALE_RECORD", async () => {
@@ -260,7 +301,6 @@ describe("separate-process races, released in a fixed order", () => {
     ]);
     const [bOut, aOut] = await inOrder([b as Worker, a as Worker]);
     expect(expectOneEditorWins(store, id, aOut as Outcome, bOut as Outcome)).toBe("b");
-    store.close();
   });
 
   it("edit then complete: the edit is in the completed report", async () => {
@@ -276,7 +316,6 @@ describe("separate-process races, released in a fixed order", () => {
     const stored = store.getReport(id).report;
     expect(workKeys(stored)).toEqual(["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
     expect(stored.totals.map((x) => x.partNo)).toEqual(["FAKE-SC-1001", "FAKE-V01-ELR-A-BACKREST"]);
-    store.close();
   });
 
   it("complete then edit: the edit is rejected with VISIT_LOCKED and the report holds only the earlier work", async () => {
@@ -289,7 +328,6 @@ describe("separate-process races, released in a fixed order", () => {
     const [completeOut, editOut] = await inOrder([complete as Worker, edit as Worker]);
     expect(expectEditVersusComplete(store, id, editOut as Outcome, completeOut as Outcome, "RECORD_ADDED")).toBe("complete-first");
     expect(workKeys(store.getReport(id).report)).toEqual(["SEAT:3A/CUSHION"]);
-    store.close();
   });
 
   it("remove then complete: the removed work is absent from the report", async () => {
@@ -303,7 +341,6 @@ describe("separate-process races, released in a fixed order", () => {
     );
     expect(expectEditVersusComplete(store, id, remove as Outcome, complete as Outcome, "RECORD_REMOVED")).toBe("edit-first");
     expect(workKeys(store.getReport(id).report)).toEqual(["SEAT:3A/CUSHION"]);
-    store.close();
   });
 
   it("complete then remove: the removal is rejected with VISIT_LOCKED and the report keeps the work", async () => {
@@ -316,7 +353,6 @@ describe("separate-process races, released in a fixed order", () => {
     const [completeOut, removeOut] = await inOrder([complete as Worker, remove as Worker]);
     expect(expectEditVersusComplete(store, id, removeOut as Outcome, completeOut as Outcome, "RECORD_REMOVED")).toBe("complete-first");
     expect(workKeys(store.getReport(id).report)).toEqual(["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
-    store.close();
   });
 
   it("removing the last record, then completing: completion is refused with EMPTY_VISIT", async () => {
@@ -329,7 +365,6 @@ describe("separate-process races, released in a fixed order", () => {
       ]),
     );
     expect(expectNoEmptyCompletion(store, id, remove as Outcome, complete as Outcome)).toBe("remove-first");
-    store.close();
   });
 
   it("completing, then removing the last record: the removal is refused with VISIT_LOCKED", async () => {
@@ -341,7 +376,6 @@ describe("separate-process races, released in a fixed order", () => {
     ]);
     const [completeOut, removeOut] = await inOrder([complete as Worker, remove as Worker]);
     expect(expectNoEmptyCompletion(store, id, removeOut as Outcome, completeOut as Outcome)).toBe("complete-first");
-    store.close();
   });
 
   it("repeated completion: the first process completes, the later ones get the same report", async () => {
@@ -356,7 +390,6 @@ describe("separate-process races, released in a fixed order", () => {
     );
     expectOneCompletion(store, id, outcomes);
     expect(outcomes.map((r) => r.alreadyCompleted)).toEqual([false, true, true]);
-    store.close();
   });
 
   it("writers of different records one after another: each sees the version after the previous change", async () => {
@@ -366,7 +399,6 @@ describe("separate-process races, released in a fixed order", () => {
     expectAllWritersCommitted(store, id, outcomes);
     expect(outcomes.map((r) => r.version)).toEqual(SEATS.map((_, i) => 2 + i));
     expect(outcomes.map((r) => r.records)).toEqual(SEATS.map((_, i) => 1 + i));
-    store.close();
   });
 });
 
@@ -382,7 +414,6 @@ describe("separate-process races, released together (invariants that hold for ev
       const [a, b] = await together(stores, id, workers);
       expectOneEditorWins(store, id, a as Outcome, b as Outcome);
     }
-    store.close();
   });
 
   it("edit versus complete: the edit is in the completed report, or it is rejected", async () => {
@@ -400,7 +431,6 @@ describe("separate-process races, released together (invariants that hold for ev
       const order = expectEditVersusComplete(store, id, edit as Outcome, complete as Outcome, "RECORD_ADDED");
       expect(workKeys(store.getReport(id).report)).toEqual(order === "edit-first" ? ["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"] : ["SEAT:3A/CUSHION"]);
     }
-    store.close();
   });
 
   it("remove versus complete: removed work is absent from the report, or the removal is rejected", async () => {
@@ -418,7 +448,6 @@ describe("separate-process races, released together (invariants that hold for ev
       const order = expectEditVersusComplete(store, id, remove as Outcome, complete as Outcome, "RECORD_REMOVED");
       expect(workKeys(store.getReport(id).report)).toEqual(order === "edit-first" ? ["SEAT:3A/CUSHION"] : ["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
     }
-    store.close();
   });
 
   it("removing the last record versus completing never yields a completed empty visit", async () => {
@@ -435,7 +464,6 @@ describe("separate-process races, released together (invariants that hold for ev
       );
       expectNoEmptyCompletion(store, id, remove as Outcome, complete as Outcome);
     }
-    store.close();
   });
 
   it("concurrent completion is idempotent: one process completes, the others get the same report", async () => {
@@ -453,13 +481,11 @@ describe("separate-process races, released together (invariants that hold for ev
       );
       expectOneCompletion(store, id, outcomes);
     }
-    store.close();
   });
 
   it("many processes adding different records all commit and the visit version counts every change", async () => {
     const { stores, store, newVisit } = setup();
     const id = newVisit([]);
     expectAllWritersCommitted(store, id, await together(stores, id, await spawnReady(stores, id, seatWriters())));
-    store.close();
   });
 });

@@ -1,13 +1,13 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
 import type { Report } from "../../src/domain/types.ts";
 import { DomainError } from "../../src/domain/visitLogic.ts";
 import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import { IDEMPOTENCY_RETENTION_DAYS } from "../../src/server/visitStore.ts";
-import { CUSHION_3A, cleanupTempDirs, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, makeStores, openVisits, SIX_LINE_TOTALS, snapshotFor } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { CUSHION_3A, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, makeStores, openVisits, SIX_LINE_TOTALS, snapshotFor, track } from "../helpers.ts";
 
 const release = fixtureRelease();
 const snap = () => snapshotFor(release, "N100TL", "2026-11-12");
@@ -36,7 +36,6 @@ describe("visit records", () => {
     expect(again.records[0]).toMatchObject({ quantity: 3, version: 2, note: "three panels" });
     expect(again.records[0]?.lines).toMatchObject([{ partNo: "FAKE-V01-FWD-PANEL", qty: 3, unit: "PANEL" }]);
     expect(totals(store.getReport(visit.id).report)).toEqual([["FAKE-V01-FWD-PANEL", 3, "PANEL"]]);
-    store.close();
   });
 
   it("cushion and backrest at one seat are independent records", () => {
@@ -47,7 +46,6 @@ describe("visit records", () => {
     expect(v.records.map((r) => r.componentId).sort()).toEqual(["BACKREST", "CUSHION"]);
     const after = store.removeRecord(visit.id, "SEAT:3A", "CUSHION", undefined).visit;
     expect(after.records.map((r) => r.componentId)).toEqual(["BACKREST"]);
-    store.close();
   });
 
   it("switching primary <-> alternate replaces main and child lines with no duplicates or orphans", () => {
@@ -72,7 +70,6 @@ describe("visit records", () => {
     store.removeRecord(visit.id, "FLOOR:FULL-CABIN", "CARPET_KIT", undefined);
     expect(totals(store.getReport(visit.id).report)).toEqual([["FAKE-SC-1001", 1, "EA"]]);
     expect(store.getVisit(visit.id).records).toHaveLength(1);
-    store.close();
   });
 
   it("rejects forged input at the store boundary and leaves the draft untouched", () => {
@@ -85,7 +82,6 @@ describe("visit records", () => {
     expect(codeOf(() => store.removeRecord(visit.id, "SEAT:3A", "CUSHION", undefined))).toBe("RECORD_NOT_FOUND");
     expect(codeOf(() => store.createVisit(snap(), "x".repeat(81)))).toBe("INVALID_TECHNICIAN");
     expect(store.getVisit(visit.id)).toMatchObject({ version: 1, recordCount: 0 });
-    store.close();
   });
 });
 
@@ -102,13 +98,9 @@ describe("stale edits and safe retries", () => {
     expect(store.getVisit(visit.id).records[0]).toMatchObject({ quantity: 2, version: 2 });
     store.removeRecord(visit.id, panel.locationId, panel.componentId, 2);
     expect(codeOf(() => store.upsertRecord(visit.id, { ...panel, quantity: 3 }, 2))).toBe("STALE_RECORD"); // removed elsewhere
-    try {
-      store.upsertRecord(visit.id, { ...panel, quantity: 3 }, 2);
-    } catch (e) {
-      expect((e as DomainError).status).toBe(409);
-      expect((e as DomainError).details).toEqual({ current: null });
-    }
-    store.close();
+    const removedElsewhere = () => store.upsertRecord(visit.id, { ...panel, quantity: 3 }, 2);
+    expect(removedElsewhere).toThrow(expect.objectContaining({ status: 409, code: "STALE_RECORD" }));
+    expect(removedElsewhere).toThrow(expect.objectContaining({ details: { current: null } }));
   });
 
   it("a retry with the same key is applied once", () => {
@@ -129,7 +121,6 @@ describe("stale edits and safe retries", () => {
     expect(codeOf(() => store.upsertRecord(first.visit.id, { ...panel, quantity: 3 }, 0, { idempotencyKey: "retry-key-0002" }))).toBe("IDEMPOTENCY_KEY_REUSED");
     store.removeRecord(first.visit.id, panel.locationId, panel.componentId, 1, { idempotencyKey: "retry-key-0003" });
     expect(store.removeRecord(first.visit.id, panel.locationId, panel.componentId, 1, { idempotencyKey: "retry-key-0003" }).replayed).toBe(true);
-    store.close();
   });
 });
 
@@ -142,7 +133,6 @@ describe("completion and locking", () => {
     store.removeRecord(visit.id, "SEAT:3A", "CUSHION", undefined);
     expect(codeOf(() => store.completeVisit(visit.id, undefined))).toBe("EMPTY_VISIT");
     expect(store.getVisit(visit.id).status).toBe("DRAFT");
-    store.close();
   });
 
   it("locks the visit, stores the six-line report and is idempotent", () => {
@@ -165,7 +155,6 @@ describe("completion and locking", () => {
     expect(codeOf(() => store.upsertRecord(visit.id, KIT_PRIMARY, undefined))).toBe("VISIT_LOCKED");
     expect(codeOf(() => store.removeRecord(visit.id, "SEAT:3A", "CUSHION", undefined))).toBe("VISIT_LOCKED");
     expect(store.getReport(visit.id).report).toEqual(done.report);
-    store.close();
   });
 
   it("is also locked at storage level when the application layer is bypassed", () => {
@@ -191,7 +180,6 @@ describe("completion and locking", () => {
     // an empty visit cannot be forced to COMPLETED even with raw SQL
     const empty = store.createVisit(snap(), "").visit;
     expect(() => store.rawExec(`UPDATE visits SET status = 'COMPLETED', completed_at = 'x' WHERE id = '${empty.id}'`)).toThrow(/EMPTY_VISIT/);
-    store.close();
   });
 
   it("later advisories and corrections are linked events that leave the report unchanged", () => {
@@ -205,7 +193,6 @@ describe("completion and locking", () => {
     expect(after.report).toEqual(done.report);
     expect(after.linkedEvents.map((e) => e.type)).toEqual(["ADVISORY", "CORRECTION_NOTE"]);
     expect(codeOf(() => store.addLinkedEvent(visit.id, "EDIT", "x", ""))).toBe("INVALID_EVENT");
-    store.close();
   });
 });
 
@@ -230,7 +217,6 @@ describe("persistence and history", () => {
     expect(totals(report)).toEqual([["FAKE-CK-2002", 1, "KIT"]]);
     expect(report.work[0]?.pendingChanges.map((p) => p.note)).toEqual(["Fictional STA 521 revision pending."]);
     expect(store.listVisits().items.map((x) => x.status)).toEqual(["COMPLETED", "DRAFT"]);
-    store.close();
   });
 
   it("navigates more than 100 visits with paging, status filter and search", () => {
@@ -265,14 +251,13 @@ describe("persistence and history", () => {
     ).toEqual(["Tech 12", "Tech 120", "Tech 121", "Tech 122", "Tech 123", "Tech 124", "Tech 125", "Tech 126", "Tech 127", "Tech 128", "Tech 129"]);
     expect(store.listVisits({ q: "50%" }).total).toBe(0); // LIKE wildcards are escaped
     expect(store.counts()).toMatchObject({ visits: 130, drafts: 123, completed: 7 });
-    store.close();
   });
 });
 
 describe("reference updates do not rebase visits", () => {
   it("a draft and a completed report keep their frozen content after a new release is activated", () => {
     const stores = makeStores();
-    const refA = ReferenceStore.open(stores.referencePath, stores.visitsPath);
+    const refA = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
     const releaseA = refA.loadActive();
     const store = openVisits(stores);
 
@@ -315,20 +300,43 @@ describe("reference updates do not rebase visits", () => {
     // A new visit uses the new release.
     const fresh = store.createVisit(snapshotFor(releaseB, "N100TL", "2026-11-12"), "Demo").visit;
     expect(store.upsertRecord(fresh.id, CUSHION_3A, undefined).visit.records[0]?.lines[0]?.partNo).toBe("FAKE-SC-9999");
-    store.close();
   });
 
-  it("changing the lookup form cannot retarget an existing visit", () => {
-    const store = openVisits(makeStores());
-    const visit = store.createVisit(snap(), "Demo").visit;
-    lookup(release, "N200TL", "2026-07-01"); // another lookup has no effect on the stored visit
+  it("a new reference release cannot retarget an existing visit", () => {
+    const stores = makeStores();
+    const ref = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
+    const releaseA = ref.loadActive();
+    const store = openVisits(stores);
+    const visit = store.createVisit(snapshotFor(releaseA, "N100TL", "2026-11-12"), "Demo").visit;
+    const original = store.getVisit(visit.id);
+    expect(original).toMatchObject({ variantId: "V01", layoutRevisionId: "FX-L-S176-MAX8@1", referenceReleaseId: releaseA.id });
+
+    // Release B moves N100TL to V10 on the 138-seat layout, which has a seat 14B; V01's layout does not.
+    const staged = buildStagedRelease({ includeCandidate: false, label: "N100TL retrofitted" });
+    const assignment = staged.content.assignments.find((a) => a.id === "FX-TA-N100TL-V01-2025-10-01");
+    const aircraft = staged.content.aircraft.find((a) => a.tail === "N100TL");
+    if (!assignment || !aircraft) throw new Error("the fixture no longer has N100TL's V01 assignment");
+    assignment.variantId = "V10";
+    assignment.layoutRevisionId = "FX-L-S138@1";
+    aircraft.subtypeId = "FX-700";
+    const { id, status } = ref.stage(staged.content, [], {});
+    expect(status).toBe("validated");
+    ref.activate(id);
+    const releaseB = ref.loadActive();
+    expect(releaseB.id).toBe(id);
+    expect(lookup(releaseB, "N100TL", "2026-11-12").context?.variant.id).toBe("V10");
+    const seat14B = { locationId: "SEAT:14B", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 };
+    // Seat 14B is a valid record under the new variant: a visit started now can record it.
+    const fresh = store.createVisit(snapshotFor(releaseB, "N100TL", "2026-11-12"), "Demo").visit;
+    expect(store.upsertRecord(fresh.id, seat14B, undefined).visit.records).toHaveLength(1);
+
+    // The existing visit keeps its snapshot, variant and release, and refuses the record that only the new variant allows.
     const loaded = store.getVisit(visit.id);
-    expect(loaded).toMatchObject({ tail: "N100TL", checkDate: "2026-11-12", variantId: "V01" });
-    // a location valid only in another tail's layout is refused
-    expect(codeOf(() => store.upsertRecord(visit.id, { locationId: "SEAT:14B", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 }, undefined))).toBe(
-      "UNKNOWN_LOCATION",
-    );
-    store.close();
+    expect(loaded.snapshotSha256).toBe(original.snapshotSha256);
+    expect(loaded).toMatchObject({ variantId: "V01", layoutRevisionId: "FX-L-S176-MAX8@1", referenceReleaseId: releaseA.id });
+    expect(loaded.snapshot.context.variant.id).toBe("V01");
+    expect(codeOf(() => store.upsertRecord(visit.id, seat14B, undefined))).toBe("UNKNOWN_LOCATION");
+    expect(store.getVisit(visit.id)).toMatchObject({ version: 1, recordCount: 0 });
   });
 });
 
@@ -347,14 +355,12 @@ describe("idempotent linked events and key retention", () => {
     expect(a.replayed).toBe(false);
     expect(b.replayed).toBe(true);
     expect(b.visit.events.filter((e) => e.type === "ADVISORY")).toHaveLength(1);
-    store.close();
   });
 
   it("the same event key with a different note is refused", () => {
     const { store, id } = fresh();
     store.addLinkedEvent(id, "ADVISORY", "Check seam", "JM", { idempotencyKey: "evt-key-0002" });
     expect(codeOf(() => store.addLinkedEvent(id, "ADVISORY", "Other note", "JM", { idempotencyKey: "evt-key-0002" }))).toBe("IDEMPOTENCY_KEY_REUSED");
-    store.close();
   });
 
   it("note is trimmed before the length check; author over 80 is refused", () => {
@@ -363,7 +369,6 @@ describe("idempotent linked events and key retention", () => {
     expect(ok.visit.events.at(-1)?.payload).toMatchObject({ note: "x", author: "JM" });
     expect(codeOf(() => store.addLinkedEvent(id, "ADVISORY", " ".repeat(5), "JM"))).toBe("INVALID_EVENT");
     expect(codeOf(() => store.addLinkedEvent(id, "ADVISORY", "x", "a".repeat(81)))).toBe("INVALID_EVENT");
-    store.close();
   });
 
   it("pruneIdempotency removes only rows older than the cutoff", () => {
@@ -374,7 +379,6 @@ describe("idempotent linked events and key retention", () => {
     expect(store.pruneIdempotency(new Date(now - IDEMPOTENCY_RETENTION_DAYS * day).toISOString())).toBe(1);
     expect(store.addLinkedEvent(id, "ADVISORY", "new", "JM", { idempotencyKey: "evt-key-new1" }).replayed).toBe(true);
     expect(store.addLinkedEvent(id, "ADVISORY", "old", "JM", { idempotencyKey: "evt-key-old1" }).replayed).toBe(false);
-    store.close();
   });
 
   it("completion replayed flag reflects a real key match", () => {
@@ -388,6 +392,89 @@ describe("idempotent linked events and key retention", () => {
     expect([fresh2.alreadyCompleted, fresh2.replayed]).toEqual([true, false]);
     const none = store.completeVisit(id, undefined);
     expect([none.alreadyCompleted, none.replayed]).toEqual([true, false]);
-    store.close();
+  });
+});
+
+describe("store edge cases (TST-09)", () => {
+  it("search treats _ and \\ in q as literal characters, not LIKE wildcards or escapes", () => {
+    const store = openVisits(makeStores());
+    for (const tech of ["a_b", "axb", "a\\b", "a\\\\b", "c%d"]) store.createVisit(snap(), tech);
+    const found = (q: string) =>
+      store
+        .listVisits({ q })
+        .items.map((v) => v.technician)
+        .sort();
+    expect(found("a_b")).toEqual(["a_b"]);
+    expect(found("_")).toEqual(["a_b"]);
+    expect(found("a\\b")).toEqual(["a\\b"]);
+    expect(found("\\")).toEqual(["a\\\\b", "a\\b"]);
+    expect(found("\\\\")).toEqual(["a\\\\b"]);
+    expect(found("\\_")).toEqual([]);
+    expect(found("c%d")).toEqual(["c%d"]);
+  });
+
+  it("a technician of only whitespace is stored empty; one with a control character is refused with INVALID_TECHNICIAN", () => {
+    const store = openVisits(makeStores());
+    expect(store.createVisit(snap(), " \t \n ").visit.technician).toBe("");
+    expect(store.createVisit(snap(), "  Demo tech\t").visit.technician).toBe("Demo tech");
+    for (const tech of ["Demo\ttech", "Demo\ntech", "Demo\u0000", "Demo\u0007tech", "Demo\u007ftech", "Demo\u0085tech", "Demo\u009btech"]) {
+      expect(() => store.createVisit(snap(), tech), JSON.stringify(tech)).toThrow(expect.objectContaining({ code: "INVALID_TECHNICIAN", status: 422 }));
+    }
+    expect(store.createVisit(snap(), "Zoë O’Brien-Łukasz").visit.technician).toBe("Zoë O’Brien-Łukasz");
+    expect(store.counts().visits).toBe(3);
+  });
+
+  it("a visit stored with a control character in its technician still opens, lists, reports and completes", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Old name");
+    store.rawExec(`UPDATE visits SET technician = 'Old' || char(9) || 'name' WHERE id = '${visit.id}'`); // written before the rule existed
+    expect(store.getVisit(visit.id).technician).toBe("Old\tname");
+    expect(store.listVisits({ q: "Old" }).items.map((v) => v.id)).toEqual([visit.id]);
+    store.upsertRecord(visit.id, CUSHION_3A, undefined);
+    expect(store.getReport(visit.id).report.visit.technician).toBe("Old\tname");
+    const done = store.completeVisit(visit.id, undefined);
+    expect(done.report).toMatchObject({ reportKind: "FINAL", visit: { technician: "Old\tname", status: "COMPLETED" } });
+  });
+
+  it("one idempotency key used on two different visits is refused for the second and leaves it unchanged", () => {
+    const store = openVisits(makeStores());
+    const first = store.createVisit(snap(), "").visit;
+    const second = store.createVisit(snap(), "").visit;
+    const key = "shared-key-0001";
+    expect(store.upsertRecord(first.id, CUSHION_3A, 0, { idempotencyKey: key }).replayed).toBe(false);
+    expect(() => store.upsertRecord(second.id, CUSHION_3A, 0, { idempotencyKey: key })).toThrow(
+      expect.objectContaining({ code: "IDEMPOTENCY_KEY_REUSED", status: 422 }),
+    );
+    expect(() => store.removeRecord(second.id, "SEAT:3A", "CUSHION", undefined, { idempotencyKey: key })).toThrow(
+      expect.objectContaining({ code: "IDEMPOTENCY_KEY_REUSED" }),
+    );
+    expect(store.getVisit(second.id)).toMatchObject({ version: 1, recordCount: 0 });
+    expect(store.getVisit(first.id)).toMatchObject({ version: 2, recordCount: 1 });
+  });
+
+  it("backupTo an existing path is refused and the file there is left as it was", () => {
+    const stores = makeStores();
+    const store = openVisits(stores);
+    store.createVisit(snap(), "Demo");
+    const destination = join(stores.dir, "existing-backup.sqlite");
+    writeFileSync(destination, "not to be overwritten");
+    expect(() => store.backupTo(destination)).toThrow(expect.objectContaining({ code: "BACKUP_EXISTS", status: 409 }));
+    expect(readFileSync(destination, "utf8")).toBe("not to be overwritten");
+  });
+
+  it("a visit on a PARTIAL configuration completes, and its FINAL report keeps the gaps", () => {
+    const store = openVisits(makeStores());
+    const partial = snapshotFor(release, "N090TL", "2026-11-12");
+    expect(partial.lookupState).toBe("PARTIAL");
+    const { visit } = store.createVisit(partial, "Demo");
+    store.upsertRecord(visit.id, { locationId: "SEAT:1A", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 }, undefined);
+    const preview = store.getReport(visit.id).report;
+    expect(preview.gaps.length).toBeGreaterThan(0);
+    const done = store.completeVisit(visit.id, undefined).report;
+    expect(done.reportKind).toBe("FINAL");
+    expect(done.configuration.lookupState).toBe("PARTIAL");
+    expect(done.gaps).toEqual(preview.gaps);
+    expect(done.gaps.reduce((n, g) => n + g.locationIds.length, 0)).toBe(partial.resolution.counts.noMatch + partial.resolution.counts.ambiguous);
+    expect(store.getReport(visit.id).report).toEqual(done);
   });
 });

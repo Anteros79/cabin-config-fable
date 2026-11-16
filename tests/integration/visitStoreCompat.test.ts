@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { canonicalJson } from "../../src/domain/canonical.ts";
 import { sha256Hex } from "../../src/domain/hash.ts";
 import { buildPreparation } from "../../src/domain/prep.ts";
@@ -10,9 +10,7 @@ import { DomainError } from "../../src/domain/visitLogic.ts";
 import { type Migration, migrate, VISIT_MIGRATIONS } from "../../src/server/migrations.ts";
 import { renderReportPdf } from "../../src/server/pdf.ts";
 import { VISIT_SCHEMA_VERSION, VisitStore } from "../../src/server/visitStore.ts";
-import { at, CUSHION_3A, cleanupTempDirs, fixtureRelease, oldShapeSnapshot, snapshotFor, tempDir } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { at, CUSHION_3A, fixtureRelease, oldShapeSnapshot, snapshotFor, tempDir, track } from "../helpers.ts";
 
 /** The committed store written by 5d6679d. Never opened in place: every test works on a copy. */
 const FIXTURE = join(import.meta.dirname, "../fixtures/visits-5d6679d.sqlite");
@@ -27,7 +25,7 @@ function copyOfFixture(): { path: string; referencePath: string } {
 }
 
 function raw<T>(path: string, fn: (db: DatabaseSync) => T): T {
-  const db = new DatabaseSync(path);
+  const db = track(new DatabaseSync(path));
   try {
     return fn(db);
   } finally {
@@ -60,7 +58,7 @@ describe("visit stores written by 5d6679d", () => {
   it("opens a store written by 5d6679d and migrates it", () => {
     const copy = copyOfFixture();
     expect(metaVersion(copy.path)).toBe("1");
-    const store = VisitStore.open(copy.path, copy.referencePath);
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
     expect(store.counts()).toMatchObject({ visits: 2, drafts: 1, completed: 1 });
     expect(store.listVisits().items.map((v) => [v.id, v.status, v.tail])).toEqual([
       [DRAFT_ID, "DRAFT", "N200TL"],
@@ -75,12 +73,11 @@ describe("visit stores written by 5d6679d", () => {
     const pristine = copyOfFixture();
     const before = rawReportJson(pristine.path, COMPLETED_ID);
     const copy = copyOfFixture();
-    const store = VisitStore.open(copy.path, copy.referencePath);
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
     const { report } = store.getReport(COMPLETED_ID);
     expect(report.schema).toBe("cabin-kit.report/1");
     expect(canonicalJson(report)).toBe(before);
     expect(canonicalJson(store.completeVisit(COMPLETED_ID, undefined).report)).toBe(before);
-    store.close();
   });
 
   it("migration leaves every stored visit, record, event and report row unchanged", () => {
@@ -108,7 +105,7 @@ describe("visit stores written by 5d6679d", () => {
         db.prepare("UPDATE visits SET snapshot_json = ?, snapshot_sha256 = ? WHERE id = ?").run(json, sha256Hex(json), row.id);
       }
     });
-    const store = VisitStore.open(copy.path, copy.referencePath);
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
     for (const id of [COMPLETED_ID, DRAFT_ID]) {
       const visit = store.getVisit(id);
       expect(visit.snapshot.resolution.components.some((c) => "excluded" in c)).toBe(false);
@@ -126,7 +123,6 @@ describe("visit stores written by 5d6679d", () => {
     expect((await renderReportPdf(preview)).subarray(0, 5).toString()).toBe("%PDF-");
     const done = store.completeVisit(DRAFT_ID, undefined);
     expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
-    store.close();
   });
 
   it("a hand-built old-shape PARTIAL snapshot records, reports and completes", async () => {
@@ -136,7 +132,7 @@ describe("visit stores written by 5d6679d", () => {
     expect(noMatch.some((c) => c.excluded.length > 0)).toBe(true);
     expect(noMatch.flatMap((c) => c.excluded).some((e) => "sourceId" in e)).toBe(false);
     expect(old.resolution.components.filter((c) => c.status !== "NO_MATCH").some((c) => "excluded" in c)).toBe(false);
-    const store = VisitStore.open(copy.path, copy.referencePath);
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
     const id = store.createVisit(old, "Demo tech").visit.id;
     store.upsertRecord(id, CUSHION_3A, undefined);
     const preview = store.getReport(id).report;
@@ -148,12 +144,11 @@ describe("visit stores written by 5d6679d", () => {
     const done = store.completeVisit(id, undefined);
     expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
     expect((await renderReportPdf(done.report)).subarray(0, 5).toString()).toBe("%PDF-");
-    store.close();
   });
 
   it("the old draft can still be edited and completed", () => {
     const copy = copyOfFixture();
-    const store = VisitStore.open(copy.path, copy.referencePath);
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
     const draft = store.getVisit(DRAFT_ID);
     expect(draft.records).toHaveLength(2);
     const edited = store.upsertRecord(DRAFT_ID, CUSHION_3A, undefined).visit;
@@ -162,7 +157,6 @@ describe("visit stores written by 5d6679d", () => {
     expect(done.visit.status).toBe("COMPLETED");
     expect(done.report.reportKind).toBe("FINAL");
     expect(store.getReport(DRAFT_ID).report).toEqual(done.report);
-    store.close();
   });
 
   it("a newer schema version is refused without modification", () => {
@@ -187,7 +181,7 @@ describe("visit stores written by 5d6679d", () => {
 
   it("a tampered snapshot is detected", () => {
     const copy = copyOfFixture();
-    const store = VisitStore.open(copy.path, copy.referencePath);
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
     store.rawExec(
       `DROP TRIGGER visits_snapshot_immutable; UPDATE visits SET snapshot_json = json_set(snapshot_json, '$.technicianNote', 'tampered') WHERE id = '${DRAFT_ID}'`,
     );
@@ -200,25 +194,23 @@ describe("visit stores written by 5d6679d", () => {
     });
     expect(domainError(() => store.upsertRecord(DRAFT_ID, CUSHION_3A, undefined)).code).toBe("SNAPSHOT_CORRUPT");
     expect(store.getVisit(COMPLETED_ID).id).toBe(COMPLETED_ID);
-    store.close();
   });
 
   it("a tampered report is detected", () => {
     const copy = copyOfFixture();
-    const store = VisitStore.open(copy.path, copy.referencePath);
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
     store.rawExec(
       `DROP TRIGGER reports_immutable_update; UPDATE reports SET report_json = json_set(report_json, '$.technician', 'tampered') WHERE visit_id = '${COMPLETED_ID}'`,
     );
     const error = domainError(() => store.getReport(COMPLETED_ID));
     expect(error).toMatchObject({ code: "REPORT_CORRUPT", status: 500, details: { visitId: COMPLETED_ID } });
     expect(domainError(() => store.completeVisit(COMPLETED_ID, undefined)).code).toBe("REPORT_CORRUPT");
-    store.close();
   });
 
   it("read-only mode neither migrates nor prunes, and still reads the old store", () => {
     const copy = copyOfFixture();
     const bytes = readFileSync(copy.path);
-    const store = VisitStore.open(copy.path, copy.referencePath, { readOnly: true });
+    const store = track(VisitStore.open(copy.path, copy.referencePath, { readOnly: true }));
     expect(store.counts()).toMatchObject({ visits: 2, drafts: 1, completed: 1 });
     expect(store.getReport(COMPLETED_ID).report.schema).toBe("cabin-kit.report/1");
     store.close();
@@ -285,7 +277,7 @@ describe("visit store migrations", () => {
   });
 
   const scratch = () => {
-    const db = new DatabaseSync(":memory:");
+    const db = track(new DatabaseSync(":memory:"));
     db.exec("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO meta VALUES ('schema_version', '1'); CREATE TABLE log (step INTEGER);");
     return db;
   };
@@ -302,7 +294,6 @@ describe("visit store migrations", () => {
     expect(migrate(db, 3, steps)).toBe(3);
     expect(migrate(db, 2, steps)).toBe(3);
     expect(db.prepare("SELECT count(*) AS n FROM log").get()).toMatchObject({ n: 2 });
-    db.close();
   });
 
   it("a failing migration rolls back every step and leaves the version unchanged", () => {
@@ -311,7 +302,6 @@ describe("visit store migrations", () => {
     expect(db.prepare("SELECT count(*) AS n FROM log").get()).toMatchObject({ n: 0 });
     expect(db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get()).toMatchObject({ value: "1" });
     expect(db.isTransaction).toBe(false);
-    db.close();
   });
 
   it("refuses when the version re-read under the write lock is newer than any migration it knows", () => {
@@ -323,6 +313,5 @@ describe("visit store migrations", () => {
     expect(db.prepare("SELECT count(*) AS n FROM log").get()).toMatchObject({ n: 0 });
     expect(db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get()).toMatchObject({ value: "5" });
     expect(db.isTransaction).toBe(false);
-    db.close();
   });
 });

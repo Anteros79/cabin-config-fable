@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterAll, afterEach, beforeEach } from "vitest";
 import { lookup } from "../src/domain/resolve.ts";
 import type { ApplicabilityRule, LookupResult, ReferenceRelease, ReleaseContent, Visit, VisitRecord, VisitSnapshot } from "../src/domain/types.ts";
 import { validateRelease } from "../src/domain/validate.ts";
@@ -170,6 +171,43 @@ export function cleanupTempDirs(): void {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 }
 
+const tracked: { close(): unknown }[] = [];
+/** Where the current test's resources and temp dirs start; anything before it belongs to a beforeAll and lives until afterAll. */
+let testMark = { tracked: 0, dirs: 0 };
+
+/**
+ * Registers a store, app or database handle to be closed after the current test, whether it passed or failed. Returns it.
+ * Resources tracked inside a beforeAll are closed after the file's last test instead.
+ */
+export function track<T extends { close(): unknown }>(resource: T): T {
+  tracked.push(resource);
+  return resource;
+}
+
+/** node:sqlite refuses to close a handle twice; a resource the test already closed (say, to reopen it) is not an error. */
+const alreadyClosed = (e: unknown): boolean => (e as { code?: unknown }).code === "ERR_INVALID_STATE" && /not open/.test((e as Error).message);
+
+/** Closes tracked resources from index `from` on, newest first, then removes temp dirs from `fromDir` on. Closing errors are rethrown after all of it. */
+async function release(from: number, fromDir: number): Promise<void> {
+  const errors: unknown[] = [];
+  for (const resource of tracked.splice(from).reverse()) {
+    try {
+      await resource.close();
+    } catch (e) {
+      if (!alreadyClosed(e)) errors.push(e);
+    }
+  }
+  for (const dir of dirs.splice(fromDir)) rmSync(dir, { recursive: true, force: true });
+  if (errors.length === 1) throw errors[0];
+  if (errors.length > 1) throw new AggregateError(errors, "closing tracked test resources failed");
+}
+
+beforeEach(() => {
+  testMark = { tracked: tracked.length, dirs: dirs.length };
+});
+afterEach(() => release(testMark.tracked, testMark.dirs));
+afterAll(() => release(0, 0));
+
 /**
  * A temp copy of fixtures/fixture-data.json with one harmless change (a part description carries `tag`), for a
  * test that needs a different but valid release. The committed fixture file is never edited.
@@ -199,8 +237,9 @@ export function makeStores(options: { includeCandidate?: boolean } = {}): TestSt
   return { dir, referencePath, visitsPath };
 }
 
+/** Opens the visit store of `stores`; it is closed after the test (see `track`). */
 export function openVisits(stores: TestStores): VisitStore {
-  return VisitStore.open(stores.visitsPath, stores.referencePath);
+  return track(VisitStore.open(stores.visitsPath, stores.referencePath));
 }
 
 export interface MakeAppOptions {
@@ -211,6 +250,7 @@ export interface MakeAppOptions {
   logLevel?: "silent" | "error" | "warn" | "info" | "debug";
 }
 
+/** An app over temp stores (fresh ones unless given); it is closed after the test, or after the file when made in a beforeAll (see `track`). */
 export function makeApp(options: MakeAppOptions = {}): AppHandle & { stores: TestStores } {
   const stores = options.stores ?? makeStores();
   const config = resolveServerConfig(
@@ -226,7 +266,7 @@ export function makeApp(options: MakeAppOptions = {}): AppHandle & { stores: Tes
     },
     {},
   );
-  return Object.assign(createApp(config), { stores });
+  return track(Object.assign(createApp(config), { stores }));
 }
 
 export const SIX_LINE_TOTALS = [

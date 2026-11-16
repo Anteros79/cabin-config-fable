@@ -21,6 +21,8 @@ describe("allowedHostnames", () => {
   test("always has loopback, the listen host and configured names", () => {
     const set = allowedHostnames({ host: "10.0.0.5", allowedHosts: ["kit.internal"] });
     expect([...set].sort()).toEqual(["10.0.0.5", "127.0.0.1", "::1", "kit.internal", "localhost"]);
+    // and with nothing configured, on a wildcard listen host
+    expect([...allowedHostnames({ host: "0.0.0.0", allowedHosts: [] })]).toEqual(expect.arrayContaining(["127.0.0.1", "::1", "localhost"]));
   });
 });
 

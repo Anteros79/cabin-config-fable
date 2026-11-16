@@ -1,9 +1,7 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Report } from "../../src/domain/types.ts";
 import { csvCell } from "../../src/server/app.ts";
-import { CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeApp, makeStores, SIX_LINE_TOTALS } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { CUSHION_3A, KIT_ALTERNATE, makeApp, makeStores, SIX_LINE_TOTALS } from "../helpers.ts";
 
 type App = ReturnType<typeof makeApp>;
 const json = (res: { body: string }) => JSON.parse(res.body);
@@ -44,7 +42,6 @@ describe("mutation responses", () => {
     expect("snapshot" in json(ev).visit).toBe(false);
     const got = json(await app.app.inject(`/api/visits/${created.visit.id}`));
     expect(got.visit.snapshot).toBeDefined();
-    await app.close();
   });
 });
 
@@ -62,7 +59,16 @@ describe("linked events API", () => {
     expect([bad.statusCode, json(bad).error.code]).toEqual([422, "INVALID_EVENT"]);
     const extra = await post(app, url, { ...body, extra: 1 });
     expect([extra.statusCode, json(extra).error.code]).toEqual([422, "UNSUPPORTED_FIELD"]);
-    await app.close();
+  });
+});
+
+describe("visit creation API", () => {
+  it("a technician with a control character is 422 INVALID_TECHNICIAN in the error envelope, and nothing is stored", async () => {
+    const app = makeApp();
+    const res = await post(app, "/api/visits", { tail: "N100TL", checkDate: "2026-11-12", technician: "Demo\ttech" });
+    expect(res.statusCode).toBe(422);
+    expect(json(res)).toEqual({ error: { code: "INVALID_TECHNICIAN", message: expect.stringContaining("control character"), details: null } });
+    expect(json(await app.app.inject("/api/visits")).total).toBe(0);
   });
 });
 
@@ -82,7 +88,26 @@ describe("lookup API", () => {
     expect(await state("N110TL", "2026-11-12")).toMatchObject({ state: "PLANNED" });
     expect(await state("N100TL", "nonsense")).toMatchObject({ state: "INVALID_INPUT" });
     expect(await state("", "")).toMatchObject({ state: "INVALID_INPUT", reasonCode: "TAIL_MISSING" });
-    await app.close();
+    // Every state carries a reason; only RESOLVED and PARTIAL carry a configuration, so none is guessed for the others.
+    const cases: [string, string][] = [
+      ["N100TL", "2026-11-12"],
+      ["N090TL", "2026-11-12"],
+      ["N999ZZ", "2026-11-12"],
+      ["N000TL", "2026-11-12"],
+      ["N400TL", "2026-09-15"],
+      ["N110TL", "2026-11-12"],
+      ["N500TL", "2026-03-01"],
+      ["N100TL", "nonsense"],
+      ["", ""],
+    ];
+    for (const [tail, date] of cases) {
+      const r = await state(tail, date);
+      expect(r.reasonCode, `${tail} ${date}`).toMatch(/^[A-Z_]+$/);
+      expect(r.message.length, `${tail} ${date}`).toBeGreaterThan(0);
+      const configured = r.state === "RESOLVED" || r.state === "PARTIAL";
+      expect(r.context !== undefined && r.context !== null, `${tail} ${date} ${r.state} context`).toBe(configured);
+      expect(r.resolution !== undefined && r.resolution !== null, `${tail} ${date} ${r.state} resolution`).toBe(configured);
+    }
   });
 
   it("reports a reference store failure as SERVICE_UNAVAILABLE and refuses to create visits", async () => {
@@ -100,7 +125,6 @@ describe("lookup API", () => {
     expect((await app.app.inject("/api/visits")).statusCode).toBe(200);
     await post(app, "/api/__test/faults", {});
     expect((await app.app.inject("/api/lookup?tail=N100TL&date=2026-11-12")).statusCode).toBe(200);
-    await app.close();
   });
 
   it("a visit needs an unambiguous configuration", async () => {
@@ -126,7 +150,6 @@ describe("lookup API", () => {
     expect(json(refused).error.code).toBe("UNRESOLVED_COMPONENT");
     const report = json(await app.app.inject(`/api/visits/${partial.id}/report`)).report as Report;
     expect(report.counts.unresolvedComponents).toBe(24);
-    await app.close();
   });
 });
 
@@ -162,7 +185,6 @@ describe("visit API with the browser bypassed", () => {
     const report = json(await app.app.inject(`/api/visits/${visit.id}/report`)).report as Report;
     expect(report.reportKind).toBe("DRAFT_PREVIEW");
     expect(report.totals.map((t) => [t.partNo, t.quantity, t.unit])).toEqual(SIX_LINE_TOTALS.map((x) => [...x]));
-    await app.close();
   });
 
   it("requires explicit, non-empty completion and locks the visit afterwards", async () => {
@@ -188,7 +210,6 @@ describe("visit API with the browser bypassed", () => {
       expect([res.statusCode, json(res).error.code]).toEqual([409, "VISIT_LOCKED"]);
     }
     expect(json(await app.app.inject(`/api/visits/${visit.id}/report`)).report).toEqual(json(done).report);
-    await app.close();
   });
 
   it("a rebinding host is refused on reads and writes", async () => {
@@ -200,7 +221,6 @@ describe("visit API with the browser bypassed", () => {
     expect(bad.statusCode).toBe(403);
     expect(json(bad).error.code).toBe("HOST_NOT_ALLOWED");
     expect(app.visits.counts().visits).toBe(0);
-    await app.close();
   });
 
   it.each([
@@ -218,7 +238,6 @@ describe("visit API with the browser bypassed", () => {
     const res = await post(app, "/api/visits", { tail: "N100TL", checkDate: "2026-11-12" }, headers);
     expect(res.statusCode).toBe(status);
     if (status === 403) expect(json(res).error.code).toBe("CROSS_ORIGIN_WRITE");
-    await app.close();
   });
 
   it("the origin rule covers every write route", async () => {
@@ -227,6 +246,7 @@ describe("visit API with the browser bypassed", () => {
     const headers = { origin: "http://x.test" };
     const base = `/api/visits/${visit.id}`;
     const results = await Promise.all([
+      app.app.inject({ method: "POST", url: "/api/visits", payload: { tail: "N100TL", checkDate: "2026-11-12" }, headers }),
       app.app.inject({ method: "PUT", url: `${base}/records`, payload: { record: CUSHION_3A }, headers }),
       app.app.inject({ method: "POST", url: `${base}/records/remove`, payload: {}, headers }),
       app.app.inject({ method: "POST", url: `${base}/complete`, payload: { confirm: true }, headers }),
@@ -236,7 +256,6 @@ describe("visit API with the browser bypassed", () => {
       expect(res.statusCode).toBe(403);
       expect(json(res).error.code).toBe("CROSS_ORIGIN_WRITE");
     }
-    await app.close();
   });
 
   it("a host named in CABIN_KIT_ALLOWED_HOSTS is accepted", async () => {
@@ -245,7 +264,6 @@ describe("visit API with the browser bypassed", () => {
     expect(ok.statusCode).toBe(200);
     const other = await app.app.inject({ method: "GET", url: "/api/health", headers: { host: "evil.example" } });
     expect(other.statusCode).toBe(403);
-    await app.close();
   });
 
   it("refuses cross-origin writes and unknown visits", async () => {
@@ -258,7 +276,6 @@ describe("visit API with the browser bypassed", () => {
     expect((await app.app.inject("/api/visits/nope/report.pdf")).statusCode).toBe(404);
     expect((await app.app.inject("/api/nope")).statusCode).toBe(404);
     expect((await app.app.inject("/api/__test/faults")).statusCode).toBe(404); // fault hooks exist only in test mode
-    await app.close();
   });
 
   it("a storage failure is reported as not saved, and a retry after recovery succeeds once", async () => {
@@ -278,7 +295,6 @@ describe("visit API with the browser bypassed", () => {
     expect(json(again).replayed).toBe(true);
     expect(json(again).visit.records).toHaveLength(1);
     expect(json(again).visit.records[0].version).toBe(1);
-    await app.close();
   });
 });
 
@@ -295,8 +311,9 @@ describe("csvCell", () => {
   ])("csvCell(%j) = %j", (input, output) => {
     expect(csvCell(input)).toBe(output);
   });
-  it("numbers are never prefixed", () => {
-    expect(csvCell(-1)).toBe("-1");
+  it("numbers are never prefixed, negative ones included; the same text as a string is", () => {
+    for (const n of [-1, -0.5, 0, 3, 1.25, -1e21]) expect(csvCell(n), String(n)).toBe(String(n));
+    expect(csvCell("-1")).toBe("'-1");
   });
 });
 
@@ -321,7 +338,6 @@ describe("preparation and reference endpoints", () => {
     // from a saved visit: frozen, independent of live reference data
     const visit = await newVisit(app);
     expect(json(await app.app.inject(`/api/visits/${visit.id}/preparation`)).lines.length).toBe(prep.lines.length);
-    await app.close();
   });
 
   it("exposes namespaces, findings and candidate layouts with their status", async () => {
@@ -338,7 +354,6 @@ describe("preparation and reference endpoints", () => {
     expect(one.layoutRevision.locations).toHaveLength(137);
     expect(one.categories.map((c: { id: string }) => c.id)).toEqual(["DOCX-CAT-700-137"]);
     expect(json(await app.app.inject("/api/tails")).tails.every((t: { namespace: string }) => t.namespace === "fixture")).toBe(true);
-    await app.close();
   });
 
   it("an unexpected exception is 500 INTERNAL_ERROR and does not leak its message", async () => {
@@ -351,7 +366,6 @@ describe("preparation and reference endpoints", () => {
     expect(json(r).error.code).toBe("INTERNAL_ERROR");
     expect(r.body).not.toContain("secret detail");
     expect(json(r).error.details.requestId).toBe(r.headers["x-request-id"]);
-    await app.close();
   });
 
   it("malformed JSON keeps the error envelope", async () => {
@@ -360,7 +374,6 @@ describe("preparation and reference endpoints", () => {
     expect(r.statusCode).toBe(400);
     expect(json(r).error.code).toBe("BAD_REQUEST");
     expect(json(r).error.details).toBeNull();
-    await app.close();
   });
 
   it("a body over 256 KB is 413 with the envelope", async () => {
@@ -373,7 +386,6 @@ describe("preparation and reference endpoints", () => {
     });
     expect(r.statusCode).toBe(413);
     expect(json(r).error.code).toBe("BAD_REQUEST");
-    await app.close();
   });
 
   it("an array or scalar JSON body is 400 INVALID_BODY", async () => {
@@ -382,7 +394,6 @@ describe("preparation and reference endpoints", () => {
       const r = await app.app.inject({ method: "POST", url: "/api/visits", headers: { "content-type": "application/json" }, payload });
       expect([r.statusCode, json(r).error.code]).toEqual([400, "INVALID_BODY"]);
     }
-    await app.close();
   });
 
   it("an idempotencyKey of length 7, 101, or not a string is 400 INVALID_IDEMPOTENCY_KEY", async () => {
@@ -392,7 +403,6 @@ describe("preparation and reference endpoints", () => {
       const r = await put(app, `/api/visits/${visit.id}/records`, { record: CUSHION_3A, expectedRecordVersion: 0, idempotencyKey: key });
       expect([r.statusCode, json(r).error.code]).toEqual([400, "INVALID_IDEMPOTENCY_KEY"]);
     }
-    await app.close();
   });
 });
 

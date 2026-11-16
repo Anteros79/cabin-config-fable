@@ -49,7 +49,7 @@ test("interpolatePose at 0 and 1 returns the endpoints", () => {
   expect(overhead.position.toArray()).toEqual([13, 36, 4.3]);
 });
 
-test("the interpolated camera never passes below the floor or inside the seat volume between two valid poses", () => {
+test("the interpolated camera stays above the floor and above its target between two valid poses, on an arc rather than the straight line", () => {
   for (const [from, to] of [
     [overhead, aisle],
     [aisle, overhead],

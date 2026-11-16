@@ -1,17 +1,17 @@
 import { chmodSync, existsSync, linkSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { contentHash, legacyContentHash } from "../../src/domain/hash.ts";
 import { lookup } from "../../src/domain/resolve.ts";
+import type { ReferenceRelease } from "../../src/domain/types.ts";
 import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { importReference } from "../../src/importer/cli.ts";
 import { canonicalPath, isSameFile, resolveServerConfig, resolveStoreConfig } from "../../src/server/config.ts";
 import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStoreError, resetReferenceStore } from "../../src/server/referenceStore.ts";
 import { StorageError, VisitStore } from "../../src/server/visitStore.ts";
-import { at, CUSHION_3A, changedFixturePath, cleanupTempDirs, KIT_ALTERNATE, makeApp, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { at, CUSHION_3A, changedFixturePath, KIT_ALTERNATE, makeApp, makeStores, openVisits, snapshotFor, tempDir, track } from "../helpers.ts";
 
 const refCode = (fn: () => unknown): string => {
   try {
@@ -24,7 +24,7 @@ const refCode = (fn: () => unknown): string => {
 
 function storesWithHistory() {
   const stores = makeStores();
-  const ref = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+  const ref = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
   const release = ref.loadActive();
   ref.close();
   const visits = openVisits(stores);
@@ -38,7 +38,7 @@ function storesWithHistory() {
   return { stores, fingerprint, releaseId: release.id };
 }
 const fingerprintOf = (s: { visitsPath: string; referencePath: string }) => {
-  const v = VisitStore.open(s.visitsPath, s.referencePath);
+  const v = track(VisitStore.open(s.visitsPath, s.referencePath));
   try {
     return v.fingerprint();
   } finally {
@@ -49,7 +49,7 @@ const fingerprintOf = (s: { visitsPath: string; referencePath: string }) => {
 describe("staged import and atomic activation", () => {
   it("activates a validated release and keeps history of releases", () => {
     const stores = makeStores();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
     const first = store.activeReleaseId()!;
     const second = importReferenceInto(stores);
     expect(second.activated).toBe(true);
@@ -58,12 +58,11 @@ describe("staged import and atomic activation", () => {
     expect(store.activeReleaseId()).toBe(second.releaseId);
     expect(list[1]?.id).toBe(first);
     expect(store.events().map((e) => e.type)).toEqual(["VALIDATED", "ACTIVATED", "VALIDATED", "ACTIVATED"]);
-    store.close();
   });
 
   it("stage keeps the original error when rollback also fails", () => {
     const stores = makeStores();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
     const bad = buildStagedRelease({ includeCandidate: false });
     const db = (store as unknown as { db: DatabaseSync }).db;
     const realExec = db.exec.bind(db);
@@ -76,12 +75,11 @@ describe("staged import and atomic activation", () => {
     expect(() => store.stage(bad.content, poisoned, {})).toThrow(/BigInt/);
     db.exec = realExec;
     realExec("ROLLBACK");
-    store.close();
   });
 
   it("a release with blocking findings is stored as rejected and never becomes active", () => {
     const stores = makeStores();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
     const active = store.activeReleaseId()!;
     const bad = buildStagedRelease({ includeCandidate: false });
     at(bad.content.rules, 0).partNo = "NOPE";
@@ -91,12 +89,11 @@ describe("staged import and atomic activation", () => {
     expect(refCode(() => store.activate(staged.id))).toBe("RELEASE_NOT_VALIDATED");
     expect(store.activeReleaseId()).toBe(active);
     expect(store.loadActive().rules[0]?.partNo).not.toBe("NOPE");
-    store.close();
   });
 
   it("staging does not change the active release until activation", () => {
     const stores = makeStores();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
     const active = store.activeReleaseId()!;
     const next = buildStagedRelease({ includeCandidate: false, label: "next" });
     const staged = store.stage(next.content, next.findings, {});
@@ -106,54 +103,67 @@ describe("staged import and atomic activation", () => {
     expect(store.activeReleaseId()).toBe(staged.id);
     store.activate(staged.id); // idempotent
     expect(store.listReleases().filter((r) => r.status === "active")).toHaveLength(1);
-    store.close();
   });
 
   it("a failed stage rolls back completely", () => {
     const stores = makeStores();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
     const before = store.listReleases().length;
     const broken = buildStagedRelease({ includeCandidate: false });
     broken.content.rules.push({ ...at(broken.content.rules, 0) }); // duplicate primary key inside the transaction
     expect(() => store.stage(broken.content, [], {})).toThrow();
     expect(store.listReleases()).toHaveLength(before);
     expect(store.loadActive().id).toBe(store.activeReleaseId());
-    store.close();
   });
 
   it("released entities are immutable in storage", () => {
     const stores = makeStores();
-    const db = new DatabaseSync(stores.referencePath);
+    const db = track(new DatabaseSync(stores.referencePath));
     expect(() => db.exec("UPDATE release_entity SET data_json = '{}' WHERE entity_type = 'rule'")).toThrow(/RELEASE_IMMUTABLE/);
     expect(() => db.exec("DELETE FROM release_entity WHERE entity_type = 'rule'")).toThrow(/RELEASE_IMMUTABLE/);
     expect(() => db.exec("UPDATE release SET content_hash = 'x'")).toThrow(/RELEASE_IMMUTABLE/);
-    db.close();
   });
 
   it("a lookup sees one whole release even if another connection activates a new one mid-flight", () => {
     const stores = makeStores();
-    const reader = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
-    const writer = ReferenceStore.open(stores.referencePath, stores.visitsPath);
-    const releaseA = reader.loadActive();
+    const writer = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
+    const releaseA = writer.activeReleaseId()!;
     const next = buildStagedRelease({ includeCandidate: false, label: "B" });
     next.content.parts.push({ partNo: "FAKE-SC-9999", namespace: "fixture", description: "changed" });
     next.content.rules.find((r) => r.id === "FX-R-V01-ELR-A-CUSHION")!.partNo = "FAKE-SC-9999";
-    const staged = writer.stage(next.content, [], {});
-    writer.activate(staged.id);
-    // The object loaded before activation is still entirely release A.
-    const snapA = snapshotFor(releaseA, "N100TL", "2026-11-12");
-    expect(snapA.referenceReleaseId).toBe(releaseA.id);
-    expect(snapA.referenceContentHash).toBe(releaseA.contentHash);
-    const cushion = snapA.resolution.components.find((c) => c.locationId === "SEAT:3A" && c.componentId === "CUSHION")!;
-    expect(cushion.status === "RESOLVED" && snapA.resolution.rules[cushion.ruleId]?.partNo).toBe("FAKE-SC-1001");
-    // A fresh read is entirely release B.
-    const releaseB = reader.loadActive();
-    expect(releaseB.id).toBe(staged.id);
-    const r = lookup(releaseB, "N100TL", "2026-11-12");
-    const c2 = r.resolution!.components.find((c) => c.locationId === "SEAT:3A" && c.componentId === "CUSHION")!;
-    expect(c2.status === "RESOLVED" && r.resolution!.rules[c2.ruleId]?.partNo).toBe("FAKE-SC-9999");
-    reader.close();
-    writer.close();
+    const releaseB = writer.stage(next.content, [], {}).id;
+    const cushionPart = (release: ReferenceRelease) => {
+      const r = lookup(release, "N100TL", "2026-11-12");
+      const c = r.resolution!.components.find((x) => x.locationId === "SEAT:3A" && x.componentId === "CUSHION")!;
+      return c.status === "RESOLVED" ? r.resolution!.rules[c.ruleId]?.partNo : null;
+    };
+    /** Whole: the content read back hashes to the hash recorded for that release. */
+    const expectWhole = (release: ReferenceRelease) => {
+      const { id: _id, contentHash: recorded, activatedAt: _at, ...content } = release;
+      expect(contentHash(content)).toBe(recorded);
+    };
+
+    // Connection 1 reads A's pointer and head row; connection 2 then activates B before connection 1 reads A's entities.
+    const reader = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
+    const paused: string[] = [];
+    const loaded = reader.loadActive({
+      onAfterHead: () => {
+        writer.activate(releaseB);
+        paused.push(String(writer.activeReleaseId()));
+      },
+    });
+    expect(paused).toEqual([releaseB]); // the activation committed while the read was in flight
+    expect(loaded.id).toBe(releaseA);
+    expectWhole(loaded);
+    expect(cushionPart(loaded)).toBe("FAKE-SC-1001");
+
+    // The same through loadRelease, the other way round: B is read while A is made active again.
+    const reader2 = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
+    const loadedB = reader2.loadRelease(releaseB, { onAfterHead: () => writer.activate(releaseA) });
+    expect(writer.activeReleaseId()).toBe(releaseA);
+    expect(loadedB.id).toBe(releaseB);
+    expectWhole(loadedB);
+    expect(cushionPart(loadedB)).toBe("FAKE-SC-9999");
   });
 });
 
@@ -181,7 +191,7 @@ describe("reference import and reset never touch visit history", () => {
       const staged = buildStagedRelease({ includeCandidate: false, label: "rebuilt" });
       store.activate(store.stage(staged.content, staged.findings, {}).id);
     });
-    const ref = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const ref = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     expect(ref.listReleases()).toHaveLength(1);
     expect(ref.loadActive().label).toBe("rebuilt");
     ref.close();
@@ -192,7 +202,6 @@ describe("reference import and reset never touch visit history", () => {
     expect(items).toHaveLength(2);
     expect(items.every((v) => v.referenceReleaseId === releaseId)).toBe(true);
     expect(visits.getReport(items.find((v) => v.status === "COMPLETED")!.id).report.totals).toHaveLength(5);
-    visits.close();
   });
 
   it("a failing reset leaves the existing reference store and the visits in place", () => {
@@ -203,7 +212,7 @@ describe("reference import and reset never touch visit history", () => {
         throw new Error("build failed half way");
       }),
     ).toThrow(/build failed half way/);
-    const ref = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const ref = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     expect(ref.activeReleaseId()).toBe(releaseId);
     ref.close();
     expect(readFileSync(stores.referencePath).length).toBe(before.length);
@@ -258,7 +267,7 @@ describe("store guards", () => {
     const visitsPath = join(dir, "visits.sqlite");
     // a visit database that also carries the reference marker and reference tables
     const mixed = join(dir, "mixed.sqlite");
-    const db = new DatabaseSync(mixed);
+    const db = track(new DatabaseSync(mixed));
     db.exec(
       "CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES('store_kind','cabin-kit-reference'); CREATE TABLE release(id TEXT); CREATE TABLE visits(id TEXT); INSERT INTO visits VALUES('user-history');",
     );
@@ -267,7 +276,7 @@ describe("store guards", () => {
     expect(refCode(() => resetReferenceStore(mixed, visitsPath, () => undefined))).toBe("VISIT_DATA_PRESENT");
     // an unrelated database carrying only the marker
     const marked = join(dir, "marked.sqlite");
-    const db2 = new DatabaseSync(marked);
+    const db2 = track(new DatabaseSync(marked));
     db2.exec(
       "CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES('store_kind','cabin-kit-reference'); CREATE TABLE customer_orders(id TEXT); INSERT INTO customer_orders VALUES('keep me');",
     );
@@ -277,7 +286,7 @@ describe("store guards", () => {
     expect(refCode(() => importReference({ referencePath: marked, visitsPath }))).toBe("UNKNOWN_STORE");
     // marker and nothing else is still not a reference store
     const bare = join(dir, "bare.sqlite");
-    const db3 = new DatabaseSync(bare);
+    const db3 = track(new DatabaseSync(bare));
     db3.exec("CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES('store_kind','cabin-kit-reference');");
     db3.close();
     expect(refCode(() => assertSafeReferenceTarget(bare, visitsPath))).toBe("UNKNOWN_STORE");
@@ -286,9 +295,8 @@ describe("store guards", () => {
     writeFileSync(text, "user notes, not a database");
     expect(refCode(() => resetReferenceStore(text, visitsPath, () => undefined))).toBe("UNKNOWN_STORE");
     expect(readFileSync(text, "utf8")).toBe("user notes, not a database");
-    const check = new DatabaseSync(marked, { readOnly: true });
+    const check = track(new DatabaseSync(marked, { readOnly: true }));
     expect(check.prepare("SELECT id FROM customer_orders").get()).toEqual({ id: "keep me" });
-    check.close();
   });
 
   it("the visit store refuses to open a reference or unknown database", () => {
@@ -300,7 +308,7 @@ describe("store guards", () => {
   // chmod does not stop root from writing, so the fault cannot be provoked that way as root.
   it.skipIf(process.getuid?.() === 0)("a SQLite fault while opening the reference store is a StorageError", () => {
     const stores = makeStores();
-    const db = new DatabaseSync(stores.referencePath);
+    const db = track(new DatabaseSync(stores.referencePath));
     db.exec("PRAGMA journal_mode=DELETE");
     db.close();
     chmodSync(stores.referencePath, 0o444); // read-write open falls back to read-only; the WAL switch then fails
@@ -321,15 +329,20 @@ describe("store guards", () => {
 
 describe("path configuration is shared by seed and start", () => {
   it("the import CLI and the server resolve the same store paths from the same inputs", () => {
-    const env = { CABIN_KIT_DATA_DIR: "/tmp/ck-data-x" };
+    const dataDir = join(tmpdir(), "ck-data-x");
+    const env = { CABIN_KIT_DATA_DIR: dataDir };
     const cli = resolveStoreConfig({}, env);
     const server = resolveServerConfig({}, env);
     expect(server.referencePath).toBe(cli.referencePath);
     expect(server.visitsPath).toBe(cli.visitsPath);
-    expect(cli.referencePath).toBe("/tmp/ck-data-x/reference.sqlite");
-    const explicit = { CABIN_KIT_REFERENCE_DB: "/tmp/a/ref.db", CABIN_KIT_VISITS_DB: "/tmp/b/visits.db", CABIN_KIT_DATA_DIR: "/tmp/ignored" };
+    expect(cli.referencePath).toBe(join(dataDir, "reference.sqlite"));
+    const explicit = {
+      CABIN_KIT_REFERENCE_DB: join(tmpdir(), "a", "ref.db"),
+      CABIN_KIT_VISITS_DB: join(tmpdir(), "b", "visits.db"),
+      CABIN_KIT_DATA_DIR: join(tmpdir(), "ignored"),
+    };
     expect(resolveServerConfig({}, explicit)).toMatchObject(resolveStoreConfig({}, explicit));
-    expect(resolveStoreConfig({}, explicit).referencePath).toBe("/tmp/a/ref.db");
+    expect(resolveStoreConfig({}, explicit).referencePath).toBe(join(tmpdir(), "a", "ref.db"));
     expect(resolveServerConfig({}, {}).host).toBe("127.0.0.1");
   });
 
@@ -346,15 +359,14 @@ describe("path configuration is shared by seed and start", () => {
 describe("release integrity", () => {
   it("a tampered release entity is detected on load", () => {
     const stores = makeStores();
-    const db = new DatabaseSync(stores.referencePath);
+    const db = track(new DatabaseSync(stores.referencePath));
     db.exec(
       "DROP TRIGGER release_entity_frozen_update; UPDATE release_entity SET data_json = json_set(data_json, '$.partNo', 'FAKE-TAMPERED') WHERE rowid = (SELECT min(rowid) FROM release_entity WHERE entity_type = 'rule')",
     );
     db.close();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     expect(refCode(() => store.loadActive())).toBe("RELEASE_CORRUPT");
     expect(refCode(() => store.loadRelease(String(store.activeReleaseId())))).toBe("RELEASE_CORRUPT");
-    store.close();
   });
 
   it("a reference store built before the label left the hash still loads (PF-5)", () => {
@@ -364,17 +376,17 @@ describe("release integrity", () => {
     const old = buildStagedRelease({ includeCandidate: false, label: "Imported before the hash change" });
     const legacy = legacyContentHash(old.content);
     expect(legacy).not.toBe(contentHash(old.content));
-    const writer = ReferenceStore.openOrCreate(stores.referencePath, stores.visitsPath);
+    const writer = track(ReferenceStore.openOrCreate(stores.referencePath, stores.visitsPath));
     const { id } = writer.stage(old.content, old.findings, old.stats);
     writer.activate(id);
     writer.close();
-    const db = new DatabaseSync(stores.referencePath);
+    const db = track(new DatabaseSync(stores.referencePath));
     db.exec(
       `DROP TRIGGER release_hash_frozen; UPDATE release SET content_hash = '${legacy}'; CREATE TRIGGER release_hash_frozen BEFORE UPDATE OF id, seq, content_hash, created_at ON release BEGIN SELECT RAISE(ABORT, 'RELEASE_IMMUTABLE'); END;`,
     );
     db.close();
 
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     const release = store.loadActive();
     expect(release).toMatchObject({ id, contentHash: legacy, label: "Imported before the hash change" });
     expect(store.activeContentHash()).toBe(legacy);
@@ -383,15 +395,14 @@ describe("release integrity", () => {
     const upgraded = importReference({ ...stores, includeCandidate: false });
     expect(upgraded).toMatchObject({ unchanged: false, activated: true });
     expect(importReference({ ...stores, includeCandidate: false })).toMatchObject({ unchanged: true, releaseId: upgraded.releaseId });
-    const after = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const after = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     expect(after.loadRelease(id).contentHash).toBe(legacy);
     expect(after.activeContentHash()).toBe(contentHash(old.content));
-    after.close();
   });
 
   it("the cached release cannot be mutated", () => {
     const stores = makeStores();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     const release = store.loadActive();
     expect(Object.isFrozen(release)).toBe(true);
     expect(() => {
@@ -403,21 +414,19 @@ describe("release integrity", () => {
     expect(store.loadActive()).toBe(release);
     expect(store.loadRelease(release.id)).toBe(release);
     expect(release.rules.length).toBeGreaterThan(0);
-    store.close();
   });
 
   it("an SQLite fault in the reference store is a storage failure (503), not an internal error", async () => {
     const stores = makeStores();
-    const db = new DatabaseSync(stores.referencePath);
+    const db = track(new DatabaseSync(stores.referencePath));
     db.exec("ALTER TABLE release_entity RENAME COLUMN data_json TO data_text");
     db.close();
-    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true }));
     expect(() => store.loadActive()).toThrow(StorageError);
     store.close();
     const app = makeApp({ stores });
     const res = await app.app.inject("/api/tails");
     expect(res.statusCode).toBe(503);
     expect(res.json().error).toMatchObject({ code: "STORAGE_UNAVAILABLE" });
-    await app.close();
   });
 });

@@ -1,10 +1,8 @@
 import { deflateSync, inflateSync } from "node:zlib";
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Report, VisitEvent } from "../../src/domain/types.ts";
 import { renderReportPdf } from "../../src/server/pdf.ts";
-import { CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeApp } from "../helpers.ts";
-
-afterAll(cleanupTempDirs);
+import { CUSHION_3A, KIT_ALTERNATE, makeApp } from "../helpers.ts";
 
 type App = ReturnType<typeof makeApp>;
 const json = (res: { body: string }) => JSON.parse(res.body);
@@ -44,6 +42,7 @@ function pdfStreams(bytes: Buffer): string[] {
   for (let m = head.exec(raw); m; m = head.exec(raw)) {
     const start = m.index + m[0].length;
     const dict = raw.slice(raw.lastIndexOf(" obj", m.index), m.index);
+    if (/\/Length \d+ \d+ R\b/.test(dict)) throw new Error(`stream at byte ${m.index}: indirect /Length not supported`);
     const length = Number(/\/Length (\d+)\b/.exec(dict)?.[1]);
     if (!Number.isInteger(length)) throw new Error(`stream at byte ${m.index} has no direct /Length`);
     if (!/^\r?\nendstream/.test(raw.slice(start + length, start + length + 12)))
@@ -128,7 +127,6 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     ]) {
       expect(flat).toContain(expected.replace(/\s+/g, ""));
     }
-    await app.close();
   });
 
   it("renders a long report across several pages with every work item present", async () => {
@@ -157,7 +155,6 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     // 30 rows of A covers: 5 ELR, 23 STD, 2 EXIT
     expect(report.totals.find((t) => t.partNo === "FAKE-SC-1001")?.quantity).toBe(5);
     expect(report.totals.find((t) => t.partNo === "FAKE-SC-1002")?.quantity).toBe(23);
-    await app.close();
   });
 
   it("a draft preview is marked as such and a PARTIAL visit prints its gaps", async () => {
@@ -169,7 +166,6 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     expect(text).toContain("Unresolved applicability gaps (24 components)");
     expect(text).toContain("Ambiguous");
     expect(text).toContain("expired after 2025-12-31");
-    await app.close();
   });
 });
 
@@ -234,7 +230,6 @@ describe("PDF robustness and accessibility", () => {
     expect(flat).toContain(note.slice(0, 40));
     expect(flat).toContain(note.slice(-40));
     expect(pages).toBeGreaterThan(1); // the note paginates rather than being cut off
-    await app.close();
   });
 
   it("short notes stay in the table and long linked-event notes are numbered with an E prefix", async () => {
@@ -247,7 +242,6 @@ describe("PDF robustness and accessibility", () => {
     expect(text).not.toContain("See note 1");
     expect(text).toContain("See note E1");
     expect(flat).toContain(longEvent);
-    await app.close();
   });
 
   it("linked events and the basis hash are printed", async () => {
@@ -258,7 +252,6 @@ describe("PDF robustness and accessibility", () => {
     expect(text).toContain("Check seam again");
     expect(text).toContain("13 Nov 2026, 09:00 UTC");
     expect(text.replace(/\s+/g, "")).toContain(basisSha256);
-    await app.close();
   });
 
   it("characters outside WinAnsi are replaced, never dropped silently", async () => {
@@ -266,7 +259,6 @@ describe("PDF robustness and accessibility", () => {
     const { report, basisSha256 } = await completedReport(app, "漢字 → ok");
     const { text } = await pdfText(await renderReportPdf(report, [], basisSha256));
     expect(text).toContain("?? -> ok");
-    await app.close();
   });
 
   it("the document declares its language, title and tagged structure", async () => {
@@ -287,7 +279,6 @@ describe("PDF robustness and accessibility", () => {
     const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: true, verbosity: 0 }).promise;
     const meta = await doc.getMetadata();
     expect((meta.info as { Title: string }).Title).toMatch(/^Cabin Kit report/);
-    await app.close();
   });
 
   it("stream extraction keeps the last byte of a compressed stream that ends in \\r", () => {
@@ -299,6 +290,15 @@ describe("PDF robustness and accessibility", () => {
     const head = Buffer.from(`1 0 obj\n<<\n/Length ${data.length}\n/Filter /FlateDecode\n>>\nstream\n`, "latin1");
     const pdf = Buffer.concat([head, data, Buffer.from("\nendstream\nendobj\n", "latin1")]);
     expect(pdfStreams(pdf)).toEqual([content]);
+  });
+
+  it("stream extraction refuses an indirect /Length by name instead of misreading the object number as a length", () => {
+    const data = Buffer.from("BT (x) Tj ET", "latin1");
+    const pdf = Buffer.from(
+      `4 0 obj\n<<\n/Length 5 0 R\n>>\nstream\n${data.toString("latin1")}\nendstream\nendobj\n5 0 obj\n${data.length}\nendobj\n`,
+      "latin1",
+    );
+    expect(() => pdfStreams(pdf)).toThrow(/indirect \/Length not supported/);
   });
 
   it("CreationDate equals report.generatedAt", async () => {
@@ -313,7 +313,6 @@ describe("PDF robustness and accessibility", () => {
     const info = (await doc.getMetadata()).info as { CreationDate: string; ModDate: string };
     expect(info.CreationDate).toBe(`D:${stamp}`);
     expect(info.ModDate).toBe(`D:${stamp}`);
-    await app.close();
   });
 
   it("rendering the same stored report twice gives identical bytes", async () => {
@@ -323,7 +322,6 @@ describe("PDF robustness and accessibility", () => {
     await new Promise((r) => setTimeout(r, 1100));
     const b = (await app.app.inject(`/api/visits/${id}/report.pdf`)).rawPayload;
     expect(Buffer.compare(a, b)).toBe(0);
-    await app.close();
   });
 
   it("the tallest row that does not throw still fits on one page below the repeated header", async () => {
@@ -355,7 +353,6 @@ describe("PDF robustness and accessibility", () => {
     const lowest = Math.min(...items.filter((i) => i.page === page && /LINEPART\d+|\(required\)/.test(i.str)).map((i) => i.y));
     // Page content ends MARGIN + FOOTER_SPACE (74 pt) above the bottom edge; no row text crosses it.
     expect(lowest).toBeGreaterThanOrEqual(74);
-    await app.close();
   });
 
   it("a long authority notice grows its box: the next content starts below it", async () => {
@@ -372,7 +369,6 @@ describe("PDF robustness and accessibility", () => {
     // y grows upwards: the heading's top (baseline + its height) sits below the notice's last line
     // with at least the box's 6 pt inner padding and 8 pt gap between them.
     expect(visit.y + visit.height).toBeLessThan(noticeBottom - 14);
-    await app.close();
   });
 
   it("a work item with excluded rules prints the rules not used", async () => {
@@ -391,7 +387,6 @@ describe("PDF robustness and accessibility", () => {
     expect(text.replace(/\s+/g, "")).toContain("Rulesnotused:X-EXPIRED-EXACT(FAKE-SC-1001):RuleX-EXPIRED-EXACTendedafter2026-11-11.");
     const { text: plain } = await pdfText(await renderReportPdf(report, [], basisSha256));
     expect(plain).not.toContain("Rules not used");
-    await app.close();
   });
 
   it("a work item with 60 exclusions and pending changes renders, the full text in Notes", async () => {
@@ -405,7 +400,6 @@ describe("PDF robustness and accessibility", () => {
     expect(flat).toContain("1.Seat3A/CUSHION:Note:Tornseam");
     for (const id of ["X-EXCL-0", "X-EXCL-59"]) expect(flat).toContain(`${id}(FAKE-SC-1001):Rule${id}endedafter2026-11-11.`);
     expect(flat).toContain("Pendingchange29withsomewordstowrap");
-    await app.close();
   });
 
   it("a gap with a very long reason renders, the full reason in Notes", async () => {
@@ -428,7 +422,6 @@ describe("PDF robustness and accessibility", () => {
     const flat = text.replace(/\s+/g, "");
     expect(flat).toContain("GAPSTART");
     expect(flat).toContain("GAPEND");
-    await app.close();
   });
 
   it("a table row taller than a page throws a loud error", async () => {
@@ -437,6 +430,5 @@ describe("PDF robustness and accessibility", () => {
     // Many part lines make the parts cell taller than any page; that column has no overflow section.
     const tall = { ...report, work: report.work.map((w) => ({ ...w, lines: manyLines(400) })) } as Report;
     await expect(renderReportPdf(tall, [], basisSha256)).rejects.toThrow("pdf: row taller than a page in");
-    await app.close();
   });
 });
