@@ -6,7 +6,19 @@ import { unzipSync } from "fflate";
  * guards: an entry's declared size before it is inflated, a sheet's extent before it is allocated.
  * Nothing in a package is executed and no DTD or external entity is ever processed.
  */
-export const OOXML_LIMITS = { entryBytes: 32 * 1024 * 1024, totalBytes: 64 * 1024 * 1024, rows: 1_048_576, columns: 16_384, cells: 2_000_000 };
+export const OOXML_LIMITS = {
+  entryBytes: 32 * 1024 * 1024,
+  /** Inflated size of one XML part (`.xml`, `.rels`); the parse tree, not the bytes, is what costs memory. */
+  xmlEntryBytes: 8 * 1024 * 1024,
+  totalBytes: 64 * 1024 * 1024,
+  /** Element starts in one XML part, counted before it is parsed. */
+  maxXmlElements: 1_000_000,
+  rows: 1_048_576,
+  columns: 16_384,
+  cells: 2_000_000,
+};
+
+const isXmlPart = (name: string) => /\.(xml|rels)$/i.test(name);
 
 /** A package or part that cannot be read safely or does not have the expected structure. */
 export class OoxmlError extends Error {
@@ -17,7 +29,7 @@ const messageOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /**
  * Inflate the entries `wanted` accepts; every other entry is skipped without being inflated. An entry
- * whose declared size is above `OOXML_LIMITS.entryBytes`, or that takes the wanted total above
+ * whose declared size is above `OOXML_LIMITS.xmlEntryBytes` (XML parts) or `entryBytes` (others), or that takes the wanted total above
  * `totalBytes` (by default `OOXML_LIMITS.totalBytes`), is refused before it is inflated.
  */
 export function readZipEntries(bytes: Uint8Array, wanted: (name: string) => boolean, totalBytes = OOXML_LIMITS.totalBytes): Map<string, Uint8Array> {
@@ -29,7 +41,7 @@ export function readZipEntries(bytes: Uint8Array, wanted: (name: string) => bool
     files = unzipSync(bytes, {
       filter: ({ name, originalSize }) => {
         if (!wanted(name)) return false;
-        if (originalSize > OOXML_LIMITS.entryBytes) throw new OoxmlError(`entry too large: ${name}`);
+        if (originalSize > (isXmlPart(name) ? OOXML_LIMITS.xmlEntryBytes : OOXML_LIMITS.entryBytes)) throw new OoxmlError(`entry too large: ${name}`);
         total += originalSize;
         if (total > totalBytes) throw new OoxmlError(`entry too large: ${name} (wanted entries exceed ${totalBytes} bytes in total)`);
         declared.set(name, originalSize);
@@ -66,10 +78,18 @@ const parser = new XMLParser({
 
 /**
  * Parse one XML part into fast-xml-parser's ordered form. Entities are left as written (no DTD is
- * processed); a part with a document type declaration or that is not well-formed is refused.
+ * processed); a part with a document type declaration, more than `maxXmlElements` element starts
+ * (counted before parsing) or that is not well-formed is refused.
  */
 export function parseXml(text: string): unknown {
   if (/<!DOCTYPE/i.test(text)) throw new OoxmlError("document type declarations are not allowed in OOXML parts");
+  // count element starts (`<` not followed by `/`, `?` or `!`) before any tree is built
+  let starts = 0;
+  for (let at = text.indexOf("<"); at !== -1; at = text.indexOf("<", at + 1)) {
+    const next = text.charCodeAt(at + 1);
+    if (next !== 0x2f && next !== 0x3f && next !== 0x21 && ++starts > OOXML_LIMITS.maxXmlElements)
+      throw new OoxmlError(`XML part has more than ${OOXML_LIMITS.maxXmlElements} elements`);
+  }
   const valid = XMLValidator.validate(text);
   if (valid !== true) throw new OoxmlError(`not well-formed XML: ${valid.err.msg} (line ${valid.err.line})`);
   try {

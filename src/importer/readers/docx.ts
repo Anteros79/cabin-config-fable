@@ -31,6 +31,7 @@ function readParagraph(paragraph: XmlElement, out: string[]): void {
   const walk = (el: XmlElement): void => {
     for (const child of elements(el)) {
       switch (child.name) {
+        // every element named t counts, so math (m:t) and drawing (a:t) text is read deliberately: prefixes are removed
         case "t":
           text += ownText(child);
           break;
@@ -82,8 +83,8 @@ export function readDocxParagraphs(bytes: Uint8Array): DocxParagraph[] {
 /** Normalise typographic hyphens and whitespace so quotes can be located reliably. */
 export function normaliseForQuote(text: string): string {
   return text
-    .replace(/[‐‑‒–—]/g, "-")
-    .replace(/ /g, " ")
+    .replace(/[\u2010\u2011\u2012\u2013\u2014]/g, "-")
+    .replace(/\u00a0/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
