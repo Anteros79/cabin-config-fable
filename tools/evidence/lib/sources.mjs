@@ -1,3 +1,4 @@
+import { compareCodePoints } from '../../../src/domain/order.ts';
 // Loads and parses every operational/narrative source once, and exposes locator helpers.
 import { F, readOriginal } from './common.mjs';
 import { parseCsv } from './csv.mjs';
@@ -24,7 +25,7 @@ export function normalizeWorkbook(xlsx) {
   }
   const rowNumbers = [...byRow.keys()].sort((a, b) => a - b);
   const headerRow = rowNumbers[0];
-  const headerCells = [...byRow.get(headerRow).values()].sort((a, b) => a.ref.length - b.ref.length || a.ref.localeCompare(b.ref));
+  const headerCells = [...byRow.get(headerRow).values()].sort((a, b) => a.ref.length - b.ref.length || compareCodePoints(a.ref, b.ref));
   const header = headerCells.map((c) => ({ column: c.column, name: String(c.value) }));
   const conversions = { numeric_cell_to_identifier_string: [], absent_cell_to_empty_string: [] };
   const rows = [];

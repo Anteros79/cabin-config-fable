@@ -1,3 +1,4 @@
+import { compareCodePoints } from "./order.ts";
 import { summarizeLocations } from "./summarize.ts";
 import type { CabinLocation, Report, ReportGap, ReportTotalLine, ReportWorkItem, SourceArtifact, Visit, VisitSnapshot } from "./types.ts";
 import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS } from "./types.ts";
@@ -10,7 +11,7 @@ function locationOrder(snapshot: VisitSnapshot): Map<string, number> {
     (a, b) =>
       KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
       (a.seat?.physicalRow ?? a.bin?.module ?? a.floor?.rowFrom ?? 0) - (b.seat?.physicalRow ?? b.bin?.module ?? b.floor?.rowFrom ?? 0) ||
-      a.id.localeCompare(b.id),
+      compareCodePoints(a.id, b.id),
   );
   sorted.forEach((l, i) => {
     order.set(l.id, i);
@@ -38,7 +39,9 @@ export function buildGaps(snapshot: VisitSnapshot): ReportGap[] {
     gap.locationIds.sort();
     gap.locationSummary = summarizeLocations(gap.locationIds.map((id) => byId.get(id)!).filter(Boolean));
   }
-  return gaps.sort((a, b) => a.componentId.localeCompare(b.componentId) || a.status.localeCompare(b.status) || a.message.localeCompare(b.message));
+  return gaps.sort(
+    (a, b) => compareCodePoints(a.componentId, b.componentId) || compareCodePoints(a.status, b.status) || compareCodePoints(a.message, b.message),
+  );
 }
 
 /**
@@ -52,7 +55,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
   const byId = new Map<string, CabinLocation>(context.layoutRevision.locations.map((l) => [l.id, l]));
 
   const records = [...visit.records].sort(
-    (a, b) => (order.get(a.locationId) ?? 0) - (order.get(b.locationId) ?? 0) || a.componentId.localeCompare(b.componentId),
+    (a, b) => (order.get(a.locationId) ?? 0) - (order.get(b.locationId) ?? 0) || compareCodePoints(a.componentId, b.componentId),
   );
   const sourceIds = new Set<string>([context.configurationSource.id]);
   const work: ReportWorkItem[] = records.map((r) => {
@@ -108,7 +111,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
       totalsMap.set(key, total);
     }
   }
-  const totals = [...totalsMap.values()].sort((a, b) => a.partNo.localeCompare(b.partNo) || a.unit.localeCompare(b.unit));
+  const totals = [...totalsMap.values()].sort((a, b) => compareCodePoints(a.partNo, b.partNo) || compareCodePoints(a.unit, b.unit));
   totals.forEach((t) => {
     t.roles.sort();
   });
@@ -117,7 +120,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
   const sources: SourceArtifact[] = [...sourceIds]
     .map((id) => resolution.sources[id])
     .filter((s): s is SourceArtifact => Boolean(s))
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort((a, b) => compareCodePoints(a.id, b.id));
 
   const seatCount = context.layoutRevision.locations.filter((l) => l.kind === "SEAT").length;
   return {

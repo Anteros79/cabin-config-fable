@@ -1,3 +1,4 @@
+import { compareCodePoints } from "./order.ts";
 import { buildGaps } from "./report.ts";
 import { summarizeLocations } from "./summarize.ts";
 import type { CabinLocation, ExcludedSubstitute, PendingChange, ReportGap, SourceArtifact, VisitSnapshot } from "./types.ts";
@@ -104,7 +105,9 @@ export function buildPreparation(snapshot: VisitSnapshot): PrepOverview {
   const kindOrder: Record<string, number> = { SEAT: 0, FLOOR: 1, BIN: 2 };
   lines.sort(
     (a, b) =>
-      (kindOrder[a.locationKind] ?? 9) - (kindOrder[b.locationKind] ?? 9) || a.componentId.localeCompare(b.componentId) || a.partNo.localeCompare(b.partNo),
+      (kindOrder[a.locationKind] ?? 9) - (kindOrder[b.locationKind] ?? 9) ||
+      compareCodePoints(a.componentId, b.componentId) ||
+      compareCodePoints(a.partNo, b.partNo),
   );
   const gaps = buildGaps(snapshot);
   return {

@@ -1,5 +1,6 @@
 import { isIsoDate, withinInclusive } from "./dates.ts";
 import { expandKit } from "./kits.ts";
+import { compareCodePoints } from "./order.ts";
 import { type AssignmentContext, buildIndex, matchesContext, type ReleaseIndex, undominated } from "./specificity.ts";
 import type {
   ApplicabilityRule,
@@ -95,7 +96,7 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     return { ...common, state: "UNKNOWN_TAIL", reasonCode: "TAIL_NOT_IN_REFERENCE", message: `Tail ${tail} is not in the reference data.` };
   }
 
-  const all = [...(index.assignmentsByTail.get(tail) ?? [])].sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+  const all = [...(index.assignmentsByTail.get(tail) ?? [])].sort((a, b) => compareCodePoints(a.effectiveFrom, b.effectiveFrom));
   const considered = all.map((a) => describe(a, checkDate));
   if (all.length === 0) {
     return {

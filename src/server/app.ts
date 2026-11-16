@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
+import { compareCodePoints } from "../domain/order.ts";
 import { buildPreparation, type PrepOverview } from "../domain/prep.ts";
 import { lookup } from "../domain/resolve.ts";
 import type { LookupResult, ReferenceRelease } from "../domain/types.ts";
@@ -298,7 +299,7 @@ export function createApp(config: ServerConfig): AppHandle {
       demo: true,
       tails: release.aircraft
         .map((a) => ({ tail: a.tail, subtypeId: a.subtypeId, namespace: a.namespace, note: a.note ?? "" }))
-        .sort((a, b) => a.tail.localeCompare(b.tail)),
+        .sort((a, b) => compareCodePoints(a.tail, b.tail)),
     };
   });
 

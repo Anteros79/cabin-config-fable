@@ -8,5 +8,6 @@
     "jsx": "react-jsx",
     "tsBuildInfoFile": "./node_modules/.cache/tsc/web.tsbuildinfo"
   },
-  "include": ["src/web", "src/domain"]
+  "include": ["src/web", "src/domain"],
+  "exclude": ["src/domain/hash.ts"]
 }

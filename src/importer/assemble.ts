@@ -1,6 +1,7 @@
-import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { canonicalJson } from "../domain/canonical.ts";
+import { sha256Hex } from "../domain/hash.ts";
 import type { Finding, ReleaseContent, VisualProfile } from "../domain/types.ts";
 import { validateRelease } from "../domain/validate.ts";
 import { buildCandidateContent } from "./candidate.ts";
@@ -43,20 +44,10 @@ export const VISUAL_PROFILES: VisualProfile[] = [
   },
 ];
 
-/** Stable JSON: object keys sorted so the content hash does not depend on insertion order. */
-export function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => v !== undefined)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(",")}}`;
-  }
-  return JSON.stringify(value) ?? "null";
-}
+export { canonicalJson };
 
 export function contentHash(content: ReleaseContent): string {
-  return createHash("sha256").update(canonicalJson(content)).digest("hex");
+  return sha256Hex(canonicalJson(content));
 }
 
 export interface StagedBuild {

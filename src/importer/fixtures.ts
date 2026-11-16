@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { binPlacement, floorPlacement, geometryDeclaration, seatPlacement, sideOf } from "../domain/geometry.ts";
+import { compareCodePoints } from "../domain/order.ts";
 import type {
   Aircraft,
   AircraftSubtype,
@@ -449,7 +450,7 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
     layoutRevisions,
     assignments,
     components: data.components,
-    parts: [...parts.values()].sort((a, b) => a.partNo.localeCompare(b.partNo)),
+    parts: [...parts.values()].sort((a, b) => compareCodePoints(a.partNo, b.partNo)),
     rules,
     substitutes,
     kitChildren,

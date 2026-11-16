@@ -29,7 +29,10 @@ function findMatches(pattern: RegExp): string[] {
   return found;
 }
 
-// Task 0.6 removes the existing uses and flips this to `test`.
-test.fails("localeCompare is not used outside src/web", () => {
+test("the scan covers a non-empty file set in every tree", () => {
+  for (const tree of TREES) expect(sourceFiles(join(ROOT, tree)).length, tree).toBeGreaterThan(0);
+});
+
+test("localeCompare is not used outside src/web", () => {
   expect(findMatches(/\.localeCompare\(/)).toEqual([]);
 });

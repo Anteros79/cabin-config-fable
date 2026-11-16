@@ -1,3 +1,4 @@
+import { compareCodePoints } from "./order.ts";
 import type { Finding, KitChild, Part } from "./types.ts";
 
 export interface ExpandedChild {
@@ -38,7 +39,7 @@ export function expandKit(partNo: string, byParent: Map<string, KitChild[]>, par
     }
   };
   walk(partNo, 1, [partNo]);
-  return [...merged.values()].sort((a, b) => a.partNo.localeCompare(b.partNo) || a.unit.localeCompare(b.unit));
+  return [...merged.values()].sort((a, b) => compareCodePoints(a.partNo, b.partNo) || compareCodePoints(a.unit, b.unit));
 }
 
 /** Import-time checks: invalid, duplicate, conflicting and cyclic kit definitions. */

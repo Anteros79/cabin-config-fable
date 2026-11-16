@@ -2,10 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { canonicalJson } from "../domain/canonical.ts";
+import { sha256Hex } from "../domain/hash.ts";
 import { buildReport } from "../domain/report.ts";
 import type { Report, Visit, VisitEvent, VisitRecord, VisitSnapshot, VisitSummary } from "../domain/types.ts";
 import { DomainError, deriveRecord } from "../domain/visitLogic.ts";
-import { canonicalJson } from "../importer/assemble.ts";
 import { isSameFile } from "./config.ts";
 import { inspectStore } from "./referenceStore.ts";
 
@@ -141,10 +142,6 @@ export interface CompletionResult {
 }
 
 type Row = Record<string, string | number | null>;
-
-function sha256(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
-}
 
 function isBusy(e: unknown): boolean {
   const err = e as { code?: string; errcode?: number; message?: string };
@@ -336,8 +333,8 @@ export class VisitStore {
     if (tech.length > 80) throw new DomainError("INVALID_TECHNICIAN", "Technician must be at most 80 characters.");
     const now = options.now ?? new Date().toISOString();
     const snapshotJson = canonicalJson(snapshot);
-    const snapshotSha = sha256(snapshotJson);
-    const requestHash = sha256(canonicalJson({ tail: snapshot.tail, checkDate: snapshot.checkDate, tech }));
+    const snapshotSha = sha256Hex(snapshotJson);
+    const requestHash = sha256Hex(canonicalJson({ tail: snapshot.tail, checkDate: snapshot.checkDate, tech }));
     return this.write(() => {
       const prior = this.replay(options.idempotencyKey, "create", requestHash) as { id: string } | undefined;
       if (prior) return { visit: this.loadVisit(prior.id), replayed: true };
@@ -407,7 +404,7 @@ export class VisitStore {
    */
   upsertRecord(visitId: string, input: unknown, expectedRecordVersion: number | undefined, options: MutationOptions = {}): VisitMutationResult {
     const now = options.now ?? new Date().toISOString();
-    const requestHash = sha256(canonicalJson({ op: "upsert", visitId, input, expectedRecordVersion: expectedRecordVersion ?? null }));
+    const requestHash = sha256Hex(canonicalJson({ op: "upsert", visitId, input, expectedRecordVersion: expectedRecordVersion ?? null }));
     return this.write(() => {
       const prior = this.replay(options.idempotencyKey, `visit:${visitId}`, requestHash);
       if (prior) return { visit: this.loadVisit(visitId), replayed: true };
@@ -479,7 +476,7 @@ export class VisitStore {
   ): VisitMutationResult {
     if (typeof locationId !== "string" || typeof componentId !== "string") throw new DomainError("INVALID_RECORD", "locationId and componentId are required.");
     const now = options.now ?? new Date().toISOString();
-    const requestHash = sha256(canonicalJson({ op: "remove", visitId, locationId, componentId, expectedRecordVersion: expectedRecordVersion ?? null }));
+    const requestHash = sha256Hex(canonicalJson({ op: "remove", visitId, locationId, componentId, expectedRecordVersion: expectedRecordVersion ?? null }));
     return this.write(() => {
       const prior = this.replay(options.idempotencyKey, `visit:${visitId}`, requestHash);
       if (prior) return { visit: this.loadVisit(visitId), replayed: true };
@@ -543,7 +540,7 @@ export class VisitStore {
       const reportJson = canonicalJson(report);
       this.db
         .prepare("INSERT INTO reports(visit_id, schema, generated_at, basis_sha256, report_json) VALUES (?, ?, ?, ?, ?)")
-        .run(visitId, report.schema, now, sha256(reportJson), reportJson);
+        .run(visitId, report.schema, now, sha256Hex(reportJson), reportJson);
       return { visit: completed, report, alreadyCompleted: false, replayed: false };
     });
   }
