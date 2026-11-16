@@ -4,14 +4,17 @@ import { STATUS_ENCODING } from "../../src/web/model.ts";
 import {
   createOverlayMaterial,
   createSeatMaterials,
+  HEADREST_TINT_OPACITY,
   METAL,
   PAD,
   SHELL,
   STATUS_COLOUR,
+  STATUS_TINT_ATTRIBUTE,
   setGhosted,
   TIER_COLOUR,
   TIER_SWATCH,
   UPHOLSTERY,
+  withStatusTint,
 } from "../../src/web/scene/materials.ts";
 import { normalFromHeight, PALETTES, REAR_SHELL_POWER_PANEL, SEAT_TEXTURE_SIZE, textureKey } from "../../src/web/scene/textures.ts";
 import { lightTokens, styleFile } from "./css.ts";
@@ -209,6 +212,38 @@ describe("overlay colour", () => {
     material.color.copy(STATUS_COLOUR.recorded);
     material.toneMapped = true;
     expect(deltaE(renderedSrgb(material, 1.0), legendSwatch("status", "recorded"))).toBeGreaterThan(10);
+  });
+});
+
+describe("headrest status tint (WEB-20)", () => {
+  // jsdom has no WebGL, so the hook is run on three's own physical shader source, as the renderer would run it.
+  const compiled = () => {
+    const material = withStatusTint(new THREE.MeshPhysicalMaterial());
+    const shader = {
+      uniforms: {},
+      vertexShader: THREE.ShaderLib.physical.vertexShader,
+      fragmentShader: THREE.ShaderLib.physical.fragmentShader,
+    } as unknown as THREE.WebGLProgramParametersWithUniforms;
+    material.onBeforeCompile(shader, null as unknown as THREE.WebGLRenderer);
+    return { material, shader };
+  };
+
+  test("every hook finds its place in three's physical shader, so the tint is never silently dropped", () => {
+    const { shader } = compiled();
+    expect(shader.vertexShader).toContain(`attribute vec4 ${STATUS_TINT_ATTRIBUTE};`);
+    expect(shader.vertexShader).toContain(`vStatusTint = ${STATUS_TINT_ATTRIBUTE};`);
+    expect(shader.fragmentShader).toContain("varying vec4 vStatusTint;");
+    // mixed after tone mapping and the output colour space: the same sum the translucent overlay's blending made
+    const fragment = shader.fragmentShader;
+    const mix = fragment.indexOf("gl_FragColor.rgb = mix( gl_FragColor.rgb, linearToOutputTexel( vec4( vStatusTint.rgb, 1.0 ) ).rgb, vStatusTint.a );");
+    expect(mix).toBeGreaterThan(fragment.indexOf("#include <tonemapping_fragment>"));
+    expect(mix).toBeGreaterThan(fragment.indexOf("#include <colorspace_fragment>"));
+  });
+
+  test("a tinted headrest has its own program and the overlay's opacity", () => {
+    const { material } = compiled();
+    expect(material.customProgramCacheKey()).toBe("status-tint");
+    expect(HEADREST_TINT_OPACITY).toBe(0.6);
   });
 });
 

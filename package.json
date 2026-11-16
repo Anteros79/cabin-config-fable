@@ -30,6 +30,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
+    "budgets": "npm run build && node tools/check-budgets.ts",
     "test:unit": "vitest run tests/unit tests/integration",
     "test:process": "vitest run tests/process",
     "test:e2e": "npm run build:e2e && playwright test",

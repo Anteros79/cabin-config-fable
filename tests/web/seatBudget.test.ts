@@ -1,12 +1,13 @@
 import { expect, test } from "vitest";
-import { buildSeatGeometries, geometryTriangles, SEAT_TRIANGLE_BUDGET, seatTriangleCount } from "../../src/web/scene/seatParts.ts";
+import budgets from "../../budgets.json" with { type: "json" };
+import { buildSeatGeometries, geometryTriangles, seatTriangleCount } from "../../src/web/scene/seatParts.ts";
 
 /** A plain box is 12 triangles. */
 const PLAIN_BOX = 12;
 
 // The seat geometry is profile-independent (PF-27): one build, one budget.
 test("one seat is within the triangle budget", () => {
-  expect(seatTriangleCount(buildSeatGeometries())).toBeLessThanOrEqual(SEAT_TRIANGLE_BUDGET);
+  expect(seatTriangleCount(buildSeatGeometries())).toBeLessThanOrEqual(budgets.scene.seatTriangles);
 });
 
 test("the silhouette parts keep rounded edges", () => {

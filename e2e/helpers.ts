@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import budgets from "../budgets.json" with { type: "json" };
 
 /** The six part/unit totals of the README walk-through (N100TL: seat 3A cushion, full-cabin carpet alternate). */
 export const SIX: [string, number, string][] = [
@@ -11,8 +12,8 @@ export const SIX: [string, number, string][] = [
   ["FAKE-SC-1001", 1, "EA"],
 ];
 
-/** Scene budgets for the 176-seat layout (PF-21). Task 6.5 moves these numbers to budgets.json. */
-export const SCENE_BUDGET_176 = { drawCalls: 34, triangles: 600_000 };
+/** Scene budgets for the 176-seat layout (PF-21), from budgets.json: the one source for every budget (Task 6.5). */
+export const SCENE_BUDGET_176 = { drawCalls: budgets.scene.drawCalls176, triangles: budgets.scene.triangles176 };
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 

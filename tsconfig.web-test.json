@@ -8,5 +8,5 @@
     "jsx": "react-jsx",
     "tsBuildInfoFile": "./node_modules/.cache/tsc/web-test.tsbuildinfo"
   },
-  "include": ["tests/web", "tests/helpers.ts", "tests/helpers", "src/web", "src/domain", "src/importer", "src/server"]
+  "include": ["tests/web", "tests/helpers.ts", "tests/helpers", "src/web", "src/domain", "src/importer", "src/server", "budgets.json"]
 }

@@ -74,50 +74,43 @@ const WORST_CASE_EXTRA: Record<string, Record<string, string>> = {
   "BIN:L-01": { BIN_DOOR: "unresolved" },
 };
 
-test("the 176-seat layout stays within the draw-call and triangle budgets in every preset, in the worst case (PF-21)", async ({ page, api, visit }) => {
-  const record = (locationId: string, componentId: string, selection = "PRIMARY", quantity = 1) =>
-    api.addRecord(visit.id, { locationId, componentId, selection, quantity });
-  await record("SEAT:7C", "CUSHION");
-  await record("SEAT:3A", "CUSHION");
-  await record("SEAT:20F", "BACKREST");
-  await record("FLOOR:AFT", "CARPET_PANEL");
-  await record("BIN:R-03", "BIN_DOOR");
-  await openScene(page, visit.id);
-  await openMap(page);
-  await selectLocation(page, "Seat 7C");
-  await open3D(page);
-  const injectWorstCase = () =>
-    page.evaluate((extra) => {
-      const s = window.__cabinKit?.scene as unknown as
-        | { states: Map<string, { components: Record<string, string> }>; setStates(m: Map<string, { components: Record<string, string> }>): void }
-        | undefined;
-      if (!s) throw new Error("test hooks missing (not the e2e build?)");
-      const next = new Map(s.states);
-      for (const [id, add] of Object.entries(extra)) next.set(id, { components: { ...(next.get(id)?.components ?? {}), ...add } });
-      s.setStates(next);
-    }, WORST_CASE_EXTRA);
-  const statusOf = () =>
-    page.evaluate(() => {
-      const s = window.__cabinKit?.scene as unknown as { states: Map<string, { components: Record<string, string> }> };
-      return Object.fromEntries(["FLOOR:FWD", "FLOOR:MID", "FLOOR:AFT", "FLOOR:FULL-CABIN", "SEAT:7C"].map((id) => [id, s.states.get(id)?.components ?? {}]));
-    });
-  // a location under the pointer, so the hover outline is drawn too: the first point of a grid over the canvas that hovers one
-  const hoverALocation = async () => {
-    const box = await page.locator("canvas").boundingBox();
-    if (!box) throw new Error("no canvas");
-    for (const fy of [0.5, 0.35, 0.65]) {
-      for (const fx of [0.3, 0.5, 0.7, 0.15, 0.85]) {
-        const x = box.x + box.width * fx;
-        const y = box.y + box.height * fy;
-        await page.mouse.move(x, y);
-        await page.mouse.move(x + 2, y + 2);
-        await nextFrames(page, 2);
-        const hover = ((await scene(page)).marks as { hover: string | null }).hover;
-        if (hover !== null) return hover;
-      }
+/** Layers a status set over the visit's own states through the scene's setStates() (the e2e build's test hooks). */
+async function injectStates(page: Page, extra: Record<string, Record<string, string>>): Promise<void> {
+  await page.evaluate((add) => {
+    const s = window.__cabinKit?.scene as unknown as
+      | { states: Map<string, { components: Record<string, string> }>; setStates(m: Map<string, { components: Record<string, string> }>): void }
+      | undefined;
+    if (!s) throw new Error("test hooks missing (not the e2e build?)");
+    const next = new Map(s.states);
+    for (const [id, components] of Object.entries(add)) next.set(id, { components: { ...(next.get(id)?.components ?? {}), ...components } });
+    s.setStates(next);
+  }, extra);
+}
+
+/** Hovers a location: the first point of a grid over the canvas that hovers one, so the hover outline is drawn too. */
+async function hoverALocation(page: Page): Promise<string | null> {
+  const box = await page.locator("canvas").boundingBox();
+  if (!box) throw new Error("no canvas");
+  for (const fy of [0.5, 0.35, 0.65]) {
+    for (const fx of [0.3, 0.5, 0.7, 0.15, 0.85]) {
+      const x = box.x + box.width * fx;
+      const y = box.y + box.height * fy;
+      await page.mouse.move(x, y);
+      await page.mouse.move(x + 2, y + 2);
+      await nextFrames(page, 2);
+      const hover = ((await scene(page)).marks as { hover: string | null }).hover;
+      if (hover !== null) return hover;
     }
-    return null;
-  };
+  }
+  return null;
+}
+
+/**
+ * Draws the 176-seat layout in every preset, with and without the context layer, with `states` layered on, the selection
+ * outlined and a location hovered, and asserts the draw calls and triangles of each view against budgets.json (PF-21).
+ * `check` asserts the status set is in place in each view.
+ */
+async function expectWithinSceneBudget(page: Page, states: Record<string, Record<string, string>>, check: (where: string) => Promise<void>): Promise<void> {
   const seen: string[] = [];
   let worst = { drawCalls: 0, triangles: 0, at: "" };
   for (const context of [false, true]) {
@@ -126,8 +119,8 @@ test("the 176-seat layout stays within the draw-call and triangle budgets in eve
       await setCamera(page, view);
       await page.evaluate(() => document.querySelector("canvas")?.scrollIntoView({ block: "center" }));
       await settle(page);
-      await injectWorstCase();
-      const hover = await hoverALocation();
+      await injectStates(page, states);
+      const hover = await hoverALocation(page);
       // force one frame so renderer.info describes this view with everything above in it
       await page.evaluate(() => window.__cabinKit?.scene?.invalidate());
       await settle(page);
@@ -138,13 +131,7 @@ test("the 176-seat layout stays within the draw-call and triangle budgets in eve
       expect(marks.selection, `${where}: the selection is outlined`).toBe(true);
       expect(hover, `${where}: a location is hovered`).not.toBeNull();
       expect(marks.hover, `${where}: the hover outline is drawn`).not.toBeNull();
-      expect(await statusOf(), `${where}: every floor location tinted, 7C mixed`).toEqual({
-        "FLOOR:FWD": { CARPET_PANEL: "unresolved" },
-        "FLOOR:MID": { CARPET_PANEL: "alternate" },
-        "FLOOR:AFT": { CARPET_PANEL: "recorded" },
-        "FLOOR:FULL-CABIN": { CARPET_KIT: "alternate" },
-        "SEAT:7C": { CUSHION: "recorded", BACKREST: "unresolved" },
-      });
+      await check(where);
       const { drawCalls, triangles } = info.renderer as { drawCalls: number; triangles: number };
       seen.push(`${where} (hover ${hover}): ${drawCalls} calls, ${triangles} triangles`);
       if (drawCalls > worst.drawCalls || (drawCalls === worst.drawCalls && triangles > worst.triangles)) worst = { drawCalls, triangles, at: where };
@@ -154,6 +141,55 @@ test("the 176-seat layout stays within the draw-call and triangle budgets in eve
   }
   test.info().annotations.push({ type: "scene worst case", description: `${worst.at}: ${worst.drawCalls} calls, ${worst.triangles} triangles` });
   test.info().annotations.push({ type: "scene cost", description: seen.join("; ") });
+}
+
+/** Opens the visit's scene with seat 7C selected (chosen on the map, so the selection outline is drawn). */
+async function openSceneWith7CSelected(page: Page, visitId: string): Promise<void> {
+  await openScene(page, visitId);
+  await openMap(page);
+  await selectLocation(page, "Seat 7C");
+  await open3D(page);
+}
+
+test("the 176-seat layout stays within the draw-call and triangle budgets in every preset, in the worst case (PF-21)", async ({ page, api, visit }) => {
+  const record = (locationId: string, componentId: string, selection = "PRIMARY", quantity = 1) =>
+    api.addRecord(visit.id, { locationId, componentId, selection, quantity });
+  await record("SEAT:7C", "CUSHION");
+  await record("SEAT:3A", "CUSHION");
+  await record("SEAT:20F", "BACKREST");
+  await record("FLOOR:AFT", "CARPET_PANEL");
+  await record("BIN:R-03", "BIN_DOOR");
+  await openSceneWith7CSelected(page, visit.id);
+  const statusOf = () =>
+    page.evaluate(() => {
+      const s = window.__cabinKit?.scene as unknown as { states: Map<string, { components: Record<string, string> }> };
+      return Object.fromEntries(["FLOOR:FWD", "FLOOR:MID", "FLOOR:AFT", "FLOOR:FULL-CABIN", "SEAT:7C"].map((id) => [id, s.states.get(id)?.components ?? {}]));
+    });
+  await expectWithinSceneBudget(page, WORST_CASE_EXTRA, async (where) => {
+    expect(await statusOf(), `${where}: every floor location tinted, 7C mixed`).toEqual({
+      "FLOOR:FWD": { CARPET_PANEL: "unresolved" },
+      "FLOOR:MID": { CARPET_PANEL: "alternate" },
+      "FLOOR:AFT": { CARPET_PANEL: "recorded" },
+      "FLOOR:FULL-CABIN": { CARPET_KIT: "alternate" },
+      "SEAT:7C": { CUSHION: "recorded", BACKREST: "unresolved" },
+    });
+  });
+});
+
+test("the 176-seat layout stays within the budgets when every location carries a status, as on a completed visit (PF-21)", async ({ page, visit }) => {
+  await openSceneWith7CSelected(page, visit.id);
+  // every seat, floor area, the full-cabin floor and every bin module, the three statuses in turn
+  const statuses = ["recorded", "unresolved", "alternate"];
+  const ids = await page.evaluate(() => {
+    const s = window.__cabinKit?.scene as unknown as { layout: { locations: { id: string }[] } };
+    return s.layout.locations.map((l) => l.id);
+  });
+  expect(ids.length, "176 seats, 4 floor locations and 20 bin modules").toBe(200);
+  const every = Object.fromEntries(ids.map((id, i) => [id, { STATUS: statuses[i % 3] ?? "recorded" }]));
+  await expectWithinSceneBudget(page, every, async (where) => {
+    const marks = (await scene(page)).marks as { badges: number };
+    expect(marks.badges, `${where}: a badge on every location`).toBe(200);
+  });
 });
 
 test("spatial picking selects the exact seat and its component", async ({ page, visit }) => {

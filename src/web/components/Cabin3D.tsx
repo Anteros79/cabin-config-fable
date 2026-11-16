@@ -4,6 +4,7 @@ import { STATUS_ENCODING, type Workspace } from "../model.ts";
 import type { CabinScene, ColourMode, Layers, LightMode, LocationState, PresetView, SceneTestHooks } from "../scene/CabinScene.ts";
 import { onThemeChange, sceneThemeTokens } from "../theme.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
+import { loadSceneModule } from "./sceneModule.ts";
 
 /** Only the e2e build (`npm run build:e2e`) exposes the scene on window; the shipped bundle never contains the hook. */
 const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
@@ -155,7 +156,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
     let scene: CabinScene | null = null;
     (async () => {
       try {
-        const mod = await import("../scene/CabinScene.ts");
+        const mod = await loadSceneModule();
         if (cancelled || !canvasRef.current) return;
         scene = new mod.CabinScene(canvasRef.current, {
           onPick: (locationId, componentId) => {

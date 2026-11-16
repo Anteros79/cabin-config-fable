@@ -5,6 +5,7 @@ import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../a
 import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { Inspector } from "../components/Inspector.tsx";
 import { Skeleton } from "../components/Skeleton.tsx";
+import { loadSceneModule } from "../components/sceneModule.ts";
 import { type ToastOptions, useToast } from "../components/Toasts.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { formatDate, formatDateTime } from "../format.ts";
@@ -185,6 +186,10 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     else if (recall() === loadedId) remember(null);
     onVisit?.({ id: loadedId, number: loadedNumber, tail: loadedTail });
   }, [loadedId, loadedStatus, loadedNumber, loadedTail, onVisit]);
+  // the scene chunk downloads while the visit is fetched, not after it (Task 6.5); a failure shows when Cabin3D loads it
+  useEffect(() => {
+    if (visitId) loadSceneModule().catch(() => {});
+  }, [visitId]);
   const visitMissing = visitRes.state === "error" && visitRes.error.status === 404;
   useEffect(() => {
     if (visitMissing && visitId && recall() === visitId) remember(null);

@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import budgets from "./budgets.json" with { type: "json" };
 
 // Projects give each tier its own timeout. `web` runs React component and hook tests in jsdom.
 // Files whose assertions are wall-clock/CPU bounds live in `perf`: the other projects exclude them, and the
@@ -71,9 +72,10 @@ export default defineConfig({
       thresholds: {
         lines: 75,
         branches: 60,
-        "src/domain/**": { lines: 90, branches: 85 },
-        "src/importer/**": { lines: 85, branches: 75 },
-        "src/server/**": { lines: 85, branches: 75 },
+        // the line floors of these three trees are budgets (budgets.json, Task 6.5)
+        "src/domain/**": { lines: budgets.coverage.domainLines, branches: 85 },
+        "src/importer/**": { lines: budgets.coverage.importerLines, branches: 75 },
+        "src/server/**": { lines: budgets.coverage.serverLines, branches: 75 },
         "src/web/**": { lines: 10, branches: 10 },
       },
     },

@@ -10,6 +10,8 @@
     "noEmit": true,
     "composite": true,
     "allowImportingTsExtensions": true,
+    // budgets.json is imported by the tests and tools that assert it (Task 6.5)
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "skipLibCheck": true,

@@ -24,6 +24,8 @@ jobs:
       - run: npm run typecheck
       # Build first so the build outputs exist; the bundle test builds its own copies in a temp directory.
       - run: npm run build
+      # bundle budgets (budgets.json): fails the job when a chunk outgrows its gzip budget (Task 6.5)
+      - run: node tools/check-budgets.ts
       - run: npm run build:e2e
       - run: npm run coverage
       - run: npm audit --omit=dev --audit-level=high

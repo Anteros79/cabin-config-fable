@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import budgets from "../../budgets.json" with { type: "json" };
 import type { Report } from "../../src/domain/types.ts";
 import { csvCell } from "../../src/server/app.ts";
 import { CUSHION_3A, KIT_ALTERNATE, makeApp, makeStores, SIX_LINE_TOTALS } from "../helpers.ts";
@@ -25,7 +26,7 @@ describe("mutation responses", () => {
     const res = await put(app, `/api/visits/${created.visit.id}/records`, { record: CUSHION_3A });
     expect(res.statusCode).toBe(200);
     expect("snapshot" in json(res).visit).toBe(false);
-    expect(res.rawPayload.length).toBeLessThan(8_000);
+    expect(res.rawPayload.length).toBeLessThanOrEqual(budgets.api.mutationResponseBytes);
     expect(json(res).visit.records).toHaveLength(1);
     expect(json(res).visit.snapshotSha256).toBe(created.visit.snapshotSha256);
     const removed = await post(app, `/api/visits/${created.visit.id}/records/remove`, {

@@ -16,6 +16,15 @@ vi.mock("../../src/web/components/Viewer.tsx", () => ({
   ),
 }));
 
+// The scene chunk is not loaded in jsdom; the stand-in records that a visit route asked for it.
+const sceneModule = vi.hoisted(() => ({ loads: 0 }));
+vi.mock("../../src/web/components/sceneModule.ts", () => ({
+  loadSceneModule: () => {
+    sceneModule.loads += 1;
+    return new Promise(() => {});
+  },
+}));
+
 const release = fixtureRelease();
 const snap = snapshotFor(release, "N100TL", "2026-11-12");
 const base = visitWith(snap, [CUSHION_3A, KIT_PRIMARY]);
@@ -32,6 +41,19 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("CheckView scene chunk", () => {
+  it("a visit route starts loading the 3D scene before the visit answers; the check page does not (Task 6.5)", async () => {
+    sceneModule.loads = 0;
+    const answer = deferred<{ body: unknown }>();
+    stubFetch((): Answer => answer.promise);
+    const view = render(<CheckView visitId={null} navigate={vi.fn()} visualProfiles={[]} />);
+    expect(sceneModule.loads, "no visit, no scene").toBe(0);
+    view.unmount();
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    await waitFor(() => expect(sceneModule.loads).toBe(1));
+  });
 });
 
 describe("CheckView writes", () => {

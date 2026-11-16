@@ -79,6 +79,34 @@ export function upholsteryVariant(base: THREE.MeshPhysicalMaterial, variant: { c
   return material;
 }
 
+/** The per-instance attribute that carries a headrest's status tint: linear RGB, and the tint's opacity in w (0: none). */
+export const STATUS_TINT_ATTRIBUTE = "statusTint";
+/** How strongly a status tints the headrest, as the translucent overlay it replaces did (WEB-21). */
+export const HEADREST_TINT_OPACITY = 0.6;
+
+/**
+ * The headrest's status tint, drawn by the headrest's own material instead of a second, translucent copy of its geometry
+ * (WEB-20: that copy cost 900 triangles per tinted seat, 158 400 on a visit where every seat has a status). The final
+ * colour is mixed toward the status colour after tone mapping and the output colour space, which is the same sum the
+ * overlay's blending made: an unlit, not tone-mapped colour over the lit headrest at the overlay's opacity. The mesh's
+ * geometry must carry STATUS_TINT_ATTRIBUTE as an instanced vec4.
+ */
+export function withStatusTint<T extends THREE.Material>(material: T): T {
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("void main() {", `attribute vec4 ${STATUS_TINT_ATTRIBUTE};\nvarying vec4 vStatusTint;\nvoid main() {`)
+      .replace("#include <begin_vertex>", `#include <begin_vertex>\nvStatusTint = ${STATUS_TINT_ATTRIBUTE};`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace("void main() {", "varying vec4 vStatusTint;\nvoid main() {")
+      .replace(
+        "#include <colorspace_fragment>",
+        "#include <colorspace_fragment>\ngl_FragColor.rgb = mix( gl_FragColor.rgb, linearToOutputTexel( vec4( vStatusTint.rgb, 1.0 ) ).rgb, vStatusTint.a );",
+      );
+  };
+  material.customProgramCacheKey = () => "status-tint";
+  return material;
+}
+
 /**
  * Status colours in 3D: the headrest tint, the floor and bin tints and the badge discs. They are the `--status-*` tokens
  * that STATUS_ENCODING names (src/web/styles/tokens.css), which the map and the legends draw; a test holds the two equal.

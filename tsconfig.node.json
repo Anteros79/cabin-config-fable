@@ -23,7 +23,8 @@
     "tests/process",
     "tools/*.ts",
     "vite.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "budgets.json"
   ],
   // drives a browser: its page.evaluate callbacks need the DOM library, so tsconfig.e2e.json checks it
   "exclude": ["tools/capture-evidence.ts"]

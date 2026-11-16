@@ -8,14 +8,17 @@ import { createEnvironment, ENVIRONMENT_INTENSITY, type LightMode } from "./envi
 import {
   createOverlayMaterial,
   createSeatMaterials,
+  HEADREST_TINT_OPACITY,
   LIGHT_SCENE_THEME,
   type SceneTheme,
   SELECT_COLOUR,
   type SeatMaps,
   STATUS_COLOUR,
+  STATUS_TINT_ATTRIBUTE,
   setGhosted,
   TIER_COLOUR,
   upholsteryVariant,
+  withStatusTint,
 } from "./materials.ts";
 import { createBadges, createFrame, createOutline, frameGeometry, HOVER_OUTLINE, hullGeometry, SELECTION_OUTLINE, type ViewportUniform } from "./outline.ts";
 import { PickGesture, type PointerSample, TouchAxisLock } from "./pickGesture.ts";
@@ -229,8 +232,8 @@ export class CabinScene {
   private seats: SeatEntry[] = [];
   private seatMeshes: { mesh: THREE.InstancedMesh; component: string | null }[] = [];
   private panOverlay: THREE.InstancedMesh | null = null;
-  /** the headrest tint of the "Work status" colour mode */
-  private headrestOverlay: THREE.InstancedMesh | null = null;
+  /** the headrest tint of the "Work status" colour mode, one vec4 per seat, drawn by the headrest's material (withStatusTint) */
+  private headrestTint: THREE.InstancedBufferAttribute | null = null;
   private badges: THREE.InstancedMesh | null = null;
   private badgeEntries: BadgeEntry[] = [];
   /** the welded outline shape of a seat, made once */
@@ -636,7 +639,11 @@ export class CabinScene {
     addSeatMesh("backFront", this.geoms.backFront, "BACKREST");
     addSeatMesh("rearShell", this.geoms.rearShell, "BACKREST");
     addSeatMesh("rearRelief", this.geoms.rearRelief, "BACKREST");
-    addSeatMesh("headrest", this.geoms.headrest, "BACKREST");
+    // The headrest draws its own status tint (withStatusTint), from a per-seat attribute on this layout's copy of its shape.
+    const headrest = own(this.geoms.headrest.clone());
+    this.headrestTint = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4);
+    headrest.setAttribute(STATUS_TINT_ATTRIBUTE, this.headrestTint);
+    addSeatMesh("headrest", headrest, "BACKREST");
     addSeatMesh("arms", this.geoms.arms, null);
     addSeatMesh("armPads", this.geoms.armPads, null);
     // Pale wing faces: the aisle-side wing always, the window-side wing only in the banded family. Both are built for
@@ -673,18 +680,12 @@ export class CabinScene {
     }
 
     // The tier tint covers the pan. The status tint covers the headrest only, so the upholstery stays visible (WEB-21);
-    // it is drawn over the headrest itself, pulled toward the camera so it never fights it in the depth buffer.
+    // the headrest's material draws it (see headrestTint).
     this.panOverlay = n ? own(new THREE.InstancedMesh(this.geoms.panOverlay, own(createOverlayMaterial(0.6)), n)) : null;
-    const headrestTint = own(createOverlayMaterial(0.6));
-    headrestTint.polygonOffset = true;
-    headrestTint.polygonOffsetFactor = -1;
-    headrestTint.polygonOffsetUnits = -4;
-    this.headrestOverlay = n ? own(new THREE.InstancedMesh(this.geoms.headrest, headrestTint, n)) : null;
-    for (const o of [this.panOverlay, this.headrestOverlay]) {
-      if (!o) continue;
-      o.renderOrder = 5;
-      o.setColorAt(0, WHITE);
-      this.groups.seats.add(o);
+    if (this.panOverlay) {
+      this.panOverlay.renderOrder = 5;
+      this.panOverlay.setColorAt(0, WHITE);
+      this.groups.seats.add(this.panOverlay);
     }
     // badges above each headrest
     this.geoms.headrest.computeBoundingBox();
@@ -919,7 +920,7 @@ export class CabinScene {
       backFront: set.upholstery,
       rearShell,
       rearRelief: set.shell,
-      headrest: plain(p.headrest),
+      headrest: withStatusTint(plain(p.headrest)),
       arms,
       armPads: set.pad,
       wings,
@@ -1103,35 +1104,33 @@ export class CabinScene {
     this.updates.applyStates += 1;
     const status = this.colourMode === "status";
     const colourFor = (s: LocationStatus) => (s === "none" ? null : STATUS_COLOUR[s]);
-    if (this.panOverlay && this.headrestOverlay) {
+    if (this.panOverlay) {
       // Only the tinted seats are drawn: they are packed first and the count stops after them, so an untinted seat costs
       // no triangles, and an overlay with nothing to show costs no draw call (WEB-20).
       let pans = 0;
-      let heads = 0;
       for (const s of this.seats) {
         const pan = this.colourMode === "tier" ? (TIER_COLOUR[s.location.seat?.commercialTier ?? s.location.seat?.maintenanceZone ?? ""] ?? null) : null;
+        if (!pan) continue;
+        this.panOverlay.setMatrixAt(pans, s.matrix);
+        this.panOverlay.setColorAt(pans++, pan);
+      }
+      this.panOverlay.count = pans;
+      this.panOverlay.visible = pans > 0;
+      this.panOverlay.instanceMatrix.needsUpdate = true;
+      if (this.panOverlay.instanceColor) this.panOverlay.instanceColor.needsUpdate = true;
+    }
+    if (this.headrestTint) {
+      // The headrest draws its tint itself: no triangles and no draw call of its own, however many seats have a status (WEB-20).
+      const tint = this.headrestTint;
+      this.seats.forEach((s, i) => {
         const head = status ? colourFor(this.statusOf(s.location.id)) : null;
-        if (pan) {
-          this.panOverlay.setMatrixAt(pans, s.matrix);
-          this.panOverlay.setColorAt(pans++, pan);
-        }
-        if (head) {
-          this.headrestOverlay.setMatrixAt(heads, s.matrix);
-          this.headrestOverlay.setColorAt(heads++, head);
-        }
-      }
-      for (const [o, count] of [
-        [this.panOverlay, pans],
-        [this.headrestOverlay, heads],
-      ] as const) {
-        o.count = count;
-        o.visible = count > 0;
-        o.instanceMatrix.needsUpdate = true;
-        if (o.instanceColor) o.instanceColor.needsUpdate = true;
-      }
+        if (head) tint.setXYZW(i, head.r, head.g, head.b, HEADREST_TINT_OPACITY);
+        else tint.setXYZW(i, 0, 0, 0, 0);
+      });
+      tint.needsUpdate = true;
     }
     if (this.floorTint) {
-      // packed and counted like the headrest tint
+      // packed and counted like the pan tint
       let tints = 0;
       for (const f of this.floorTintEntries) {
         const c = status ? colourFor(this.statusOf(f.locationId)) : null;

@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import budgets from "../../budgets.json" with { type: "json" };
 import { CONTENT_SECURITY_POLICY } from "../../src/server/http/headers.ts";
 import { makeApp, tempDir } from "../helpers.ts";
 
@@ -49,7 +50,7 @@ describe("headers, caching, compression and static serving", () => {
   it("large JSON is compressed when the client accepts it", async () => {
     const r = await handle.app.inject({ url: "/api/lookup?tail=N100TL&date=2026-11-12", headers: { "accept-encoding": "br, gzip" } });
     expect(["br", "gzip"]).toContain(r.headers["content-encoding"]);
-    expect(r.rawPayload.length).toBeLessThan(30_000);
+    expect(r.rawPayload.length).toBeLessThanOrEqual(budgets.api.lookupGzipBytes);
     const plain = await handle.app.inject({ url: "/api/lookup?tail=N100TL&date=2026-11-12", headers: { "accept-encoding": "identity" } });
     expect(plain.headers["content-encoding"]).toBeUndefined();
   });

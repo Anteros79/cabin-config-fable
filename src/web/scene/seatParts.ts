@@ -128,9 +128,6 @@ export interface SeatGeometries {
 /** Height of the contact quad above the carpet: enough to stay clear of it in the depth buffer, too little to see. */
 export const CONTACT_LIFT = 0.004;
 
-/** Most triangles one seat may draw, summed over every part geometry (WEB-20). */
-export const SEAT_TRIANGLE_BUDGET = 3_200;
-
 /** Triangles in one geometry, indexed or not. */
 export function geometryTriangles(g: THREE.BufferGeometry): number {
   return (g.index ? g.index.count : g.getAttribute("position").count) / 3;

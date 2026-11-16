@@ -8,6 +8,6 @@
     "jsx": "react-jsx",
     "tsBuildInfoFile": "./node_modules/.cache/tsc/e2e.tsbuildinfo"
   },
-  "include": ["e2e", "playwright.config.ts", "tools/capture-evidence.ts", "src/web"],
+  "include": ["e2e", "playwright.config.ts", "tools/capture-evidence.ts", "src/web", "budgets.json"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
