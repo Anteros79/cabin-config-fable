@@ -1,16 +1,20 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
-import { Cabin3D, hoverLabelPosition } from "../../src/web/components/Cabin3D.tsx";
+import { Cabin3D, hoverLabelPosition, WHEEL_HINT, WHEEL_HINT_MS } from "../../src/web/components/Cabin3D.tsx";
 import { Viewer } from "../../src/web/components/Viewer.tsx";
 import { buildStates, type Workspace } from "../../src/web/model.ts";
+import type { SceneCallbacks } from "../../src/web/scene/CabinScene.ts";
 import { at, fixtureRelease } from "../helpers.ts";
 
 // jsdom has no WebGL: the scene is a recording stand-in, so these tests see exactly which scene methods the component calls.
-const scenes = vi.hoisted(() => ({ constructed: 0, calls: [] as { name: string; args: unknown[] }[] }));
+const scenes = vi.hoisted(() => ({ constructed: 0, calls: [] as { name: string; args: unknown[] }[], callbacks: null as unknown }));
 vi.mock("../../src/web/scene/CabinScene.ts", () => ({
   CabinScene: class {
-    constructor() {
+    constructor(_canvas: unknown, callbacks: unknown) {
       scenes.constructed += 1;
+      scenes.callbacks = callbacks;
       // biome-ignore lint/correctness/noConstructorReturn: a stand-in that records every method call
       return new Proxy(
         {},
@@ -43,7 +47,11 @@ const workspace: Workspace = {
 beforeEach(() => {
   scenes.constructed = 0;
   scenes.calls = [];
+  scenes.callbacks = null;
+  sessionStorage.clear();
 });
+
+const callbacks = () => scenes.callbacks as SceneCallbacks;
 
 function renderCabin(ws: Workspace) {
   const props = { states: buildStates(ws).scene, selection: null, onSelect: vi.fn(), visualProfiles: [], onFailed: vi.fn() };
@@ -110,4 +118,70 @@ test("the hover label sits 14 px right of and below the pointer, flips near an e
   expect(hoverLabelPosition({ x: 390, y: 295 }, label, wrap)).toEqual({ left: 296, top: 261 });
   // a label wider than the room left on either side is clamped inside the wrap
   expect(hoverLabelPosition({ x: 60, y: 10 }, { width: 380, height: 20 }, wrap)).toEqual({ left: 16, top: 24 });
+});
+
+function renderSelectable(paused = false) {
+  const onSelect = vi.fn();
+  const props = { workspace, states: buildStates(workspace).scene, onSelect, visualProfiles: [], onFailed: vi.fn() };
+  const view = render(<Cabin3D {...props} selection={null} paused={paused} />);
+  return {
+    onSelect,
+    select: (selection: string | null, nowPaused = paused) => view.rerender(<Cabin3D {...props} selection={selection} paused={nowPaused} />),
+  };
+}
+
+test("a location selected outside the canvas while the 3D view shows is brought into view; a pick in the canvas is not", async () => {
+  const { select, onSelect } = renderSelectable();
+  await ready();
+  // selected in the map, list, work list or go-to
+  select("SEAT:7C");
+  expect(calls("revealLocation").map((c) => c.args[0])).toEqual(["SEAT:7C"]);
+  // picked in the canvas: the parent selects it, and the camera stays
+  act(() => callbacks().onPick("SEAT:9D", "CUSHION"));
+  expect(onSelect).toHaveBeenCalledWith("SEAT:9D", "CUSHION");
+  select("SEAT:9D");
+  expect(calls("setSelection").at(-1)?.args).toEqual(["SEAT:9D"]);
+  expect(calls("revealLocation")).toHaveLength(1);
+  // the next selection from outside moves it again
+  select("SEAT:2A");
+  expect(calls("revealLocation").map((c) => c.args[0])).toEqual(["SEAT:7C", "SEAT:2A"]);
+  // clearing the selection moves nothing
+  select(null);
+  expect(calls("revealLocation")).toHaveLength(2);
+});
+
+test("a selection made while the 3D view is hidden, or already there when it starts, does not move the camera", async () => {
+  const onSelect = vi.fn();
+  const props = { workspace, states: buildStates(workspace).scene, onSelect, visualProfiles: [], onFailed: vi.fn() };
+  const view = render(<Cabin3D {...props} selection="SEAT:7C" />);
+  await ready();
+  expect(calls("setSelection").at(-1)?.args).toEqual(["SEAT:7C"]);
+  view.rerender(<Cabin3D {...props} selection="SEAT:9D" paused />);
+  view.rerender(<Cabin3D {...props} selection="SEAT:9D" />);
+  expect(calls("revealLocation")).toHaveLength(0);
+});
+
+test("the wheel hint shows for 2 s the first time the wheel scrolls past the view, and not again in the session", async () => {
+  renderCabin(workspace);
+  await ready();
+  vi.useFakeTimers();
+  try {
+    act(() => callbacks().onWheelPassedThrough?.());
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent(WHEEL_HINT);
+    expect(WHEEL_HINT).toBe("Click the view, then scroll to zoom");
+    act(() => vi.advanceTimersByTime(WHEEL_HINT_MS - 1));
+    expect(screen.queryByText(WHEEL_HINT)).not.toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByText(WHEEL_HINT)).toBeNull();
+    act(() => callbacks().onWheelPassedThrough?.());
+    expect(screen.queryByText(WHEEL_HINT)).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("the canvas lets a vertical touch drag scroll the page", () => {
+  const css = readFileSync(join(import.meta.dirname, "../../src/web/styles.css"), "utf8");
+  const rule = /\.canvas-wrap canvas \{([^}]*)\}/.exec(css)?.[1] ?? "";
+  expect(rule).toMatch(/touch-action:\s*pan-y;/);
 });

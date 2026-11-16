@@ -118,9 +118,13 @@ export async function waitFor3D(page: Page, timeout = 20000): Promise<void> {
   );
 }
 
-/** Let the scene settle (damping, texture upload) before a capture. */
+/** Let the scene settle (damping, texture upload, a camera transition or ghosting fade under way) before a capture. */
 export async function settle(page: Page, ms = 450): Promise<void> {
   await page.waitForTimeout(ms);
+  await page.waitForFunction(() => {
+    const info = window.__cabinKit?.scene?.describeScene() as { transitioning?: boolean; ghostFading?: boolean } | undefined;
+    return !info || (!info.transitioning && !info.ghostFading);
+  });
 }
 
 export async function sceneInfo(page: Page): Promise<Record<string, unknown>> {

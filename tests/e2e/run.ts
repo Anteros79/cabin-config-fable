@@ -555,6 +555,8 @@ try {
     await settle(page, 400);
     const orbited = await position();
     expect(orbited !== home, "drag orbits");
+    // the wheel zooms while the view has focus (a click gives it focus; see the wheel check below for the unfocused case)
+    await page.focus("canvas");
     await page.mouse.wheel(0, -600);
     await settle(page, 400);
     const zoomed = await position();
@@ -581,6 +583,148 @@ try {
     await settle(page, 300);
     expect((await position()) !== home, "camera buttons work");
     await page.click(".toolbar button:has-text('Reset')");
+  });
+  await check("a camera preset eases along an arc and drawing stops when it arrives; with reduced motion it cuts (WEB-21)", async () => {
+    await page.click(".toolbar button:has-text('Reset')");
+    await settle(page, 300);
+    const start = await cameraOf(page);
+    await page.click(".toolbar button:has-text('Aisle')");
+    const samples: number[][] = [];
+    for (let i = 0; i < 6; i++) {
+      samples.push(await cameraOf(page));
+      await page.waitForTimeout(50);
+    }
+    await settle(page, 300);
+    const end = await cameraOf(page);
+    const apart = (a: number[], b: number[]) => Math.max(...a.map((v, i) => Math.abs(v - (b[i] ?? Number.NaN))));
+    expect(
+      samples.some((p) => apart(p, start) > 0.05 && apart(p, end) > 0.05),
+      "the camera passes through poses between the two presets",
+    );
+    const arrived = await sceneInfo(page);
+    equal([arrived.view, arrived.transitioning, arrived.framePending], ["aisle", false, false], "arrived, no frame pending");
+    await page.waitForTimeout(300);
+    equal((await sceneInfo(page)).frames, arrived.frames, "no frames drawn once the camera is still");
+    // prefers-reduced-motion, read when it changes: presets cut and the orbit does not glide
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.waitForFunction(() => window.__cabinKit!.scene!.describeScene().reducedMotion === true);
+    equal((await sceneInfo(page)).damping, false, "orbit damping is off with reduced motion");
+    await page.click(".toolbar button:has-text('Overhead')");
+    const cut = await sceneInfo(page);
+    equal([cut.view, cut.transitioning], ["overhead", false], "the preset is reached at once");
+    const placed = await cameraOf(page);
+    await settle(page, 200);
+    sameCamera(await cameraOf(page), placed, "with reduced motion");
+    await page.emulateMedia({ reducedMotion: null });
+    await page.waitForFunction(() => window.__cabinKit!.scene!.describeScene().reducedMotion === false);
+    equal((await sceneInfo(page)).damping, true, "damping is back without reduced motion");
+    await page.click(".toolbar button:has-text('Reset')");
+    await settle(page, 300);
+  });
+  await check("the wheel scrolls the page past the view until the view has focus, with a hint once; Ctrl or focus zooms (WEB-21)", async () => {
+    await page.click(".toolbar button:has-text('Reset')");
+    await settle(page, 300);
+    await page.evaluate(() => {
+      sessionStorage.removeItem("cabin-kit.wheel-hint-shown");
+      window.scrollTo(0, 0);
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    const overCanvas = async () => {
+      const box = (await page.locator("canvas").boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + Math.min(box.height / 2, 120));
+    };
+    const home = await cameraOf(page);
+    await overCanvas();
+    await page.mouse.wheel(0, 240);
+    await page.waitForFunction(() => window.scrollY > 0);
+    equal(await page.textContent(".canvas-hint"), "Click the view, then scroll to zoom", "the hint");
+    await settle(page, 200);
+    sameCamera(await cameraOf(page), home, "by an unfocused wheel");
+    equal((await sceneInfo(page)).view, "cutaway", "an unfocused wheel keeps the preset");
+    await page.waitForSelector(".canvas-hint", { state: "detached", timeout: 3000 });
+    await page.mouse.wheel(0, -240);
+    await page.waitForFunction(() => window.scrollY === 0);
+    await page.waitForTimeout(150);
+    equal(await page.locator(".canvas-hint").count(), 0, "the hint shows at most once per session");
+    // Ctrl and the wheel zoom without focus
+    await overCanvas();
+    await page.keyboard.down("Control");
+    await page.mouse.wheel(0, -240);
+    await page.keyboard.up("Control");
+    await settle(page, 300);
+    expect(JSON.stringify(await cameraOf(page)) !== JSON.stringify(home), "Ctrl and the wheel zoom");
+    equal(await page.evaluate(() => window.scrollY), 0, "Ctrl and the wheel do not scroll the page");
+    // a click gives the view focus; then the wheel zooms
+    await page.click(".toolbar button:has-text('Reset')");
+    await settle(page, 300);
+    await page.focus("canvas");
+    await overCanvas();
+    await page.mouse.wheel(0, -240);
+    await settle(page, 300);
+    expect(JSON.stringify(await cameraOf(page)) !== JSON.stringify(home), "a focused view zooms");
+    equal(await page.evaluate(() => window.scrollY), 0, "a focused view does not scroll the page");
+    equal((await sceneInfo(page)).view, "free", "a zoom by hand leaves the preset");
+    await page.click(".toolbar button:has-text('Reset')");
+    await settle(page, 300);
+  });
+  await check("an unmoved preset re-frames on resize, also after a pick, which never moves the camera (WEB-09)", async () => {
+    await page.click(".toolbar button:has-text('Reset')");
+    await settle(page, 300);
+    const home = await cameraOf(page);
+    await page.setViewportSize({ width: 1180, height: 760 });
+    await settle(page, 400);
+    const refit = await cameraOf(page);
+    expect(Math.max(...refit.map((v, i) => Math.abs(v - (home[i] ?? 0)))) > 0.05, "the preset is fitted to the new shape");
+    equal((await sceneInfo(page)).view, "cutaway", "still the preset after a resize");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await settle(page, 400);
+    sameCamera(await cameraOf(page), home, "back at the first size");
+    // a click that picks fires no camera change: the preset stays, and the next resize re-frames it
+    await clickLocation(page, "SEAT:14C", "head");
+    await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 14C");
+    await settle(page, 200);
+    sameCamera(await cameraOf(page), home, "by a pick in the canvas");
+    equal((await sceneInfo(page)).view, "cutaway", "a pick keeps the preset");
+    await page.setViewportSize({ width: 1180, height: 760 });
+    await settle(page, 400);
+    sameCamera(await cameraOf(page), refit, "a picked-in preset is re-framed like an unmoved one");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await settle(page, 400);
+  });
+  await check("a location chosen in the work list while 3D shows is brought into view if it is off to the side", async () => {
+    await cam(page, "focus", "SEAT:25A");
+    await settle(page);
+    await page.locator(".worklist button[aria-label^='Show Seat 7C']").first().click();
+    await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 7C");
+    await settle(page);
+    const info = await sceneInfo(page);
+    const target = (info.camera as { target: number[] }).target;
+    const seatX = await page.evaluate(() => {
+      const scene = window.__cabinKit!.scene as unknown as { layout: { locations: { id: string; placement: { x: number } }[] } };
+      return scene.layout.locations.find((l) => l.id === "SEAT:7C")!.placement.x;
+    });
+    equal(info.view, "focus", "framed on the chosen seat");
+    expect(Math.abs((target[0] ?? 0) - seatX) < 0.5, `the camera looks at seat 7C (target ${JSON.stringify(target)}, seat x ${seatX})`);
+    const point = (await page.evaluate(() => window.__cabinKit!.scene!.screenPointOf("SEAT:7C", "head")))!;
+    const box = (await page.locator("canvas").boundingBox())!;
+    expect(
+      Math.abs(point.x - (box.x + box.width / 2)) < box.width * 0.4 && Math.abs(point.y - (box.y + box.height / 2)) < box.height * 0.4,
+      "the seat is in the central part of the view",
+    );
+    // chosen while already in view: the camera stays
+    await page.click(".toolbar button:has-text('Overhead')");
+    await settle(page);
+    await clickLocation(page, "SEAT:20C", "pan");
+    await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 20C");
+    await settle(page, 200);
+    const overhead = await cameraOf(page);
+    await page.locator(".worklist button[aria-label^='Show Seat 7C']").first().click();
+    await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 7C");
+    await settle(page, 300);
+    sameCamera(await cameraOf(page), overhead, "for a location already in view");
+    equal((await sceneInfo(page)).view, "overhead", "the preset stays");
+    await page.click(".toolbar button:has-text('Reset')");
+    await settle(page, 300);
   });
   await check("whole cabin is framed to fill the view", async () => {
     await page.click(".toolbar button:has-text('Reset')");
@@ -782,7 +926,8 @@ try {
     await page.evaluate(() => (window.__cabinKit!.scene!.pickLatencies.length = 0));
     for (const seat of ["SEAT:5C", "SEAT:8D", "SEAT:11C", "SEAT:14D", "SEAT:18C", "SEAT:22D", "SEAT:3C", "SEAT:9D", "SEAT:16C", "SEAT:25D"]) {
       await cam(page, "focus", seat);
-      await page.waitForTimeout(140);
+      // the camera eases to the seat: aim once it has arrived
+      await settle(page, 140);
       await clickLocation(page, seat);
       await page.waitForFunction((label) => document.querySelector("#inspector-heading")?.textContent === label, `Seat ${seat.split(":")[1]}`);
       await page.waitForTimeout(80);
@@ -1335,13 +1480,19 @@ try {
     await m.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 6D");
   });
   await check("mobile: the end of a two-finger gesture selects nothing and a URL-bar resize keeps a moved camera", async () => {
-    const near = (await m.evaluate(() => window.__cabinKit!.scene!.screenPointOf("SEAT:6D", "head")))!;
-    const other = (await m.evaluate(() => window.__cabinKit!.scene!.screenPointOf("SEAT:6E", "head")))!;
+    // From above, every seat pan is a separate target: each finger lands on a seat other than the selected 6D, so a
+    // gesture that picked would change the selection.
+    await m.evaluate(() => window.__cabinKit!.scene!.setCamera("overhead"));
+    await settle(m);
+    await m.locator("canvas").scrollIntoViewIfNeeded();
+    const point = (id: string) => m.evaluate((seat) => window.__cabinKit!.scene!.screenPointOf(seat, "pan"), id);
+    const other = (await point("SEAT:6E"))!;
+    const third = (await point("SEAT:8B"))!;
     const cdp = await m.context().newCDPSession(m);
     const finger = (id: number, p: { x: number; y: number }, dx = 0) => ({ x: p.x + dx, y: p.y, id, radiusX: 4, radiusY: 4, force: 1 });
     // Two fingers down, then lifted one at a time without moving: a pinch held still, then a two-finger tap on one seat.
     const gestures: [ReturnType<typeof finger>, ReturnType<typeof finger>][] = [
-      [finger(1, near), finger(2, other)],
+      [finger(1, other), finger(2, third)],
       [finger(1, other), finger(2, other, 3)],
     ];
     for (const [a, b] of gestures) {
@@ -1365,6 +1516,50 @@ try {
     await settle(m, 400);
     sameCamera(await cameraOf(m), moved, "after the viewport height changed");
     equal((await sceneInfo(m)).view, "free", "a nudge leaves the preset");
+  });
+  await check("mobile: a one-finger vertical drag on the view scrolls the page; a sideways drag orbits (WEB-21)", async () => {
+    await m.tap(".toolbar button:has-text('Reset')");
+    await settle(m);
+    await m.evaluate(() => document.querySelector("canvas")!.scrollIntoView({ block: "center" }));
+    await m.waitForTimeout(200);
+    const heading = await m.textContent("#inspector-heading");
+    const home = await cameraOf(m);
+    const box = (await m.locator("canvas").boundingBox())!;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const cdp = await m.context().newCDPSession(m);
+    const drag = async (from: { x: number; y: number }, to: { x: number; y: number }) => {
+      const at = (t: number) => [{ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, id: 1, radiusX: 4, radiusY: 4, force: 1 }];
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(0) });
+      for (let i = 1; i <= 12; i++) {
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: at(i / 12) });
+        await m.waitForTimeout(16);
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    };
+    const scrollBefore = await m.evaluate(() => window.scrollY);
+    await drag({ x: cx, y: cy + 90 }, { x: cx, y: cy - 90 });
+    await settle(m, 400);
+    const scrolled = (await m.evaluate(() => window.scrollY)) - scrollBefore;
+    expect(scrolled > 40, `a vertical drag scrolled the page by ${scrolled}px`);
+    sameCamera(await cameraOf(m), home, "by a vertical drag");
+    equal((await sceneInfo(m)).view, "cutaway", "a vertical drag keeps the preset");
+    equal(await m.textContent("#inspector-heading"), heading, "a vertical drag selects nothing");
+    // sideways: the view orbits and the page stays
+    await m.evaluate(() => document.querySelector("canvas")!.scrollIntoView({ block: "center" }));
+    await m.waitForTimeout(200);
+    const sideBox = (await m.locator("canvas").boundingBox())!;
+    const scrollSide = await m.evaluate(() => window.scrollY);
+    const y = sideBox.y + sideBox.height / 2;
+    await drag({ x: sideBox.x + sideBox.width * 0.25, y }, { x: sideBox.x + sideBox.width * 0.75, y });
+    await settle(m, 500);
+    expect(JSON.stringify(await cameraOf(m)) !== JSON.stringify(home), "a sideways drag orbits");
+    equal((await sceneInfo(m)).view, "free", "a sideways drag leaves the preset");
+    expect(Math.abs((await m.evaluate(() => window.scrollY)) - scrollSide) <= 2, "a sideways drag does not scroll the page");
+    equal(await m.textContent("#inspector-heading"), heading, "a sideways drag selects nothing");
+    await cdp.detach();
+    await m.tap(".toolbar button:has-text('Reset')");
+    await settle(m);
   });
   await check("mobile: record through the map with touch-sized targets, complete and read the report", async () => {
     await m.tap("#tab-map");
@@ -1401,6 +1596,25 @@ try {
     expect(overflow <= 1, `report overflows horizontally by ${overflow}px`);
     await m.screenshot({ path: join(OUT, "mobile-report.png") });
     expect(mobileVisit.length === 36, "visit id");
+  });
+  const calmBrowser = browser;
+  await check("a scene that starts with reduced motion on cuts between presets and does not glide (WEB-21)", async () => {
+    const calm = await calmBrowser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+    const p = await calm.newPage();
+    const errors: string[] = [];
+    p.on("pageerror", (e) => errors.push(e.message));
+    try {
+      await p.goto(`${server.url}/#/visit/${mobileVisit}`);
+      await waitFor3D(p);
+      const info = await sceneInfo(p);
+      equal([info.reducedMotion, info.damping], [true, false], "reduced motion read at start");
+      await p.click(".toolbar button:has-text('Aisle')");
+      const cut = await sceneInfo(p);
+      equal([cut.view, cut.transitioning], ["aisle", false], "the preset is reached at once");
+      equal(errors, [], "no page errors");
+    } finally {
+      await calm.close();
+    }
   });
   await check("axe on mobile: visit map and report", async () => {
     await axe(m, "mobile-report");

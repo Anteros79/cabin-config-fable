@@ -642,12 +642,28 @@ ul.plain {
   width: 100%;
   height: 100%;
   display: block;
-  touch-action: none;
+  /* one finger: a vertical drag scrolls the page, a sideways drag orbits; two fingers pinch and pan the view */
+  touch-action: pan-y;
   cursor: grab;
 }
 /* the wrapper clips overflow, so the ring is drawn inside the canvas */
 .canvas-wrap canvas:focus-visible {
   outline-offset: -3px;
+}
+/* shown for 2 s when the wheel scrolls the page past an unfocused view */
+.canvas-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0.75rem;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
 }
 .canvas-note {
   position: absolute;

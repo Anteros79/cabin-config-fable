@@ -3,10 +3,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FORWARD_MARGIN } from "../../domain/geometry.ts";
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.ts";
+import { type CabinBounds, type CameraPose, clampTarget, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
 import { createEnvironment, ENVIRONMENT_INTENSITY, type LightMode } from "./environment.ts";
 import { createOverlayMaterial, createSeatMaterials, type SeatMaps, STATUS_COLOUR, setGhosted, TIER_COLOUR, upholsteryVariant } from "./materials.ts";
 import { createBadges, createFrame, createOutline, frameGeometry, HOVER_OUTLINE, hullGeometry, SELECTION_OUTLINE, type ViewportUniform } from "./outline.ts";
-import { PickGesture, type PointerSample } from "./pickGesture.ts";
+import { PickGesture, type PointerSample, TouchAxisLock } from "./pickGesture.ts";
 import { buildBinGeometry, buildSeatGeometries, SEAT, type SeatGeometries } from "./seatParts.ts";
 import {
   BADGE_ATLAS_SIZE,
@@ -47,8 +48,10 @@ export interface LocationState {
   components: Record<string, LocationStatus>;
 }
 export type ColourMode = "status" | "tier" | "none";
+/** A view setCamera() frames: the whole cabin, or the selected location ("focus", "focus-rear"). */
+export type PresetView = "cutaway" | "overhead" | "aisle" | "focus" | "focus-rear" | "carpet" | "bins";
 /** A preset view, or "free" once the user has moved the camera by hand (orbit, pan, zoom or a nudge). */
-export type CameraView = "cutaway" | "overhead" | "aisle" | "focus" | "focus-rear" | "carpet" | "bins" | "free";
+export type CameraView = PresetView | "free";
 export interface Layers {
   seats: boolean;
   floor: boolean;
@@ -60,6 +63,8 @@ export interface SceneCallbacks {
   /** the hovered location's label and the pointer's position in the canvas (CSS pixels), or null when nothing is hovered */
   onHover(hover: { label: string; x: number; y: number } | null): void;
   onContextLost(): void;
+  /** the wheel turned over the canvas without zooming (the view has no focus and no Ctrl or Cmd is held): the page scrolled */
+  onWheelPassedThrough?(): void;
 }
 
 /** Bin doors are pale: a status tints them halfway from white toward its colour. */
@@ -83,6 +88,14 @@ const BADGE_ABOVE_HEADREST = 0.075;
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 const WHITE = new THREE.Color("#ffffff");
 const FULL_CABIN = "FLOOR:FULL-CABIN";
+/** The cabin box the orbit target stays in (plus half a metre) is this tall: the top of the bins. */
+const CABIN_HEIGHT = 2.3;
+/** Ghosting of bins and walls fades over this long instead of popping (0 with reduced motion). */
+const GHOST_FADE_MS = 150;
+const BIN_GHOST_OPACITY = 0.16;
+const WALL_GHOST_OPACITY = 0.1;
+/** A location selected outside the canvas is framed when it projects outside this central part of the view. */
+const REVEAL_CENTRAL = 0.8;
 
 interface SeatEntry {
   location: CabinLocation;
@@ -221,8 +234,19 @@ export class CabinScene {
   /** every floor-area tint and the aisle strip's, as instances of one flat unit plane: one draw call (WEB-20) */
   private floorTint: THREE.InstancedMesh | null = null;
   private floorTintEntries: { locationId: string; matrix: THREE.Matrix4 }[] = [];
-  private binSides: { side: "L" | "R"; door: THREE.InstancedMesh; body: THREE.InstancedMesh; locations: CabinLocation[]; extras: THREE.Object3D[] }[] = [];
-  private contextSides: { side: "L" | "R"; wallMaterial: THREE.MeshStandardMaterial }[] = [];
+  /** `ghost` is where the side is going (and decides picking at once); `level` fades toward it, 0 solid to 1 ghosted */
+  private binSides: {
+    side: "L" | "R";
+    door: THREE.InstancedMesh;
+    body: THREE.InstancedMesh;
+    locations: CabinLocation[];
+    extras: THREE.Object3D[];
+    ghost: boolean;
+    level: number;
+  }[] = [];
+  private contextSides: { side: "L" | "R"; wallMaterial: THREE.MeshStandardMaterial; ghost: boolean; level: number }[] = [];
+  /** when the ghosting fade last stepped; null while nothing fades */
+  private ghostClock: number | null = null;
   private states = new Map<string, LocationState>();
   private selection: string | null = null;
   private selectionMarks: Marks;
@@ -268,10 +292,19 @@ export class CabinScene {
   private needsRender = true;
   private disposed = false;
   private readonly gesture = new PickGesture();
+  private readonly touchAxis = new TouchAxisLock();
   private paused = false;
   private hoverPending: PointerEvent | null = null;
   private pickStamp: number | null = null;
   private currentView: CameraView = "cutaway";
+  /** a preset change on its way: eased along an arc from one pose to the next, a frame at a time (WEB-21) */
+  private transition: { from: CameraPose; to: CameraPose; fromFov: number; toFov: number; start: number; duration: number } | null = null;
+  /** true from the controls' start to their end: a change in between is the user's own, and leaves the preset */
+  private userGesture = false;
+  /** true while the scene itself moves the camera through the controls */
+  private placing = false;
+  private reducedMotion = false;
+  private motionQuery: MediaQueryList | null = null;
   /** the location a focus view was framed on, so a resize re-frames the same one */
   private viewLocation: string | null = null;
   private pickableFloorBins = true;
@@ -297,17 +330,31 @@ export class CabinScene {
       this.sceneResources.track(g);
     });
 
-    this.controls = new OrbitControls(this.camera, canvas);
-    this.controls.enableDamping = true;
+    // The wheel listener goes on before the controls connect theirs, so it runs first and can keep the wheel from them.
+    this.controls = new OrbitControls(this.camera);
+    canvas.addEventListener("wheel", this.onWheel);
+    this.controls.connect(canvas);
+    // the controls set touch-action: none inline; the stylesheet's pan-y lets a vertical drag scroll the page
+    canvas.style.touchAction = "";
     this.controls.dampingFactor = 0.12;
-    this.controls.minDistance = 0.4;
+    this.controls.minDistance = 0.8;
+    // set per layout from the cabin length
     this.controls.maxDistance = 90;
-    this.controls.maxPolarAngle = Math.PI * 0.62;
-    // Any orbit, pan or zoom by hand leaves the preset: from then on a resize keeps the camera where the user put it (WEB-09).
+    // never below the floor: the camera stays above its target
+    this.controls.maxPolarAngle = Math.PI / 2 - 0.03;
+    // Any user input stops a running transition where it is. A change during the user's own gesture leaves the preset:
+    // from then on a resize keeps the camera where the user put it (WEB-09). A click that picks moves nothing, fires no
+    // change, and keeps the preset.
     this.controls.addEventListener("start", () => {
-      this.currentView = "free";
+      this.userGesture = true;
+      this.transition = null;
+    });
+    this.controls.addEventListener("end", () => {
+      this.userGesture = false;
     });
     this.controls.addEventListener("change", () => {
+      if (this.userGesture && !this.placing) this.currentView = "free";
+      this.keepTargetInBounds();
       this.updateGhosting();
       this.invalidate();
     });
@@ -357,6 +404,11 @@ export class CabinScene {
     canvas.addEventListener("pointerleave", this.onPointerLeave);
     canvas.addEventListener("webglcontextlost", this.onContextLost);
     document.addEventListener("visibilitychange", this.onVisibilityChange);
+    // prefers-reduced-motion: preset changes cut and the orbit does not glide; read now and whenever it changes. Set after
+    // the marks exist, since it updates the ghosting.
+    this.motionQuery = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    this.motionQuery?.addEventListener("change", this.onMotionChange);
+    this.setReducedMotion(this.motionQuery?.matches ?? false);
     this.applyProfile();
     this.resize();
     if (TEST_HOOKS) {
@@ -428,6 +480,10 @@ export class CabinScene {
           profile: this.palette.id,
           light: this.light,
           view: this.currentView,
+          transitioning: this.transition !== null,
+          ghostFading: this.ghostClock !== null,
+          reducedMotion: this.reducedMotion,
+          damping: this.controls.enableDamping,
           paused: this.paused,
           layers: this.layers,
           colourMode: this.colourMode,
@@ -480,7 +536,7 @@ export class CabinScene {
     this.layout = layout;
     this.pickableFloorBins = pickableFloorBins;
     this.buildLayout();
-    if (!sameRevision) this.setCamera("cutaway");
+    if (!sameRevision) this.frameView("cutaway", null, false);
   }
 
   /**
@@ -519,6 +575,7 @@ export class CabinScene {
     const length = layout.geometry.cabinLength;
     const halfW = layout.geometry.cabinHalfWidth;
     const rows = layout.rows.filter((r) => r.exists).length;
+    this.controls.maxDistance = length * 1.4;
 
     // seats ------------------------------------------------------------------------------------
     this.seats = layout.locations
@@ -727,7 +784,7 @@ export class CabinScene {
       psu.rotation.z = sign > 0 ? 0 : Math.PI;
       psu.position.set(FORWARD_MARGIN + (rows * layout.geometry.rowPitch) / 2, 1.648, sign * 1.55);
       this.groups.bins.add(doorMesh, bodyMesh, psu);
-      this.binSides.push({ side, door: doorMesh, body: bodyMesh, locations: mine, extras: [psu] });
+      this.binSides.push({ side, door: doorMesh, body: bodyMesh, locations: mine, extras: [psu], ghost: false, level: 0 });
     }
 
     // context (secondary, hidden by default) --------------------------------------------------
@@ -749,7 +806,7 @@ export class CabinScene {
       strip.position.set(length / 2, 1.63, sign * (halfW - 0.03));
       strip.userData.wash = true;
       this.groups.context.add(wall, strip);
-      this.contextSides.push({ side, wallMaterial });
+      this.contextSides.push({ side, wallMaterial, ghost: false, level: 0 });
     }
     for (const x of [0.02, length - 0.02]) {
       const bulkhead = new THREE.Mesh(own(new THREE.BoxGeometry(0.04, 2.25, halfW * 2)), std("#e2e4ea", 0.7, 0, { transparent: true, opacity: 0.55 }));
@@ -774,7 +831,7 @@ export class CabinScene {
     this.applyProfile();
     this.applyStates();
     this.applySelection();
-    this.updateGhosting();
+    this.updateGhosting(true);
     this.invalidate();
   }
 
@@ -932,27 +989,54 @@ export class CabinScene {
 
   /**
    * In an outside view, the bins and wall nearest the camera are ghosted and excluded from
-   * picking so they never block the seats; seen from above, both bin rows are ghosted.
+   * picking so they never block the seats; seen from above, both bin rows are ghosted. Picking follows at once; the look
+   * fades over 150 ms (WEB-21), or changes at once with reduced motion or when `instant` (a new layout).
    */
-  private updateGhosting(): void {
+  private updateGhosting(instant = false): void {
     const cam = this.camera.position;
     const inside = Math.abs(cam.z) < 0.7 && cam.y < 2.2;
     const offset = cam.clone().sub(this.controls.target);
     const above = offset.y / Math.max(offset.length(), 0.001) > 0.9 && cam.y > 4;
     for (const b of this.binSides) {
-      const near = !inside && (above || (b.side === "L" ? cam.z > 0.7 : cam.z < -0.7));
-      const ghost = near;
-      b.door.userData.ghost = ghost;
-      for (const o of [b.door, b.body, ...b.extras] as THREE.Mesh[]) {
-        setGhosted(o.material as THREE.Material, ghost, 0.16);
-      }
+      b.ghost = !inside && (above || (b.side === "L" ? cam.z > 0.7 : cam.z < -0.7));
+      b.door.userData.ghost = b.ghost;
     }
     for (const m of [this.selectionMarks, this.hoverMarks]) this.ghostOutline(m);
+    for (const c of this.contextSides) c.ghost = !inside && (c.side === "L" ? cam.z > 0.7 : cam.z < -0.7);
+    if (instant || this.reducedMotion) {
+      for (const g of [...this.binSides, ...this.contextSides]) g.level = g.ghost ? 1 : 0;
+      this.ghostClock = null;
+      this.applyGhostLevels();
+    } else if (this.ghostClock === null && [...this.binSides, ...this.contextSides].some((g) => g.level !== (g.ghost ? 1 : 0))) {
+      this.ghostClock = performance.now();
+      this.invalidate();
+    }
+  }
+
+  /** Move each ghosting level toward where it is going, by the time since the last step; the clock stops when all arrive. */
+  private stepGhostFade(now: number): void {
+    if (this.ghostClock === null) return;
+    const step = Math.max(now - this.ghostClock, 0) / GHOST_FADE_MS;
+    this.ghostClock = now;
+    let fading = false;
+    for (const g of [...this.binSides, ...this.contextSides]) {
+      const goal = g.ghost ? 1 : 0;
+      g.level = goal > g.level ? Math.min(goal, g.level + step) : Math.max(goal, g.level - step);
+      if (g.level !== goal) fading = true;
+    }
+    this.applyGhostLevels();
+    if (!fading) this.ghostClock = null;
+  }
+
+  private applyGhostLevels(): void {
+    for (const b of this.binSides) {
+      for (const o of [b.door, b.body, ...b.extras] as THREE.Mesh[]) {
+        setGhosted(o.material as THREE.Material, b.level > 0, THREE.MathUtils.lerp(1, BIN_GHOST_OPACITY, b.level));
+      }
+    }
     for (const c of this.contextSides) {
-      const near = !inside && (c.side === "L" ? cam.z > 0.7 : cam.z < -0.7);
-      const wall = c.wallMaterial;
-      wall.opacity = near ? 0.1 : 1;
-      wall.depthWrite = !near;
+      c.wallMaterial.opacity = THREE.MathUtils.lerp(1, WALL_GHOST_OPACITY, c.level);
+      c.wallMaterial.depthWrite = c.level === 0;
     }
   }
 
@@ -1166,16 +1250,163 @@ export class CabinScene {
     return new THREE.Box3(new THREE.Vector3(0, 0, -g.cabinHalfWidth), new THREE.Vector3(g.cabinLength, this.layers.bins ? 2.3 : 1.25, g.cabinHalfWidth));
   }
 
-  /** Frame the cabin or a location. Views are fitted to the viewport so the cabin fills it. */
-  setCamera(view: CameraView, locationId?: string | null): void {
+  /** The cabin box for the camera rig: the target stays inside it plus half a metre. */
+  private bounds(): CabinBounds | null {
+    const g = this.layout?.geometry;
+    return g ? { length: g.cabinLength, halfWidth: g.cabinHalfWidth, height: CABIN_HEIGHT } : null;
+  }
+
+  private pose(): CameraPose {
+    return { position: this.camera.position.clone(), target: this.controls.target.clone() };
+  }
+
+  /** On every change the target is kept in the cabin box: the camera moves with it, so a pan stops at the edge instead of turning the view. */
+  private keepTargetInBounds(): void {
+    const bounds = this.bounds();
+    if (!bounds) return;
+    const clamped = clampTarget(this.controls.target, bounds);
+    if (clamped.equals(this.controls.target)) return;
+    this.camera.position.add(clamped.clone().sub(this.controls.target));
+    this.controls.target.copy(clamped);
+  }
+
+  /** Move the camera through the controls without that counting as the user's own move. */
+  private place(fn: () => void): void {
+    const placing = this.placing;
+    this.placing = true;
+    try {
+      fn();
+    } finally {
+      this.placing = placing;
+    }
+  }
+
+  /** Spend what is left of a glide from an earlier drag at once, so it does not carry on into a preset. */
+  private stopGlide(): void {
+    const damping = this.controls.enableDamping;
+    this.controls.enableDamping = false;
+    this.place(() => this.controls.update());
+    this.controls.enableDamping = damping;
+  }
+
+  /**
+   * Frame the cabin or a location. Views are fitted to the viewport so the cabin fills it. The camera eases there from
+   * wherever it is, along an arc, in 250–700 ms; with reduced motion it cuts. A new call or any user input stops a
+   * running transition where it is. "free" is not a preset: it is what the user's own moves make.
+   */
+  setCamera(view: PresetView, locationId?: string | null): void {
+    if ((view as CameraView) === "free") return;
+    this.frameView(view, locationId ?? null, true);
+  }
+
+  /**
+   * Frame a location selected outside the canvas (map, list, work list, go-to), if it is not already in view: when it
+   * projects outside the central 80 % of the view or a bin hides it, the camera moves to it. True if it moved.
+   */
+  revealLocation(locationId: string): boolean {
+    if (!this.layout || this.paused) return false;
+    const location = this.layout.locations.find((l) => l.id === locationId);
+    if (!location) return false;
+    const point = this.boxOf(location).centre;
+    this.camera.updateMatrixWorld();
+    const v = point.clone().project(this.camera);
+    const outside = Math.abs(v.z) > 1 || Math.abs(v.x) > REVEAL_CENTRAL || Math.abs(v.y) > REVEAL_CENTRAL;
+    if (!outside && !this.hiddenByBins(location, point)) return false;
+    this.frameView("focus", locationId, true);
+    return true;
+  }
+
+  /** Whether a solid (unghosted) bin module lies between the camera and a point of a seat or floor area. */
+  private hiddenByBins(location: CabinLocation, point: THREE.Vector3): boolean {
+    if (location.kind === "BIN" || !this.layers.bins) return false;
+    const toPoint = point.clone().sub(this.camera.position);
+    const distance = toPoint.length();
+    this.raycaster.set(this.camera.position, toPoint.normalize());
+    this.raycaster.far = distance - 0.05;
+    const solid = this.binSides.filter((b) => !b.ghost).flatMap((b) => [b.door, b.body]);
+    const hit = this.raycaster.intersectObjects(solid, false).length > 0;
+    this.raycaster.far = Number.POSITIVE_INFINITY;
+    return hit;
+  }
+
+  /** Frame a view: at once (a new layout, a resize) or eased from the current pose. */
+  private frameView(view: PresetView, locationId: string | null, animate: boolean): void {
     if (!this.layout) return;
-    const g = this.layout.geometry;
+    this.transition = null;
+    this.stopGlide();
+    const from = this.pose();
+    const fromFov = this.camera.fov;
+    this.place(() => this.placePreset(view, locationId ?? this.selection));
+    const to = this.pose();
+    const toFov = this.camera.fov;
+    const duration = animate ? transitionMs(from, to, this.reducedMotion) : 0;
+    if (duration > 0) {
+      this.transition = { from, to, fromFov, toFov, start: performance.now(), duration };
+      // back to where it starts; the frames move it
+      this.applyPose(from, fromFov);
+    }
+    this.updateGhosting();
+    this.invalidate();
+  }
+
+  private applyPose(pose: CameraPose, fov: number): void {
+    this.camera.position.copy(pose.position);
+    this.controls.target.copy(pose.target);
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
+    this.camera.lookAt(pose.target);
+  }
+
+  /** One frame of a running transition; the controls' update() that follows draws it. */
+  private stepTransition(now: number): void {
+    const t = this.transition;
+    if (!t) return;
+    const progress = Math.min((now - t.start) / t.duration, 1);
+    const eased = easeInOutCubic(progress);
+    this.applyPose(interpolatePose(t.from, t.to, eased), THREE.MathUtils.lerp(t.fromFov, t.toFov, eased));
+    if (progress >= 1) this.transition = null;
+    this.needsRender = true;
+  }
+
+  private onMotionChange = (e: MediaQueryListEvent) => {
+    this.setReducedMotion(e.matches);
+  };
+
+  private setReducedMotion(reduced: boolean): void {
+    this.reducedMotion = reduced;
+    this.controls.enableDamping = !reduced;
+    if (reduced && this.transition) {
+      // a transition under way finishes at once
+      this.applyPose(this.transition.to, this.transition.toFov);
+      this.transition = null;
+      this.place(() => this.controls.update());
+    }
+    if (reduced) this.updateGhosting(true);
+    this.invalidate();
+  }
+
+  /** Put the camera on a preset, at once. */
+  private placePreset(view: PresetView, locationId: string | null): void {
+    const layout = this.layout;
+    if (!layout) return;
+    const g = layout.geometry;
     const aspect = this.camera.aspect;
     const centre = new THREE.Vector3(g.cabinLength / 2, 0.75, 0);
     this.camera.fov = 36;
+    const location = locationId ? layout.locations.find((l) => l.id === locationId) : undefined;
+    if ((view === "focus" || view === "focus-rear") && !location) {
+      this.placePreset("cutaway", null);
+      return;
+    }
     this.currentView = view;
-    const location = this.layout.locations.find((l) => l.id === (locationId ?? this.selection));
     this.viewLocation = location?.id ?? null;
+    const set = (position: THREE.Vector3, target: THREE.Vector3, fov = 36) => {
+      this.camera.fov = fov;
+      this.camera.position.copy(position);
+      this.controls.target.copy(target);
+      this.camera.updateProjectionMatrix();
+      this.controls.update();
+    };
     if (view === "cutaway") {
       // Seen from the forward quarter so the cabin recedes and fills the frame instead of lying as a thin strip.
       const dir = aspect >= 1.15 ? new THREE.Vector3(-0.52, 0.52, 0.68) : new THREE.Vector3(-0.86, 0.72, 0.34);
@@ -1184,60 +1415,31 @@ export class CabinScene {
       const dir = aspect >= 1 ? new THREE.Vector3(0, 1, 0.12) : new THREE.Vector3(-0.12, 1, 0);
       this.fit(dir, new THREE.Vector3(g.cabinLength / 2, 0, 0), this.cabinBox(), 0.96);
     } else if (view === "aisle") {
-      this.camera.fov = 62;
-      this.camera.position.set(0.2, 1.78, 0);
-      this.controls.target.set(Math.min(7, g.cabinLength), 0.85, 0);
-      this.camera.updateProjectionMatrix();
-      this.controls.update();
+      set(new THREE.Vector3(0.2, 1.78, 0), new THREE.Vector3(Math.min(7, g.cabinLength), 0.85, 0), 62);
     } else if (view === "carpet") {
       const x = Math.min(g.cabinLength / 2, 6);
-      this.camera.fov = 50;
-      this.camera.position.set(x - 0.3, 2.05, 0);
-      this.controls.target.set(x, 0, 0);
-      this.camera.updateProjectionMatrix();
-      this.controls.update();
+      set(new THREE.Vector3(x - 0.3, 2.05, 0), new THREE.Vector3(x, 0, 0), 50);
     } else if (view === "bins") {
+      // from standing height: the camera stays above its target (maxPolarAngle), so it does not look up at the bins
       const x = Math.min(g.cabinLength / 2, 6.2);
-      this.camera.fov = 52;
-      this.camera.position.set(x - 1.5, 1.2, 0.3);
-      this.controls.target.set(x + 0.7, 1.5, -1.3);
-      this.camera.updateProjectionMatrix();
-      this.controls.update();
-    } else if (location) {
+      set(new THREE.Vector3(x - 1.5, 1.62, 0.3), new THREE.Vector3(x + 0.7, 1.5, -1.3), 52);
+    } else if (location && view === "focus-rear" && location.kind === "SEAT") {
       const p = location.placement;
-      if (location.kind === "SEAT") {
-        const toAisle = p.z > 0 ? -1 : 1;
-        if (view === "focus-rear") {
-          this.camera.position.set(p.x + 1.3, 1.34, p.z + toAisle * 0.42);
-          this.controls.target.set(p.x + 0.32, 0.8, p.z);
-        } else {
-          this.camera.position.set(p.x - 1.35, 1.46, p.z + toAisle * 0.5);
-          this.controls.target.set(p.x + 0.12, 0.86, p.z);
-        }
-      } else if (location.kind === "FLOOR") {
-        this.fit(
-          new THREE.Vector3(-0.35, 1, 0.5),
-          new THREE.Vector3(p.x, 0, 0),
-          new THREE.Box3(new THREE.Vector3(p.x - p.lx / 2, 0, -g.cabinHalfWidth), new THREE.Vector3(p.x + p.lx / 2, 1.2, g.cabinHalfWidth)),
-        );
-        return;
-      } else {
-        const sign = location.bin?.side === "L" ? 1 : -1;
-        this.camera.position.set(p.x - 1.7, 1.3, -sign * 0.35);
-        this.controls.target.set(p.x, 1.9, sign * 1.15);
-      }
-      this.camera.updateProjectionMatrix();
-      this.controls.update();
-    } else {
-      this.setCamera("cutaway");
-      return;
+      const toAisle = p.z > 0 ? -1 : 1;
+      set(new THREE.Vector3(p.x + 1.3, 1.34, p.z + toAisle * 0.42), new THREE.Vector3(p.x + 0.32, 0.8, p.z));
+    } else if (location) {
+      // "focus", and "focus-rear" of a floor area or bin: the location from the aisle side
+      const bounds = this.bounds();
+      if (!bounds) return;
+      const pose = poseToFrame(location.placement, location.kind, bounds);
+      set(pose.position, pose.target);
     }
-    this.updateGhosting();
-    this.invalidate();
   }
 
   /** Keyboard and button camera control: orbit, tilt and zoom around the current target. */
   nudge(action: "left" | "right" | "up" | "down" | "in" | "out"): void {
+    // user input: a running transition stops where it is
+    this.transition = null;
     const offset = this.camera.position.clone().sub(this.controls.target);
     const s = new THREE.Spherical().setFromVector3(offset);
     if (action === "left") s.theta -= 0.2;
@@ -1248,7 +1450,7 @@ export class CabinScene {
     if (action === "out") s.radius = Math.min(this.controls.maxDistance, s.radius * 1.25);
     this.currentView = "free";
     this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(s));
-    this.controls.update();
+    this.place(() => this.controls.update());
     this.updateGhosting();
     this.invalidate();
   }
@@ -1301,11 +1503,15 @@ export class CabinScene {
   // Only a short, still, primary left press picks; a right click, a drag, a long press or the end of a pinch does not (WEB-12).
   private onPointerDown = (e: PointerEvent) => {
     if (this.paused) return;
-    this.gesture.down(CabinScene.sample(e));
+    const sample = CabinScene.sample(e);
+    this.gesture.down(sample);
+    if (e.pointerType === "touch") this.touchAxis.down(sample);
   };
 
   private onPointerUp = (e: PointerEvent) => {
-    const at = this.gesture.up(CabinScene.sample(e));
+    const sample = CabinScene.sample(e);
+    if (e.pointerType === "touch") this.touchAxis.up(sample);
+    const at = this.gesture.up(sample);
     if (!at || this.paused) return;
     const hit = this.hit(at.x, at.y);
     if (!hit) return;
@@ -1314,15 +1520,19 @@ export class CabinScene {
   };
 
   private onPointerMove = (e: PointerEvent) => {
-    this.gesture.move(CabinScene.sample(e));
+    const sample = CabinScene.sample(e);
+    this.gesture.move(sample);
+    // The controls follow moves on the document: a one-finger vertical drag is kept from them, so only the page scrolls.
+    if (e.pointerType === "touch" && !this.touchAxis.move(sample)) e.stopPropagation();
     if (this.paused || e.pointerType === "touch" || e.buttons !== 0) return;
     this.hoverPending = e;
     // hover is resolved in the next frame, which draws only if the hover mark changed
     this.requestFrame();
   };
 
-  private onPointerCancel = () => {
+  private onPointerCancel = (e: PointerEvent) => {
     this.gesture.cancel();
+    this.touchAxis.up(CabinScene.sample(e));
   };
 
   private onPointerLeave = () => {
@@ -1373,7 +1583,7 @@ export class CabinScene {
     const changed = Math.abs(this.camera.aspect - w / h) > 0.001;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    if (changed && this.layout && this.currentView !== "free") this.setCamera(this.currentView, this.viewLocation);
+    if (changed && this.layout && this.currentView !== "free") this.frameView(this.currentView, this.viewLocation, false);
     this.invalidate();
   }
 
@@ -1386,6 +1596,7 @@ export class CabinScene {
     this.paused = paused;
     this.controls.enabled = !paused;
     this.gesture.cancel();
+    this.touchAxis.cancel();
     this.hoverPending = null;
     if (paused) {
       this.cancelFrame();
@@ -1430,7 +1641,10 @@ export class CabinScene {
     } else this.invalidate();
   };
 
-  /** One frame. It requests the next only while the orbit damping is settling or measure() is running. */
+  /**
+   * One frame. It requests the next only while the orbit damping is settling, a camera transition or a ghosting fade is
+   * running, or measure() is running: once the camera settles, frames stop.
+   */
   private renderFrame = () => {
     this.frame = 0;
     if (this.disposed || this.paused) return;
@@ -1439,6 +1653,13 @@ export class CabinScene {
     try {
       this.measureStep?.();
       this.processHover();
+      const now = performance.now();
+      this.stepTransition(now);
+      // the step that ends a fade changes the look too
+      if (this.ghostClock !== null) {
+        this.stepGhostFade(now);
+        this.needsRender = true;
+      }
       settling = this.controls.update();
       if (settling) this.needsRender = true;
       if (this.needsRender) {
@@ -1450,7 +1671,17 @@ export class CabinScene {
     } finally {
       this.inFrame = false;
     }
-    if (settling || this.measureStep || this.needsRender) this.requestFrame();
+    if (settling || this.measureStep || this.needsRender || this.transition || this.ghostClock !== null) this.requestFrame();
+  };
+
+  /**
+   * The wheel zooms only while the view has focus or Ctrl or Cmd is held. Otherwise the controls never see it and the page
+   * scrolls past the canvas as it would past anything else (WEB-21).
+   */
+  private onWheel = (e: WheelEvent) => {
+    if (document.activeElement === this.canvas || e.ctrlKey || e.metaKey) return;
+    e.stopImmediatePropagation();
+    if (!this.paused) this.callbacks.onWheelPassedThrough?.();
   };
 
   dispose(): void {
@@ -1460,6 +1691,8 @@ export class CabinScene {
     this.cancelFrame();
     this.measureStep?.();
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
+    this.motionQuery?.removeEventListener("change", this.onMotionChange);
+    this.canvas.removeEventListener("wheel", this.onWheel);
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.canvas.removeEventListener("pointerup", this.onPointerUp);
     this.canvas.removeEventListener("pointermove", this.onPointerMove);

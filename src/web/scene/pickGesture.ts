@@ -53,3 +53,45 @@ export class PickGesture {
     this.candidate = null;
   }
 }
+
+/** A one-finger touch must move this far, in CSS pixels, before it is known whether it scrolls the page or orbits. */
+export const TOUCH_AXIS_SLOP_PX = 8;
+
+/**
+ * Who gets a one-finger touch drag on the canvas (WEB-21). The canvas has `touch-action: pan-y`, so the browser scrolls
+ * the page on a vertical drag, but it may deliver a few moves before it decides. A mostly vertical drag is the page's: the
+ * camera sees none of it. A mostly sideways drag orbits. Until the finger has moved far enough to tell, the camera sees
+ * nothing. With two fingers down the camera sees everything (pinch and pan).
+ */
+export class TouchAxisLock {
+  private readonly touches = new Map<number, { x: number; y: number }>();
+  private owner: "page" | "camera" | null = null;
+
+  down(p: { pointerId: number; x: number; y: number }): void {
+    this.touches.set(p.pointerId, { x: p.x, y: p.y });
+    this.owner = this.touches.size > 1 ? "camera" : null;
+  }
+
+  /** Whether the camera may see this move. */
+  move(p: { pointerId: number; x: number; y: number }): boolean {
+    const start = this.touches.get(p.pointerId);
+    if (!start) return true;
+    if (this.owner === null) {
+      const dx = p.x - start.x;
+      const dy = p.y - start.y;
+      if (Math.hypot(dx, dy) < TOUCH_AXIS_SLOP_PX) return false;
+      this.owner = Math.abs(dy) > Math.abs(dx) ? "page" : "camera";
+    }
+    return this.owner === "camera";
+  }
+
+  up(p: { pointerId: number }): void {
+    this.touches.delete(p.pointerId);
+    if (this.touches.size === 0) this.owner = null;
+  }
+
+  cancel(): void {
+    this.touches.clear();
+    this.owner = null;
+  }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../../domain/types.ts";
 import { STATUS_ENCODING, type Workspace } from "../model.ts";
-import type { CabinScene, CameraView, ColourMode, Layers, LightMode, LocationState, SceneTestHooks } from "../scene/CabinScene.ts";
+import type { CabinScene, ColourMode, Layers, LightMode, LocationState, PresetView, SceneTestHooks } from "../scene/CabinScene.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
 
 /** Only the e2e build (`npm run build:e2e`) exposes the scene on window; the shipped bundle never contains the hook. */
@@ -24,11 +24,31 @@ declare global {
   }
 }
 
-const CAMERA_BUTTONS: { view: CameraView; label: string; hint: string }[] = [
+const CAMERA_BUTTONS: { view: PresetView; label: string; hint: string }[] = [
   { view: "cutaway", label: "Cutaway", hint: "Whole cabin from outside; the near bins are ghosted" },
   { view: "overhead", label: "Overhead", hint: "Whole cabin from above" },
   { view: "aisle", label: "Aisle", hint: "Standing in the aisle looking aft" },
 ];
+
+/** The wheel hint shows for this long, at most once per browser session. */
+export const WHEEL_HINT_MS = 2000;
+export const WHEEL_HINT = "Click the view, then scroll to zoom";
+const WHEEL_HINT_KEY = "cabin-kit.wheel-hint-shown";
+/** used when session storage is blocked */
+let wheelHintShown = false;
+
+/** True the first time in this browser session, false after: the wheel hint is shown at most once. */
+function firstWheelHint(): boolean {
+  try {
+    if (sessionStorage.getItem(WHEEL_HINT_KEY) !== null) return false;
+    sessionStorage.setItem(WHEEL_HINT_KEY, "1");
+    return true;
+  } catch {
+    if (wheelHintShown) return false;
+    wheelHintShown = true;
+    return true;
+  }
+}
 
 /** The hover label sits this far right of and below the pointer, and flips to the other side near an edge. */
 const HOVER_OFFSET = 14;
@@ -61,6 +81,14 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   const onFailedRef = useRef(onFailed);
   onSelectRef.current = onSelect;
   onFailedRef.current = onFailed;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  /** the location last picked in the canvas: selecting it moves no camera */
+  const pickedRef = useRef<string | null>(null);
+  /** the selection the scene last showed; undefined before the first */
+  const shownSelectionRef = useRef<string | null | undefined>(undefined);
+  const [wheelHint, setWheelHint] = useState(false);
+  const wheelHintTimer = useRef<number | undefined>(undefined);
   const [ready, setReady] = useState(false);
   const [hover, setHover] = useState<{ label: string; x: number; y: number } | null>(null);
   const hoverRef = useRef<HTMLParagraphElement | null>(null);
@@ -83,9 +111,17 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
         const mod = await import("../scene/CabinScene.ts");
         if (cancelled || !canvasRef.current) return;
         scene = new mod.CabinScene(canvasRef.current, {
-          onPick: (locationId, componentId) => onSelectRef.current(locationId, componentId),
+          onPick: (locationId, componentId) => {
+            pickedRef.current = locationId;
+            onSelectRef.current(locationId, componentId);
+          },
           onHover: setHover,
           onContextLost: () => onFailedRef.current("The graphics context was lost."),
+          onWheelPassedThrough: () => {
+            if (!firstWheelHint()) return;
+            setWheelHint(true);
+            wheelHintTimer.current = window.setTimeout(() => setWheelHint(false), WHEEL_HINT_MS);
+          },
         });
         sceneRef.current = scene;
         if (TEST_HOOKS) window.__cabinKit = { scene: scene as CabinScene & SceneTestHooks };
@@ -96,6 +132,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(wheelHintTimer.current);
       scene?.dispose();
       sceneRef.current = null;
       if (TEST_HOOKS && window.__cabinKit) window.__cabinKit.scene = null;
@@ -113,8 +150,18 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   useEffect(() => {
     if (ready) sceneRef.current?.setStates(states);
   }, [ready, states]);
+  // A location selected outside the canvas (map, list, work list, go-to) while the 3D view shows is brought into view if
+  // it is off to the side or behind a bin. A pick in the canvas never moves the camera.
   useEffect(() => {
-    if (ready) sceneRef.current?.setSelection(selection);
+    const scene = sceneRef.current;
+    if (!ready || !scene) return;
+    scene.setSelection(selection);
+    const previous = shownSelectionRef.current;
+    shownSelectionRef.current = selection;
+    const picked = pickedRef.current === selection;
+    pickedRef.current = null;
+    if (previous === undefined || selection === null || selection === previous || picked || pausedRef.current) return;
+    scene.revealLocation(selection);
   }, [ready, selection]);
   useEffect(() => {
     if (ready) sceneRef.current?.setPaused(paused);
@@ -184,7 +231,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
       document.getElementById("inspector-heading")?.focus();
     }
   };
-  const camera = (view: CameraView) => sceneRef.current?.setCamera(view, selection);
+  const camera = (view: PresetView) => sceneRef.current?.setCamera(view, selection);
   const toggle = (key: keyof Layers) => setLayers((l) => ({ ...l, [key]: !l[key] }));
   const activeProfile = visualProfiles.find((p) => p.id === profile);
   const keysId = useId();
@@ -286,10 +333,16 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           <li>Plus and minus zoom in and out.</li>
           <li>Home resets the view.</li>
           <li>Enter goes to the parts for the selected location.</li>
-          <li>Drag to orbit, right-drag or two fingers to pan, wheel or pinch to zoom.</li>
+          <li>Drag to orbit, right-drag or two fingers to pan, pinch to zoom. The wheel zooms once the view has focus; until then it scrolls the page.</li>
+          <li>On a touch screen, drag up or down to scroll the page and sideways to orbit.</li>
           <li>Use the Map and list tab to select locations by keyboard.</li>
         </ul>
         {!ready && <p className="canvas-note">Starting 3D…</p>}
+        {wheelHint && (
+          <p className="canvas-hint" role="status">
+            {WHEEL_HINT}
+          </p>
+        )}
         {/* The live region announces selection; this label only follows the pointer. */}
         {hover && (
           <p className="hover-label" aria-hidden="true" ref={hoverRef}>
