@@ -82,7 +82,8 @@ export function readXlsx(bytes: Uint8Array): XlsxWorkbook {
     const rows: XlsxCellValue[][] = [];
     for (const rowMatch of xml.matchAll(/<row\s[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
       const rowIndex = Number(attr(rowMatch[0], "r") ?? rows.length + 1) - 1;
-      const row: XlsxCellValue[] = (rows[rowIndex] ??= []);
+      rows[rowIndex] ??= [];
+      const row: XlsxCellValue[] = rows[rowIndex];
       for (const c of (rowMatch[1] ?? "").matchAll(/<c\s[^>]*?(?:\/>|>([\s\S]*?)<\/c>)/g)) {
         const ref = attr(c[0].slice(0, c[0].indexOf(">") + 1), "r") ?? "";
         const type = attr(c[0].slice(0, c[0].indexOf(">") + 1), "t") ?? "n";

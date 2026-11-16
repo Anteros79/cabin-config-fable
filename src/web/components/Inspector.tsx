@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import type { CabinLocation, RecordInput, SourceArtifact, VisitRecord } from "../../domain/types.ts";
-import { componentsAt, describeSeat, sourceText, type ComponentView, type Workspace } from "../model.ts";
+import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
 
 export interface SaveState {
   status: "idle" | "saving" | "saved" | "error" | "unknown" | "conflict";
@@ -47,6 +47,7 @@ function ComponentCard({
   const [quantity, setQuantity] = useState<number>(record?.quantity ?? 1);
   const [note, setNote] = useState<string>(record?.note ?? "");
   // Re-sync the form when the saved record changes (saved, removed, or reloaded after a conflict).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.5
   useEffect(() => {
     setChoice(record?.substituteId ?? "PRIMARY");
     setQuantity(record?.quantity ?? 1);

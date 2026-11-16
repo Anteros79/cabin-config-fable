@@ -2,8 +2,8 @@ import { cpSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { validateRelease } from "../../src/domain/validate.ts";
-import { ORIGINAL_FILES } from "../../src/importer/candidate.ts";
 import { buildStagedRelease, defaultSourceRoot } from "../../src/importer/assemble.ts";
+import { ORIGINAL_FILES } from "../../src/importer/candidate.ts";
 import { parseCsv } from "../../src/importer/readers/csv.ts";
 import { cleanupTempDirs, errorsOf, fixtureContent, stagedFull, tempDir } from "../helpers.ts";
 

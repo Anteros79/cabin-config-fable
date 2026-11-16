@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PrepOverview } from "../../domain/prep.ts";
-import { api, ApiError } from "../api.ts";
+import { ApiError, api } from "../api.ts";
 
 interface Props {
   visitId: string | null;

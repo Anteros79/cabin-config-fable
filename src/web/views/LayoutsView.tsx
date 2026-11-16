@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { LayoutCategory, VisualProfile } from "../../domain/types.ts";
-import { api, ApiError, type LayoutDetail, type LayoutSummary } from "../api.ts";
+import { ApiError, api, type LayoutDetail, type LayoutSummary } from "../api.ts";
 import { Inspector } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import type { Workspace } from "../model.ts";

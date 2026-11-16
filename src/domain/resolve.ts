@@ -1,6 +1,6 @@
 import { isIsoDate, withinInclusive } from "./dates.ts";
 import { expandKit } from "./kits.ts";
-import { buildIndex, matchesContext, undominated, type AssignmentContext, type ReleaseIndex } from "./specificity.ts";
+import { type AssignmentContext, buildIndex, matchesContext, type ReleaseIndex, undominated } from "./specificity.ts";
 import type {
   ApplicabilityRule,
   ComponentResolution,
@@ -254,7 +254,9 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
         continue;
       }
       const children = expandKit(sub.altPartNo, index.kitChildrenByParent, index.parts);
-      children.forEach((c) => noteSource(c.sourceId));
+      children.forEach((c) => {
+        noteSource(c.sourceId);
+      });
       noteSource(sub.sourceId);
       substitutes.push({
         id: sub.id,
@@ -271,9 +273,13 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
       });
     }
     const pendingChanges = index.pendingByRule.get(rule.id) ?? [];
-    pendingChanges.forEach((p) => noteSource(p.sourceId));
+    pendingChanges.forEach((p) => {
+      noteSource(p.sourceId);
+    });
     const children = expandKit(rule.partNo, index.kitChildrenByParent, index.parts);
-    children.forEach((c) => noteSource(c.sourceId));
+    children.forEach((c) => {
+      noteSource(c.sourceId);
+    });
     noteSource(rule.sourceId);
     return {
       id: rule.id,
@@ -301,7 +307,9 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
       const eligible = covering.filter((c) => c.exclusions.length === 0).map((c) => c.rule);
       const excluded = covering.filter((c) => c.exclusions.length > 0).map((c) => ({ ruleId: c.rule.id, partNo: c.rule.partNo, reasons: c.exclusions }));
       if (eligible.length === 0) {
-        excluded.forEach((e) => noteSource(index.release.rules.find((r) => r.id === e.ruleId)?.sourceId ?? null));
+        excluded.forEach((e) => {
+          noteSource(index.release.rules.find((r) => r.id === e.ruleId)?.sourceId ?? null);
+        });
         counts.noMatch += 1;
         components.push({
           locationId: location.id,
@@ -317,7 +325,9 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
       }
       const winners = undominated(index, eligible);
       if (winners.length !== 1) {
-        winners.forEach((r) => noteSource(r.sourceId));
+        winners.forEach((r) => {
+          noteSource(r.sourceId);
+        });
         counts.ambiguous += 1;
         components.push({
           locationId: location.id,

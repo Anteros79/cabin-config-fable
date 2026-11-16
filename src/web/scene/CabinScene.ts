@@ -8,10 +8,10 @@ import {
   binDoorTexture,
   carpetTexture,
   PALETTES,
+  type ProfilePalette,
   rearShellTexture,
   serviceUnitTexture,
   sidewallTexture,
-  type ProfilePalette,
 } from "./textures.ts";
 
 export type LocationStatus = "recorded" | "unresolved" | "none";
@@ -106,7 +106,9 @@ export class CabinScene {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.geoms = buildSeatGeometries();
-    Object.values(this.geoms).forEach((g) => this.disposables.push(g));
+    Object.values(this.geoms).forEach((g) => {
+      this.disposables.push(g);
+    });
 
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;
@@ -195,7 +197,9 @@ export class CabinScene {
     this.floorMeshes = [];
     this.binSides = [];
     this.contextSides = [];
-    this.lights.wash.forEach((l) => this.scene.remove(l));
+    this.lights.wash.forEach((l) => {
+      this.scene.remove(l);
+    });
     this.lights.wash = [];
     const p = this.palette;
     const length = layout.geometry.cabinLength;
@@ -872,7 +876,9 @@ export class CabinScene {
     this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
     this.controls.dispose();
     for (const g of [this.groups.seats, this.groups.floor, this.groups.bins, this.groups.context]) this.clearGroup(g);
-    this.disposables.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => {
+      d.dispose();
+    });
     this.renderer.dispose();
   }
 }

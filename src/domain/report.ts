@@ -12,7 +12,9 @@ function locationOrder(snapshot: VisitSnapshot): Map<string, number> {
       (a.seat?.physicalRow ?? a.bin?.module ?? a.floor?.rowFrom ?? 0) - (b.seat?.physicalRow ?? b.bin?.module ?? b.floor?.rowFrom ?? 0) ||
       a.id.localeCompare(b.id),
   );
-  sorted.forEach((l, i) => order.set(l.id, i));
+  sorted.forEach((l, i) => {
+    order.set(l.id, i);
+  });
   return order;
 }
 
@@ -57,9 +59,13 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
     const rule = resolution.rules[r.ruleId];
     const sub = r.substituteId ? rule?.substitutes.find((s) => s.id === r.substituteId) : undefined;
     const main = r.lines.find((l) => l.role !== "MANDATORY_CHILD");
-    r.lines.forEach((l) => sourceIds.add(l.sourceId));
+    r.lines.forEach((l) => {
+      sourceIds.add(l.sourceId);
+    });
     if (rule) sourceIds.add(rule.sourceId);
-    rule?.pendingChanges.forEach((p) => p.sourceId && sourceIds.add(p.sourceId));
+    rule?.pendingChanges.forEach((p) => {
+      if (p.sourceId) sourceIds.add(p.sourceId);
+    });
     return {
       locationId: r.locationId,
       locationLabel: r.locationLabel,
@@ -103,7 +109,9 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
     }
   }
   const totals = [...totalsMap.values()].sort((a, b) => a.partNo.localeCompare(b.partNo) || a.unit.localeCompare(b.unit));
-  totals.forEach((t) => t.roles.sort());
+  totals.forEach((t) => {
+    t.roles.sort();
+  });
 
   const gaps = buildGaps(snapshot);
   const sources: SourceArtifact[] = [...sourceIds]

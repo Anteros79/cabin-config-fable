@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import type { CabinLocation } from "../../domain/types.ts";
-import { seatLabelFor, type LocationFlags, type Workspace } from "../model.ts";
+import { type LocationFlags, seatLabelFor, type Workspace } from "../model.ts";
 
 interface Props {
   workspace: Workspace;

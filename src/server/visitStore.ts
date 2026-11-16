@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { buildReport } from "../domain/report.ts";
 import type { Report, Visit, VisitEvent, VisitRecord, VisitSnapshot, VisitSummary } from "../domain/types.ts";
-import { deriveRecord, DomainError } from "../domain/visitLogic.ts";
+import { DomainError, deriveRecord } from "../domain/visitLogic.ts";
 import { canonicalJson } from "../importer/assemble.ts";
 import { isSameFile } from "./config.ts";
 import { inspectStore } from "./referenceStore.ts";

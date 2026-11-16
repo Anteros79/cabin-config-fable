@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LookupResult, RecordInput, Visit, VisitRecord, VisualProfile } from "../../domain/types.ts";
-import { api, ApiError, newKey, type VisitEnvelope } from "../api.ts";
+import { ApiError, api, newKey, type VisitEnvelope } from "../api.ts";
 import { Inspector, type SaveState } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import type { Workspace } from "../model.ts";
@@ -63,6 +63,7 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
   const [confirming, setConfirming] = useState(false);
   const pending = useRef<(() => void) | null>(null);
   const confirmRef = useRef<HTMLHeadingElement | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.5
   const lastDraft = useMemo(recall, [visitId]);
 
   useEffect(() => {

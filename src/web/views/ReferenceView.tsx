@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, ApiError, type ReferenceInfo } from "../api.ts";
+import { ApiError, api, type ReferenceInfo } from "../api.ts";
 
 const SEVERITY: Record<string, string> = { error: "Blocking", conflict: "Conflict / unresolved", warning: "Warning", info: "Information" };
 

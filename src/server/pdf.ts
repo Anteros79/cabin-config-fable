@@ -13,10 +13,13 @@ const HEADER_SPACE = 30;
 
 /** Standard PDF fonts are WinAnsi only; anything else is replaced so the document never fails. */
 function safe(text: unknown): string {
-  return String(text ?? "")
-    .replace(/[\u2192\u21d2]/g, "->")
-    .replace(/[\u2011\u2010]/g, "-")
-    .replace(/[^\x09\x0a\x0d\x20-\x7e\u00a0-\u00ff\u2013\u2014\u2018\u2019\u201c\u201d\u2022\u2026]/g, "?");
+  return (
+    String(text ?? "")
+      .replace(/[\u2192\u21d2]/g, "->")
+      .replace(/[\u2011\u2010]/g, "-")
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: the allow-list deliberately names tab, LF and CR
+      .replace(/[^\x09\x0a\x0d\x20-\x7e\u00a0-\u00ff\u2013\u2014\u2018\u2019\u201c\u201d\u2022\u2026]/g, "?")
+  );
 }
 
 function sourceLabel(report: Report, id: string): string {

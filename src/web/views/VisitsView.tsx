@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { VisitSummary } from "../../domain/types.ts";
-import { api, ApiError } from "../api.ts";
+import { ApiError, api } from "../api.ts";
 
 const PAGE = 25;
 

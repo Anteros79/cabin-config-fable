@@ -1,6 +1,6 @@
 import { intervalsOverlap, isIsoDate } from "./dates.ts";
 import { validateKits } from "./kits.ts";
-import { buildMatchSet, matchSetsEqual, type MatchSet } from "./specificity.ts";
+import { buildMatchSet, type MatchSet, matchSetsEqual } from "./specificity.ts";
 import type { ContextConstraint, Finding, LayoutRevision, ReleaseContent } from "./types.ts";
 
 function duplicates<T>(items: T[], key: (item: T) => string): string[] {

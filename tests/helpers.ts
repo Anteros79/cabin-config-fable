@@ -7,7 +7,7 @@ import { validateRelease } from "../src/domain/validate.ts";
 import { buildSnapshot } from "../src/domain/visitLogic.ts";
 import { buildStagedRelease, contentHash, type StagedBuild } from "../src/importer/assemble.ts";
 import { importReference } from "../src/importer/cli.ts";
-import { createApp, type AppHandle } from "../src/server/app.ts";
+import { type AppHandle, createApp } from "../src/server/app.ts";
 import { resolveServerConfig } from "../src/server/config.ts";
 import { VisitStore } from "../src/server/visitStore.ts";
 

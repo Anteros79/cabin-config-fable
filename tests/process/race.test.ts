@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { Report } from "../../src/domain/types.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import type { VisitStore } from "../../src/server/visitStore.ts";
-import { cleanupTempDirs, CUSHION_3A, makeStores, openVisits, snapshotFor, type TestStores } from "../helpers.ts";
+import { CUSHION_3A, cleanupTempDirs, makeStores, openVisits, snapshotFor, type TestStores } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 

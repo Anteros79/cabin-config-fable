@@ -5,7 +5,7 @@ import { buildReport } from "../../src/domain/report.ts";
 import { lookup } from "../../src/domain/resolve.ts";
 import { summarizeLocations } from "../../src/domain/summarize.ts";
 import type { KitChild, Part, Visit, VisitRecord, VisitSnapshot } from "../../src/domain/types.ts";
-import { buildSnapshot, deriveRecord, DomainError } from "../../src/domain/visitLogic.ts";
+import { buildSnapshot, DomainError, deriveRecord } from "../../src/domain/visitLogic.ts";
 import { CUSHION_3A, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, SIX_LINE_TOTALS, snapshotFor } from "../helpers.ts";
 
 const release = fixtureRelease();
@@ -198,7 +198,9 @@ describe("snapshot", () => {
     const snap = snapshotFor(rel, "N100TL", "2026-11-12");
     const before = JSON.stringify(snap);
     rel.rules.length = 0;
-    rel.layoutRevisions.forEach((r) => (r.locations.length = 0));
+    rel.layoutRevisions.forEach((r) => {
+      r.locations.length = 0;
+    });
     rel.substitutes.length = 0;
     expect(JSON.stringify(snap)).toBe(before);
     expect(deriveRecord(snap, KIT_ALTERNATE).lines).toHaveLength(5);

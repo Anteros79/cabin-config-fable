@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import type { Report } from "../../src/domain/types.ts";
-import { cleanupTempDirs, CUSHION_3A, KIT_ALTERNATE, makeApp, makeStores, SIX_LINE_TOTALS } from "../helpers.ts";
+import { CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeApp, makeStores, SIX_LINE_TOTALS } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 

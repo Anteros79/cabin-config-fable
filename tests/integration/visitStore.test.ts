@@ -4,7 +4,7 @@ import type { Report } from "../../src/domain/types.ts";
 import { DomainError } from "../../src/domain/visitLogic.ts";
 import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
-import { cleanupTempDirs, CUSHION_3A, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, makeStores, openVisits, SIX_LINE_TOTALS, snapshotFor } from "../helpers.ts";
+import { CUSHION_3A, cleanupTempDirs, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, makeStores, openVisits, SIX_LINE_TOTALS, snapshotFor } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 

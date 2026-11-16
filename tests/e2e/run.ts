@@ -1,13 +1,14 @@
 // End-to-end verification against a real server and the installed Google Chrome.
 //   node tests/e2e/run.ts            (writes verification/e2e/*)
 // Uses disposable stores in a temp directory and a free port. Never touches ./data.
-import AxeBuilder from "@axe-core/playwright";
+
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus, platform, release, totalmem } from "node:os";
 import { join } from "node:path";
+import AxeBuilder from "@axe-core/playwright";
 import type { Browser, BrowserContext, Page } from "playwright-core";
 import type { Report } from "../../src/domain/types.ts";
-import { launchBrowser, PROJECT_ROOT, sceneInfo, settle, startServer, waitFor3D, type Server } from "./lib.ts";
+import { launchBrowser, PROJECT_ROOT, type Server, sceneInfo, settle, startServer, waitFor3D } from "./lib.ts";
 
 const OUT = join(PROJECT_ROOT, "verification", "e2e");
 const CAPTURES = join(PROJECT_ROOT, "verification", "captures");

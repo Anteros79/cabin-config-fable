@@ -78,9 +78,11 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
       onFailedRef.current(e instanceof Error ? e.message : "The 3D scene could not be built.");
     }
   }, [ready, workspace.layout, hasMaps]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.7
   useEffect(() => {
     if (ready) sceneRef.current?.setStates(states);
   }, [ready, states, workspace.layout]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.7
   useEffect(() => {
     if (ready) sceneRef.current?.setSelection(selection);
   }, [ready, selection, workspace.layout]);

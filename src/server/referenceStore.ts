@@ -187,21 +187,51 @@ function entityRows(content: ReleaseContent): { type: EntityType; id: string; na
   const rows: { type: EntityType; id: string; namespace: string; data: unknown }[] = [];
   const push = (type: EntityType, id: string, namespace: string, data: unknown) => rows.push({ type, id, namespace, data });
   push("vocabulary", "vocabulary", "shared", { ...content.vocabulary, schema: content.schema, label: content.label });
-  content.sources.forEach((x) => push("source", x.id, x.namespace, x));
-  content.subtypes.forEach((x) => push("subtype", x.id, x.namespace, x));
-  content.aircraft.forEach((x) => push("aircraft", x.tail, x.namespace, x));
-  content.variants.forEach((x) => push("variant", x.id, x.namespace, x));
-  content.layouts.forEach((x) => push("layout", x.id, x.namespace, x));
-  content.layoutRevisions.forEach((x) => push("layoutRevision", x.id, x.namespace, x));
-  content.assignments.forEach((x) => push("assignment", x.id, x.namespace, x));
-  content.components.forEach((x) => push("component", x.id, "shared", x));
-  content.parts.forEach((x) => push("part", x.partNo, x.namespace, x));
-  content.rules.forEach((x) => push("rule", x.id, x.namespace, x));
-  content.substitutes.forEach((x) => push("substitute", x.id, x.namespace, x));
-  content.kitChildren.forEach((x) => push("kitChild", `${x.parentPartNo}>${x.childPartNo}`, "fixture", x));
-  content.pendingChanges.forEach((x) => push("pendingChange", x.id, "fixture", x));
-  content.layoutCategories.forEach((x) => push("layoutCategory", x.id, x.namespace, x));
-  content.visualProfiles.forEach((x) => push("visualProfile", x.id, "shared", x));
+  content.sources.forEach((x) => {
+    push("source", x.id, x.namespace, x);
+  });
+  content.subtypes.forEach((x) => {
+    push("subtype", x.id, x.namespace, x);
+  });
+  content.aircraft.forEach((x) => {
+    push("aircraft", x.tail, x.namespace, x);
+  });
+  content.variants.forEach((x) => {
+    push("variant", x.id, x.namespace, x);
+  });
+  content.layouts.forEach((x) => {
+    push("layout", x.id, x.namespace, x);
+  });
+  content.layoutRevisions.forEach((x) => {
+    push("layoutRevision", x.id, x.namespace, x);
+  });
+  content.assignments.forEach((x) => {
+    push("assignment", x.id, x.namespace, x);
+  });
+  content.components.forEach((x) => {
+    push("component", x.id, "shared", x);
+  });
+  content.parts.forEach((x) => {
+    push("part", x.partNo, x.namespace, x);
+  });
+  content.rules.forEach((x) => {
+    push("rule", x.id, x.namespace, x);
+  });
+  content.substitutes.forEach((x) => {
+    push("substitute", x.id, x.namespace, x);
+  });
+  content.kitChildren.forEach((x) => {
+    push("kitChild", `${x.parentPartNo}>${x.childPartNo}`, "fixture", x);
+  });
+  content.pendingChanges.forEach((x) => {
+    push("pendingChange", x.id, "fixture", x);
+  });
+  content.layoutCategories.forEach((x) => {
+    push("layoutCategory", x.id, x.namespace, x);
+  });
+  content.visualProfiles.forEach((x) => {
+    push("visualProfile", x.id, "shared", x);
+  });
   return rows;
 }
 
@@ -285,7 +315,9 @@ export class ReferenceStore {
       const insert = this.db.prepare(
         "INSERT INTO release_entity(release_id, entity_type, entity_id, namespace, position, data_json) VALUES (?, ?, ?, ?, ?, ?)",
       );
-      entityRows(content).forEach((row, position) => insert.run(id, row.type, row.id, row.namespace, position, JSON.stringify(row.data)));
+      entityRows(content).forEach((row, position) => {
+        insert.run(id, row.type, row.id, row.namespace, position, JSON.stringify(row.data));
+      });
       const status = hasBlockingFindings(findings) ? "rejected" : "validated";
       this.db.prepare("UPDATE release SET status = ?, validated_at = ? WHERE id = ?").run(status, now, id);
       this.event(

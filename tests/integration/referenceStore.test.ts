@@ -8,7 +8,7 @@ import { importReference } from "../../src/importer/cli.ts";
 import { canonicalPath, isSameFile, resolveServerConfig, resolveStoreConfig } from "../../src/server/config.ts";
 import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStoreError, resetReferenceStore } from "../../src/server/referenceStore.ts";
 import { VisitStore } from "../../src/server/visitStore.ts";
-import { cleanupTempDirs, CUSHION_3A, KIT_ALTERNATE, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
+import { CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 

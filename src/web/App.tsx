@@ -1,4 +1,4 @@
-import { Component, useEffect, useRef, useState, type ReactNode } from "react";
+import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../domain/types.ts";
 import { api, type Health } from "./api.ts";
 import { CheckView } from "./views/CheckView.tsx";
@@ -114,6 +114,7 @@ export function App() {
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.4
   useEffect(() => {
     api
       .layouts()

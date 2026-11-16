@@ -21,6 +21,9 @@
     "evidence:build": "node tools/evidence/build-all.mjs",
     "images:previews": "node tools/make-image-previews.mjs",
     "comparisons": "node tools/make-comparisons.mjs",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome ci . && npm run typecheck && vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit tests/integration",
@@ -38,6 +41,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
+    "@biomejs/biome": "2.6.8",
     "@types/node": "^24.0.0",
     "@types/pdfkit": "^0.17.0",
     "@types/react": "^19.0.0",

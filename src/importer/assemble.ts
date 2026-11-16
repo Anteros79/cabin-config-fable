@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import type { Finding, ReleaseContent, VisualProfile } from "../domain/types.ts";
 import { validateRelease } from "../domain/validate.ts";
 import { buildCandidateContent } from "./candidate.ts";
-import { resolveSourceRoot } from "./originals.ts";
 import { buildFixtureContent, loadFixtureData } from "./fixtures.ts";
+import { resolveSourceRoot } from "./originals.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const PROJECT_ROOT = resolve(here, "..", "..");
