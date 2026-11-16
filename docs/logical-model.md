@@ -116,6 +116,36 @@ Not findings, but codes added in the same phase:
 | `RELEASE_MISMATCH` | error response (HTTP 500) | A visit snapshot was asked to freeze a lookup result taken from a different reference release than the one given |
 | `SNAPSHOT_INCONSISTENT` | error response (HTTP 500) | A record or gap refers to a location absent from the frozen layout, or a location has an unknown kind |
 
+Codes that existed before Phase 2, for completeness (all from `validateRelease` or `validateKits`):
+
+| Code | Severity | Meaning |
+| --- | --- | --- |
+| `DUPLICATE_KEY` | error | Two entities of one type share a key, or a layout revision repeats a printed row label |
+| `ORPHAN` | error | A reference to an entity or source that does not exist (subtype, variant, layout revision, part, component, approval source and so on) |
+| `NAMESPACE` | error | Data outside the namespace it may live in: a tail, assignment, rule or approval outside `fixture`, or a candidate revision not marked candidate |
+| `UNSUPPORTED_AUTHORITY` | error | A source claims approved authority; none was supplied |
+| `UNSUPPORTED_FIELD` | error | A candidate layout revision claims a floor or bin map that was not supplied |
+| `INVALID_INTERVAL` | error | An end date before its start date |
+| `VOCABULARY` | error | An assignment uses a carpet, seam or upholstery value that is not in the vocabulary |
+| `UNKNOWN_UNIT` | error | A rule or approval uses a unit that is not in the vocabulary |
+| `COMPONENT_KIND` | error | A component on, or selected for, a location of the wrong kind |
+| `ROW_ORDER` | error | Rows without a unique physical order, or a skipped row label with one |
+| `SEAT_INVALID`, `SEAT_IDENTITY`, `SEAT_ROW` | error | A seat location without seat attributes, with an inconsistent row, letter and code, or on a row the layout does not have |
+| `SEAT_TOTAL`, `TIER_TOTAL` | error | The declared seat count, or a tier count, differs from the seats present |
+| `SEAT_SET_STATUS` | error | A revision marked "seat set not supplied" contains seats |
+| `RANGE_INVALID` | error | A seat's pitch range is inverted |
+| `CROSSWALK` | error | A layout category without a supplied seat set is crosswalked to a layout |
+| `UNREACHABLE_RULE`, `UNREACHABLE_SUBSTITUTE` | error | A rule or approval can match no location in any configuration |
+| `SUBSTITUTE_INVALID` | error | An approval substitutes a part for itself |
+| `KIT_ORPHAN_PARENT`, `KIT_ORPHAN_CHILD`, `KIT_ORPHAN_SOURCE` | error | A kit line naming an unknown parent part, child part or source |
+| `KIT_SELF_REFERENCE` | error | A kit that lists itself as a child |
+| `KIT_UNKNOWN_UNIT` | error | A kit line with a unit that is not in the vocabulary |
+| `ASSIGNMENT_OVERLAP` | conflict | One tail has overlapping released assignments; lookups inside the overlap are refused |
+| `EQUAL_RULES` | conflict | Two rules with identical scope and overlapping validity; the affected components are ambiguous |
+| `SUBSTITUTE_UNUSED` | warning | An approval stands in for a part that no rule for its component selects |
+
+The importer adds its own findings about the supplied files (`SOURCE_FILE_MISSING`, `SOURCE_HASH_CHANGED`, `SOURCE_UNREADABLE`, `SOURCE_ENCODING`, `REGISTRY_SHAPE`, `CROSS_FORMAT_MISMATCH`, `CROSS_FORMAT_INCOMPLETE`, `PITCH_UNPARSED`, `WIDTH_UNPARSED`, `FIXTURE_INVALID`, `IMPORT_INTERNAL` and others); `npm run reference:findings` prints them with their messages.
+
 ## Numeric limits
 
 Defined in `src/domain/limits.ts` and enforced by the schema, kit expansion and record derivation.
@@ -139,7 +169,7 @@ At creation the whole context is copied into the visit: assignment, variant, lay
 
 Backward compatibility: fields added after a snapshot was frozen are absent from it; every reader defaults them; nothing rewrites a stored snapshot. For example, snapshots frozen before report schema 2 have no `excluded` list on resolved or ambiguous components and no `sourceId` on a no-match exclusion; readers treat the list as empty and cite no source for it.
 
-Report schema 2 (`cabin-kit.report/2`) adds `excludedRules` to each work item and `sourceIds` to each gap, and `sources` lists every source the report cites: work items (rule, selection, mandatory children, pending changes), their excluded rules, and gaps (ambiguous candidates and no-match exclusions). A stored `/1` report is immutable and is returned exactly as stored; readers treat its missing fields as empty. Work items are ordered by physical position: seats by physical row then letter, then floor areas by first row, then bins by module, each tie broken by location id; gap location ids follow the same order. A record whose location is absent from the snapshot, or a location of unknown kind, is refused as `SNAPSHOT_INCONSISTENT` (HTTP 500), never placed silently. The preparation overview's `counts.parts` is the number of distinct primary part numbers.
+Report schema 2 (`cabin-kit.report/2`) adds `excludedRules` to each work item and `sourceIds` to each gap, and `sources` lists every source the report cites: work items (rule, selection, mandatory children, pending changes), their excluded rules, and gaps (ambiguous candidates and no-match exclusions). A stored `/1` report is immutable and is returned exactly as stored; readers treat its missing fields as empty. Work items are ordered by physical position: seats by physical row then letter, then floor areas by first row, then bins by module, each tie broken by location id; gap location ids follow the same order. Bins on both sides share module numbers, so they interleave left and right: `BIN:L-01`, `BIN:R-01`, `BIN:L-02`, `BIN:R-02` and so on. A record whose location is absent from the snapshot, or a location of unknown kind, is refused as `SNAPSHOT_INCONSISTENT` (HTTP 500), never placed silently. The preparation overview's `counts.parts` is the number of distinct primary part numbers.
 
 | Operation | Guarantee |
 | --- | --- |
@@ -148,6 +178,7 @@ Report schema 2 (`cabin-kit.report/2`) adds `excludedRules` to each work item an
 | Complete | One transaction: version check, non-empty check, re-derivation of every record from the snapshot, lock, report stored. Repeating it returns the stored report |
 | Retry | A repeated idempotency key returns the first outcome, for record writes, completion and linked events; the same key with a different request is refused. Keys are pruned after 30 days when the store opens; events and reports are never pruned |
 | After completion | Edits refused by the application and by triggers on records, visit, report and events. Advisories and corrections are appended as linked events |
+| Linked events | `ADVISORY` or `CORRECTION_NOTE`, with a note of 1-2,000 characters and an optional author of at most 80 (both trimmed first; nothing is truncated). Accepted on drafts and on completed visits (decision D4 of the hardening plan), appended only, and idempotent by key like the other writes |
 
 Writers use `BEGIN IMMEDIATE`, so an edit racing a completion either commits first and is in the report, or is refused afterwards.
 

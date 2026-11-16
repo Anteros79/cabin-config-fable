@@ -8,7 +8,7 @@ This folder holds curated evidence: renders of the 3D view, sheets comparing the
 
 | Path | What it is |
 | --- | --- |
-| `PROVENANCE.json` | When, where and from which commit the files below were captured. The only file with a capture time in it |
+| `PROVENANCE.json` | When, where and from which commit the files below were captured. The two PDFs printed by Chromium also carry their own creation time |
 | `captures/` | 18 renders of this build and `captures.json` (release, layout, visual family, light, camera, layers and viewport of each) |
 | `comparisons/` | 12 sheets placing a supplied original beside a render, and `index.json` |
 | `samples/` | Sample visits, their reports as JSON and PDF, and a preparation export |
@@ -18,7 +18,7 @@ PNG and PDF bytes differ between machines, so the files change only when someone
 
 ## Test results
 
-Test results live in CI, not in this repository: every push runs Biome, the type check, both builds, the vitest suite with coverage and the Playwright browser tests (`.github/workflows/ci.yml`), and fails if the run changed the working tree. Locally:
+Test results live in CI, not in this repository: the workflow in `.github/workflows/ci.yml` runs Biome, the type check, both builds, the vitest suite with coverage and the Playwright browser tests on every push, and fails if the run changed the working tree. It has not run yet (see Not verified). Locally:
 
 ```
 npm run verify          # check (Biome, tsc, vitest), build, browser tests, originals check; writes nothing tracked
@@ -41,7 +41,7 @@ npm run comparisons                          # only the comparison sheets, from 
 
 `--promote` replaces `captures/`, `comparisons/` and `samples/` wholesale (files no longer captured disappear) and replaces `performance.json` and `PROVENANCE.json`. It copies everything into a staging folder first and swaps it in only when the copy succeeded. It refuses when files outside `verification/` differ from HEAD, at capture time or now; `--promote-only` also refuses, unless given `--force`, when the capture was made at another commit than HEAD. The rest stays in `verification/out/`. The axe results are not curated, in either theme: the browser tests assert zero violations on every view in the light, dark and mobile projects on each run, so a stored copy would only go stale. The capture above recorded 0 violations on all 18 page states.
 
-The sample visits are written with fixed idempotency keys and a fixed clock (2026-11-12T09:00:00Z), so a new capture gives them new ids but the same content, totals and report body.
+The sample visits are written with fixed idempotency keys and a fixed clock (2026-11-12T09:00:00Z), so a new capture gives them new ids but the same content, totals and report body. The PDFs Chromium prints (`sample-completed-report-browser-print.pdf` and the preparation PDF) are not reproducible byte for byte: they carry the time they were printed.
 
 ## Performance (`performance.json`)
 
@@ -134,14 +134,19 @@ Summary (re-judged in Task 6.2 against the committed sheets): 8 PASS, 13 PARTIAL
 
 ## Not verified
 
-- A real screen reader. The checks are axe-core plus structural assertions (landmarks, headings, labels, live regions) and a keyboard-only run.
-- Any browser other than the Chromium named in `PROVENANCE.json`, and any device other than that machine. The mobile project is Chromium emulating a 390×844 touch viewport, not a phone.
-- Frame rate on weaker hardware or integrated graphics.
-- The PDFs in viewers other than the text extraction used by the tests. I did not open them in Preview or Acrobat.
-- The baseline in a browser. Its tests and linter were run in an isolated copy; its pages were not exercised.
-- Live web links cited in the DOCX.
-- Long-running use, large visit stores beyond the 100-plus visits in the tests, and more than two concurrent writers.
-- Agreement of any candidate data with a real aircraft.
+Written for 2.0.0 (Task 6.6). Each item says what was and was not done.
+
+- **A real screen reader.** Not done. No one has run the walk-through with VoiceOver (or any screen reader) and listened to it; see the next section for what is checked automatically instead. This should be done by a person before release.
+- **Browsers other than Chromium.** The browser tests run on the Chromium bundled with Playwright. On the reference machine (macOS 27.3, Playwright 1.65.1) the `workflow` and `a11y` specs were run once on the other two engines, without changing anything to make them pass:
+  - **WebKit 27.2** (as the `desktop` and `dark` projects): 19 passed, 4 failed, 4 skipped by the specs' own project rules. Failing: the keyboard walk-through (the first Tab does not focus "Skip to content"; WebKit's default of not moving focus to buttons with Tab may be the cause, not confirmed); "Go to location" then Enter does not select "Full cabin floor", which fails the axe check on the map view (desktop and dark) and the screen-reader structure check; and every failing test also logged a console error, "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive", that Chromium does not log. Cause not investigated. The other axe checks (eight views, light and dark) and the theme checks passed.
+  - **Firefox** (Playwright's Nightly build 1572): not run. The browser does not start on this machine ("Could not find profile folder", also when started directly and after a forced reinstall), so no Firefox behaviour was observed.
+- **The PDFs in a desktop viewer.** The server PDF and the Chromium-printed report were opened with pdfjs (text, page count, the six totals); neither has been opened in Preview or Acrobat by a person, so layout, tagging and reading order in a real viewer are unchecked.
+- **Linux, and WebGL without a GPU.** The CI workflow (`.github/workflows/ci.yml`, Ubuntu with SwiftShader) has never run: nothing was pushed and no container was available. Everything here ran on one Mac with a GPU.
+- **Hardware other than the reference machine** (named in `PROVENANCE.json`). Frame rate on weaker hardware, integrated graphics or a real phone is unknown; the mobile project is Chromium emulating a 390x844 touch viewport.
+- **Long-running use.** No soak test: a server left running for days, visit stores far beyond the 100-plus visits in the tests, or more than two concurrent writers.
+- **The baseline in a browser.** Its tests and linter were run in an isolated copy; its pages were not exercised.
+- **Live web links cited in the DOCX** (only with `evidence:build -- --online`, not run for this release).
+- **Agreement of any candidate data with a real aircraft.**
 
 ## Screen reader pass (VoiceOver, manual)
 

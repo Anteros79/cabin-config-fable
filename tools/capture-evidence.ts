@@ -8,9 +8,11 @@
 // It starts a disposable server on the e2e build (e2e/server.ts: temp stores, port 0, never ./data), drives the bundled
 // Chromium with Playwright's library API and writes to verification/out/: 18 captures (17 desktop, 1 mobile) and captures.json, sample visits,
 // reports, PDFs and CSV, performance.json, webgl.json, framing.json, axe JSON (light, dark, mobile), the comparison sheets
-// (tools/make-comparisons.mjs) and vitest-output.txt. Timestamps go into PROVENANCE.json only. The sample visits are
-// written with fixed idempotency keys and a fixed clock, so their ids differ between runs but their content, totals and
-// report body do not. PNG and PDF bytes still differ between machines and runs: promotion is a human decision.
+// (tools/make-comparisons.mjs) and vitest-output.txt. The sample visits are written with fixed idempotency keys and a
+// fixed clock, so their ids differ between runs but their content, totals and report body do not. The capture time is
+// recorded in PROVENANCE.json, but it is not the only time in the output: the PDFs Chromium prints (the browser-printed
+// report and preparation list) carry their own creation date, and PNG and PDF bytes differ between machines and runs.
+// Promotion is a human decision.
 // PROVENANCE.json names the exact commit the renders were built from. A capture made with changes outside verification/
 // records them (`git diff HEAD --stat` and the sha256 of `git diff HEAD`) and can never be promoted: commit first.
 

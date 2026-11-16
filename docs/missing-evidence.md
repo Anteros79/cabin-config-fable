@@ -44,6 +44,6 @@ The populated registry (5 configurations, 837 seats, agreeing across JSON, CSV a
 
 - Agreement of the registry with any real aircraft.
 - Any regulatory statement in the documents.
-- Behaviour with a real screen reader, on devices other than the one recorded in `verification/performance.json`, or in browsers other than Chrome.
+- Behaviour with a real screen reader, on devices other than the one named in `verification/PROVENANCE.json`, or in browsers other than Chromium (WebKit was run once and fails three checks; Firefox could not be started).
 
 See [`verification/README.md`](../verification/README.md) for the full list.

@@ -4,7 +4,7 @@ Cabin Kit is a fictional home-lab demonstration. It is not an approved maintenan
 
 ## Threat model
 
-- The server listens on the loopback interface only (`127.0.0.1`). Do not expose it to a network.
+- The server listens on the loopback interface (`127.0.0.1` by default). It refuses to start on any other address unless `CABIN_KIT_ALLOW_REMOTE=1` is set, which accepts the risk below. Do not expose it to a network you do not trust.
 - There is no authentication and no user accounts. Anyone who can reach the port can read and write visits.
 - Data is stored in a local SQLite file under `data/`. Stored snapshots, reports and events are immutable.
 
@@ -17,7 +17,14 @@ Every request, whatever its method, is checked first.
 - **Sec-Fetch-Site, on writes.** If sent, it must be `same-origin` or `none`. `same-site` and `cross-site` are refused with 403 `CROSS_ORIGIN_WRITE`.
 - **No `Origin` and no `Sec-Fetch-Site`** (for example curl) is allowed. These checks defend against browsers, not against other local programs.
 
-Refusals use the standard error envelope with `details: null`. Binding to a non-loopback address still exposes an unauthenticated API; the Host list does not change that.
+Refusals use the standard error envelope with `details: null`.
+
+## Other protections
+
+- **Response headers.** Every answer carries a Content-Security-Policy (`default-src 'self'`, no inline script and no inline `<style>` elements; style attributes are allowed through `style-src-attr 'unsafe-inline'`; `frame-ancestors 'none'`), `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-origin` and `X-Content-Type-Options: nosniff`. API answers are `Cache-Control: no-store`; only hashed assets are cached, as immutable.
+- **Input.** Query strings, ids and bodies are validated; bodies are limited to 256 KiB. Unexpected errors are answered with a fixed message and a request id, never the internal message.
+- **Exports.** CSV cells starting with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed so a spreadsheet does not run them as formulas.
+- **Imports.** Workbooks and documents are read with size and element caps before parsing, with no entity expansion; see `docs/operations.md`. Binding to a non-loopback address still exposes an unauthenticated API; the Host list does not change that.
 
 ## Reporting a problem
 

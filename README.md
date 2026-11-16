@@ -16,15 +16,17 @@ Cabin Kit helps an aircraft appearance technician bring only the replacement par
 
 ## Quick start
 
-Requires Node.js 24 or later (uses the built-in `node:sqlite` and runs TypeScript directly; no native modules to compile). Network access is needed once, for `npm ci`.
+Requires Node.js 24 or later (uses the built-in `node:sqlite` and runs TypeScript directly; no native modules to compile). Network access is needed once, for `npm ci`. The nine data originals the import reads are vendored in `fixtures/originals/`, so a fresh clone needs nothing from outside the repository.
 
 ```bash
-cd implementation/cabin-kit
+git clone <this repository> cabin-kit && cd cabin-kit
 npm run setup        # npm ci, build the web client, import reference data, add two sample visits
 npm start            # http://127.0.0.1:4310
 ```
 
-`npm start` binds to loopback only; there is no authentication. If no reference store exists it creates one with the same import the CLI uses. It never re-imports or resets an existing store.
+This was tested from a fresh clone of the release branch: `setup` finished with release `REL-0001-9cf6c6d2` active and two sample visits, and the page and the lookup API answered on the port given.
+
+`npm start` binds to loopback only unless told otherwise (see Configuration); there is no authentication. If no reference store exists it creates one with the same import the CLI uses. It never re-imports or resets an existing store.
 
 Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Record replacement → "Full cabin floor" → Alternate → Record → Complete. The report shows exactly six part/unit totals.
 
@@ -52,24 +54,40 @@ Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Reco
 | `npm run reference:reset -- --yes` | Rebuild the reference store only (stop the server first) |
 | `npm run sample:seed` | Add one completed and one draft sample visit, only if the visit store is empty |
 | `npm run visits:backup -- [--out <file>]` | Verified copy of the visit store (default `backups/visits-<UTC stamp>Z.sqlite`); safe while the server runs |
-| `npm test` | 132 unit, integration and separate-process race tests (disposable stores) |
-| `npm run test:e2e` | 62 browser checks with the installed Google Chrome (disposable stores, free port) |
+| `npm run check` | Biome, the type check and the whole vitest suite (unit, integration, separate-process races, web components in jsdom, timing tests) |
+| `npm test` | The vitest suite only |
+| `npm run coverage` | The vitest suite with v8 coverage and the per-directory floors |
+| `npm run test:e2e` | Build the client with test hooks (`dist/web-e2e`), then the Playwright specs in `e2e/` on the bundled Chromium (`npx playwright install chromium` once). Disposable stores, free ports |
+| `npm run test:e2e:ui` | The same specs in Playwright's UI mode (run `npm run build:e2e` first) |
+| `npm run budgets` | Build, then check bundle, payload, scene geometry and coverage budgets against `budgets.json` |
 | `npm run verify` | `check`, build, browser tests and the originals check. Writes nothing tracked |
-| `npm run verify:clean` | `verify`, then fails if the working tree changed |
+| `npm run verify:clean` | `verify`, then fails if the working tree changed (CI runs the same) |
 | `npm run evidence:capture` | Renders, sample visits and reports, performance and axe results into `verification/out/` (git-ignored). `-- --promote` copies the curated subset into `verification/` to be committed by hand; `-- --assert-perf` also checks the frame-rate and pick targets |
 | `npm run comparisons` | Comparison sheets from the captures in `verification/out/` and the image originals; skipped when the images are not present |
-| `npm run originals:verify` | Re-hash the 23 supplied originals against the manifest |
+| `npm run originals:verify` | Re-hash the supplied originals against the manifest (the 14 images only where they are present) |
 | `npm run evidence:build` | Regenerate the evidence inventory, extracts and registers from the originals. Offline by default; `-- --online` adds the public-hyperlink reachability check. Step names run a subset, with the steps it needs |
 
-Configuration (one resolver, shared by the server, the import CLI and the tests):
+Test counts are not listed here because they change; see the CI run (`.github/workflows/ci.yml`) or run `npm run check`.
 
-| Variable | Default |
-| --- | --- |
-| `CABIN_KIT_DATA_DIR` | `./data` |
-| `CABIN_KIT_REFERENCE_DB` | `<data dir>/reference.sqlite` |
-| `CABIN_KIT_VISITS_DB` | `<data dir>/visits.sqlite` |
-| `CABIN_KIT_HOST` / `CABIN_KIT_PORT` | `127.0.0.1` / `4310` |
-| `CABIN_KIT_SOURCE_ROOT` | the development folder two levels up (where the originals are) |
+## Configuration
+
+One resolver (`src/server/config.ts`) is shared by the server, the import CLI, the tools and the tests. An empty or blank value counts as unset. The server checks every value before it opens a store and stops with exit code 2 on an unusable one.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `CABIN_KIT_DATA_DIR` | `./data` | Folder for both stores |
+| `CABIN_KIT_REFERENCE_DB` | `<data dir>/reference.sqlite` | Reference store |
+| `CABIN_KIT_VISITS_DB` | `<data dir>/visits.sqlite` | Visit store |
+| `CABIN_KIT_HOST` / `CABIN_KIT_PORT` | `127.0.0.1` / `4310` | Listen address and port. A non-loopback host is refused unless `CABIN_KIT_ALLOW_REMOTE=1` |
+| `CABIN_KIT_ALLOW_REMOTE` | unset | `1` accepts a non-loopback `CABIN_KIT_HOST`. The server has no authentication |
+| `CABIN_KIT_ALLOWED_HOSTS` | unset | Extra host names accepted in the `Host` header, comma-separated (besides `localhost`, `127.0.0.1`, `::1` and the listen host) |
+| `CABIN_KIT_LOG_LEVEL` | `info` | `silent`, `error`, `warn`, `info` or `debug`. One JSON line per request, with its request id |
+| `CABIN_KIT_WEB_ROOT` | `dist/web` | Built client the server serves |
+| `CABIN_KIT_SOURCE_ROOT` | see below | Folder holding the supplied originals |
+
+Source root, for the data originals: `CABIN_KIT_SOURCE_ROOT` when set, else the vendored `fixtures/originals/`, else the development folder two levels up (`../../`). The 14 images are never vendored: they are read from `CABIN_KIT_SOURCE_ROOT` when set, else `../../`, and only the comparison sheets and `originals:verify` use them.
+
+More in [operations](docs/operations.md).
 
 ## Where things are
 
@@ -80,14 +98,15 @@ src/server/     config, reference store, visit store, PDF, HTTP API
 src/web/        React client, accessible map/list, three.js scene
 fixtures/       mandatory fictional regression data (declarative)
 evidence/       inventory, located extracts, crosswalk, seat sets, conflict register, image previews
-docs/           logical model, visual families, operations, missing evidence, baseline review
+docs/           logical model, visual families, operations, missing evidence, baseline review, audit register
 verification/   curated captures, comparison sheets, performance, sample visits and reports, and their provenance
 inspection/     isolated copy of the baseline and the record of running it
 data/           runtime stores (git-ignored)
-tests/          unit, integration, process (races), e2e
+tests/          vitest: unit, integration, process (races), web (jsdom)
+e2e/            Playwright specs
 ```
 
-Read next: [logical model](docs/logical-model.md) · [visual families](docs/visual-families.md) · [operations](docs/operations.md) · [missing evidence](docs/missing-evidence.md) · [verification](verification/README.md) · [evidence](evidence/README.md) · [baseline review](docs/baseline-review.md).
+Read next: [logical model](docs/logical-model.md) · [visual families](docs/visual-families.md) · [operations](docs/operations.md) · [missing evidence](docs/missing-evidence.md) · [verification](verification/README.md) · [evidence](evidence/README.md) · [baseline review](docs/baseline-review.md) · [audit register](docs/audit-2026-11-15.md) · [browser check migration](docs/e2e-migration.md) · [changelog](CHANGELOG.md).
 
 ## Path mapping and preservation
 
@@ -95,7 +114,7 @@ The request named `./app`, `./tests` and `./analysis/...` under the development 
 
 | Named in the request | Actual location | Handling |
 | --- | --- | --- |
-| 8 data/document inputs and 14 images at `./` | `../../` (the development folder) | Read only. SHA-256 recorded in `evidence/originals-manifest.json` |
+| 8 data/document inputs and 14 images at `./` | `../../` (the development folder) | Read only. SHA-256 recorded in `evidence/originals-manifest.json`. The nine data and document originals are also vendored, byte-identical, in `fixtures/originals/` |
 | DOCX at `./analysis/.../additional-inputs/` | `../../Current Aircraft Seat Configurations.docx` | The root copy is byte-identical to the analysis copy (SHA-256 `723d11ee62d0…`); the root copy is used |
 | Baseline `./app`, `./tests`, `README.md`, `pyproject.toml`, `uv.lock` | sibling `../../../cabin-config/` | Read in place, never written. Only `app/`, `tests/` and the three files were copied to `inspection/baseline-copy/` and run there |
 | `./analysis/cabin-kit-review-2026-11-13/` | `../../../cabin-config/analysis/` | Not used as an authority. Evidence here was extracted from the original bytes |
@@ -114,9 +133,15 @@ Nothing outside `implementation/cabin-kit/` was created or changed. Other siblin
 
 ## Known limits
 
+What is true at 2.0.0:
+
 - All workflow data is fictional. Candidate layouts have no tails, parts, floor map or bin map; every component there is shown as unresolved.
-- Geometry is an illustrative approximation with uniform row spacing. It is not derived from pitch claims or photographs.
-- Visual fidelity was judged by comparing real renders with the supplied images; several features are recorded as FAIL or UNKNOWN in [verification/README.md](verification/README.md).
-- No authentication, authorisation or multi-user identity. Loopback only.
-- Screen-reader support was checked structurally and with axe; it was not tested with a live screen reader.
-- Performance was measured on one device (Apple M4 Pro, headless Chrome).
+- Geometry is an illustrative approximation with uniform row spacing, and the cabin shell (ceiling 2.45 m, curved sidewall, windows) is drawn from illustrative constants. Nothing is derived from pitch claims, drawings or photographs.
+- The 3D model is recognisable as the photographed cabin but is not a faithful reproduction: 13 of the judged features are PARTIAL and 5 UNKNOWN in [verification/README.md](verification/README.md). There are no cast shadows, only contact shading.
+- No authentication, authorisation or multi-user identity. The server listens on loopback unless `CABIN_KIT_ALLOW_REMOTE=1`, and then anyone who can reach it can read and write visits.
+- Completing a visit locks it for good; there is no reopen and no delete. Corrections are linked notes.
+- Screen-reader support was checked with axe, structural assertions and a keyboard-only run. No one has run it with a real screen reader.
+- The browser tests run on the Chromium bundled with Playwright. WebKit was run once on the workflow and accessibility specs and three of its checks fail; Firefox could not be started on the reference machine. See "Not verified" in [verification/README.md](verification/README.md).
+- The CI workflow (Linux, WebGL in software) has never run: nothing has been pushed. Every result here comes from one machine (Apple M4 Pro, macOS).
+- The scene stays within the budgets in `budgets.json` (32 draw calls and 525,000 triangles on the 176-seat layout, checked by the browser tests); frame rate was measured only on that machine.
+- An import accepts a large workbook only up to its caps (4 MiB per XML part, 100,000 elements); a legitimate larger workbook is refused with a message, and an accepted one near the caps can use about 300 MB.

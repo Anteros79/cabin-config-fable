@@ -1,6 +1,6 @@
 {
   "name": "cabin-kit-replacement",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Cabin Kit replacement - fictional home-lab demonstration, not an approved maintenance authority",
   "type": "module",
