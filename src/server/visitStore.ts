@@ -368,8 +368,12 @@ export class VisitStore {
   }
 
   listVisits(options: ListOptions = {}): { items: VisitSummary[]; total: number; limit: number; offset: number } {
-    const limit = Math.min(Math.max(Math.trunc(options.limit ?? 50), 1), 200);
-    const offset = Math.max(Math.trunc(options.offset ?? 0), 0);
+    for (const name of ["limit", "offset"] as const) {
+      const value = options[name];
+      if (value !== undefined && !Number.isInteger(value)) throw new DomainError("INVALID_QUERY", `${name}: must be a whole number.`, 400);
+    }
+    const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
+    const offset = Math.max(options.offset ?? 0, 0);
     const where: string[] = [];
     const args: (string | number)[] = [];
     if (options.status) {

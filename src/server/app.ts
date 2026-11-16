@@ -11,6 +11,7 @@ import { buildSnapshot, DomainError } from "../domain/visitLogic.ts";
 import type { ServerConfig } from "./config.ts";
 import { applyHeaders } from "./http/headers.ts";
 import { allowedHostnames, hostnameOf, isWriteAllowed } from "./http/hostGuard.ts";
+import { ListVisitsQuery, LookupQuery, parseOr400, VisitIdParam } from "./http/schemas.ts";
 import { renderReportPdf } from "./pdf.ts";
 import { ReferenceStore, ReferenceStoreError } from "./referenceStore.ts";
 import { VisitStore } from "./visitStore.ts";
@@ -211,6 +212,12 @@ export function createApp(config: ServerConfig): AppHandle {
       if (typeof b !== "object" || b === null || Array.isArray(b)) throw new DomainError("INVALID_BODY", "A JSON object body is required.", 400);
       return b as Record<string, unknown>;
     };
+    /** A malformed id cannot name a visit, so it gets the same answer as an unknown one. */
+    const visitId = (raw: unknown): string => {
+      const parsed = VisitIdParam.safeParse(raw);
+      if (!parsed.success) throw new DomainError("VISIT_NOT_FOUND", "Visit not found.", 404);
+      return parsed.data;
+    };
     const optionalVersion = (value: unknown, name: string): number | undefined => {
       if (value === undefined || value === null) return undefined;
       if (typeof value !== "number" || !Number.isInteger(value) || value < 0)
@@ -381,18 +388,20 @@ export function createApp(config: ServerConfig): AppHandle {
       return { release, result: lookup(release, tail, date) };
     };
 
-    app.get<{ Querystring: { tail?: string; date?: string } }>("/api/lookup", async (request, reply) => {
-      const { result } = runLookup(request.query.tail, request.query.date);
+    app.get("/api/lookup", async (request, reply) => {
+      const query = parseOr400(LookupQuery, request.query, "INVALID_QUERY");
+      const { result } = runLookup(query.tail, query.date);
       if (result.state === "SERVICE_UNAVAILABLE") reply.code(503);
       return result;
     });
 
-    app.get<{ Querystring: { tail?: string; date?: string; format?: string } }>("/api/preparation", async (request, reply) => {
-      const { release, result } = runLookup(request.query.tail, request.query.date);
+    app.get("/api/preparation", async (request, reply) => {
+      const query = parseOr400(LookupQuery, request.query, "INVALID_QUERY");
+      const { release, result } = runLookup(query.tail, query.date);
       if (!release) return fail(reply, 503, "REFERENCE_UNAVAILABLE", result.message);
       const snapshot = buildSnapshot(release, result, new Date().toISOString());
       const prep = buildPreparation(snapshot);
-      if (request.query.format === "csv") {
+      if (query.format === "csv") {
         reply.header("Content-Type", "text/csv; charset=utf-8");
         reply.header("Content-Disposition", `attachment; filename="cabin-kit-preparation-${prep.tail}-${prep.checkDate}.csv"`);
         return preparationCsv(prep);
@@ -400,11 +409,11 @@ export function createApp(config: ServerConfig): AppHandle {
       return prep;
     });
 
-    app.get<{ Querystring: { status?: string; q?: string; limit?: string; offset?: string } }>("/api/visits", async (request) => {
-      const { status, q, limit, offset } = request.query;
+    app.get<{ Querystring: { status?: unknown } }>("/api/visits", async (request) => {
+      const { status } = request.query;
       if (status !== undefined && status !== "DRAFT" && status !== "COMPLETED")
         throw new DomainError("INVALID_STATUS", "status must be DRAFT or COMPLETED.", 400);
-      return visits.listVisits({ status, q, limit: limit ? Number(limit) : undefined, offset: offset ? Number(offset) : undefined });
+      return visits.listVisits(parseOr400(ListVisitsQuery, request.query, "INVALID_QUERY"));
     });
 
     app.post("/api/visits", async (request, reply) => {
@@ -427,7 +436,7 @@ export function createApp(config: ServerConfig): AppHandle {
     });
 
     app.get<{ Params: { id: string } }>("/api/visits/:id", async (request) => {
-      const visit = visits.getVisit(request.params.id);
+      const visit = visits.getVisit(visitId(request.params.id));
       let referenceNow: { releaseId: string | null; changedSinceVisit: boolean } = { releaseId: null, changedSinceVisit: false };
       try {
         const release = activeRelease();
@@ -439,7 +448,7 @@ export function createApp(config: ServerConfig): AppHandle {
     });
 
     app.get<{ Params: { id: string }; Querystring: { format?: string } }>("/api/visits/:id/preparation", async (request, reply) => {
-      const prep = buildPreparation(visits.getVisit(request.params.id).snapshot);
+      const prep = buildPreparation(visits.getVisit(visitId(request.params.id)).snapshot);
       if (request.query.format === "csv") {
         reply.header("Content-Type", "text/csv; charset=utf-8");
         reply.header("Content-Disposition", `attachment; filename="cabin-kit-preparation-${prep.tail}-${prep.checkDate}.csv"`);
@@ -456,7 +465,7 @@ export function createApp(config: ServerConfig): AppHandle {
         }
       }
       const dropAfter = writeFault();
-      const result = visits.upsertRecord(request.params.id, b.record, optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"), {
+      const result = visits.upsertRecord(visitId(request.params.id), b.record, optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"), {
         idempotencyKey: optionalKey(b.idempotencyKey),
       });
       if (dropAfter) return drop(reply);
@@ -466,9 +475,15 @@ export function createApp(config: ServerConfig): AppHandle {
     app.post<{ Params: { id: string } }>("/api/visits/:id/records/remove", async (request, reply) => {
       const b = body(request);
       const dropAfter = writeFault();
-      const result = visits.removeRecord(request.params.id, b.locationId, b.componentId, optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"), {
-        idempotencyKey: optionalKey(b.idempotencyKey),
-      });
+      const result = visits.removeRecord(
+        visitId(request.params.id),
+        b.locationId,
+        b.componentId,
+        optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"),
+        {
+          idempotencyKey: optionalKey(b.idempotencyKey),
+        },
+      );
       if (dropAfter) return drop(reply);
       return result;
     });
@@ -477,7 +492,7 @@ export function createApp(config: ServerConfig): AppHandle {
       const b = body(request);
       if (b.confirm !== true) throw new DomainError("CONFIRMATION_REQUIRED", "Completion must be confirmed explicitly (confirm: true).", 400);
       const dropAfter = writeFault();
-      const result = visits.completeVisit(request.params.id, optionalVersion(b.expectedVisitVersion, "expectedVisitVersion"), {
+      const result = visits.completeVisit(visitId(request.params.id), optionalVersion(b.expectedVisitVersion, "expectedVisitVersion"), {
         idempotencyKey: optionalKey(b.idempotencyKey),
       });
       if (dropAfter) return drop(reply);
@@ -486,13 +501,13 @@ export function createApp(config: ServerConfig): AppHandle {
 
     app.post<{ Params: { id: string } }>("/api/visits/:id/events", async (request, reply) => {
       const b = body(request);
-      const visit = visits.addLinkedEvent(request.params.id, b.type, b.note, b.author);
+      const visit = visits.addLinkedEvent(visitId(request.params.id), b.type, b.note, b.author);
       reply.code(201);
       return { visit };
     });
 
     app.get<{ Params: { id: string }; Querystring: { download?: string } }>("/api/visits/:id/report", async (request, reply) => {
-      const result = visits.getReport(request.params.id);
+      const result = visits.getReport(visitId(request.params.id));
       if (request.query.download) {
         reply.header(
           "Content-Disposition",
@@ -503,7 +518,7 @@ export function createApp(config: ServerConfig): AppHandle {
     });
 
     app.get<{ Params: { id: string } }>("/api/visits/:id/report.pdf", async (request, reply) => {
-      const { report, linkedEvents, basisSha256 } = visits.getReport(request.params.id);
+      const { report, linkedEvents, basisSha256 } = visits.getReport(visitId(request.params.id));
       const pdf = await renderReportPdf(report, linkedEvents, basisSha256);
       reply.header("Content-Type", "application/pdf");
       reply.header(
