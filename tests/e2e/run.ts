@@ -464,6 +464,30 @@ try {
     await waitFor3D(page);
     equal((await sceneInfo(page)).selection, "SEAT:9D", "map selection carried into 3D");
   });
+  await check("selection and hover are outlined, status is a badge, and the hover label follows the pointer (WEB-21)", async () => {
+    await cam(page, "cutaway");
+    await settle(page);
+    const marks = (await sceneInfo(page)).marks as { selection: boolean; hover: string | null; badges: number };
+    expect(marks.selection, "the selected seat is outlined");
+    expect(marks.badges >= 1, `a badge for the recorded seat (${marks.badges} shown)`);
+    const legend = await page.locator(".legend li[data-status] svg[aria-hidden=true]").count();
+    expect(legend >= 3, "legend shows a glyph for each status");
+    const pt = (await page.evaluate(() => window.__cabinKit!.scene!.screenPointOf("SEAT:14C")))!;
+    await page.mouse.move(pt.x, pt.y);
+    await page.waitForSelector(".hover-label");
+    equal(((await sceneInfo(page)).marks as { hover: string | null }).hover, "SEAT:14C", "hover outline on the seat under the pointer");
+    const label = (await page.locator(".hover-label").boundingBox())!;
+    const wrap = (await page.locator(".canvas-wrap").boundingBox())!;
+    expect(Math.abs(label.x - (pt.x + 14)) <= 1 || label.x + label.width <= pt.x, `label beside the pointer (label x ${label.x}, pointer x ${pt.x})`);
+    expect(
+      label.x >= wrap.x && label.x + label.width <= wrap.x + wrap.width && label.y >= wrap.y && label.y + label.height <= wrap.y + wrap.height,
+      "label inside the canvas",
+    );
+    equal(await page.getAttribute(".hover-label", "aria-hidden"), "true", "hover label hidden from assistive technology");
+    await page.mouse.move(wrap.x + 2, wrap.y + wrap.height - 2);
+    await page.mouse.move(0, 0);
+    await page.waitForSelector(".hover-label", { state: "detached" });
+  });
   await check("floor areas and bin modules are pickable in 3D", async () => {
     await cam(page, "overhead");
     await settle(page);

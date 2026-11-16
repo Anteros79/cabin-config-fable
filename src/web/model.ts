@@ -1,6 +1,42 @@
 import type { CabinLocation, ComponentDef, ComponentResolution, FrozenRule, LayoutRevision, Resolution, SourceArtifact, VisitRecord } from "../domain/types.ts";
 import type { LocationState } from "./scene/CabinScene.ts";
 
+/**
+ * The work status of a location or one of its components: a replacement is recorded, the component is unresolved, an
+ * approved alternate part is eligible here (and nothing is recorded yet), or none of these.
+ */
+export type LocationStatus = "recorded" | "unresolved" | "alternate" | "none";
+export type StatusGlyph = "tick" | "question" | "alternate" | "none";
+
+/**
+ * How each status is shown, so the 3D badges, the map and the legends cannot disagree (WEB-21). Status never rests on
+ * colour alone: every status but "none" has its own glyph, drawn in a disc of its colour token. "none" shows nothing.
+ */
+export const STATUS_ENCODING: Record<LocationStatus, { glyph: StatusGlyph; token: string; label: string }> = {
+  recorded: { glyph: "tick", token: "--status-recorded", label: "Recorded" },
+  unresolved: { glyph: "question", token: "--status-unresolved", label: "Unresolved" },
+  alternate: { glyph: "alternate", token: "--status-alternate", label: "Has alternate" },
+  none: { glyph: "none", token: "", label: "No status" },
+};
+
+/**
+ * Each glyph as an SVG path in a 24 × 24 box centred on (12, 12), drawn as a round-capped stroke. The map and legends
+ * render it as inline SVG and the 3D badge atlas strokes the same path on a canvas.
+ */
+export const GLYPH_PATHS: Record<Exclude<StatusGlyph, "none">, string> = {
+  tick: "M6.5 12.5l3.6 3.6L17.6 8.4",
+  question: "M9 9.4a3.1 3.1 0 1 1 4.6 2.7c-1 .55-1.6 1.2-1.6 2.3v.5M12 17.6v.1",
+  alternate: "M6 9.5h11M14 6.5l3 3-3 3M18 14.5H7M10 11.5l-3 3 3 3",
+};
+
+/** The status a whole location shows: a record wins, then an unresolved component, then an eligible alternate. */
+export function aggregateStatus(statuses: Iterable<LocationStatus>): LocationStatus {
+  let out: LocationStatus = "none";
+  const rank: Record<LocationStatus, number> = { none: 0, alternate: 1, unresolved: 2, recorded: 3 };
+  for (const s of statuses) if (rank[s] > rank[out]) out = s;
+  return out;
+}
+
 /** What the viewer, the map, the inspector and the work list all render from. */
 export interface Workspace {
   /** visit: frozen snapshot, records may be editable. preview: live lookup, read-only. explore: a layout with no tail. */
@@ -47,6 +83,10 @@ export interface LocationFlags {
   recorded: number;
   unresolved: number;
   resolved: number;
+  /** components with an eligible alternate part and no record */
+  alternate: number;
+  /** what the location shows: aggregateStatus() of its components */
+  status: LocationStatus;
 }
 
 /** One pass over the resolution: status per location and component for the 3D scene and the map. */
@@ -58,7 +98,7 @@ export function buildStates(ws: Workspace): { scene: Map<string, LocationState>;
     if (!s) {
       s = { components: {} };
       scene.set(id, s);
-      flags.set(id, { recorded: 0, unresolved: 0, resolved: 0 });
+      flags.set(id, { recorded: 0, unresolved: 0, resolved: 0, alternate: 0, status: "none" });
     }
     return s;
   };
@@ -66,8 +106,12 @@ export function buildStates(ws: Workspace): { scene: Map<string, LocationState>;
     for (const c of ws.resolution.components) {
       const s = at(c.locationId);
       const f = flags.get(c.locationId)!;
-      if (c.status === "RESOLVED") f.resolved += 1;
-      else {
+      if (c.status === "RESOLVED") {
+        f.resolved += 1;
+        // An approved alternate eligible at this location (PF-15); a record made later overrides it below.
+        const rule = ws.resolution.rules[c.ruleId];
+        if (rule?.substitutes.some((sub) => sub.locationIds === null || sub.locationIds.includes(c.locationId))) s.components[c.componentId] = "alternate";
+      } else {
         s.components[c.componentId] = "unresolved";
         f.unresolved += 1;
       }
@@ -77,6 +121,13 @@ export function buildStates(ws: Workspace): { scene: Map<string, LocationState>;
     const s = at(r.locationId);
     s.components[r.componentId] = "recorded";
     flags.get(r.locationId)!.recorded += 1;
+  }
+  for (const [id, s] of scene) {
+    const f = flags.get(id);
+    if (!f) continue;
+    const values = Object.values(s.components);
+    f.alternate = values.filter((v) => v === "alternate").length;
+    f.status = aggregateStatus(values);
   }
   return { scene, flags };
 }
@@ -110,7 +161,13 @@ export function seatLabelFor(location: CabinLocation, flags: LocationFlags | und
   if (s?.commercialTier) parts.push(s.commercialTier);
   if (flags?.recorded) parts.push(`${flags.recorded} replacement${flags.recorded === 1 ? "" : "s"} recorded`);
   if (flags?.unresolved) parts.push(`${flags.unresolved} component${flags.unresolved === 1 ? "" : "s"} unresolved`);
+  if (flags?.alternate) parts.push(alternateText(flags.alternate));
   return parts.join(", ");
+}
+
+/** Words for components that have an eligible alternate part, for accessible names. */
+export function alternateText(count: number): string {
+  return `${count} component${count === 1 ? " has" : "s have"} an alternate part`;
 }
 
 /**

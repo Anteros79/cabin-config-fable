@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
-import { Cabin3D } from "../../src/web/components/Cabin3D.tsx";
+import { Cabin3D, hoverLabelPosition } from "../../src/web/components/Cabin3D.tsx";
 import { Viewer } from "../../src/web/components/Viewer.tsx";
 import { buildStates, type Workspace } from "../../src/web/model.ts";
 import { at, fixtureRelease } from "../helpers.ts";
@@ -100,4 +100,14 @@ test("Cmd+= on the focused canvas is not prevented", async () => {
   // without a modifier the key still drives the camera
   expect(fireEvent.keyDown(canvas, { key: "=" })).toBe(false);
   expect(calls("nudge").map((c) => c.args[0])).toEqual(["in"]);
+});
+
+test("the hover label sits 14 px right of and below the pointer, flips near an edge and stays inside the canvas", () => {
+  const label = { width: 80, height: 20 };
+  const wrap = { width: 400, height: 300 };
+  expect(hoverLabelPosition({ x: 100, y: 50 }, label, wrap)).toEqual({ left: 114, top: 64 });
+  // near the right and bottom edges it goes to the left of and above the pointer
+  expect(hoverLabelPosition({ x: 390, y: 295 }, label, wrap)).toEqual({ left: 296, top: 261 });
+  // a label wider than the room left on either side is clamped inside the wrap
+  expect(hoverLabelPosition({ x: 60, y: 10 }, { width: 380, height: 20 }, wrap)).toEqual({ left: 16, top: 24 });
 });

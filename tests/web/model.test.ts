@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CabinLocation, VisitRecord } from "../../src/domain/types.ts";
-import { buildStates, componentsAt, describeSeat, seatLabelFor, type Workspace } from "../../src/web/model.ts";
+import { aggregateStatus, buildStates, componentsAt, describeSeat, seatLabelFor, type Workspace } from "../../src/web/model.ts";
 import { at, fixtureRelease, snapshotFor } from "../helpers.ts";
 
 const snap = snapshotFor(fixtureRelease(), "N100TL", "2026-11-12");
@@ -92,6 +92,56 @@ describe("buildStates", () => {
     expect(buildStates(ws).scene.get(first.locationId)?.components[first.componentId]).toBe("recorded");
   });
 
+  it("a resolved component with an alternate eligible at the location shows 'alternate' until a record is made (PF-15)", () => {
+    const withAlternate = snap.resolution.components.find((c) => {
+      if (c.status !== "RESOLVED") return false;
+      const rule = snap.resolution.rules[c.ruleId];
+      return rule?.substitutes.some((s) => s.locationIds === null || s.locationIds.includes(c.locationId));
+    });
+    if (!withAlternate) throw new Error("fixture has no component with an alternate");
+    const { locationId, componentId } = withAlternate;
+    const before = buildStates(workspace());
+    expect(before.scene.get(locationId)?.components[componentId]).toBe("alternate");
+    expect(before.flags.get(locationId)).toMatchObject({ alternate: 1, status: "alternate" });
+    const after = buildStates(workspace([recordAt(locationId, componentId)]));
+    expect(after.scene.get(locationId)?.components[componentId]).toBe("recorded");
+    expect(after.flags.get(locationId)).toMatchObject({ alternate: 0, status: "recorded" });
+  });
+
+  it("an alternate limited to other locations does not count here", () => {
+    const resolved = snap.resolution.components.find((c) => c.status === "RESOLVED" && c.locationId === "SEAT:3A");
+    if (resolved?.status !== "RESOLVED") throw new Error("fixture has no resolved component at 3A");
+    const rule = snap.resolution.rules[resolved.ruleId];
+    if (!rule) throw new Error(`fixture has no rule ${resolved.ruleId}`);
+    const substitute = {
+      id: "SUB-X",
+      altPartNo: "FAKE-ALT",
+      altDescription: "fictional alternate",
+      qtyPerReplacement: 1,
+      unit: "EA",
+      effectiveFrom: "2020-01-01",
+      effectiveTo: null,
+      sourceId: rule.sourceId,
+      children: [],
+    };
+    const ws = workspace();
+    const withSub = (locationIds: string[] | null) => ({
+      ...snap.resolution,
+      rules: { ...snap.resolution.rules, [rule.id]: { ...rule, substitutes: [{ ...substitute, locationIds }] } },
+    });
+    ws.resolution = withSub(["SEAT:9F"]);
+    expect(buildStates(ws).scene.get("SEAT:3A")?.components[resolved.componentId]).toBeUndefined();
+    ws.resolution = withSub(["SEAT:3A"]);
+    expect(buildStates(ws).scene.get("SEAT:3A")?.components[resolved.componentId]).toBe("alternate");
+  });
+
+  it("a location shows a record first, then an unresolved component, then an alternate", () => {
+    expect(aggregateStatus([])).toBe("none");
+    expect(aggregateStatus(["alternate", "none"])).toBe("alternate");
+    expect(aggregateStatus(["alternate", "unresolved"])).toBe("unresolved");
+    expect(aggregateStatus(["unresolved", "recorded", "alternate"])).toBe("recorded");
+  });
+
   it("without a resolution or records there is nothing to show", () => {
     const { scene, flags } = buildStates({ ...workspace(), resolution: null });
     expect(scene.size).toBe(0);
@@ -118,8 +168,15 @@ describe("seatLabelFor", () => {
 
   it("appends recorded and unresolved counts with correct plurals", () => {
     const loc = location("FLOOR:FULL-CABIN");
-    expect(seatLabelFor(loc, { recorded: 1, unresolved: 1, resolved: 0 })).toBe(`${loc.label}, 1 replacement recorded, 1 component unresolved`);
-    expect(seatLabelFor(loc, { recorded: 2, unresolved: 3, resolved: 0 })).toBe(`${loc.label}, 2 replacements recorded, 3 components unresolved`);
+    expect(seatLabelFor(loc, { recorded: 1, unresolved: 1, resolved: 0, alternate: 0, status: "recorded" })).toBe(
+      `${loc.label}, 1 replacement recorded, 1 component unresolved`,
+    );
+    expect(seatLabelFor(loc, { recorded: 2, unresolved: 3, resolved: 0, alternate: 0, status: "recorded" })).toBe(
+      `${loc.label}, 2 replacements recorded, 3 components unresolved`,
+    );
+    expect(seatLabelFor(loc, { recorded: 0, unresolved: 0, resolved: 2, alternate: 1, status: "alternate" })).toBe(
+      `${loc.label}, 1 component has an alternate part`,
+    );
   });
 
   it("names the maintenance zone and tier of a seat", () => {

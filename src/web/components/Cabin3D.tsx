@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../../domain/types.ts";
-import type { Workspace } from "../model.ts";
+import { STATUS_ENCODING, type Workspace } from "../model.ts";
 import type { CabinScene, CameraView, ColourMode, Layers, LightMode, LocationState, SceneTestHooks } from "../scene/CabinScene.ts";
+import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
 
 /** Only the e2e build (`npm run build:e2e`) exposes the scene on window; the shipped bundle never contains the hook. */
 const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
@@ -29,6 +30,26 @@ const CAMERA_BUTTONS: { view: CameraView; label: string; hint: string }[] = [
   { view: "aisle", label: "Aisle", hint: "Standing in the aisle looking aft" },
 ];
 
+/** The hover label sits this far right of and below the pointer, and flips to the other side near an edge. */
+const HOVER_OFFSET = 14;
+/** The gap the hover label keeps from the edges of the canvas. */
+const HOVER_MARGIN = 4;
+
+/** Where the hover label goes: beside the pointer, inside the canvas wrap. */
+export function hoverLabelPosition(
+  pointer: { x: number; y: number },
+  label: { width: number; height: number },
+  wrap: { width: number; height: number },
+): { left: number; top: number } {
+  const place = (at: number, size: number, room: number) => {
+    const after = at + HOVER_OFFSET;
+    const before = at - HOVER_OFFSET - size;
+    const wanted = after + size <= room - HOVER_MARGIN || before < HOVER_MARGIN ? after : before;
+    return Math.max(HOVER_MARGIN, Math.min(wanted, room - size - HOVER_MARGIN));
+  };
+  return { left: place(pointer.x, label.width, wrap.width), top: place(pointer.y, label.height, wrap.height) };
+}
+
 /**
  * The interactive 3D cutaway. The renderer is loaded on demand; any failure (module, WebGL,
  * lost context) is reported upward so the complete map-and-list fallback takes over.
@@ -41,7 +62,8 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   onSelectRef.current = onSelect;
   onFailedRef.current = onFailed;
   const [ready, setReady] = useState(false);
-  const [hover, setHover] = useState<string | null>(null);
+  const [hover, setHover] = useState<{ label: string; x: number; y: number } | null>(null);
+  const hoverRef = useRef<HTMLParagraphElement | null>(null);
   const [layers, setLayers] = useState<Layers>({ seats: true, floor: true, bins: true, context: false });
   const [light, setLight] = useState<LightMode>("neutral");
   const [profile, setProfile] = useState("photo-navy-band");
@@ -109,6 +131,21 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   useEffect(() => {
     if (ready) sceneRef.current?.setColourMode(colourMode);
   }, [ready, colourMode]);
+
+  // The hover label follows the pointer (offset 14 px, kept inside the canvas wrap). Placed before paint, so it never
+  // shows in the wrong place for a frame.
+  useLayoutEffect(() => {
+    const label = hoverRef.current;
+    const wrap = label?.parentElement;
+    if (!hover || !label || !wrap) return;
+    const { left, top } = hoverLabelPosition(
+      hover,
+      { width: label.offsetWidth, height: label.offsetHeight },
+      { width: wrap.clientWidth, height: wrap.clientHeight },
+    );
+    label.style.left = `${left}px`;
+    label.style.top = `${top}px`;
+  }, [hover]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -253,22 +290,20 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           <li>Use the Map and list tab to select locations by keyboard.</li>
         </ul>
         {!ready && <p className="canvas-note">Starting 3D…</p>}
+        {/* The live region announces selection; this label only follows the pointer. */}
         {hover && (
-          <p className="hover-label" aria-hidden="true">
-            {hover}
+          <p className="hover-label" aria-hidden="true" ref={hoverRef}>
+            {hover.label}
           </p>
         )}
         <ul className="legend" aria-label="Legend">
-          {colourMode === "status" && (
-            <>
-              <li>
-                <span className="swatch recorded" /> Recorded
+          {/* status badges show in both colour modes; "Work status" also tints headrests, floor areas and bins */}
+          {colourMode !== "none" &&
+            KEYED_STATUSES.map((s) => (
+              <li key={s} data-status={s}>
+                <StatusGlyph status={s} /> {STATUS_ENCODING[s].label}
               </li>
-              <li>
-                <span className="swatch unresolved" /> Unresolved
-              </li>
-            </>
-          )}
+            ))}
           {colourMode === "tier" && (
             <>
               <li>

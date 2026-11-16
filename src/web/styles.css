@@ -13,6 +13,10 @@
   --bad: #a3201a;
   --bad-bg: #fde7e5;
   --select: #ffc531;
+  /* status colours: the 3D badges and tints, the map key and the legends (STATUS_ENCODING); Task 5.7 moves them */
+  --status-recorded: #2fe08a;
+  --status-unresolved: #ff5757;
+  --status-alternate: #5b8cff;
   --radius: 6px;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.45;
@@ -651,10 +655,12 @@ ul.plain {
   text-align: center;
   color: var(--muted);
 }
+/* placed beside the pointer by Cabin3D; white-space keeps its measured width stable */
 .hover-label {
   position: absolute;
-  left: 0.5rem;
-  top: 0.4rem;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
   margin: 0;
   padding: 0.1rem 0.5rem;
   border-radius: var(--radius);
@@ -683,6 +689,41 @@ ul.plain {
   font-size: 0.8rem;
   pointer-events: none;
 }
+/* a status: a disc in its --status-* colour with an ink glyph, as on the 3D badges (STATUS_ENCODING) */
+.status-glyph {
+  display: inline-block;
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  vertical-align: -0.2rem;
+}
+.status-glyph circle {
+  fill: var(--status-colour);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.status-glyph path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.legend li,
+.status-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.status-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.9rem;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
 .swatch {
   display: inline-block;
   width: 0.8rem;
@@ -690,12 +731,6 @@ ul.plain {
   border-radius: 2px;
   vertical-align: -0.1rem;
   border: 1px solid rgba(0, 0, 0, 0.35);
-}
-.swatch.recorded {
-  background: #2fe08a;
-}
-.swatch.unresolved {
-  background: #ff5757;
 }
 .swatch.selected {
   background: var(--select);
@@ -859,15 +894,13 @@ button.loc.selected::before {
   right: 5px;
   bottom: 5px;
 }
-/* state marks are decorative: the state is in each button's accessible name */
-button.loc.recorded::after {
-  content: "✓";
-  font-size: 0.8rem;
+button.loc.alternate {
+  border-color: var(--accent);
 }
-button.loc.unresolved::after,
-button.loc.partial:not(.recorded)::after {
-  content: "!";
-  font-size: 0.8rem;
+/* the status glyph is decorative: the state is in each button's accessible name */
+button.loc .status-glyph {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 .loc-list {
   display: flex;
@@ -1110,6 +1143,17 @@ button.loc.partial:not(.recorded)::after {
   button.loc::before {
     forced-color-adjust: none;
     border: 1px solid CanvasText;
+  }
+  /* the glyph alone tells the statuses apart: system colours, a filled disc so it stands out from the button */
+  .status-glyph {
+    forced-color-adjust: none;
+  }
+  .status-glyph circle {
+    fill: CanvasText;
+    stroke: CanvasText;
+  }
+  .status-glyph path {
+    stroke: Canvas;
   }
   button.loc.selected {
     outline: 3px solid Highlight;

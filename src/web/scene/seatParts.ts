@@ -118,9 +118,8 @@ export interface SeatGeometries {
   arms: THREE.BufferGeometry;
   armPads: THREE.BufferGeometry;
   legs: THREE.BufferGeometry;
-  /** slightly oversized shells used for status and tier overlays */
+  /** a slightly oversized pan for the tier tint */
   panOverlay: THREE.BufferGeometry;
-  backOverlay: THREE.BufferGeometry;
   /** flat quad lying on the carpet under the seat, for the contact shading (WEB-21) */
   contact: THREE.BufferGeometry;
 }
@@ -200,7 +199,6 @@ export function buildSeatGeometries(): SeatGeometries {
   const panOverlay = new RoundedBoxGeometry(0.49, 0.13, SEAT.width - 0.015, 2, 0.04);
   panOverlay.rotateZ(0.06);
   panOverlay.translate(-0.045, SEAT.panY + 0.004, 0);
-  const backOverlay = lofted(-half - 0.012, half + 0.012, 4, 4);
 
   // Contact patch: a little larger than the footprint of the legs and the pan, centred under the pan.
   const contact = new THREE.PlaneGeometry(0.72, SEAT.width + 0.1);
@@ -219,7 +217,6 @@ export function buildSeatGeometries(): SeatGeometries {
     armPads: merged(padParts),
     legs: merged(legParts),
     panOverlay,
-    backOverlay,
     contact,
   };
 }

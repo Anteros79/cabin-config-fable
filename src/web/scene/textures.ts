@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GLYPH_PATHS, type StatusGlyph } from "../model.ts";
 
 /**
  * Visual profiles. Each is an unassigned, illustrative reading of a coherent image family
@@ -99,6 +100,10 @@ export const SERVICE_UNIT_TEXTURE_SIZE: TextureSize = { width: 256, height: 128 
 export const SIDEWALL_TEXTURE_SIZE: TextureSize = { width: 256, height: 256 };
 /** the soft dark patch drawn on the carpet under each seat */
 export const CONTACT_TEXTURE_SIZE: TextureSize = { width: 128, height: 128 };
+/** The status badge atlas: one square cell per glyph, side by side, in BADGE_GLYPHS order. */
+export const BADGE_ATLAS_SIZE: TextureSize = { width: 512, height: 128 };
+/** The atlas cells, left to right. "none" is an empty cell. */
+export const BADGE_GLYPHS: readonly StatusGlyph[] = ["tick", "question", "alternate", "none"];
 /** The rear shell shows the two-opening panel (appearance only; no availability claim). A factory parameter, so part of the key. */
 export const REAR_SHELL_POWER_PANEL = true;
 /** Strength of the Sobel pass that turns a seat height map into its normal map. A factory parameter, so part of the key. */
@@ -114,8 +119,8 @@ export type TextureParams = Record<string, string | number | boolean>;
  * which factory parameters. Build every key from the exported size constants and parameters, so a changed factory can
  * never reuse a stale cached texture.
  */
-export function textureKey(kind: string, paletteId: string, size: number | TextureSize, params: TextureParams = {}): string {
-  const dims = typeof size === "number" ? `${size}` : `${size.width}x${size.height}`;
+export function textureKey(kind: string, paletteId: string, size: TextureSize, params: TextureParams = {}): string {
+  const dims = `${size.width}x${size.height}`;
   const extra = Object.keys(params)
     .sort()
     .map((k) => `${k}=${params[k]}`)
@@ -800,5 +805,36 @@ export function contactTexture(): THREE.CanvasTexture {
   grad.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = grad;
   g.fillRect(0, 0, w, h);
+  return toTexture(c);
+}
+
+/**
+ * Status badges (WEB-21): per glyph, a white disc with an ink rim and the glyph stroked in ink, from the same SVG paths
+ * the map and legends draw. The badge mesh tints the disc with the status colour; the ink stays dark, so the glyph reads
+ * on any colour and the status never rests on colour alone.
+ */
+export function statusBadgeAtlas(): THREE.CanvasTexture {
+  const { width, height } = BADGE_ATLAS_SIZE;
+  const { c, g } = canvas(width, height);
+  const cell = height;
+  const ink = "#141a2e";
+  BADGE_GLYPHS.forEach((glyph, i) => {
+    if (glyph === "none") return;
+    g.save();
+    g.translate(i * cell, 0);
+    g.scale(cell / 24, cell / 24);
+    g.beginPath();
+    g.arc(12, 12, 10.6, 0, Math.PI * 2);
+    g.fillStyle = "#ffffff";
+    g.fill();
+    g.lineWidth = 1.5;
+    g.strokeStyle = ink;
+    g.stroke();
+    g.lineWidth = 2.6;
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    g.stroke(new Path2D(GLYPH_PATHS[glyph]));
+    g.restore();
+  });
   return toTexture(c);
 }

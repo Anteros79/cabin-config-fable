@@ -2,7 +2,19 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
 import { describe, expect, test } from "vitest";
-import { createOverlayMaterial, createSeatMaterials, STATUS_COLOUR, setGhosted } from "../../src/web/scene/materials.ts";
+import { STATUS_ENCODING } from "../../src/web/model.ts";
+import {
+  createOverlayMaterial,
+  createSeatMaterials,
+  METAL,
+  PAD,
+  SHELL,
+  STATUS_COLOUR,
+  setGhosted,
+  TIER_COLOUR,
+  TIER_SWATCH,
+  UPHOLSTERY,
+} from "../../src/web/scene/materials.ts";
 import { normalFromHeight, PALETTES, REAR_SHELL_POWER_PANEL, SEAT_TEXTURE_SIZE, textureKey } from "../../src/web/scene/textures.ts";
 
 /** A height map shaped like ImageData (PF-20: jsdom has no ImageData), every pixel the grey `level` unless `at` says otherwise. */
@@ -92,20 +104,27 @@ describe("createSeatMaterials", () => {
     expect(u.map).toBe(m.colour);
     expect(u.normalMap).toBe(m.normal);
     expect(u.roughnessMap).toBe(m.roughness);
-    expect(u.sheen).toBeGreaterThan(0);
-    // a black sheen colour would switch the sheen off
+    expect(u.roughness).toBe(UPHOLSTERY.roughness);
+    expect(u.specularIntensity).toBe(UPHOLSTERY.specularIntensity);
+    expect(u.sheen).toBe(UPHOLSTERY.sheen);
+    expect(u.sheenRoughness).toBe(UPHOLSTERY.sheenRoughness);
+    expect(u.clearcoat).toBe(UPHOLSTERY.clearcoat);
+    expect(u.clearcoatRoughness).toBe(UPHOLSTERY.clearcoatRoughness);
+    expect([u.normalScale.x, u.normalScale.y]).toEqual([UPHOLSTERY.normalScale, UPHOLSTERY.normalScale]);
+    // the sheen colour is the upholstery lifted toward white by sheenLift; a black one would switch the sheen off
+    const sheen = new THREE.Color(PALETTES["photo-navy-band"].upholstery).lerp(new THREE.Color("#ffffff"), UPHOLSTERY.sheenLift);
+    expect(u.sheenColor.getHexString()).toBe(sheen.getHexString());
     expect(u.sheenColor.getHex()).not.toBe(0);
-    expect(u.clearcoat).toBeGreaterThan(0);
-    expect(u.normalScale.x).toBeGreaterThan(0);
-    expect(u.normalScale.y).toBe(u.normalScale.x);
   });
 
   test("metal is fully metallic and the other parts are not; colours follow the visual family", () => {
     const p = PALETTES["photo-navy-band"];
     const set = createSeatMaterials(p, maps());
-    expect(set.metal.metalness).toBe(1);
+    expect(METAL.metalness).toBe(1);
+    expect([set.metal.metalness, set.metal.roughness]).toEqual([METAL.metalness, METAL.roughness]);
     expect(set.metal.color.getHexString()).toBe(new THREE.Color(p.metal).getHexString());
-    expect(set.shell.metalness).toBe(0);
+    expect([set.shell.metalness, set.shell.roughness]).toEqual([0, SHELL.roughness]);
+    expect([set.pad.metalness, set.pad.roughness]).toEqual([0, PAD.roughness]);
     expect(set.shell.color.getHexString()).toBe(new THREE.Color(p.shell).getHexString());
     expect(set.pad.color.getHexString()).toBe(new THREE.Color(p.armPad).getHexString());
     for (const material of [set.shell, set.metal, set.pad]) expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
@@ -157,20 +176,31 @@ function deltaE(a: THREE.Color, b: THREE.Color): number {
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
 
-function legendSwatch(status: "recorded" | "unresolved"): THREE.Color {
+/** The legend colour for a status (its `--status-*` token) or a tier (its `.swatch.tier-*` background) in styles.css. */
+function legendSwatch(kind: "status" | "tier", name: string): THREE.Color {
   const css = readFileSync(join(import.meta.dirname, "../../src/web/styles.css"), "utf8");
-  const match = new RegExp(`\\.swatch\\.${status}\\s*\\{[^}]*background:\\s*(#[0-9a-fA-F]{6})`).exec(css);
-  if (!match?.[1]) throw new Error(`no legend swatch for ${status}`);
+  const pattern =
+    kind === "status"
+      ? new RegExp(`${STATUS_ENCODING[name as keyof typeof STATUS_ENCODING].token}:\\s*(#[0-9a-fA-F]{6})`)
+      : new RegExp(`\\.swatch\\.${name}\\s*\\{[^}]*background:\\s*(#[0-9a-fA-F]{6})`);
+  const match = pattern.exec(css);
+  if (!match?.[1]) throw new Error(`no legend colour for ${kind} ${name}`);
   return new THREE.Color(match[1]);
 }
 
-describe("status overlay colour", () => {
-  for (const status of ["recorded", "unresolved"] as const) {
+/** Every overlay colour drawn in 3D with the legend entry it must match: the status tints and the tier tints. */
+const OVERLAYS: { kind: "status" | "tier"; name: string; legend: string; colour: THREE.Color }[] = [
+  ...(["recorded", "unresolved", "alternate"] as const).map((s) => ({ kind: "status" as const, name: s, legend: s, colour: STATUS_COLOUR[s] })),
+  ...Object.entries(TIER_COLOUR).map(([tier, colour]) => ({ kind: "tier" as const, name: tier, legend: TIER_SWATCH[tier] ?? "", colour })),
+];
+
+describe("overlay colour", () => {
+  for (const o of OVERLAYS) {
     for (const exposure of [1.0, 1.05]) {
-      test(`the rendered ${status} overlay matches its legend swatch within ΔE 10 at exposure ${exposure}`, () => {
+      test(`the ${o.kind} overlay colour for ${o.name}, before blending, matches its legend swatch within ΔE 10 at exposure ${exposure}`, () => {
         const material = createOverlayMaterial(0.6);
-        material.color.copy(STATUS_COLOUR[status]);
-        expect(deltaE(renderedSrgb(material, exposure), legendSwatch(status))).toBeLessThanOrEqual(10);
+        material.color.copy(o.colour);
+        expect(deltaE(renderedSrgb(material, exposure), legendSwatch(o.kind, o.legend))).toBeLessThanOrEqual(10);
       });
     }
   }
@@ -179,7 +209,7 @@ describe("status overlay colour", () => {
     const material = createOverlayMaterial(0.6);
     material.color.copy(STATUS_COLOUR.recorded);
     material.toneMapped = true;
-    expect(deltaE(renderedSrgb(material, 1.0), legendSwatch("recorded"))).toBeGreaterThan(10);
+    expect(deltaE(renderedSrgb(material, 1.0), legendSwatch("status", "recorded"))).toBeGreaterThan(10);
   });
 });
 
@@ -190,7 +220,16 @@ describe("texture keys", () => {
     expect(base).not.toBe(textureKey("rearShell", "photo-navy-band", { width: 256, height: 512 }, { powerPanel: REAR_SHELL_POWER_PANEL }));
     expect(base).toContain(`${SEAT_TEXTURE_SIZE.width}x${SEAT_TEXTURE_SIZE.height}`);
     // parameter order does not matter
-    expect(textureKey("k", "p", 8, { a: 1, b: true })).toBe(textureKey("k", "p", 8, { b: true, a: 1 }));
+    const size = { width: 8, height: 8 };
+    expect(textureKey("k", "p", size, { a: 1, b: true })).toBe(textureKey("k", "p", size, { b: true, a: 1 }));
+  });
+
+  test("a key's size is a TextureSize, never a bare number", () => {
+    // a type check only: tsc rejects the call, so the function is never run
+    const _bareNumber = () =>
+      // @ts-expect-error a bare number is not a TextureSize
+      textureKey("k", "p", 8);
+    expect(typeof _bareNumber).toBe("function");
   });
 
   test("seat back and pan textures are 512 × 1024", () => {

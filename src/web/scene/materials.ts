@@ -79,8 +79,25 @@ export function upholsteryVariant(base: THREE.MeshPhysicalMaterial, variant: { c
   return material;
 }
 
-/** Status overlay colours. The legend swatches in styles.css use the same values. */
-export const STATUS_COLOUR = { recorded: new THREE.Color("#2fe08a"), unresolved: new THREE.Color("#ff5757") };
+/**
+ * Status colours in 3D: the headrest tint, the floor and bin tints and the badge discs. They are the `--status-*` tokens
+ * that STATUS_ENCODING names (styles.css), which the map and the legends draw; a test holds the two equal.
+ */
+export const STATUS_COLOUR = {
+  recorded: new THREE.Color("#2fe08a"),
+  unresolved: new THREE.Color("#ff5757"),
+  alternate: new THREE.Color("#5b8cff"),
+} as const;
+
+/** Tier and zone tints on the seat pan in the "Tier / zone" colour mode, keyed by commercial tier or maintenance zone. */
+export const TIER_COLOUR: Record<string, THREE.Color> = {
+  "Extra Legroom": new THREE.Color("#19c8b4"),
+  Preferred: new THREE.Color("#b08cff"),
+  ELR: new THREE.Color("#19c8b4"),
+  EXIT: new THREE.Color("#ff9550"),
+};
+/** The legend swatch (`.swatch.<class>` in styles.css) that shows each tier tint. */
+export const TIER_SWATCH: Record<string, string> = { "Extra Legroom": "tier-elr", Preferred: "tier-pref", ELR: "tier-elr", EXIT: "tier-exit" };
 
 /**
  * A translucent status or tier overlay. It is not tone mapped: ACES would desaturate the colour (ΔE 26.5

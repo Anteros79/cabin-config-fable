@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { CabinLocation } from "../../domain/types.ts";
-import { type LocationFlags, seatLabelFor, type Workspace } from "../model.ts";
+import { alternateText, type LocationFlags, STATUS_ENCODING, seatLabelFor, type Workspace } from "../model.ts";
+import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
 
 interface Props {
   workspace: Workspace;
@@ -17,6 +18,7 @@ function stateClass(flags: LocationFlags | undefined, selected: boolean): string
   if (flags?.recorded) c.push("recorded");
   if (flags && flags.unresolved > 0 && flags.resolved === 0) c.push("unresolved");
   else if (flags?.unresolved) c.push("partial");
+  if (flags?.status === "alternate") c.push("alternate");
   return c.join(" ");
 }
 
@@ -105,6 +107,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
     const parts: string[] = [];
     if (f?.recorded) parts.push(`${f.recorded} replacement${f.recorded === 1 ? "" : "s"} recorded`);
     if (f?.unresolved) parts.push(`${f.unresolved} component${f.unresolved === 1 ? "" : "s"} unresolved`);
+    if (f?.alternate) parts.push(alternateText(f.alternate));
     return parts.length ? `, ${parts.join(", ")}` : "";
   };
   // The accessible name is the visible text plus hidden prefix and state, so it always contains what is shown.
@@ -124,6 +127,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
           {text}
           <span className="sr-only">{stateText(f)}</span>
         </span>
+        <StatusGlyph status={f?.status ?? "none"} />
       </button>
     );
   };
@@ -155,7 +159,14 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         <h3 id="map-seats">
           Seats <span className="count">({seats.size})</span>
         </h3>
-        <p className="fine">Forward is at the top. Arrow keys move between seats; Enter or Space selects. ✓ recorded, ! unresolved.</p>
+        <p className="fine">Forward is at the top. Arrow keys move between seats; Enter or Space selects.</p>
+        <ul className="status-key" aria-label="Status key">
+          {KEYED_STATUSES.map((s) => (
+            <li key={s}>
+              <StatusGlyph status={s} /> {STATUS_ENCODING[s].label}
+            </li>
+          ))}
+        </ul>
         {seats.size === 0 ? (
           <p className="notice">No seat set is defined for this layout.</p>
         ) : (
@@ -205,6 +216,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                             onKeyDown={(e) => onGridKey(e, code)}
                           >
                             <span aria-hidden="true">{letter}</span>
+                            <StatusGlyph status={f?.status ?? "none"} />
                           </button>
                         </span>
                       );
