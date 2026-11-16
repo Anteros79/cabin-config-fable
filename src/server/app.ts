@@ -31,26 +31,96 @@ function csvCell(value: unknown): string {
 
 export function preparationCsv(prep: PrepOverview): string {
   const header = [
-    "line_type", "part_no", "description", "component", "qty_per_replacement", "unit", "coverage_locations", "coverage_summary",
-    "source", "source_revision", "valid_from", "valid_to", "pending_change", "alternate_for", "note",
+    "line_type",
+    "part_no",
+    "description",
+    "component",
+    "qty_per_replacement",
+    "unit",
+    "coverage_locations",
+    "coverage_summary",
+    "source",
+    "source_revision",
+    "valid_from",
+    "valid_to",
+    "pending_change",
+    "alternate_for",
+    "note",
   ];
   const rows: unknown[][] = [];
   for (const line of prep.lines) {
     rows.push([
-      "PRIMARY", line.partNo, line.description, line.componentName, line.qtyPerReplacement, line.unit, line.coverageCount, line.coverageSummary,
-      line.source?.id ?? "", line.source?.revision ?? "", line.ruleEffectiveFrom, line.ruleEffectiveTo ?? "", line.pendingChanges.map((p) => p.note).join(" | "), "",
+      "PRIMARY",
+      line.partNo,
+      line.description,
+      line.componentName,
+      line.qtyPerReplacement,
+      line.unit,
+      line.coverageCount,
+      line.coverageSummary,
+      line.source?.id ?? "",
+      line.source?.revision ?? "",
+      line.ruleEffectiveFrom,
+      line.ruleEffectiveTo ?? "",
+      line.pendingChanges.map((p) => p.note).join(" | "),
+      "",
       "Coverage = locations where the part would apply; not replacements made",
     ]);
     for (const s of line.requiredSupplements) {
-      rows.push(["REQUIRED_SUPPLEMENT", s.partNo, s.description, line.componentName, s.qty, s.unit, "", "", s.sourceId, "", "", "", "", line.partNo, "Required with each primary replacement"]);
+      rows.push([
+        "REQUIRED_SUPPLEMENT",
+        s.partNo,
+        s.description,
+        line.componentName,
+        s.qty,
+        s.unit,
+        "",
+        "",
+        s.sourceId,
+        "",
+        "",
+        "",
+        "",
+        line.partNo,
+        "Required with each primary replacement",
+      ]);
     }
     for (const alt of line.alternates) {
       rows.push([
-        "ALTERNATE", alt.altPartNo, alt.altDescription, line.componentName, alt.qtyPerReplacement, alt.unit, alt.locationCount, "",
-        alt.approvalSource?.id ?? "", alt.approvalSource?.revision ?? "", alt.effectiveFrom, alt.effectiveTo ?? "", "", line.partNo, "Separately approved alternate; replaces the primary when chosen",
+        "ALTERNATE",
+        alt.altPartNo,
+        alt.altDescription,
+        line.componentName,
+        alt.qtyPerReplacement,
+        alt.unit,
+        alt.locationCount,
+        "",
+        alt.approvalSource?.id ?? "",
+        alt.approvalSource?.revision ?? "",
+        alt.effectiveFrom,
+        alt.effectiveTo ?? "",
+        "",
+        line.partNo,
+        "Separately approved alternate; replaces the primary when chosen",
       ]);
       for (const s of alt.requiredSupplements) {
-        rows.push(["REQUIRED_SUPPLEMENT", s.partNo, s.description, line.componentName, s.qty, s.unit, "", "", s.sourceId, "", "", "", "", alt.altPartNo, "Required with each alternate replacement"]);
+        rows.push([
+          "REQUIRED_SUPPLEMENT",
+          s.partNo,
+          s.description,
+          line.componentName,
+          s.qty,
+          s.unit,
+          "",
+          "",
+          s.sourceId,
+          "",
+          "",
+          "",
+          "",
+          alt.altPartNo,
+          "Required with each alternate replacement",
+        ]);
       }
     }
   }
@@ -83,7 +153,8 @@ export function createApp(config: ServerConfig): AppHandle {
     }
     const stat = statSync(config.referencePath);
     if (reference && reference.ino !== stat.ino) closeReference();
-    if (!reference) reference = { store: ReferenceStore.open(config.referencePath, config.visitsPath, { readOnly: true }), ino: stat.ino, mtimeMs: stat.mtimeMs };
+    if (!reference)
+      reference = { store: ReferenceStore.open(config.referencePath, config.visitsPath, { readOnly: true }), ino: stat.ino, mtimeMs: stat.mtimeMs };
     try {
       return reference.store.loadActive();
     } catch (e) {
@@ -103,7 +174,9 @@ export function createApp(config: ServerConfig): AppHandle {
     if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
       return fail(reply, error.statusCode, "BAD_REQUEST", error.message);
     }
-    return fail(reply, 503, "STORAGE_UNAVAILABLE", "The store could not complete the request. The transaction was rolled back; nothing was saved.", { cause: error.message });
+    return fail(reply, 503, "STORAGE_UNAVAILABLE", "The store could not complete the request. The transaction was rolled back; nothing was saved.", {
+      cause: error.message,
+    });
   });
 
   app.addHook("onRequest", async (request, reply) => {
@@ -132,12 +205,14 @@ export function createApp(config: ServerConfig): AppHandle {
   };
   const optionalVersion = (value: unknown, name: string): number | undefined => {
     if (value === undefined || value === null) return undefined;
-    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) throw new DomainError("INVALID_VERSION", `${name} must be a non-negative whole number.`, 400);
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0)
+      throw new DomainError("INVALID_VERSION", `${name} must be a non-negative whole number.`, 400);
     return value;
   };
   const optionalKey = (value: unknown): string | undefined => {
     if (value === undefined || value === null) return undefined;
-    if (typeof value !== "string" || value.length < 8 || value.length > 100) throw new DomainError("INVALID_IDEMPOTENCY_KEY", "idempotencyKey must be 8-100 characters.", 400);
+    if (typeof value !== "string" || value.length < 8 || value.length > 100)
+      throw new DomainError("INVALID_IDEMPOTENCY_KEY", "idempotencyKey must be 8-100 characters.", 400);
     return value;
   };
   /** Applies a simulated write fault (test builds only). Returns true when the response must be dropped. */
@@ -168,13 +243,19 @@ export function createApp(config: ServerConfig): AppHandle {
     } catch (e) {
       visitStatus = { available: false, message: (e as Error).message };
     }
-    return { status: referenceStatus.available && visitStatus.available ? "ok" : "degraded", demo: true, authorityNotice: AUTHORITY_NOTICE, reference: referenceStatus, visits: visitStatus };
+    return {
+      status: referenceStatus.available && visitStatus.available ? "ok" : "degraded",
+      demo: true,
+      authorityNotice: AUTHORITY_NOTICE,
+      reference: referenceStatus,
+      visits: visitStatus,
+    };
   });
 
   app.get("/api/reference", async () => {
     const release = activeRelease();
     const detail = reference!.store.findings(release.id);
-    const countBy = <T,>(items: T[], key: (item: T) => string) => {
+    const countBy = <T>(items: T[], key: (item: T) => string) => {
       const out: Record<string, number> = {};
       for (const item of items) out[key(item)] = (out[key(item)] ?? 0) + 1;
       return out;
@@ -213,7 +294,12 @@ export function createApp(config: ServerConfig): AppHandle {
 
   app.get("/api/tails", async () => {
     const release = activeRelease();
-    return { demo: true, tails: release.aircraft.map((a) => ({ tail: a.tail, subtypeId: a.subtypeId, namespace: a.namespace, note: a.note ?? "" })).sort((a, b) => a.tail.localeCompare(b.tail)) };
+    return {
+      demo: true,
+      tails: release.aircraft
+        .map((a) => ({ tail: a.tail, subtypeId: a.subtypeId, namespace: a.namespace, note: a.note ?? "" }))
+        .sort((a, b) => a.tail.localeCompare(b.tail)),
+    };
   });
 
   app.get("/api/layouts", async () => {
@@ -308,7 +394,8 @@ export function createApp(config: ServerConfig): AppHandle {
 
   app.get<{ Querystring: { status?: string; q?: string; limit?: string; offset?: string } }>("/api/visits", async (request) => {
     const { status, q, limit, offset } = request.query;
-    if (status !== undefined && status !== "DRAFT" && status !== "COMPLETED") throw new DomainError("INVALID_STATUS", "status must be DRAFT or COMPLETED.", 400);
+    if (status !== undefined && status !== "DRAFT" && status !== "COMPLETED")
+      throw new DomainError("INVALID_STATUS", "status must be DRAFT or COMPLETED.", 400);
     return visits.listVisits({ status, q, limit: limit ? Number(limit) : undefined, offset: offset ? Number(offset) : undefined });
   });
 
@@ -318,7 +405,10 @@ export function createApp(config: ServerConfig): AppHandle {
     const { release, result } = runLookup(b.tail, b.checkDate);
     if (!release) return fail(reply, 503, "REFERENCE_UNAVAILABLE", result.message);
     if (result.state !== "RESOLVED" && result.state !== "PARTIAL") {
-      return fail(reply, 422, "CONFIGURATION_NOT_RESOLVED", `A visit needs an unambiguous valid configuration. ${result.message}`, { state: result.state, reasonCode: result.reasonCode });
+      return fail(reply, 422, "CONFIGURATION_NOT_RESOLVED", `A visit needs an unambiguous valid configuration. ${result.message}`, {
+        state: result.state,
+        reasonCode: result.reasonCode,
+      });
     }
     const snapshot = buildSnapshot(release, result, new Date().toISOString());
     const dropAfter = writeFault();
@@ -358,7 +448,9 @@ export function createApp(config: ServerConfig): AppHandle {
       }
     }
     const dropAfter = writeFault();
-    const result = visits.upsertRecord(request.params.id, b.record, optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"), { idempotencyKey: optionalKey(b.idempotencyKey) });
+    const result = visits.upsertRecord(request.params.id, b.record, optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"), {
+      idempotencyKey: optionalKey(b.idempotencyKey),
+    });
     if (dropAfter) return drop(reply);
     return result;
   });
@@ -366,7 +458,9 @@ export function createApp(config: ServerConfig): AppHandle {
   app.post<{ Params: { id: string } }>("/api/visits/:id/records/remove", async (request, reply) => {
     const b = body(request);
     const dropAfter = writeFault();
-    const result = visits.removeRecord(request.params.id, b.locationId, b.componentId, optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"), { idempotencyKey: optionalKey(b.idempotencyKey) });
+    const result = visits.removeRecord(request.params.id, b.locationId, b.componentId, optionalVersion(b.expectedRecordVersion, "expectedRecordVersion"), {
+      idempotencyKey: optionalKey(b.idempotencyKey),
+    });
     if (dropAfter) return drop(reply);
     return result;
   });
@@ -375,7 +469,9 @@ export function createApp(config: ServerConfig): AppHandle {
     const b = body(request);
     if (b.confirm !== true) throw new DomainError("CONFIRMATION_REQUIRED", "Completion must be confirmed explicitly (confirm: true).", 400);
     const dropAfter = writeFault();
-    const result = visits.completeVisit(request.params.id, optionalVersion(b.expectedVisitVersion, "expectedVisitVersion"), { idempotencyKey: optionalKey(b.idempotencyKey) });
+    const result = visits.completeVisit(request.params.id, optionalVersion(b.expectedVisitVersion, "expectedVisitVersion"), {
+      idempotencyKey: optionalKey(b.idempotencyKey),
+    });
     if (dropAfter) return drop(reply);
     return result;
   });
@@ -390,7 +486,10 @@ export function createApp(config: ServerConfig): AppHandle {
   app.get<{ Params: { id: string }; Querystring: { download?: string } }>("/api/visits/:id/report", async (request, reply) => {
     const result = visits.getReport(request.params.id);
     if (request.query.download) {
-      reply.header("Content-Disposition", `attachment; filename="cabin-kit-report-${result.report.visit.tail}-${result.report.visit.checkDate}-visit-${result.report.visit.number}.json"`);
+      reply.header(
+        "Content-Disposition",
+        `attachment; filename="cabin-kit-report-${result.report.visit.tail}-${result.report.visit.checkDate}-visit-${result.report.visit.number}.json"`,
+      );
     }
     return result;
   });

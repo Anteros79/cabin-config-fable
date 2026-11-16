@@ -1,14 +1,5 @@
 import { summarizeLocations } from "./summarize.ts";
-import type {
-  CabinLocation,
-  Report,
-  ReportGap,
-  ReportTotalLine,
-  ReportWorkItem,
-  SourceArtifact,
-  Visit,
-  VisitSnapshot,
-} from "./types.ts";
+import type { CabinLocation, Report, ReportGap, ReportTotalLine, ReportWorkItem, SourceArtifact, Visit, VisitSnapshot } from "./types.ts";
 import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS } from "./types.ts";
 
 const KIND_ORDER = { SEAT: 0, FLOOR: 1, BIN: 2 } as const;

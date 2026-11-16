@@ -12,12 +12,32 @@ const release = fixtureRelease();
 const snapshot = snapshotFor(release, "N100TL", "2026-11-12");
 
 function visitWith(snap: VisitSnapshot, inputs: unknown[]): Visit {
-  const records: VisitRecord[] = inputs.map((input) => ({ ...deriveRecord(snap, input), version: 1, createdAt: "2026-11-12T12:01:00.000Z", updatedAt: "2026-11-12T12:01:00.000Z" }));
+  const records: VisitRecord[] = inputs.map((input) => ({
+    ...deriveRecord(snap, input),
+    version: 1,
+    createdAt: "2026-11-12T12:01:00.000Z",
+    updatedAt: "2026-11-12T12:01:00.000Z",
+  }));
   return {
-    id: "visit-1", number: 1, tail: snap.tail, checkDate: snap.checkDate, technician: "Demo", status: "DRAFT", version: 1 + records.length,
-    createdAt: "2026-11-12T12:00:00.000Z", updatedAt: "2026-11-12T12:01:00.000Z", completedAt: null, recordCount: records.length,
-    referenceReleaseId: snap.referenceReleaseId, lookupState: snap.lookupState, variantId: snap.context.variant.id, layoutRevisionId: snap.context.layoutRevision.id,
-    snapshot: snap, snapshotSha256: "test", records, events: [],
+    id: "visit-1",
+    number: 1,
+    tail: snap.tail,
+    checkDate: snap.checkDate,
+    technician: "Demo",
+    status: "DRAFT",
+    version: 1 + records.length,
+    createdAt: "2026-11-12T12:00:00.000Z",
+    updatedAt: "2026-11-12T12:01:00.000Z",
+    completedAt: null,
+    recordCount: records.length,
+    referenceReleaseId: snap.referenceReleaseId,
+    lookupState: snap.lookupState,
+    variantId: snap.context.variant.id,
+    layoutRevisionId: snap.context.layoutRevision.id,
+    snapshot: snap,
+    snapshotSha256: "test",
+    records,
+    events: [],
   };
 }
 const code = (fn: () => unknown): string => {
@@ -40,7 +60,13 @@ describe("primary and alternate selections", () => {
     expect(kit.lines.filter((l) => l.role === "MANDATORY_CHILD").every((l) => l.parentPartNo === "FAKE-CK-2000" && l.sourceId === "FX-DOC-DEV")).toBe(true);
     // traceability: every total line lists its location
     expect(report.totals.find((t) => t.partNo === "FAKE-P-39")!.locations).toEqual([
-      { locationId: "FLOOR:FULL-CABIN", locationLabel: "Full cabin floor (fictional carpet-kit scope)", componentId: "CARPET_KIT", quantity: 2, role: "MANDATORY_CHILD" },
+      {
+        locationId: "FLOOR:FULL-CABIN",
+        locationLabel: "Full cabin floor (fictional carpet-kit scope)",
+        componentId: "CARPET_KIT",
+        quantity: 2,
+        role: "MANDATORY_CHILD",
+      },
     ]);
   });
 
@@ -53,8 +79,21 @@ describe("primary and alternate selections", () => {
     const rel = fixtureRelease((c) => (c.components.find((x) => x.id === "CARPET_KIT")!.maxReplacementsPerLocation = 3));
     const snap = snapshotFor(rel, "N100TL", "2026-11-12");
     const record = deriveRecord(snap, { ...KIT_ALTERNATE, quantity: 3 });
-    expect(record.lines.map((l) => [l.partNo, l.qty])).toEqual([["FAKE-CK-2000", 3], ["FAKE-P-39", 6], ["FAKE-P-40", 6], ["FAKE-P-41", 3], ["FAKE-P-42", 3]]);
-    const panel = deriveRecord(snapshot, { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", substituteId: null, quantity: 4, note: "" });
+    expect(record.lines.map((l) => [l.partNo, l.qty])).toEqual([
+      ["FAKE-CK-2000", 3],
+      ["FAKE-P-39", 6],
+      ["FAKE-P-40", 6],
+      ["FAKE-P-41", 3],
+      ["FAKE-P-42", 3],
+    ]);
+    const panel = deriveRecord(snapshot, {
+      locationId: "FLOOR:FWD",
+      componentId: "CARPET_PANEL",
+      selection: "PRIMARY",
+      substituteId: null,
+      quantity: 4,
+      note: "",
+    });
     expect(panel.lines).toMatchObject([{ partNo: "FAKE-V01-FWD-PANEL", qty: 4, unit: "PANEL" }]);
   });
 
@@ -64,7 +103,10 @@ describe("primary and alternate selections", () => {
     });
     const snap = snapshotFor(rel, "N100TL", "2026-11-12");
     const report = buildReport(visitWith(snap, [CUSHION_3A, KIT_ALTERNATE]), "DRAFT_PREVIEW", "2026-11-12T12:02:00.000Z");
-    expect(report.totals.filter((t) => t.partNo === "FAKE-SC-1001").map((t) => [t.quantity, t.unit])).toEqual([[1, "EA"], [3, "PANEL"]]);
+    expect(report.totals.filter((t) => t.partNo === "FAKE-SC-1001").map((t) => [t.quantity, t.unit])).toEqual([
+      [1, "EA"],
+      [3, "PANEL"],
+    ]);
   });
 
   it("nested kits are expanded with multiplied quantities and cycles are refused", () => {
@@ -75,7 +117,10 @@ describe("primary and alternate selections", () => {
       return m;
     };
     const k = (parentPartNo: string, childPartNo: string, qty: number): KitChild => ({ parentPartNo, childPartNo, qty, unit: "EA", sourceId: "S" });
-    expect(expandKit("K", by([k("K", "A", 2), k("A", "B", 3), k("K", "B", 1)]), parts).map((c) => [c.partNo, c.qty])).toEqual([["A", 2], ["B", 7]]);
+    expect(expandKit("K", by([k("K", "A", 2), k("A", "B", 3), k("K", "B", 1)]), parts).map((c) => [c.partNo, c.qty])).toEqual([
+      ["A", 2],
+      ["B", 7],
+    ]);
     expect(() => expandKit("K", by([k("K", "A", 1), k("A", "K", 1)]), parts)).toThrow(KitError);
   });
 });
@@ -104,7 +149,9 @@ describe("authoritative record validation", () => {
       expect(code(() => deriveRecord(snapshot, { ...CUSHION_3A, quantity }))).toBe("INVALID_QUANTITY");
     }
     expect(code(() => deriveRecord(snapshot, { ...KIT_ALTERNATE, quantity: 7 }))).toBe("INVALID_QUANTITY");
-    expect(code(() => deriveRecord(snapshot, { locationId: "BIN:L-01", componentId: "BIN_DOOR", selection: "PRIMARY", quantity: 100 }))).toBe("INVALID_QUANTITY");
+    expect(code(() => deriveRecord(snapshot, { locationId: "BIN:L-01", componentId: "BIN_DOOR", selection: "PRIMARY", quantity: 100 }))).toBe(
+      "INVALID_QUANTITY",
+    );
     expect(code(() => deriveRecord(snapshot, { ...CUSHION_3A, selection: "BOTH" }))).toBe("INVALID_SELECTION");
     expect(code(() => deriveRecord(snapshot, { ...CUSHION_3A, note: "x".repeat(1001) }))).toBe("INVALID_NOTE");
     expect(code(() => deriveRecord(snapshot, [CUSHION_3A]))).toBe("INVALID_RECORD");
@@ -116,8 +163,12 @@ describe("authoritative record validation", () => {
   });
   it("only resolved components can be recorded; gaps stay in the report", () => {
     const partial = snapshotFor(release, "N090TL", "2026-11-12");
-    expect(code(() => deriveRecord(partial, { locationId: "BIN:L-01", componentId: "BIN_DOOR", selection: "PRIMARY", quantity: 1 }))).toBe("UNRESOLVED_COMPONENT");
-    expect(code(() => deriveRecord(partial, { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", quantity: 1 }))).toBe("UNRESOLVED_COMPONENT");
+    expect(code(() => deriveRecord(partial, { locationId: "BIN:L-01", componentId: "BIN_DOOR", selection: "PRIMARY", quantity: 1 }))).toBe(
+      "UNRESOLVED_COMPONENT",
+    );
+    expect(code(() => deriveRecord(partial, { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", quantity: 1 }))).toBe(
+      "UNRESOLVED_COMPONENT",
+    );
     const ok = { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 };
     const report = buildReport(visitWith(partial, [ok]), "DRAFT_PREVIEW", "2026-11-12T12:02:00.000Z");
     expect(report.counts.unresolvedComponents).toBe(24);
@@ -129,7 +180,13 @@ describe("authoritative record validation", () => {
     ]);
   });
   it("a visit cannot be built from an unresolved lookup", () => {
-    for (const [tail, date] of [["N000TL", "2026-11-12"], ["N400TL", "2026-09-15"], ["N110TL", "2026-11-12"], ["N999ZZ", "2026-11-12"], ["N600TL", "2026-03-01"]]) {
+    for (const [tail, date] of [
+      ["N000TL", "2026-11-12"],
+      ["N400TL", "2026-09-15"],
+      ["N110TL", "2026-11-12"],
+      ["N999ZZ", "2026-11-12"],
+      ["N600TL", "2026-03-01"],
+    ]) {
       expect(code(() => buildSnapshot(release, lookup(release, tail, date), "now"))).toBe("CONFIGURATION_NOT_RESOLVED");
     }
   });
@@ -166,7 +223,12 @@ describe("preparation overview", () => {
     const kit = prep.lines.find((l) => l.partNo === "FAKE-CK-2001")!;
     expect(kit.alternates).toHaveLength(1);
     expect(kit.alternates[0]).toMatchObject({ altPartNo: "FAKE-CK-2000", qtyPerReplacement: 1, unit: "KIT", effectiveTo: "2026-12-31" });
-    expect(kit.alternates[0].requiredSupplements.map((s) => [s.partNo, s.qty, s.unit])).toEqual([["FAKE-P-39", 2, "PANEL"], ["FAKE-P-40", 2, "PANEL"], ["FAKE-P-41", 1, "PANEL"], ["FAKE-P-42", 1, "PANEL"]]);
+    expect(kit.alternates[0].requiredSupplements.map((s) => [s.partNo, s.qty, s.unit])).toEqual([
+      ["FAKE-P-39", 2, "PANEL"],
+      ["FAKE-P-40", 2, "PANEL"],
+      ["FAKE-P-41", 1, "PANEL"],
+      ["FAKE-P-42", 1, "PANEL"],
+    ]);
     expect(prep.lines.some((l) => l.partNo === "FAKE-CK-2000")).toBe(false);
   });
   it("shows pending changes, excluded alternates and gaps", () => {

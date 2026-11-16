@@ -47,8 +47,7 @@ export function geometryDeclaration(physicalRows: number): GeometryDeclaration {
     },
     origin: "Cabin centreline at floor level, at the forward edge of the drawn floor",
     status: "illustrative-approximation",
-    note:
-      "Uniform illustrative row spacing and seat sizes for display and picking only. Pitch bands and photographs do not establish coordinates, hardware construction or cabin height.",
+    note: "Uniform illustrative row spacing and seat sizes for display and picking only. Pitch bands and photographs do not establish coordinates, hardware construction or cabin height.",
     cabinLength: cabinLength(physicalRows),
     cabinHalfWidth: CABIN_HALF_WIDTH,
     rowPitch: ROW_PITCH,

@@ -34,5 +34,9 @@ export function readDocxParagraphs(bytes: Uint8Array): DocxParagraph[] {
 
 /** Normalise typographic hyphens and whitespace so quotes can be located reliably. */
 export function normaliseForQuote(text: string): string {
-  return text.replace(/[\u2010\u2011\u2012\u2013\u2014]/g, "-").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+  return text
+    .replace(/[\u2010\u2011\u2012\u2013\u2014]/g, "-")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }

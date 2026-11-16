@@ -44,7 +44,13 @@ export async function startServer(options: { dataDir?: string; testFaults?: bool
   const launch = () =>
     new Promise<void>((res, rej) => {
       child = spawn(process.execPath, [join(PROJECT_ROOT, "src", "server", "main.ts")], {
-        env: { ...process.env, CABIN_KIT_DATA_DIR: dataDir, CABIN_KIT_PORT: String(port), CABIN_KIT_HOST: "127.0.0.1", CABIN_KIT_TEST_FAULTS: options.testFaults === false ? "0" : "1" },
+        env: {
+          ...process.env,
+          CABIN_KIT_DATA_DIR: dataDir,
+          CABIN_KIT_PORT: String(port),
+          CABIN_KIT_HOST: "127.0.0.1",
+          CABIN_KIT_TEST_FAULTS: options.testFaults === false ? "0" : "1",
+        },
         stdio: ["ignore", "pipe", "pipe"],
       });
       let err = "";
@@ -92,7 +98,9 @@ export async function launchBrowser(extraArgs: string[] = []): Promise<Browser> 
 }
 
 export async function waitFor3D(page: Page, timeout = 20000): Promise<void> {
-  await page.waitForFunction(() => document.querySelector("canvas[data-ready='true']") !== null && (window.__cabinKit?.scene?.frameCount ?? 0) > 1, undefined, { timeout });
+  await page.waitForFunction(() => document.querySelector("canvas[data-ready='true']") !== null && (window.__cabinKit?.scene?.frameCount ?? 0) > 1, undefined, {
+    timeout,
+  });
 }
 
 /** Let the scene settle (damping, texture upload) before a capture. */

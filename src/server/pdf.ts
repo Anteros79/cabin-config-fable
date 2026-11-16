@@ -30,13 +30,18 @@ function sourceLabel(report: Report, id: string): string {
  */
 export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [], basisSha256: string | null = null): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "LETTER", margins: { top: MARGIN + HEADER_SPACE, bottom: MARGIN + FOOTER_SPACE, left: MARGIN, right: MARGIN }, bufferPages: true, info: {
-      Title: `Cabin Kit report - visit ${report.visit.number} - ${report.visit.tail}`,
-      Subject: "Fictional demonstration appearance-check report",
-      Creator: "Cabin Kit replacement",
-      CreationDate: new Date(report.generatedAt),
-      ModDate: new Date(report.generatedAt),
-    } });
+    const doc = new PDFDocument({
+      size: "LETTER",
+      margins: { top: MARGIN + HEADER_SPACE, bottom: MARGIN + FOOTER_SPACE, left: MARGIN, right: MARGIN },
+      bufferPages: true,
+      info: {
+        Title: `Cabin Kit report - visit ${report.visit.number} - ${report.visit.tail}`,
+        Subject: "Fictional demonstration appearance-check report",
+        Creator: "Cabin Kit replacement",
+        CreationDate: new Date(report.generatedAt),
+        ModDate: new Date(report.generatedAt),
+      },
+    });
     const chunks: Buffer[] = [];
     doc.on("data", (c: Buffer) => chunks.push(c));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
@@ -50,7 +55,12 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
     const heading = (text: string) => {
       ensure(40);
       doc.moveDown(0.6).font("Helvetica-Bold").fontSize(12).fillColor("#12264d").text(safe(text), MARGIN, doc.y, { width });
-      doc.moveTo(MARGIN, doc.y + 2).lineTo(MARGIN + width, doc.y + 2).lineWidth(0.7).strokeColor("#12264d").stroke();
+      doc
+        .moveTo(MARGIN, doc.y + 2)
+        .lineTo(MARGIN + width, doc.y + 2)
+        .lineWidth(0.7)
+        .strokeColor("#12264d")
+        .stroke();
       doc.moveDown(0.5).fillColor("#000000");
     };
     const para = (text: string, size = 9, font = "Helvetica") => {
@@ -71,7 +81,10 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
         row.forEach(([k, v], c) => {
           const x = MARGIN + c * colW;
           doc.font("Helvetica-Bold").fillColor("#444444").text(safe(k), x, y, { width: labelW });
-          doc.font("Helvetica").fillColor("#000000").text(safe(v), x + labelW, y, { width: colW - labelW - 8 });
+          doc
+            .font("Helvetica")
+            .fillColor("#000000")
+            .text(safe(v), x + labelW, y, { width: colW - labelW - 8 });
         });
         doc.y = y + h;
       }
@@ -109,7 +122,12 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
           doc.fillColor("#000000").text(safe(cell), x + pad, y + pad, { width: columns[i].width - pad * 2, align: columns[i].align ?? "left" });
           x += columns[i].width;
         });
-        doc.moveTo(MARGIN, y + h).lineTo(MARGIN + width, y + h).lineWidth(0.3).strokeColor("#c5cbd8").stroke();
+        doc
+          .moveTo(MARGIN, y + h)
+          .lineTo(MARGIN + width, y + h)
+          .lineWidth(0.3)
+          .strokeColor("#c5cbd8")
+          .stroke();
         doc.y = y + h;
       });
       doc.moveDown(0.5);
@@ -118,10 +136,18 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
     // Title block
     const final = report.reportKind === "FINAL";
     doc.font("Helvetica-Bold").fontSize(17).fillColor("#12264d").text("Cabin Kit after-action report", MARGIN, doc.y, { width });
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(final ? "#1b6b3a" : "#a14a00").text(final ? "FINAL - visit completed and locked" : "DRAFT PREVIEW - visit not completed; content may still change", { width });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .fillColor(final ? "#1b6b3a" : "#a14a00")
+      .text(final ? "FINAL - visit completed and locked" : "DRAFT PREVIEW - visit not completed; content may still change", { width });
     doc.moveDown(0.4);
     doc.rect(MARGIN, doc.y, width, 34).fill("#fff4d6");
-    doc.fillColor("#5c4300").font("Helvetica-Bold").fontSize(8).text(safe(report.authorityNotice), MARGIN + 6, doc.y + 6, { width: width - 12 });
+    doc
+      .fillColor("#5c4300")
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .text(safe(report.authorityNotice), MARGIN + 6, doc.y + 6, { width: width - 12 });
     doc.fillColor("#000000");
     doc.y += 14;
 
@@ -238,7 +264,14 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
         { header: "Released", width: 46 },
         { header: "Effective / expires (inclusive)", width: width - 402 },
       ],
-      report.sources.map((s) => [s.id, s.revision, s.kind, s.title, s.released ? "yes" : "NO", `${s.effectiveFrom ?? "not stated"} / ${s.expiresOn ?? "no expiry"}`]),
+      report.sources.map((s) => [
+        s.id,
+        s.revision,
+        s.kind,
+        s.title,
+        s.released ? "yes" : "NO",
+        `${s.effectiveFrom ?? "not stated"} / ${s.expiresOn ?? "no expiry"}`,
+      ]),
     );
     para(report.dateRule, 7);
 
@@ -265,10 +298,25 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       doc.page.margins.bottom = 0;
       doc.page.margins.top = 0;
       doc.font("Helvetica").fontSize(7.5).fillColor("#555555");
-      doc.text(safe(`Cabin Kit report | Visit #${report.visit.number} | ${report.visit.tail} | ${report.visit.checkDate} | ${final ? "FINAL" : "DRAFT PREVIEW"}`), MARGIN, MARGIN - 6, { width, lineBreak: false });
-      doc.moveTo(MARGIN, MARGIN + 6).lineTo(MARGIN + width, MARGIN + 6).lineWidth(0.4).strokeColor("#999999").stroke();
+      doc.text(
+        safe(`Cabin Kit report | Visit #${report.visit.number} | ${report.visit.tail} | ${report.visit.checkDate} | ${final ? "FINAL" : "DRAFT PREVIEW"}`),
+        MARGIN,
+        MARGIN - 6,
+        { width, lineBreak: false },
+      );
+      doc
+        .moveTo(MARGIN, MARGIN + 6)
+        .lineTo(MARGIN + width, MARGIN + 6)
+        .lineWidth(0.4)
+        .strokeColor("#999999")
+        .stroke();
       const fy = doc.page.height - MARGIN - 14;
-      doc.moveTo(MARGIN, fy - 4).lineTo(MARGIN + width, fy - 4).lineWidth(0.4).strokeColor("#999999").stroke();
+      doc
+        .moveTo(MARGIN, fy - 4)
+        .lineTo(MARGIN + width, fy - 4)
+        .lineWidth(0.4)
+        .strokeColor("#999999")
+        .stroke();
       doc.text("FICTIONAL DEMONSTRATION - not an approved maintenance record", MARGIN, fy, { width: width - 90, lineBreak: false });
       doc.text(`Page ${i + 1} of ${range.count}`, MARGIN + width - 90, fy, { width: 90, align: "right", lineBreak: false });
       doc.page.margins.bottom = savedBottom;

@@ -26,12 +26,7 @@ export function withinInclusive(date: IsoDate, from: IsoDate | null, to: IsoDate
   return true;
 }
 
-export function intervalsOverlap(
-  aFrom: IsoDate,
-  aTo: IsoDate | null,
-  bFrom: IsoDate,
-  bTo: IsoDate | null,
-): boolean {
+export function intervalsOverlap(aFrom: IsoDate, aTo: IsoDate | null, bFrom: IsoDate, bTo: IsoDate | null): boolean {
   const aEnd = aTo ?? "9999-12-31";
   const bEnd = bTo ?? "9999-12-31";
   return aFrom <= bEnd && bFrom <= aEnd;

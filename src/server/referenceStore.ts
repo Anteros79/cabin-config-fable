@@ -20,8 +20,22 @@ const REFERENCE_TABLES = ["meta", "release", "release_entity", "active_release",
 const VISIT_TABLES = ["visits", "visit_records", "visit_events", "reports", "idempotency"];
 
 const ENTITY_TYPES = [
-  "vocabulary", "source", "subtype", "aircraft", "variant", "layout", "layoutRevision", "assignment", "component", "part",
-  "rule", "substitute", "kitChild", "pendingChange", "layoutCategory", "visualProfile",
+  "vocabulary",
+  "source",
+  "subtype",
+  "aircraft",
+  "variant",
+  "layout",
+  "layoutRevision",
+  "assignment",
+  "component",
+  "part",
+  "rule",
+  "substitute",
+  "kitChild",
+  "pendingChange",
+  "layoutCategory",
+  "visualProfile",
 ] as const;
 type EntityType = (typeof ENTITY_TYPES)[number];
 
@@ -98,11 +112,13 @@ export function inspectStore(path: string): StoreInspection {
     return { exists: true, kind: "not-sqlite", tables: [], storeKindMarker: null, visitRows: 0 };
   }
   try {
-    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map((r) => r.name);
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map(
+      (r) => r.name,
+    );
     let marker: string | null = null;
     if (tables.includes("meta")) {
       try {
-        marker = ((db.prepare("SELECT value FROM meta WHERE key='store_kind'").get() as { value: string } | undefined)?.value) ?? null;
+        marker = (db.prepare("SELECT value FROM meta WHERE key='store_kind'").get() as { value: string } | undefined)?.value ?? null;
       } catch {
         marker = null;
       }
@@ -144,7 +160,10 @@ export function assertSafeReferenceTarget(referencePath: string, visitsPath: str
   }
   const inspection = inspectStore(referencePath);
   if (inspection.kind === "visits" || inspection.kind === "mixed") {
-    throw new ReferenceStoreError("VISIT_DATA_PRESENT", `The reference target contains visit tables (${inspection.visitRows} visits). Reference import or reset is refused.`);
+    throw new ReferenceStoreError(
+      "VISIT_DATA_PRESENT",
+      `The reference target contains visit tables (${inspection.visitRows} visits). Reference import or reset is refused.`,
+    );
   }
   if (inspection.kind === "unknown" || inspection.kind === "not-sqlite") {
     throw new ReferenceStoreError("UNKNOWN_STORE", "The reference target is not a database created by this application. It will not be modified or replaced.");
@@ -220,7 +239,8 @@ export class ReferenceStore {
 
   static open(path: string, visitsPath: string, options: { readOnly?: boolean } = {}): ReferenceStore {
     const inspection = assertSafeReferenceTarget(path, visitsPath);
-    if (inspection.kind !== "reference") throw new ReferenceStoreError("STORE_MISSING", "No reference store exists at that path. Run the reference import first.");
+    if (inspection.kind !== "reference")
+      throw new ReferenceStoreError("STORE_MISSING", "No reference store exists at that path. Run the reference import first.");
     const db = new DatabaseSync(path, { timeout: 8000, readOnly: options.readOnly ?? false });
     db.exec("PRAGMA foreign_keys=ON;");
     if (!options.readOnly) db.exec("PRAGMA journal_mode=WAL;");
@@ -248,20 +268,32 @@ export class ReferenceStore {
    * Stage a release and record its validation result. Nothing here changes which release is
    * active. Returns the release id and whether it may be activated.
    */
-  stage(content: ReleaseContent, findings: Finding[], stats: Record<string, unknown> = {}, now = new Date().toISOString()): { id: string; status: "validated" | "rejected" } {
+  stage(
+    content: ReleaseContent,
+    findings: Finding[],
+    stats: Record<string, unknown> = {},
+    now = new Date().toISOString(),
+  ): { id: string; status: "validated" | "rejected" } {
     const hash = contentHash(content);
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const seq = Number((this.db.prepare("SELECT coalesce(max(seq), 0) + 1 AS n FROM release").get() as { n: number }).n);
       const id = `REL-${String(seq).padStart(4, "0")}-${hash.slice(0, 8)}`;
-      this.db.prepare("INSERT INTO release(id, seq, label, status, content_hash, created_at, findings_json, stats_json) VALUES (?, ?, ?, 'staged', ?, ?, ?, ?)").run(
-        id, seq, content.label, hash, now, JSON.stringify(findings), JSON.stringify(stats),
+      this.db
+        .prepare("INSERT INTO release(id, seq, label, status, content_hash, created_at, findings_json, stats_json) VALUES (?, ?, ?, 'staged', ?, ?, ?, ?)")
+        .run(id, seq, content.label, hash, now, JSON.stringify(findings), JSON.stringify(stats));
+      const insert = this.db.prepare(
+        "INSERT INTO release_entity(release_id, entity_type, entity_id, namespace, position, data_json) VALUES (?, ?, ?, ?, ?, ?)",
       );
-      const insert = this.db.prepare("INSERT INTO release_entity(release_id, entity_type, entity_id, namespace, position, data_json) VALUES (?, ?, ?, ?, ?, ?)");
       entityRows(content).forEach((row, position) => insert.run(id, row.type, row.id, row.namespace, position, JSON.stringify(row.data)));
       const status = hasBlockingFindings(findings) ? "rejected" : "validated";
       this.db.prepare("UPDATE release SET status = ?, validated_at = ? WHERE id = ?").run(status, now, id);
-      this.event(id, status === "validated" ? "VALIDATED" : "REJECTED", { findings: findings.length, blocking: findings.filter((f) => f.severity === "error").length }, now);
+      this.event(
+        id,
+        status === "validated" ? "VALIDATED" : "REJECTED",
+        { findings: findings.length, blocking: findings.filter((f) => f.severity === "error").length },
+        now,
+      );
       this.db.exec("COMMIT");
       return { id, status };
     } catch (e) {
@@ -283,10 +315,15 @@ export class ReferenceStore {
       if (row.status !== "validated" && row.status !== "superseded") {
         throw new ReferenceStoreError("RELEASE_NOT_VALIDATED", `Release ${releaseId} is ${row.status} and cannot be activated.`);
       }
-      const previous = (this.db.prepare("SELECT release_id FROM active_release WHERE singleton = 1").get() as { release_id: string } | undefined)?.release_id ?? null;
+      const previous =
+        (this.db.prepare("SELECT release_id FROM active_release WHERE singleton = 1").get() as { release_id: string } | undefined)?.release_id ?? null;
       if (previous) this.db.prepare("UPDATE release SET status = 'superseded' WHERE id = ?").run(previous);
       this.db.prepare("UPDATE release SET status = 'active', activated_at = ? WHERE id = ?").run(now, releaseId);
-      this.db.prepare("INSERT INTO active_release(singleton, release_id, activated_at) VALUES (1, ?, ?) ON CONFLICT(singleton) DO UPDATE SET release_id = excluded.release_id, activated_at = excluded.activated_at").run(releaseId, now);
+      this.db
+        .prepare(
+          "INSERT INTO active_release(singleton, release_id, activated_at) VALUES (1, ?, ?) ON CONFLICT(singleton) DO UPDATE SET release_id = excluded.release_id, activated_at = excluded.activated_at",
+        )
+        .run(releaseId, now);
       this.event(releaseId, "ACTIVATED", { previous }, now);
       this.db.exec("COMMIT");
     } catch (e) {
@@ -296,7 +333,7 @@ export class ReferenceStore {
   }
 
   activeReleaseId(): string | null {
-    return ((this.db.prepare("SELECT release_id FROM active_release WHERE singleton = 1").get() as { release_id: string } | undefined)?.release_id) ?? null;
+    return (this.db.prepare("SELECT release_id FROM active_release WHERE singleton = 1").get() as { release_id: string } | undefined)?.release_id ?? null;
   }
 
   listReleases(): ReleaseSummary[] {
@@ -320,13 +357,22 @@ export class ReferenceStore {
   }
 
   findings(releaseId: string): { findings: Finding[]; stats: Record<string, unknown> } {
-    const row = this.db.prepare("SELECT findings_json, stats_json FROM release WHERE id = ?").get(releaseId) as { findings_json: string; stats_json: string } | undefined;
+    const row = this.db.prepare("SELECT findings_json, stats_json FROM release WHERE id = ?").get(releaseId) as
+      | { findings_json: string; stats_json: string }
+      | undefined;
     if (!row) throw new ReferenceStoreError("RELEASE_NOT_FOUND", `Release ${releaseId} does not exist.`);
     return { findings: JSON.parse(row.findings_json), stats: JSON.parse(row.stats_json) };
   }
 
   events(): { at: string; releaseId: string | null; type: string; detail: unknown }[] {
-    return (this.db.prepare("SELECT at, release_id, type, detail_json FROM release_event ORDER BY id").all() as { at: string; release_id: string | null; type: string; detail_json: string }[]).map((r) => ({
+    return (
+      this.db.prepare("SELECT at, release_id, type, detail_json FROM release_event ORDER BY id").all() as {
+        at: string;
+        release_id: string | null;
+        type: string;
+        detail_json: string;
+      }[]
+    ).map((r) => ({
       at: r.at,
       releaseId: r.release_id,
       type: r.type,
@@ -344,7 +390,10 @@ export class ReferenceStore {
         | { id: string; content_hash: string; activated_at: string | null; status: string }
         | undefined;
       if (!head) throw new ReferenceStoreError("RELEASE_NOT_FOUND", `Release ${releaseId} does not exist.`);
-      const rows = this.db.prepare("SELECT entity_type, data_json FROM release_entity WHERE release_id = ? ORDER BY position").all(releaseId) as { entity_type: EntityType; data_json: string }[];
+      const rows = this.db.prepare("SELECT entity_type, data_json FROM release_entity WHERE release_id = ? ORDER BY position").all(releaseId) as {
+        entity_type: EntityType;
+        data_json: string;
+      }[];
       const by = (type: EntityType) => rows.filter((r) => r.entity_type === type).map((r) => JSON.parse(r.data_json));
       const vocab = by("vocabulary")[0] ?? { carpets: [], seams: [], upholsteries: [], units: [], schema: "cabin-kit.reference/1", label: "" };
       const release: ReferenceRelease = {
@@ -391,11 +440,7 @@ export class ReferenceStore {
  * Destructive rebuild of the reference store only. Builds the replacement beside the target and
  * swaps it in with one rename, after the same guards as every other reference operation.
  */
-export function resetReferenceStore(
-  referencePath: string,
-  visitsPath: string,
-  build: (store: ReferenceStore) => void,
-): void {
+export function resetReferenceStore(referencePath: string, visitsPath: string, build: (store: ReferenceStore) => void): void {
   assertSafeReferenceTarget(referencePath, visitsPath);
   const temp = `${referencePath}.rebuild-${process.pid}.tmp`;
   for (const suffix of ["", "-wal", "-shm"]) rmSync(`${temp}${suffix}`, { force: true });

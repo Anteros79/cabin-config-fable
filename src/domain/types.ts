@@ -658,8 +658,7 @@ export const AUTHORITY_NOTICE =
   "Fictional home-lab demonstration. Not an approved maintenance authority, engineering source or work instruction. " +
   "Part numbers, tails, applicability and geometry shown are fictional fixtures or unverified candidate data.";
 
-export const DATE_RULE =
-  "Effective-from and effective-to/expiry dates are calendar dates and are both inclusive.";
+export const DATE_RULE = "Effective-from and effective-to/expiry dates are calendar dates and are both inclusive.";
 
 export const REPLACEMENT_COUNT_SEMANTICS =
   "Replacements = number of that component replaced at that location during this visit (one record per visit, location and component). " +

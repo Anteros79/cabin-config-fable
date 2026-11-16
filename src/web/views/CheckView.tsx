@@ -66,7 +66,10 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
   const lastDraft = useMemo(recall, [visitId]);
 
   useEffect(() => {
-    api.tails().then((r) => setTails(r.tails)).catch(() => setTails([]));
+    api
+      .tails()
+      .then((r) => setTails(r.tails))
+      .catch(() => setTails([]));
   }, []);
 
   const loadVisit = useCallback(async (id: string) => {
@@ -78,7 +81,11 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
       setReferenceChanged(res.referenceNow?.changedSinceVisit ?? false);
       if (res.visit.status === "DRAFT") remember(id);
     } catch (e) {
-      setVisitError(e instanceof ApiError && e.kind === "network" ? "The server could not be reached. Your saved work is still on the server; retry when the connection is back." : (e as Error).message);
+      setVisitError(
+        e instanceof ApiError && e.kind === "network"
+          ? "The server could not be reached. Your saved work is still on the server; retry when the connection is back."
+          : (e as Error).message,
+      );
     } finally {
       setVisitLoading(false);
     }
@@ -146,7 +153,11 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
       setSelection(null);
     } catch (err) {
       setLookup(null);
-      setLookupError(err instanceof ApiError && err.kind === "network" ? "The server could not be reached. Nothing was looked up; retry when the connection is back." : (err as Error).message);
+      setLookupError(
+        err instanceof ApiError && err.kind === "network"
+          ? "The server could not be reached. Nothing was looked up; retry when the connection is back."
+          : (err as Error).message,
+      );
     } finally {
       setLookupBusy(false);
     }
@@ -161,13 +172,24 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
         const res = await op(key);
         pending.current = null;
         setVisit(res.visit);
-        setSaveState({ status: "saved", message: res.replayed ? "Saved. The earlier attempt had already been stored; nothing was duplicated." : "Saved.", target });
+        setSaveState({
+          status: "saved",
+          message: res.replayed ? "Saved. The earlier attempt had already been stored; nothing was duplicated." : "Saved.",
+          target,
+        });
         after?.(res);
       } catch (e) {
         if (e instanceof ApiError && e.kind === "network") {
           pending.current = attempt;
-          setSaveState({ status: "unknown", message: "Outcome unknown: the server did not answer, so this may or may not have been saved. Retrying is safe and cannot duplicate it.", target });
-        } else if (e instanceof ApiError && (e.code === "STALE_RECORD" || e.code === "STALE_VISIT" || e.code === "VISIT_LOCKED" || e.code === "RECORD_NOT_FOUND")) {
+          setSaveState({
+            status: "unknown",
+            message: "Outcome unknown: the server did not answer, so this may or may not have been saved. Retrying is safe and cannot duplicate it.",
+            target,
+          });
+        } else if (
+          e instanceof ApiError &&
+          (e.code === "STALE_RECORD" || e.code === "STALE_VISIT" || e.code === "VISIT_LOCKED" || e.code === "RECORD_NOT_FOUND")
+        ) {
           pending.current = null;
           setSaveState({ status: "conflict", message: `Not saved: ${e.message} The current saved state has been reloaded.`, target });
           if (visitId) void loadVisit(visitId);
@@ -185,10 +207,15 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
 
   const startVisit = () => {
     if (!lookup) return;
-    mutate("visit", "Creating visit", (key) => api.createVisit(lookup.tail, lookup.checkDate, technician, key), (res) => {
-      remember(res.visit.id);
-      navigate(`#/visit/${res.visit.id}`);
-    });
+    mutate(
+      "visit",
+      "Creating visit",
+      (key) => api.createVisit(lookup.tail, lookup.checkDate, technician, key),
+      (res) => {
+        remember(res.visit.id);
+        navigate(`#/visit/${res.visit.id}`);
+      },
+    );
   };
   const record = (input: RecordInput, expectedRecordVersion: number) => {
     if (!visit) return;
@@ -212,7 +239,12 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
         setConfirming(false);
         if (e instanceof ApiError && e.kind === "network") {
           pending.current = attempt;
-          setSaveState({ status: "unknown", message: "Outcome unknown: the server did not answer, so the visit may or may not be completed. Retrying is safe: completing twice returns the same report.", target: "complete" });
+          setSaveState({
+            status: "unknown",
+            message:
+              "Outcome unknown: the server did not answer, so the visit may or may not be completed. Retrying is safe: completing twice returns the same report.",
+            target: "complete",
+          });
         } else if (e instanceof ApiError && e.code === "STALE_VISIT") {
           setSaveState({ status: "conflict", message: `Not completed: ${e.message} The current saved work has been reloaded.`, target: "complete" });
           void loadVisit(visit.id);
@@ -244,7 +276,16 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
           <form onSubmit={doLookup} className="lookup-form" noValidate>
             <label className="field">
               <span>Tail number</span>
-              <input name="tail" list="tail-options" value={tail} onChange={(e) => setTail(e.target.value)} autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="e.g. N100TL" />
+              <input
+                name="tail"
+                list="tail-options"
+                value={tail}
+                onChange={(e) => setTail(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="e.g. N100TL"
+              />
               <datalist id="tail-options">
                 {tails.map((t) => (
                   <option key={t.tail} value={t.tail}>
@@ -343,8 +384,11 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
             <div className="head-row">
               <div className="head-main">
                 <p>
-                  <span className={`pill ${visit.status === "DRAFT" ? "draft" : "recorded"}`}>{visit.status === "DRAFT" ? "Draft" : "Completed and locked"}</span> Technician: {visit.technician || "not entered"} ·
-                  Configuration frozen {visit.snapshot.capturedAt.slice(0, 19).replace("T", " ")} UTC from release {visit.referenceReleaseId}.
+                  <span className={`pill ${visit.status === "DRAFT" ? "draft" : "recorded"}`}>
+                    {visit.status === "DRAFT" ? "Draft" : "Completed and locked"}
+                  </span>{" "}
+                  Technician: {visit.technician || "not entered"} · Configuration frozen {visit.snapshot.capturedAt.slice(0, 19).replace("T", " ")} UTC from
+                  release {visit.referenceReleaseId}.
                 </p>
                 <p className="fine">
                   This visit keeps its own frozen configuration and parts rules. Looking up another tail or date never changes it.
@@ -473,8 +517,9 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                         Complete and lock this visit?
                       </h4>
                       <p id="confirm-d">
-                        {visit.records.length} record{visit.records.length === 1 ? "" : "s"} will be locked into the after-action report for {visit.tail} on {visit.checkDate}. Completed visits cannot be
-                        edited.{unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
+                        {visit.records.length} record{visit.records.length === 1 ? "" : "s"} will be locked into the after-action report for {visit.tail} on{" "}
+                        {visit.checkDate}. Completed visits cannot be edited.
+                        {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
                       </p>
                       <div className="actions">
                         <button type="button" className="primary" onClick={complete} disabled={saveState.status === "saving"}>

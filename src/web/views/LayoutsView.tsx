@@ -76,8 +76,11 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
           </p>
           <h2 id="layout-h">{rev.name}</h2>
           <p>
-            <span className={`pill ${rev.namespace === "candidate" ? "candidate" : rev.status === "planned" ? "unresolved" : "ok"}`}>{STATUS_TEXT[rev.status] ?? rev.status}</span> {rev.id} · namespace{" "}
-            {rev.namespace} · {rev.locations.filter((l) => l.kind === "SEAT").length} seats · floor map {rev.floorMapStatus} · bin map {rev.binMapStatus}
+            <span className={`pill ${rev.namespace === "candidate" ? "candidate" : rev.status === "planned" ? "unresolved" : "ok"}`}>
+              {STATUS_TEXT[rev.status] ?? rev.status}
+            </span>{" "}
+            {rev.id} · namespace {rev.namespace} · {rev.locations.filter((l) => l.kind === "SEAT").length} seats · floor map {rev.floorMapStatus} · bin map{" "}
+            {rev.binMapStatus}
           </p>
           <ul className="notes">
             {rev.notes.map((n) => (
@@ -118,7 +121,11 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
 
   if (!list) return <p role="status">Loading layouts…</p>;
   const groups: [string, string, LayoutSummary[]][] = [
-    ["Candidate layouts from the supplied registry", "Unverified and unassigned. Explorable in 3D; no tails, parts or floor/bin maps.", list.layouts.filter((l) => l.namespace === "candidate")],
+    [
+      "Candidate layouts from the supplied registry",
+      "Unverified and unassigned. Explorable in 3D; no tails, parts or floor/bin maps.",
+      list.layouts.filter((l) => l.namespace === "candidate"),
+    ],
     ["Fictional fixture layouts", "Used by the demonstration tails. Not aircraft data.", list.layouts.filter((l) => l.namespace === "fixture")],
   ];
   return (
@@ -168,12 +175,19 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
       ))}
       <section aria-labelledby="cats-h">
         <h3 id="cats-h">Layout categories described in the supplied DOCX</h3>
-        <p className="fine">Four document categories versus five registry identifiers is a difference of grain. No record is merged or dropped, and crosswalks are inferred, not stated.</p>
+        <p className="fine">
+          Four document categories versus five registry identifiers is a difference of grain. No record is merged or dropped, and crosswalks are inferred, not
+          stated.
+        </p>
         <ul className="category-list">
           {list.layoutCategories.map((c) => (
             <li key={c.id} data-category={c.id}>
               <strong>{c.name}</strong> — claimed {c.claimedSeatCount ?? "?"} seats.{" "}
-              {c.seatSetStatus === "not-supplied" ? <span className="pill unresolved">Unresolved: seat set not supplied</span> : <span className="pill candidate">Inferred: {c.crosswalk.map((x) => x.layoutRevisionId).join(", ")}</span>}
+              {c.seatSetStatus === "not-supplied" ? (
+                <span className="pill unresolved">Unresolved: seat set not supplied</span>
+              ) : (
+                <span className="pill candidate">Inferred: {c.crosswalk.map((x) => x.layoutRevisionId).join(", ")}</span>
+              )}
               <br />
               <span className="fine">{c.note}</span>
               <ul className="plain fine">

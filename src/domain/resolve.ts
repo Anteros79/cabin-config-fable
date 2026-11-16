@@ -1,12 +1,6 @@
 import { isIsoDate, withinInclusive } from "./dates.ts";
 import { expandKit } from "./kits.ts";
-import {
-  buildIndex,
-  matchesContext,
-  undominated,
-  type AssignmentContext,
-  type ReleaseIndex,
-} from "./specificity.ts";
+import { buildIndex, matchesContext, undominated, type AssignmentContext, type ReleaseIndex } from "./specificity.ts";
 import type {
   ApplicabilityRule,
   ComponentResolution,
@@ -56,7 +50,8 @@ export function substituteExclusions(index: ReleaseIndex, sub: SubstituteApprova
   const reasons: ExclusionReason[] = [];
   if (!sub.released) reasons.push({ code: "NOT_RELEASED", message: `Substitute approval ${sub.id} is not released.` });
   if (date < sub.effectiveFrom) reasons.push({ code: "APPROVAL_NOT_YET_EFFECTIVE", message: `Approval ${sub.id} is effective from ${sub.effectiveFrom}.` });
-  if (sub.effectiveTo !== null && date > sub.effectiveTo) reasons.push({ code: "APPROVAL_EXPIRED", message: `Approval ${sub.id} expired after ${sub.effectiveTo}.` });
+  if (sub.effectiveTo !== null && date > sub.effectiveTo)
+    reasons.push({ code: "APPROVAL_EXPIRED", message: `Approval ${sub.id} expired after ${sub.effectiveTo}.` });
   return [...reasons, ...sourceExclusions(index.sources.get(sub.sourceId), date)];
 }
 
@@ -115,9 +110,7 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
 
   const covering = all.filter((a) => withinInclusive(checkDate, a.effectiveFrom, a.effectiveTo));
   const isReleased = (a: TailAssignment) =>
-    a.status === "released" &&
-    index.variants.get(a.variantId)?.released === true &&
-    index.layoutRevisions.get(a.layoutRevisionId)?.status === "released";
+    a.status === "released" && index.variants.get(a.variantId)?.released === true && index.layoutRevisions.get(a.layoutRevisionId)?.status === "released";
   const released = covering.filter(isReleased);
   const planned = covering.filter((a) => !isReleased(a));
 
@@ -306,9 +299,7 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
     for (const componentId of location.componentIds) {
       const covering = (inContext.get(componentId) ?? []).filter((c) => c.locations.has(location.id));
       const eligible = covering.filter((c) => c.exclusions.length === 0).map((c) => c.rule);
-      const excluded = covering
-        .filter((c) => c.exclusions.length > 0)
-        .map((c) => ({ ruleId: c.rule.id, partNo: c.rule.partNo, reasons: c.exclusions }));
+      const excluded = covering.filter((c) => c.exclusions.length > 0).map((c) => ({ ruleId: c.rule.id, partNo: c.rule.partNo, reasons: c.exclusions }));
       if (eligible.length === 0) {
         excluded.forEach((e) => noteSource(index.release.rules.find((r) => r.id === e.ruleId)?.sourceId ?? null));
         counts.noMatch += 1;

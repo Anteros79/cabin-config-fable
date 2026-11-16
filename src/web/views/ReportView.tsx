@@ -17,7 +17,11 @@ export function ReportView({ visitId }: { visitId: string }) {
     try {
       setData(await api.report(visitId));
     } catch (e) {
-      setError(e instanceof ApiError && e.kind === "network" ? "The server could not be reached. The saved report is unchanged; retry when the connection is back." : (e as Error).message);
+      setError(
+        e instanceof ApiError && e.kind === "network"
+          ? "The server could not be reached. The saved report is unchanged; retry when the connection is back."
+          : (e as Error).message,
+      );
     }
   }, [visitId]);
   useEffect(() => {
@@ -77,7 +81,9 @@ export function ReportView({ visitId }: { visitId: string }) {
       </div>
       <header>
         <h2 id="report-h">Cabin Kit after-action report</h2>
-        <p className={`report-kind ${final ? "final" : "draft"}`}>{final ? "FINAL — visit completed and locked" : "DRAFT PREVIEW — visit not completed; content may still change"}</p>
+        <p className={`report-kind ${final ? "final" : "draft"}`}>
+          {final ? "FINAL — visit completed and locked" : "DRAFT PREVIEW — visit not completed; content may still change"}
+        </p>
         <p className="authority">{report.authorityNotice}</p>
       </header>
 
@@ -330,7 +336,8 @@ export function ReportView({ visitId }: { visitId: string }) {
           <ul>
             {linkedEvents.map((e) => (
               <li key={e.seq}>
-                <strong>{e.type === "ADVISORY" ? "Advisory" : "Correction note"}</strong> {e.at} {String(e.payload.author ?? "") && `by ${String(e.payload.author)}`}: {String(e.payload.note ?? "")}
+                <strong>{e.type === "ADVISORY" ? "Advisory" : "Correction note"}</strong> {e.at}{" "}
+                {String(e.payload.author ?? "") && `by ${String(e.payload.author)}`}: {String(e.payload.note ?? "")}
               </li>
             ))}
           </ul>

@@ -26,7 +26,11 @@ describe("visit records", () => {
     const { visit } = store.createVisit(snap(), "Demo tech");
     expect(visit).toMatchObject({ status: "DRAFT", version: 1, number: 1, technician: "Demo tech", tail: "N100TL", checkDate: "2026-11-12" });
     store.upsertRecord(visit.id, { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", quantity: 1 }, undefined);
-    const again = store.upsertRecord(visit.id, { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", quantity: 3, note: " three panels " }, undefined).visit;
+    const again = store.upsertRecord(
+      visit.id,
+      { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", quantity: 3, note: " three panels " },
+      undefined,
+    ).visit;
     expect(again.records).toHaveLength(1);
     expect(again.records[0]).toMatchObject({ quantity: 3, version: 2, note: "three panels" });
     expect(again.records[0].lines).toMatchObject([{ partNo: "FAKE-V01-FWD-PANEL", qty: 3, unit: "PANEL" }]);
@@ -50,13 +54,19 @@ describe("visit records", () => {
     const { visit } = store.createVisit(snap(), "");
     store.upsertRecord(visit.id, CUSHION_3A, undefined);
     store.upsertRecord(visit.id, KIT_PRIMARY, undefined);
-    expect(totals(store.getReport(visit.id).report)).toEqual([["FAKE-CK-2001", 1, "KIT"], ["FAKE-SC-1001", 1, "EA"]]);
+    expect(totals(store.getReport(visit.id).report)).toEqual([
+      ["FAKE-CK-2001", 1, "KIT"],
+      ["FAKE-SC-1001", 1, "EA"],
+    ]);
     store.upsertRecord(visit.id, KIT_ALTERNATE, undefined);
     expect(totals(store.getReport(visit.id).report)).toEqual(SIX_LINE_TOTALS.map((x) => [...x]));
     store.upsertRecord(visit.id, KIT_ALTERNATE, undefined); // retry of the same choice
     expect(totals(store.getReport(visit.id).report)).toEqual(SIX_LINE_TOTALS.map((x) => [...x]));
     store.upsertRecord(visit.id, KIT_PRIMARY, undefined);
-    expect(totals(store.getReport(visit.id).report)).toEqual([["FAKE-CK-2001", 1, "KIT"], ["FAKE-SC-1001", 1, "EA"]]);
+    expect(totals(store.getReport(visit.id).report)).toEqual([
+      ["FAKE-CK-2001", 1, "KIT"],
+      ["FAKE-SC-1001", 1, "EA"],
+    ]);
     store.upsertRecord(visit.id, KIT_ALTERNATE, undefined);
     store.removeRecord(visit.id, "FLOOR:FULL-CABIN", "CARPET_KIT", undefined);
     expect(totals(store.getReport(visit.id).report)).toEqual([["FAKE-SC-1001", 1, "EA"]]);
@@ -168,7 +178,11 @@ describe("completion and locking", () => {
     store.completeVisit(visit.id, undefined);
     expect(() => store.rawExec(`UPDATE visit_records SET quantity = 9 WHERE visit_id = '${visit.id}'`)).toThrow(/VISIT_LOCKED/);
     expect(() => store.rawExec(`DELETE FROM visit_records WHERE visit_id = '${visit.id}'`)).toThrow(/VISIT_LOCKED/);
-    expect(() => store.rawExec(`INSERT INTO visit_records SELECT visit_id, 'SEAT:9A', component_id, version, selection, substitute_id, quantity, note, rule_id, primary_part_no, location_label, component_name, lines_json, created_at, updated_at FROM visit_records WHERE visit_id = '${visit.id}'`)).toThrow(/VISIT_LOCKED/);
+    expect(() =>
+      store.rawExec(
+        `INSERT INTO visit_records SELECT visit_id, 'SEAT:9A', component_id, version, selection, substitute_id, quantity, note, rule_id, primary_part_no, location_label, component_name, lines_json, created_at, updated_at FROM visit_records WHERE visit_id = '${visit.id}'`,
+      ),
+    ).toThrow(/VISIT_LOCKED/);
     expect(() => store.rawExec(`UPDATE visits SET status = 'DRAFT', completed_at = NULL WHERE id = '${visit.id}'`)).toThrow(/VISIT_LOCKED/);
     expect(() => store.rawExec(`UPDATE reports SET report_json = '{}' WHERE visit_id = '${visit.id}'`)).toThrow(/REPORT_IMMUTABLE/);
     expect(() => store.rawExec(`DELETE FROM reports WHERE visit_id = '${visit.id}'`)).toThrow(/REPORT_IMMUTABLE/);
@@ -242,7 +256,12 @@ describe("persistence and history", () => {
     expect(store.listVisits({ status: "COMPLETED", limit: 200 }).total).toBe(7);
     expect(store.listVisits({ status: "DRAFT", limit: 200 }).items).toHaveLength(123);
     expect(store.listVisits({ q: "N300TL" }).total).toBe(13);
-    expect(store.listVisits({ q: "Tech 12" }).items.map((x) => x.technician).sort()).toEqual(["Tech 12", "Tech 120", "Tech 121", "Tech 122", "Tech 123", "Tech 124", "Tech 125", "Tech 126", "Tech 127", "Tech 128", "Tech 129"]);
+    expect(
+      store
+        .listVisits({ q: "Tech 12" })
+        .items.map((x) => x.technician)
+        .sort(),
+    ).toEqual(["Tech 12", "Tech 120", "Tech 121", "Tech 122", "Tech 123", "Tech 124", "Tech 125", "Tech 126", "Tech 127", "Tech 128", "Tech 129"]);
     expect(store.listVisits({ q: "50%" }).total).toBe(0); // LIKE wildcards are escaped
     expect(store.counts()).toMatchObject({ visits: 130, drafts: 123, completed: 7 });
     store.close();
@@ -305,7 +324,9 @@ describe("reference updates do not rebase visits", () => {
     const loaded = store.getVisit(visit.id);
     expect(loaded).toMatchObject({ tail: "N100TL", checkDate: "2026-11-12", variantId: "V01" });
     // a location valid only in another tail's layout is refused
-    expect(codeOf(() => store.upsertRecord(visit.id, { locationId: "SEAT:14B", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 }, undefined))).toBe("UNKNOWN_LOCATION");
+    expect(codeOf(() => store.upsertRecord(visit.id, { locationId: "SEAT:14B", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 }, undefined))).toBe(
+      "UNKNOWN_LOCATION",
+    );
     store.close();
   });
 });

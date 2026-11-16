@@ -104,7 +104,14 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
   const button = (location: CabinLocation, text: string, hiddenPrefix = "") => {
     const f = flags.get(location.id);
     return (
-      <button key={location.id} type="button" className={stateClass(f, selection === location.id)} aria-pressed={selection === location.id} data-location={location.id} onClick={() => onSelect(location.id, null)}>
+      <button
+        key={location.id}
+        type="button"
+        className={stateClass(f, selection === location.id)}
+        aria-pressed={selection === location.id}
+        data-location={location.id}
+        onClick={() => onSelect(location.id, null)}
+      >
         <span>
           {hiddenPrefix && <span className="sr-only">{hiddenPrefix}</span>}
           {text}
@@ -220,7 +227,13 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
             {(["L", "R"] as const).map((side) => (
               <div key={side} role="group" aria-label={`${side === "L" ? "Left" : "Right"} side bins`}>
                 <h4>{side === "L" ? "Left (A-C side)" : "Right (D-F side)"}</h4>
-                <div className="loc-list">{bins.filter((l) => l.bin?.side === side).map((l) => button(l, `${l.bin!.side}-${String(l.bin!.module).padStart(2, "0")} · rows ${l.bin!.rowFrom}-${l.bin!.rowTo}`, "Overhead bin "))}</div>
+                <div className="loc-list">
+                  {bins
+                    .filter((l) => l.bin?.side === side)
+                    .map((l) =>
+                      button(l, `${l.bin!.side}-${String(l.bin!.module).padStart(2, "0")} · rows ${l.bin!.rowFrom}-${l.bin!.rowTo}`, "Overhead bin "),
+                    )}
+                </div>
               </div>
             ))}
           </div>

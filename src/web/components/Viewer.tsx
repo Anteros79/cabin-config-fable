@@ -32,7 +32,15 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
     <div className="viewer">
       <div className="tabs-row">
         <div className="tabs" role="tablist" aria-label="Cabin view">
-          <button type="button" role="tab" id="tab-3d" aria-selected={showing === "3d"} aria-controls="panel-3d" disabled={!!failure} onClick={() => setTab("3d")}>
+          <button
+            type="button"
+            role="tab"
+            id="tab-3d"
+            aria-selected={showing === "3d"}
+            aria-controls="panel-3d"
+            disabled={!!failure}
+            onClick={() => setTab("3d")}
+          >
             3D cutaway
           </button>
           <button type="button" role="tab" id="tab-map" aria-selected={showing === "map"} aria-controls="panel-map" onClick={() => setTab("map")}>
@@ -46,7 +54,8 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
       {failure && (
         <div className="alert" role="alert">
           <p>
-            <strong>3D view unavailable.</strong> {failure} Every seat, floor area and bin stays selectable in the map and list below; your selection and saved work are unchanged.
+            <strong>3D view unavailable.</strong> {failure} Every seat, floor area and bin stays selectable in the map and list below; your selection and saved
+            work are unchanged.
           </p>
           <button
             type="button"
@@ -62,7 +71,15 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
       )}
       {showing === "3d" && (
         <div role="tabpanel" id="panel-3d" aria-labelledby="tab-3d">
-          <Cabin3D key={attempt} workspace={workspace} states={scene} selection={selection} onSelect={onSelect} visualProfiles={visualProfiles} onFailed={setFailure} />
+          <Cabin3D
+            key={attempt}
+            workspace={workspace}
+            states={scene}
+            selection={selection}
+            onSelect={onSelect}
+            visualProfiles={visualProfiles}
+            onFailed={setFailure}
+          />
         </div>
       )}
       {showing === "map" && (

@@ -1,13 +1,4 @@
-import type {
-  CabinLocation,
-  ComponentDef,
-  ComponentResolution,
-  FrozenRule,
-  LayoutRevision,
-  Resolution,
-  SourceArtifact,
-  VisitRecord,
-} from "../domain/types.ts";
+import type { CabinLocation, ComponentDef, ComponentResolution, FrozenRule, LayoutRevision, Resolution, SourceArtifact, VisitRecord } from "../domain/types.ts";
 import type { LocationState } from "./scene/CabinScene.ts";
 
 /** What the viewer, the map, the inspector and the work list all render from. */

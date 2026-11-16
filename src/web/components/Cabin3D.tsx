@@ -108,7 +108,16 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   const onKeyDown = (e: React.KeyboardEvent) => {
     const scene = sceneRef.current;
     if (!scene) return;
-    const map: Record<string, Parameters<CabinScene["nudge"]>[0]> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", "+": "in", "=": "in", "-": "out", _: "out" };
+    const map: Record<string, Parameters<CabinScene["nudge"]>[0]> = {
+      ArrowLeft: "left",
+      ArrowRight: "right",
+      ArrowUp: "up",
+      ArrowDown: "down",
+      "+": "in",
+      "=": "in",
+      "-": "out",
+      _: "out",
+    };
     const action = map[e.key];
     if (action) {
       e.preventDefault();
@@ -152,7 +161,15 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
               ["out", "Zoom out", "−"],
             ] as const
           ).map(([action, label, glyph]) => (
-            <button key={action} type="button" className="icon" aria-label={label} title={label} onClick={() => sceneRef.current?.nudge(action)} disabled={!ready}>
+            <button
+              key={action}
+              type="button"
+              className="icon"
+              aria-label={label}
+              title={label}
+              onClick={() => sceneRef.current?.nudge(action)}
+              disabled={!ready}
+            >
               <span aria-hidden="true">{glyph}</span>
             </button>
           ))}
@@ -238,8 +255,9 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
         </ul>
       </div>
       <p className="fine">
-        Visual family: <strong>{activeProfile?.name ?? profile}</strong>, unassigned and illustrative ({activeProfile?.basis ?? "images"}). Geometry is an approximation for display and picking, not
-        aircraft dimensions.{!hasMaps && " Floor and bins are illustrative only: no floor or bin map was supplied for this layout."}
+        Visual family: <strong>{activeProfile?.name ?? profile}</strong>, unassigned and illustrative ({activeProfile?.basis ?? "images"}). Geometry is an
+        approximation for display and picking, not aircraft dimensions.
+        {!hasMaps && " Floor and bins are illustrative only: no floor or bin map was supplied for this layout."}
       </p>
     </div>
   );

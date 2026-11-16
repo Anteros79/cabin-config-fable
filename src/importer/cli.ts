@@ -95,7 +95,9 @@ function main(): void {
     console.log(`Source root     : ${sourceRoot}`);
     console.log(`Release         : ${outcome.releaseId} (${outcome.status}${outcome.activated ? ", now active" : ", not activated"})`);
     console.log(`Findings        : ${JSON.stringify(outcome.findingCounts)}`);
-    console.log(`Visit history   : ${outcome.visitsUnchanged === null ? "no visit store present" : outcome.visitsUnchanged ? "unchanged (fingerprint verified)" : "CHANGED - investigate"}`);
+    console.log(
+      `Visit history   : ${outcome.visitsUnchanged === null ? "no visit store present" : outcome.visitsUnchanged ? "unchanged (fingerprint verified)" : "CHANGED - investigate"}`,
+    );
     if (outcome.status === "rejected") {
       console.error("The release has blocking findings and was not activated. Run `findings` to see them. The previously active release is untouched.");
       process.exitCode = 2;
@@ -132,7 +134,9 @@ function main(): void {
   }
   if (command === "reset") {
     if (flags.yes !== true) {
-      console.error("reset rebuilds the reference store from scratch (release history is discarded; visits are never touched). Stop the server first, then re-run with --yes.");
+      console.error(
+        "reset rebuilds the reference store from scratch (release history is discarded; visits are never touched). Stop the server first, then re-run with --yes.",
+      );
       process.exitCode = 1;
       return;
     }
@@ -140,12 +144,15 @@ function main(): void {
     resetReferenceStore(stores.referencePath, stores.visitsPath, (store) => {
       const staged = buildStagedRelease({ sourceRoot });
       const { id, status } = store.stage(staged.content, staged.findings, staged.stats);
-      if (status !== "validated") throw new ReferenceStoreError("RELEASE_REJECTED", "The rebuilt release has blocking findings; the existing reference store was left in place.");
+      if (status !== "validated")
+        throw new ReferenceStoreError("RELEASE_REJECTED", "The rebuilt release has blocking findings; the existing reference store was left in place.");
       store.activate(id);
     });
     const after = visitFingerprint(stores.visitsPath, stores.referencePath);
     console.log(`Reference store rebuilt: ${stores.referencePath}`);
-    console.log(`Visit history   : ${before === null ? "no visit store present" : before === after ? "unchanged (fingerprint verified)" : "CHANGED - investigate"}`);
+    console.log(
+      `Visit history   : ${before === null ? "no visit store present" : before === after ? "unchanged (fingerprint verified)" : "CHANGED - investigate"}`,
+    );
     if (before !== null && before !== after) process.exitCode = 3;
     return;
   }

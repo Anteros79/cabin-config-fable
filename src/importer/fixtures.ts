@@ -47,7 +47,16 @@ interface FixtureData {
     released: boolean;
   }[];
   aircraft: { tail: string; subtype: string; note: string }[];
-  assignments: { tail: string; variant: string; carpet: string | null; seam: string | null; from: string; to: string | null; source: string; status?: "planned" }[];
+  assignments: {
+    tail: string;
+    variant: string;
+    carpet: string | null;
+    seam: string | null;
+    from: string;
+    to: string | null;
+    source: string;
+    status?: "planned";
+  }[];
   components: ComponentDef[];
   seatRuleSource: string;
   carpetRuleSource: string;
@@ -265,7 +274,9 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
       const existing = revisionFor.get(key);
       if (existing) revision = existing;
       else {
-        const specId = data.variants.some((o) => o.seatSpec === v.seatSpec && o.subtype !== v.subtype) ? `${v.seatSpec}-${v.subtype.replace("FX-", "")}` : v.seatSpec;
+        const specId = data.variants.some((o) => o.seatSpec === v.seatSpec && o.subtype !== v.subtype)
+          ? `${v.seatSpec}-${v.subtype.replace("FX-", "")}`
+          : v.seatSpec;
         revision = buildRevision(specId, data.seatSpecs[v.seatSpec], v.subtype, "FX-DOC-CONFIG");
         revisionFor.set(key, revision);
         layouts.push({ id: revision.layoutId, namespace: ns, subtypeId: v.subtype, name: revision.name });

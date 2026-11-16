@@ -23,8 +23,7 @@ export const VISUAL_PROFILES: VisualProfile[] = [
     basis: "Photographs",
     status: "unassigned-illustrative",
     evidence: ["recarro 2.jpg", "seats 1.jpeg", "seats 2 .jpeg", "seats 4.jpg", "southwest seats-7.webp", "seats 3.jpg", "carpet.jpg"],
-    note:
-      "Dark navy seat with a pale-blue upper-back band and headrest surround, pale arms and rear shells. Not mapped to any layout, tail, hardware part or material specification.",
+    note: "Dark navy seat with a pale-blue upper-back band and headrest surround, pale arms and rear shells. Not mapped to any layout, tail, hardware part or material specification.",
   },
   {
     id: "photo-navy-plain",
@@ -32,8 +31,7 @@ export const VISUAL_PROFILES: VisualProfile[] = [
     basis: "Photographs",
     status: "unassigned-illustrative",
     evidence: ["seats 5.jpg", "seats 6.avif"],
-    note:
-      "Navy back with no pale upper band and a single pale headrest wing face. Whether this is the same hardware as the banded family is unknown, so it is kept separate.",
+    note: "Navy back with no pale upper band and a single pale headrest wing face. Whether this is the same hardware as the banded family is unknown, so it is kept separate.",
   },
   {
     id: "concept-gray",
@@ -41,8 +39,7 @@ export const VISUAL_PROFILES: VisualProfile[] = [
     basis: "Probable computer renders",
     status: "unassigned-illustrative",
     evidence: ["Southwest-Airlines-new-RECARO-seats-Video-still-Southwest.png", "seats 8.jpg"],
-    note:
-      "Gray-lilac upholstery under warm daylight in what appear to be renders. Compatibility with the photographed blue upholstery is unknown; the two are never blended into one seat.",
+    note: "Gray-lilac upholstery under warm daylight in what appear to be renders. Compatibility with the photographed blue upholstery is unknown; the two are never blended into one seat.",
   },
 ];
 

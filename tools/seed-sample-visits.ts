@@ -29,13 +29,32 @@ try {
     const snapshot = (tail: string, date: string) => buildSnapshot(release, lookup(release, tail, date), now);
 
     const completed = visits.createVisit(snapshot("N100TL", "2026-11-12"), "Sample Technician (fictional)").visit;
-    visits.upsertRecord(completed.id, { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", substituteId: null, quantity: 1, note: "Sample: torn seam on the leading edge." }, 0);
-    visits.upsertRecord(completed.id, { locationId: "FLOOR:FULL-CABIN", componentId: "CARPET_KIT", selection: "ALTERNATE", substituteId: "FX-SUB-KIT-1", quantity: 1, note: "Sample: alternate kit used under the fictional deviation." }, 0);
+    visits.upsertRecord(
+      completed.id,
+      { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", substituteId: null, quantity: 1, note: "Sample: torn seam on the leading edge." },
+      0,
+    );
+    visits.upsertRecord(
+      completed.id,
+      {
+        locationId: "FLOOR:FULL-CABIN",
+        componentId: "CARPET_KIT",
+        selection: "ALTERNATE",
+        substituteId: "FX-SUB-KIT-1",
+        quantity: 1,
+        note: "Sample: alternate kit used under the fictional deviation.",
+      },
+      0,
+    );
     const done = visits.completeVisit(completed.id, undefined);
     console.log(`Completed sample visit #${done.visit.number}: ${done.report.totals.map((t) => `${t.partNo} ${t.quantity} ${t.unit}`).join(", ")}`);
 
     const draft = visits.createVisit(snapshot("N200TL", "2026-07-01"), "Sample Technician (fictional)").visit;
-    visits.upsertRecord(draft.id, { locationId: "SEAT:12C", componentId: "BACKREST", selection: "PRIMARY", substituteId: null, quantity: 1, note: "Sample draft record." }, 0);
+    visits.upsertRecord(
+      draft.id,
+      { locationId: "SEAT:12C", componentId: "BACKREST", selection: "PRIMARY", substituteId: null, quantity: 1, note: "Sample draft record." },
+      0,
+    );
     visits.upsertRecord(draft.id, { locationId: "BIN:L-04", componentId: "BIN_DOOR", selection: "PRIMARY", substituteId: null, quantity: 1, note: "" }, 0);
     console.log(`Draft sample visit #${draft.number} left open with 2 records.`);
   }

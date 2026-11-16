@@ -37,7 +37,9 @@ export function fixtureRelease(mutate?: (content: ReleaseContent) => void): Refe
 }
 
 export function errorsOf(content: ReleaseContent): string[] {
-  return validateRelease(content).filter((f) => f.severity === "error").map((f) => f.code);
+  return validateRelease(content)
+    .filter((f) => f.severity === "error")
+    .map((f) => f.code);
 }
 
 export function resolutionAt(result: LookupResult, locationId: string, componentId: string) {
@@ -87,7 +89,10 @@ export function openVisits(stores: TestStores): VisitStore {
 }
 
 export function makeApp(stores: TestStores = makeStores(), testFaults = false): AppHandle & { stores: TestStores } {
-  const config = resolveServerConfig({ dataDir: stores.dir, referencePath: stores.referencePath, visitsPath: stores.visitsPath, port: 0, testFaults, webRoot: join(stores.dir, "no-web") }, {});
+  const config = resolveServerConfig(
+    { dataDir: stores.dir, referencePath: stores.referencePath, visitsPath: stores.visitsPath, port: 0, testFaults, webRoot: join(stores.dir, "no-web") },
+    {},
+  );
   return Object.assign(createApp(config), { stores });
 }
 
@@ -101,5 +106,19 @@ export const SIX_LINE_TOTALS = [
 ] as const;
 
 export const CUSHION_3A = { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", substituteId: null, quantity: 1, note: "" } as const;
-export const KIT_ALTERNATE = { locationId: "FLOOR:FULL-CABIN", componentId: "CARPET_KIT", selection: "ALTERNATE", substituteId: "FX-SUB-KIT-1", quantity: 1, note: "" } as const;
-export const KIT_PRIMARY = { locationId: "FLOOR:FULL-CABIN", componentId: "CARPET_KIT", selection: "PRIMARY", substituteId: null, quantity: 1, note: "" } as const;
+export const KIT_ALTERNATE = {
+  locationId: "FLOOR:FULL-CABIN",
+  componentId: "CARPET_KIT",
+  selection: "ALTERNATE",
+  substituteId: "FX-SUB-KIT-1",
+  quantity: 1,
+  note: "",
+} as const;
+export const KIT_PRIMARY = {
+  locationId: "FLOOR:FULL-CABIN",
+  componentId: "CARPET_KIT",
+  selection: "PRIMARY",
+  substituteId: null,
+  quantity: 1,
+  note: "",
+} as const;

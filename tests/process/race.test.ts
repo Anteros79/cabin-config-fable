@@ -25,7 +25,9 @@ interface Outcome {
 /** Run one operation in a separate OS process with its own database connection. */
 function run(stores: TestStores, visitId: string, op: string, startAt: number, payload: unknown): Promise<Outcome> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [worker, stores.visitsPath, stores.referencePath, visitId, op, String(startAt), JSON.stringify(payload)], { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(process.execPath, [worker, stores.visitsPath, stores.referencePath, visitId, op, String(startAt), JSON.stringify(payload)], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let out = "";
     let err = "";
     child.stdout.on("data", (d) => (out += d));
@@ -184,7 +186,9 @@ describe("separate-process races", () => {
     const id = newVisit([]);
     const seats = ["1A", "2A", "3A", "4A", "5A", "6A", "7A", "8A"];
     const t = Date.now() + START_DELAY;
-    const results = await Promise.all(seats.map((s) => run(stores, id, "upsert", t, { record: { ...CUSHION_3A, locationId: `SEAT:${s}` }, expectedRecordVersion: 0 })));
+    const results = await Promise.all(
+      seats.map((s) => run(stores, id, "upsert", t, { record: { ...CUSHION_3A, locationId: `SEAT:${s}` }, expectedRecordVersion: 0 })),
+    );
     expect(results.every((r) => r.ok)).toBe(true);
     const visit = store.getVisit(id);
     expect(visit.records.map((r) => r.locationId).sort()).toEqual(seats.map((s) => `SEAT:${s}`).sort());

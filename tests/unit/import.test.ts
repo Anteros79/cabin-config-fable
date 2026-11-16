@@ -11,7 +11,10 @@ afterAll(cleanupTempDirs);
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 function expectedSeats(rows: number[], omit: string[]): string[] {
-  return rows.flatMap((r) => LETTERS.map((l) => `${r}${l}`)).filter((c) => !omit.includes(c)).sort();
+  return rows
+    .flatMap((r) => LETTERS.map((l) => `${r}${l}`))
+    .filter((c) => !omit.includes(c))
+    .sort();
 }
 function range(a: number, b: number): number[] {
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
@@ -19,7 +22,10 @@ function range(a: number, b: number): number[] {
 function seatCodes(revisionId: string): string[] {
   const rev = stagedFull().content.layoutRevisions.find((r) => r.id === revisionId);
   if (!rev) throw new Error(`missing ${revisionId}`);
-  return rev.locations.filter((l) => l.kind === "SEAT").map((l) => l.seat!.code).sort();
+  return rev.locations
+    .filter((l) => l.kind === "SEAT")
+    .map((l) => l.seat!.code)
+    .sort();
 }
 function tierTotals(revisionId: string): number[] {
   const rev = stagedFull().content.layoutRevisions.find((r) => r.id === revisionId)!;
@@ -193,7 +199,10 @@ describe("mandatory fictional fixture seat sets", () => {
     const { content } = stagedFull();
     const variant = content.variants.find((v) => v.id === variantId)!;
     const rev = content.layoutRevisions.find((r) => r.id === variant.layoutRevisionIds[0])!;
-    return rev.locations.filter((l) => l.kind === "SEAT").map((l) => l.seat!.code).sort();
+    return rev.locations
+      .filter((l) => l.kind === "SEAT")
+      .map((l) => l.seat!.code)
+      .sort();
   };
   it("V01 is rows 1-30 A-F except 14B/14E/15B/15E: 176 seats", () => {
     expect(seatsOfVariant("V01")).toEqual(expectedSeats(range(1, 30), ["14B", "14E", "15B", "15E"]));

@@ -259,12 +259,16 @@ export class VisitStore {
 
   private remember(key: string | undefined, scope: string, requestHash: string, response: unknown, now: string): void {
     if (!key) return;
-    this.db.prepare("INSERT INTO idempotency(key, scope, request_hash, response_json, created_at) VALUES (?, ?, ?, ?, ?)").run(key, scope, requestHash, JSON.stringify(response), now);
+    this.db
+      .prepare("INSERT INTO idempotency(key, scope, request_hash, response_json, created_at) VALUES (?, ?, ?, ?, ?)")
+      .run(key, scope, requestHash, JSON.stringify(response), now);
   }
 
   private event(visitId: string, type: string, payload: Record<string, unknown>, at: string): void {
     const seq = Number((this.db.prepare("SELECT coalesce(max(seq), 0) + 1 AS n FROM visit_events WHERE visit_id = ?").get(visitId) as { n: number }).n);
-    this.db.prepare("INSERT INTO visit_events(visit_id, seq, type, at, payload_json) VALUES (?, ?, ?, ?, ?)").run(visitId, seq, type, at, JSON.stringify(payload));
+    this.db
+      .prepare("INSERT INTO visit_events(visit_id, seq, type, at, payload_json) VALUES (?, ?, ?, ?, ?)")
+      .run(visitId, seq, type, at, JSON.stringify(payload));
   }
 
   private summaryOf(row: Row, recordCount: number): VisitSummary {
@@ -310,7 +314,9 @@ export class VisitStore {
   private loadVisit(id: string): Visit {
     const row = this.db.prepare("SELECT * FROM visits WHERE id = ?").get(id) as Row | undefined;
     if (!row) throw new DomainError("VISIT_NOT_FOUND", "Visit not found.", 404);
-    const records = (this.db.prepare("SELECT * FROM visit_records WHERE visit_id = ? ORDER BY created_at, location_id, component_id").all(id) as Row[]).map((r) => this.recordOf(r));
+    const records = (this.db.prepare("SELECT * FROM visit_records WHERE visit_id = ? ORDER BY created_at, location_id, component_id").all(id) as Row[]).map(
+      (r) => this.recordOf(r),
+    );
     const events = (this.db.prepare("SELECT seq, type, at, payload_json FROM visit_events WHERE visit_id = ? ORDER BY seq").all(id) as Row[]).map(
       (e): VisitEvent => ({ seq: Number(e.seq), type: String(e.type), at: String(e.at), payload: JSON.parse(String(e.payload_json)) }),
     );
@@ -324,7 +330,8 @@ export class VisitStore {
   }
 
   createVisit(snapshot: VisitSnapshot, technician: unknown, options: MutationOptions = {}): VisitMutationResult {
-    if (technician !== undefined && technician !== null && typeof technician !== "string") throw new DomainError("INVALID_TECHNICIAN", "Technician must be text.");
+    if (technician !== undefined && technician !== null && typeof technician !== "string")
+      throw new DomainError("INVALID_TECHNICIAN", "Technician must be text.");
     const tech = (typeof technician === "string" ? technician : "").trim();
     if (tech.length > 80) throw new DomainError("INVALID_TECHNICIAN", "Technician must be at most 80 characters.");
     const now = options.now ?? new Date().toISOString();
@@ -339,7 +346,20 @@ export class VisitStore {
         .prepare(
           "INSERT INTO visits(id, tail, check_date, technician, created_at, updated_at, reference_release_id, lookup_state, variant_id, layout_revision_id, snapshot_sha256, snapshot_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
-        .run(id, snapshot.tail, snapshot.checkDate, tech, now, now, snapshot.referenceReleaseId, snapshot.lookupState, snapshot.context.variant.id, snapshot.context.layoutRevision.id, snapshotSha, snapshotJson);
+        .run(
+          id,
+          snapshot.tail,
+          snapshot.checkDate,
+          tech,
+          now,
+          now,
+          snapshot.referenceReleaseId,
+          snapshot.lookupState,
+          snapshot.context.variant.id,
+          snapshot.context.layoutRevision.id,
+          snapshotSha,
+          snapshotJson,
+        );
       this.event(id, "CREATED", { referenceReleaseId: snapshot.referenceReleaseId, snapshotSha256: snapshotSha, lookupState: snapshot.lookupState }, now);
       this.remember(options.idempotencyKey, "create", requestHash, { id }, now);
       return { visit: this.loadVisit(id), replayed: false };
@@ -360,7 +380,9 @@ export class VisitStore {
       args.push(options.status);
     }
     if (options.q && options.q.trim()) {
-      where.push("(v.tail LIKE ? ESCAPE '\\' OR v.technician LIKE ? ESCAPE '\\' OR v.check_date LIKE ? ESCAPE '\\' OR v.variant_id LIKE ? ESCAPE '\\' OR CAST(v.number AS TEXT) = ?)");
+      where.push(
+        "(v.tail LIKE ? ESCAPE '\\' OR v.technician LIKE ? ESCAPE '\\' OR v.check_date LIKE ? ESCAPE '\\' OR v.variant_id LIKE ? ESCAPE '\\' OR CAST(v.number AS TEXT) = ?)",
+      );
       const like = `%${options.q.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
       args.push(like, like, like, like, options.q.trim());
     }
@@ -413,14 +435,34 @@ export class VisitStore {
              note = excluded.note, rule_id = excluded.rule_id, primary_part_no = excluded.primary_part_no, lines_json = excluded.lines_json, updated_at = excluded.updated_at`,
         )
         .run(
-          visitId, derived.locationId, derived.componentId, version, derived.selection, derived.substituteId, derived.quantity, derived.note,
-          derived.ruleId, derived.primaryPartNo, derived.locationLabel, derived.componentName, JSON.stringify(derived.lines), existing?.createdAt ?? now, now,
+          visitId,
+          derived.locationId,
+          derived.componentId,
+          version,
+          derived.selection,
+          derived.substituteId,
+          derived.quantity,
+          derived.note,
+          derived.ruleId,
+          derived.primaryPartNo,
+          derived.locationLabel,
+          derived.componentName,
+          JSON.stringify(derived.lines),
+          existing?.createdAt ?? now,
+          now,
         );
       this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
       this.event(
         visitId,
         existing ? "RECORD_UPDATED" : "RECORD_ADDED",
-        { locationId: derived.locationId, componentId: derived.componentId, selection: derived.selection, substituteId: derived.substituteId, quantity: derived.quantity, recordVersion: version },
+        {
+          locationId: derived.locationId,
+          componentId: derived.componentId,
+          selection: derived.selection,
+          substituteId: derived.substituteId,
+          quantity: derived.quantity,
+          recordVersion: version,
+        },
         now,
       );
       this.remember(options.idempotencyKey, `visit:${visitId}`, requestHash, { ok: true }, now);
@@ -428,7 +470,13 @@ export class VisitStore {
     });
   }
 
-  removeRecord(visitId: string, locationId: unknown, componentId: unknown, expectedRecordVersion: number | undefined, options: MutationOptions = {}): VisitMutationResult {
+  removeRecord(
+    visitId: string,
+    locationId: unknown,
+    componentId: unknown,
+    expectedRecordVersion: number | undefined,
+    options: MutationOptions = {},
+  ): VisitMutationResult {
     if (typeof locationId !== "string" || typeof componentId !== "string") throw new DomainError("INVALID_RECORD", "locationId and componentId are required.");
     const now = options.now ?? new Date().toISOString();
     const requestHash = sha256(canonicalJson({ op: "remove", visitId, locationId, componentId, expectedRecordVersion: expectedRecordVersion ?? null }));
@@ -440,7 +488,9 @@ export class VisitStore {
       const existing = visit.records.find((r) => r.locationId === locationId && r.componentId === componentId);
       if (!existing) throw new DomainError("RECORD_NOT_FOUND", "That replacement is not recorded on this visit (it may already have been removed).", 404);
       if (expectedRecordVersion !== undefined && expectedRecordVersion !== existing.version) {
-        throw new DomainError("STALE_RECORD", "This replacement was changed elsewhere since you loaded it. Review the current record and try again.", 409, { current: existing });
+        throw new DomainError("STALE_RECORD", "This replacement was changed elsewhere since you loaded it. Review the current record and try again.", 409, {
+          current: existing,
+        });
       }
       this.db.prepare("DELETE FROM visit_records WHERE visit_id = ? AND location_id = ? AND component_id = ?").run(visitId, locationId, componentId);
       this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
@@ -479,7 +529,11 @@ export class VisitStore {
           note: record.note,
         });
         if (canonicalJson(derived.lines) !== canonicalJson(record.lines)) {
-          throw new DomainError("RECORD_INCONSISTENT", `Stored part lines for ${record.locationLabel} / ${record.componentName} do not match the frozen rules. Completion refused.`, 409);
+          throw new DomainError(
+            "RECORD_INCONSISTENT",
+            `Stored part lines for ${record.locationLabel} / ${record.componentName} do not match the frozen rules. Completion refused.`,
+            409,
+          );
         }
       }
       this.db.prepare("UPDATE visits SET status = 'COMPLETED', completed_at = ?, updated_at = ?, version = version + 1 WHERE id = ?").run(now, now, visitId);
@@ -487,7 +541,9 @@ export class VisitStore {
       const completed = this.loadVisit(visitId);
       const report = buildReport(completed, "FINAL", now);
       const reportJson = canonicalJson(report);
-      this.db.prepare("INSERT INTO reports(visit_id, schema, generated_at, basis_sha256, report_json) VALUES (?, ?, ?, ?, ?)").run(visitId, report.schema, now, sha256(reportJson), reportJson);
+      this.db
+        .prepare("INSERT INTO reports(visit_id, schema, generated_at, basis_sha256, report_json) VALUES (?, ?, ?, ?, ?)")
+        .run(visitId, report.schema, now, sha256(reportJson), reportJson);
       return { visit: completed, report, alreadyCompleted: false, replayed: false };
     });
   }
@@ -507,7 +563,9 @@ export class VisitStore {
       const visit = this.loadVisit(visitId);
       const linkedEvents = visit.events.filter((e) => e.type === "ADVISORY" || e.type === "CORRECTION_NOTE");
       if (visit.status === "COMPLETED") {
-        const row = this.db.prepare("SELECT report_json, basis_sha256 FROM reports WHERE visit_id = ?").get(visitId) as { report_json: string; basis_sha256: string } | undefined;
+        const row = this.db.prepare("SELECT report_json, basis_sha256 FROM reports WHERE visit_id = ?").get(visitId) as
+          | { report_json: string; basis_sha256: string }
+          | undefined;
         if (!row) throw new DomainError("REPORT_MISSING", "The completed visit has no stored report.", 500);
         return { report: JSON.parse(row.report_json) as Report, basisSha256: row.basis_sha256, linkedEvents };
       }
@@ -518,7 +576,8 @@ export class VisitStore {
   /** Later advisories and corrections are appended as linked events; visit content is not edited. */
   addLinkedEvent(visitId: string, type: unknown, note: unknown, author: unknown, options: MutationOptions = {}): Visit {
     if (type !== "ADVISORY" && type !== "CORRECTION_NOTE") throw new DomainError("INVALID_EVENT", "Event type must be ADVISORY or CORRECTION_NOTE.");
-    if (typeof note !== "string" || note.trim().length === 0 || note.length > 2000) throw new DomainError("INVALID_EVENT", "A note of 1-2000 characters is required.");
+    if (typeof note !== "string" || note.trim().length === 0 || note.length > 2000)
+      throw new DomainError("INVALID_EVENT", "A note of 1-2000 characters is required.");
     const by = typeof author === "string" ? author.trim().slice(0, 80) : "";
     const now = options.now ?? new Date().toISOString();
     return this.write(() => {
@@ -530,7 +589,11 @@ export class VisitStore {
 
   counts(): { visits: number; drafts: number; completed: number; records: number } {
     return this.read(() => {
-      const v = this.db.prepare("SELECT count(*) AS n, sum(status = 'DRAFT') AS d, sum(status = 'COMPLETED') AS c FROM visits").get() as { n: number; d: number | null; c: number | null };
+      const v = this.db.prepare("SELECT count(*) AS n, sum(status = 'DRAFT') AS d, sum(status = 'COMPLETED') AS c FROM visits").get() as {
+        n: number;
+        d: number | null;
+        c: number | null;
+      };
       const r = this.db.prepare("SELECT count(*) AS n FROM visit_records").get() as { n: number };
       return { visits: Number(v.n), drafts: Number(v.d ?? 0), completed: Number(v.c ?? 0), records: Number(r.n) };
     });
@@ -541,7 +604,8 @@ export class VisitStore {
     return this.read(() => {
       const hash = createHash("sha256");
       for (const table of ["visits", "visit_records", "visit_events", "reports"]) {
-        const order = table === "visits" ? "number" : table === "reports" ? "visit_id" : table === "visit_events" ? "visit_id, seq" : "visit_id, location_id, component_id";
+        const order =
+          table === "visits" ? "number" : table === "reports" ? "visit_id" : table === "visit_events" ? "visit_id, seq" : "visit_id, location_id, component_id";
         for (const row of this.db.prepare(`SELECT * FROM ${table} ORDER BY ${order}`).all() as Row[]) hash.update(JSON.stringify(row));
       }
       return hash.digest("hex");

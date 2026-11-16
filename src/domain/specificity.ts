@@ -155,10 +155,7 @@ export function buildMatchSet(
   const seam = dim(constraint.seam);
   const upholstery = dim(constraint.upholstery);
   const empty =
-    pairs.size === 0 ||
-    (carpet !== null && carpet.size === 0) ||
-    (seam !== null && seam.size === 0) ||
-    (upholstery !== null && upholstery.size === 0);
+    pairs.size === 0 || (carpet !== null && carpet.size === 0) || (seam !== null && seam.size === 0) || (upholstery !== null && upholstery.size === 0);
   return { pairs, carpet, seam, upholstery, empty };
 }
 
@@ -209,7 +206,10 @@ export function buildIndex(release: ReleaseContent): ReleaseIndex {
   const layoutRevisions = toMap(release.layoutRevisions, (r) => r.id);
   const locations = new Map<string, Map<string, CabinLocation>>();
   for (const revision of release.layoutRevisions) {
-    locations.set(revision.id, toMap(revision.locations, (l) => l.id));
+    locations.set(
+      revision.id,
+      toMap(revision.locations, (l) => l.id),
+    );
   }
   const ruleMatch = new Map<string, MatchSet>();
   for (const rule of release.rules) {
@@ -261,12 +261,7 @@ export function undominated(index: ReleaseIndex, candidates: ApplicabilityRule[]
   return candidates.filter((rule) => !candidates.some((other) => other !== rule && ruleDominates(index, other, rule)));
 }
 
-export function substituteCoversLocation(
-  index: ReleaseIndex,
-  sub: SubstituteApproval,
-  ctx: AssignmentContext,
-  locationId: string,
-): boolean {
+export function substituteCoversLocation(index: ReleaseIndex, sub: SubstituteApproval, ctx: AssignmentContext, locationId: string): boolean {
   const set = index.substituteMatch.get(sub.id);
   if (!set) return false;
   return set.pairs.get(`${ctx.variantId}|${ctx.layoutRevisionId}`)?.has(locationId) ?? false;

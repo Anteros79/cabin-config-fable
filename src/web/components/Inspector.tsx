@@ -60,7 +60,14 @@ function ComponentCard({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     onRecord(
-      { locationId: location.id, componentId: view.componentId, selection: choice === "PRIMARY" ? "PRIMARY" : "ALTERNATE", substituteId: choice === "PRIMARY" ? null : choice, quantity, note },
+      {
+        locationId: location.id,
+        componentId: view.componentId,
+        selection: choice === "PRIMARY" ? "PRIMARY" : "ALTERNATE",
+        substituteId: choice === "PRIMARY" ? null : choice,
+        quantity,
+        note,
+      },
       record?.version ?? 0,
     );
   };
@@ -69,7 +76,13 @@ function ComponentCard({
     <section className={`component-card${highlighted ? " highlighted" : ""}`} aria-labelledby={`${id}-h`} data-component={view.componentId}>
       <h4 id={`${id}-h`}>
         {view.name}
-        {record ? <span className="pill recorded">Recorded</span> : view.status === "RESOLVED" ? <span className="pill ok">Applicable part found</span> : <span className="pill unresolved">Unresolved</span>}
+        {record ? (
+          <span className="pill recorded">Recorded</span>
+        ) : view.status === "RESOLVED" ? (
+          <span className="pill ok">Applicable part found</span>
+        ) : (
+          <span className="pill unresolved">Unresolved</span>
+        )}
       </h4>
 
       {view.status === "NOT_SUPPLIED" && <p className="notice">{workspace.unresolvedReason ?? "No applicability is available for this component."}</p>}
@@ -122,7 +135,8 @@ function ComponentCard({
           </dl>
           {rule.pendingChanges.map((p) => (
             <p key={p.id} className="advisory" role="note">
-              <strong>Pending change (advisory):</strong> {p.note} {p.sourceId ? `Source ${sourceText(sources, p.sourceId)}.` : ""} The current rule stays in effect.
+              <strong>Pending change (advisory):</strong> {p.note} {p.sourceId ? `Source ${sourceText(sources, p.sourceId)}.` : ""} The current rule stays in
+              effect.
             </p>
           ))}
 
@@ -130,7 +144,8 @@ function ComponentCard({
           {alternates.map((s) => (
             <div key={s.id} className="alternate">
               <p>
-                <strong className="partno">{s.altPartNo}</strong> {s.altDescription} — {s.qtyPerReplacement} {s.unit} per replacement. Replaces the primary when chosen.
+                <strong className="partno">{s.altPartNo}</strong> {s.altDescription} — {s.qtyPerReplacement} {s.unit} per replacement. Replaces the primary when
+                chosen.
               </p>
               <p className="fine">
                 Approval {s.id}: {s.effectiveFrom} to {s.effectiveTo ?? "open"} (inclusive). {sourceText(sources, s.sourceId)}
@@ -175,9 +190,19 @@ function ComponentCard({
                 {view.maxReplacements > 1 ? (
                   <label className="field inline">
                     <span>
-                      Replacements <span className="fine">(1–{view.maxReplacements}; {view.countNote})</span>
+                      Replacements{" "}
+                      <span className="fine">
+                        (1–{view.maxReplacements}; {view.countNote})
+                      </span>
                     </span>
-                    <input type="number" min={1} max={view.maxReplacements} step={1} value={quantity} onChange={(e) => setQuantity(Math.trunc(Number(e.target.value)) || 1)} />
+                    <input
+                      type="number"
+                      min={1}
+                      max={view.maxReplacements}
+                      step={1}
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.trunc(Number(e.target.value)) || 1)}
+                    />
                   </label>
                 ) : (
                   <p className="fine">Replacements: 1. {view.countNote}</p>
@@ -208,7 +233,10 @@ function ComponentCard({
             </form>
           )}
           {workspace.mode === "visit" && !workspace.editable && (
-            <p className="fine">{record ? `Recorded: ${record.lines.map((l) => `${l.partNo} ${l.qty} ${l.unit}`).join(", ")}.` : "Not replaced on this visit."} This visit is completed and locked.</p>
+            <p className="fine">
+              {record ? `Recorded: ${record.lines.map((l) => `${l.partNo} ${l.qty} ${l.unit}`).join(", ")}.` : "Not replaced on this visit."} This visit is
+              completed and locked.
+            </p>
           )}
           {workspace.mode === "preview" && <p className="fine">Start a visit to record replacements.</p>}
         </>

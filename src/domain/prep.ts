@@ -104,9 +104,7 @@ export function buildPreparation(snapshot: VisitSnapshot): PrepOverview {
   const kindOrder: Record<string, number> = { SEAT: 0, FLOOR: 1, BIN: 2 };
   lines.sort(
     (a, b) =>
-      (kindOrder[a.locationKind] ?? 9) - (kindOrder[b.locationKind] ?? 9) ||
-      a.componentId.localeCompare(b.componentId) ||
-      a.partNo.localeCompare(b.partNo),
+      (kindOrder[a.locationKind] ?? 9) - (kindOrder[b.locationKind] ?? 9) || a.componentId.localeCompare(b.componentId) || a.partNo.localeCompare(b.partNo),
   );
   const gaps = buildGaps(snapshot);
   return {
@@ -116,8 +114,7 @@ export function buildPreparation(snapshot: VisitSnapshot): PrepOverview {
     variantId: context.variant.id,
     layoutRevisionId: context.layoutRevision.id,
     referenceReleaseId: snapshot.referenceReleaseId,
-    note:
-      "Applicable-parts overview for preparation. Coverage counts are locations where a part would apply if that component needed replacing; they are not replacements made and not a quantity to order.",
+    note: "Applicable-parts overview for preparation. Coverage counts are locations where a part would apply if that component needed replacing; they are not replacements made and not a quantity to order.",
     lines,
     gaps,
     counts: {

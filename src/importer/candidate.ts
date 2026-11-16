@@ -3,17 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { geometryDeclaration, seatPlacement, sideOf } from "../domain/geometry.ts";
-import type {
-  AircraftSubtype,
-  CabinLocation,
-  Finding,
-  Layout,
-  LayoutCategory,
-  LayoutRevision,
-  RangeClaim,
-  RowLabel,
-  SourceArtifact,
-} from "../domain/types.ts";
+import type { AircraftSubtype, CabinLocation, Finding, Layout, LayoutCategory, LayoutRevision, RangeClaim, RowLabel, SourceArtifact } from "../domain/types.ts";
 import { ORIGINAL_FILES } from "./originals.ts";
 import { parseCsv } from "./readers/csv.ts";
 import { normaliseForQuote, readDocxParagraphs } from "./readers/docx.ts";
@@ -27,19 +17,59 @@ import { readXlsx } from "./readers/xlsx.ts";
 export { ORIGINAL_FILES };
 
 const CONFIG_FIELDS = [
-  "lopa_id", "boeing_model", "icao_code", "iata_code", "configuration_name", "interior_generation", "seat_hardware_model",
-  "est_active_aircraft", "total_seats", "extra_legroom_seats", "preferred_seats", "standard_seats", "numbered_row_range",
-  "elr_pitch_inches", "standard_pitch_inches", "max_seat_width_inches", "in_seat_power", "wifi_system", "lavatory_count_fwd",
-  "lavatory_count_aft", "notes",
+  "lopa_id",
+  "boeing_model",
+  "icao_code",
+  "iata_code",
+  "configuration_name",
+  "interior_generation",
+  "seat_hardware_model",
+  "est_active_aircraft",
+  "total_seats",
+  "extra_legroom_seats",
+  "preferred_seats",
+  "standard_seats",
+  "numbered_row_range",
+  "elr_pitch_inches",
+  "standard_pitch_inches",
+  "max_seat_width_inches",
+  "in_seat_power",
+  "wifi_system",
+  "lavatory_count_fwd",
+  "lavatory_count_aft",
+  "notes",
 ];
 const ROW_FIELDS = [
-  "lopa_id", "row_number", "row_exists", "active_seat_count", "omitted_seat_letters", "is_exit_row", "is_bulkhead_row",
-  "recline_status", "recline_restriction_reason", "row_notes",
+  "lopa_id",
+  "row_number",
+  "row_exists",
+  "active_seat_count",
+  "omitted_seat_letters",
+  "is_exit_row",
+  "is_bulkhead_row",
+  "recline_status",
+  "recline_restriction_reason",
+  "row_notes",
 ];
 const SEAT_FIELDS = [
-  "lopa_id", "row_number", "seat_letter", "seat_code", "seat_position_type", "commercial_tier", "pitch_range_inches",
-  "effective_width_inches", "recline_status", "window_status", "window_notes", "is_exit_seat", "is_bulkhead_seat",
-  "has_unobstructed_legroom", "tray_table_location", "underseat_storage_allowed", "power_type", "special_notes",
+  "lopa_id",
+  "row_number",
+  "seat_letter",
+  "seat_code",
+  "seat_position_type",
+  "commercial_tier",
+  "pitch_range_inches",
+  "effective_width_inches",
+  "recline_status",
+  "window_status",
+  "window_notes",
+  "is_exit_seat",
+  "is_bulkhead_seat",
+  "has_unobstructed_legroom",
+  "tray_table_location",
+  "underseat_storage_allowed",
+  "power_type",
+  "special_notes",
 ];
 
 export interface CandidateContent {
@@ -161,14 +191,51 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     if (s && revision) s.revision = revision;
   };
 
-  register("CAND-SRC-REGISTRY-JSON", ORIGINAL_FILES.registryJson, "generated registry export (JSON)", "Southwest 737 LOPA registry (normalized JSON)", "unknown", "pending");
-  register("CAND-SRC-TEMPLATE-JSON", ORIGINAL_FILES.templateJson, "JSON template (not data)", "Space-named normalized JSON", "none", "pending", "Not imported.");
-  register("CAND-SRC-GEMINI-JSON", ORIGINAL_FILES.geminiJson, "JSON template (not data)", "Gemini code JSON", "none", "pending", "Not imported. Content is treated as reference text and is never executed.");
+  register(
+    "CAND-SRC-REGISTRY-JSON",
+    ORIGINAL_FILES.registryJson,
+    "generated registry export (JSON)",
+    "Southwest 737 LOPA registry (normalized JSON)",
+    "unknown",
+    "pending",
+  );
+  register(
+    "CAND-SRC-TEMPLATE-JSON",
+    ORIGINAL_FILES.templateJson,
+    "JSON template (not data)",
+    "Space-named normalized JSON",
+    "none",
+    "pending",
+    "Not imported.",
+  );
+  register(
+    "CAND-SRC-GEMINI-JSON",
+    ORIGINAL_FILES.geminiJson,
+    "JSON template (not data)",
+    "Gemini code JSON",
+    "none",
+    "pending",
+    "Not imported. Content is treated as reference text and is never executed.",
+  );
   register("CAND-SRC-CONFIG-CSV", ORIGINAL_FILES.configCsv, "generated registry export (CSV)", "LOPA configurations CSV", "unknown", "pending");
   register("CAND-SRC-SEATS-CSV", ORIGINAL_FILES.seatsCsv, "generated registry export (CSV)", "LOPA seats CSV", "unknown", "pending");
   register("CAND-SRC-ROWS-XLSX", ORIGINAL_FILES.rowsXlsx, "generated registry export (XLSX)", "LOPA rows workbook", "unknown", "pending");
-  register("CAND-SRC-SCHEMA-CSV", ORIGINAL_FILES.schemaCsv, "descriptive schema summary", "Cabin schema architecture CSV", "none", "read; descriptive, not operational records");
-  register("CAND-SRC-RTF", ORIGINAL_FILES.rtf, "narrative document (RTF)", "Southwest Cabin Configuration Standard", "not stated", "read as narrative evidence; see evidence/extracts");
+  register(
+    "CAND-SRC-SCHEMA-CSV",
+    ORIGINAL_FILES.schemaCsv,
+    "descriptive schema summary",
+    "Cabin schema architecture CSV",
+    "none",
+    "read; descriptive, not operational records",
+  );
+  register(
+    "CAND-SRC-RTF",
+    ORIGINAL_FILES.rtf,
+    "narrative document (RTF)",
+    "Southwest Cabin Configuration Standard",
+    "not stated",
+    "read as narrative evidence; see evidence/extracts",
+  );
   register("CAND-SRC-DOCX", ORIGINAL_FILES.docx, "narrative document (DOCX)", "Current Aircraft Seat Configurations", "not stated", "pending");
 
   const empty: CandidateContent = { sources, subtypes: [], layouts: [], layoutRevisions: [], layoutCategories: [], findings, stats };
@@ -189,7 +256,10 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
   setStatus("CAND-SRC-GEMINI-JSON", gStatus);
   const identicalTemplates = Buffer.compare(Buffer.from(bytesOf.get("CAND-SRC-TEMPLATE-JSON")!), Buffer.from(bytesOf.get("CAND-SRC-GEMINI-JSON")!)) === 0;
   stats.templates = { spaceNamed: tStatus, gemini: gStatus, byteIdentical: identicalTemplates };
-  for (const [id, status] of [["CAND-SRC-TEMPLATE-JSON", tStatus], ["CAND-SRC-GEMINI-JSON", gStatus]] as const) {
+  for (const [id, status] of [
+    ["CAND-SRC-TEMPLATE-JSON", tStatus],
+    ["CAND-SRC-GEMINI-JSON", gStatus],
+  ] as const) {
     findings.push({
       severity: status.startsWith("invalid") ? "info" : "warning",
       code: status.startsWith("invalid") ? "TEMPLATE_NOT_IMPORTED" : "UNEXPECTED_PARSEABLE_TEMPLATE",
@@ -206,7 +276,12 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     registry = JSON.parse(Buffer.from(bytesOf.get("CAND-SRC-REGISTRY-JSON")!).toString("utf8")) as Json;
   } catch (e) {
     setStatus("CAND-SRC-REGISTRY-JSON", `invalid JSON: ${(e as Error).message}`);
-    findings.push({ severity: "error", code: "REGISTRY_UNREADABLE", message: `The populated registry JSON could not be parsed: ${(e as Error).message}`, refs: ["CAND-SRC-REGISTRY-JSON"] });
+    findings.push({
+      severity: "error",
+      code: "REGISTRY_UNREADABLE",
+      message: `The populated registry JSON could not be parsed: ${(e as Error).message}`,
+      refs: ["CAND-SRC-REGISTRY-JSON"],
+    });
     return empty;
   }
   const meta = (registry.schema_metadata ?? {}) as Json;
@@ -217,12 +292,22 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
   const rows = (registry.lopa_rows ?? []) as Json[];
   const seats = (registry.lopa_seats ?? []) as Json[];
   if (!Array.isArray(configs) || !Array.isArray(rows) || !Array.isArray(seats)) {
-    findings.push({ severity: "error", code: "REGISTRY_SHAPE", message: "The registry JSON does not contain the three expected arrays.", refs: ["CAND-SRC-REGISTRY-JSON"] });
+    findings.push({
+      severity: "error",
+      code: "REGISTRY_SHAPE",
+      message: "The registry JSON does not contain the three expected arrays.",
+      refs: ["CAND-SRC-REGISTRY-JSON"],
+    });
     return empty;
   }
   for (const key of Object.keys(registry)) {
     if (!["schema_metadata", "lopa_configurations", "lopa_rows", "lopa_seats"].includes(key)) {
-      findings.push({ severity: "warning", code: "UNSUPPORTED_FIELD", message: `Registry top-level field "${key}" is not understood and is ignored.`, refs: ["CAND-SRC-REGISTRY-JSON"] });
+      findings.push({
+        severity: "warning",
+        code: "UNSUPPORTED_FIELD",
+        message: `Registry top-level field "${key}" is not understood and is ignored.`,
+        refs: ["CAND-SRC-REGISTRY-JSON"],
+      });
     }
   }
   const unknownFields = (records: Json[], known: string[], label: string) => {
@@ -232,8 +317,15 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       for (const k of Object.keys(r)) if (!known.includes(k)) extra.add(k);
       for (const k of known) if (!(k in r)) missing.add(k);
     }
-    for (const k of extra) findings.push({ severity: "warning", code: "UNSUPPORTED_FIELD", message: `${label} field "${k}" is not understood; it is kept only in the raw record.`, refs: ["CAND-SRC-REGISTRY-JSON"] });
-    for (const k of missing) findings.push({ severity: "error", code: "MISSING_FIELD", message: `${label} records are missing field "${k}".`, refs: ["CAND-SRC-REGISTRY-JSON"] });
+    for (const k of extra)
+      findings.push({
+        severity: "warning",
+        code: "UNSUPPORTED_FIELD",
+        message: `${label} field "${k}" is not understood; it is kept only in the raw record.`,
+        refs: ["CAND-SRC-REGISTRY-JSON"],
+      });
+    for (const k of missing)
+      findings.push({ severity: "error", code: "MISSING_FIELD", message: `${label} records are missing field "${k}".`, refs: ["CAND-SRC-REGISTRY-JSON"] });
   };
   unknownFields(configs, CONFIG_FIELDS, "Configuration");
   unknownFields(rows, ROW_FIELDS, "Row");
@@ -241,10 +333,19 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
 
   // declared record counts
   const entities = (meta.entities ?? {}) as Record<string, Json>;
-  for (const [name, actual] of [["lopa_configurations", configs.length], ["lopa_rows", rows.length], ["lopa_seats", seats.length]] as const) {
+  for (const [name, actual] of [
+    ["lopa_configurations", configs.length],
+    ["lopa_rows", rows.length],
+    ["lopa_seats", seats.length],
+  ] as const) {
     const declared = entities[name]?.record_count;
     if (typeof declared === "number" && declared !== actual) {
-      findings.push({ severity: "error", code: "RECORD_COUNT", message: `Registry metadata declares ${declared} ${name} records but ${actual} are present.`, refs: ["CAND-SRC-REGISTRY-JSON"] });
+      findings.push({
+        severity: "error",
+        code: "RECORD_COUNT",
+        message: `Registry metadata declares ${declared} ${name} records but ${actual} are present.`,
+        refs: ["CAND-SRC-REGISTRY-JSON"],
+      });
     }
   }
   stats.registry = { schemaVersion, generatedAt, configurations: configs.length, rowRecords: rows.length, seats: seats.length };
@@ -261,7 +362,8 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     const key = `${r.lopa_id}|${r.row_number}`;
     if (rowKeys.has(key)) findings.push({ severity: "error", code: "DUPLICATE_KEY", message: `Duplicate row record ${key}.`, refs: [key] });
     rowKeys.set(key, r);
-    if (!configIds.has(String(r.lopa_id))) findings.push({ severity: "error", code: "ORPHAN", message: `Row ${key} refers to unknown configuration.`, refs: [key] });
+    if (!configIds.has(String(r.lopa_id)))
+      findings.push({ severity: "error", code: "ORPHAN", message: `Row ${key} refers to unknown configuration.`, refs: [key] });
   }
   const seatKeys = new Set<string>();
   for (const s of seats) {
@@ -270,8 +372,10 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     seatKeys.add(key);
     const row = rowKeys.get(`${s.lopa_id}|${s.row_number}`);
     if (!row) findings.push({ severity: "error", code: "ORPHAN", message: `Seat ${key} refers to a row that is not in the registry.`, refs: [key] });
-    else if (row.row_exists !== true) findings.push({ severity: "error", code: "SEAT_ROW", message: `Seat ${key} sits on a row marked as not existing.`, refs: [key] });
-    if (s.seat_code !== `${s.row_number}${s.seat_letter}`) findings.push({ severity: "error", code: "SEAT_IDENTITY", message: `Seat ${key} has seat_code "${s.seat_code}".`, refs: [key] });
+    else if (row.row_exists !== true)
+      findings.push({ severity: "error", code: "SEAT_ROW", message: `Seat ${key} sits on a row marked as not existing.`, refs: [key] });
+    if (s.seat_code !== `${s.row_number}${s.seat_letter}`)
+      findings.push({ severity: "error", code: "SEAT_IDENTITY", message: `Seat ${key} has seat_code "${s.seat_code}".`, refs: [key] });
   }
 
   // Cross-format agreement (declared, counted conversions; any substantive difference is reported, not resolved)
@@ -287,7 +391,13 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
   try {
     const csv = parseCsv(Buffer.from(bytesOf.get("CAND-SRC-CONFIG-CSV")!).toString("utf8"));
     setStatus("CAND-SRC-CONFIG-CSV", `parsed: ${csv.records.length} records, ${csv.headers.length} columns${csv.hasBom ? ", UTF-8 BOM" : ""}`);
-    if (csv.records.length !== configs.length) findings.push({ severity: "error", code: "CROSS_FORMAT_MISMATCH", message: `Configuration CSV has ${csv.records.length} records, JSON has ${configs.length}.`, refs: ["CAND-SRC-CONFIG-CSV"] });
+    if (csv.records.length !== configs.length)
+      findings.push({
+        severity: "error",
+        code: "CROSS_FORMAT_MISMATCH",
+        message: `Configuration CSV has ${csv.records.length} records, JSON has ${configs.length}.`,
+        refs: ["CAND-SRC-CONFIG-CSV"],
+      });
     const byId = new Map(csv.records.map((r) => [r.lopa_id, r]));
     for (const c of configs) {
       const other = byId.get(String(c.lopa_id));
@@ -301,17 +411,33 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     }
   } catch (e) {
     setStatus("CAND-SRC-CONFIG-CSV", `unreadable: ${(e as Error).message}`);
-    findings.push({ severity: "error", code: "SOURCE_UNREADABLE", message: `Configuration CSV could not be read: ${(e as Error).message}`, refs: ["CAND-SRC-CONFIG-CSV"] });
+    findings.push({
+      severity: "error",
+      code: "SOURCE_UNREADABLE",
+      message: `Configuration CSV could not be read: ${(e as Error).message}`,
+      refs: ["CAND-SRC-CONFIG-CSV"],
+    });
   }
   try {
     const csv = parseCsv(Buffer.from(bytesOf.get("CAND-SRC-SEATS-CSV")!).toString("utf8"));
     setStatus("CAND-SRC-SEATS-CSV", `parsed: ${csv.records.length} records, ${csv.headers.length} columns${csv.hasBom ? ", UTF-8 BOM" : ""}`);
-    if (csv.records.length !== seats.length) findings.push({ severity: "error", code: "CROSS_FORMAT_MISMATCH", message: `Seat CSV has ${csv.records.length} records, JSON has ${seats.length}.`, refs: ["CAND-SRC-SEATS-CSV"] });
+    if (csv.records.length !== seats.length)
+      findings.push({
+        severity: "error",
+        code: "CROSS_FORMAT_MISMATCH",
+        message: `Seat CSV has ${csv.records.length} records, JSON has ${seats.length}.`,
+        refs: ["CAND-SRC-SEATS-CSV"],
+      });
     const byKey = new Map(csv.records.map((r) => [`${r.lopa_id}|${r.row_number}|${r.seat_letter}`, r]));
     for (const s of seats) {
       const other = byKey.get(`${s.lopa_id}|${s.row_number}|${s.seat_letter}`);
       if (!other) {
-        findings.push({ severity: "error", code: "CROSS_FORMAT_MISMATCH", message: `Seat ${s.lopa_id} ${s.seat_code} is missing from the seat CSV.`, refs: ["CAND-SRC-SEATS-CSV"] });
+        findings.push({
+          severity: "error",
+          code: "CROSS_FORMAT_MISMATCH",
+          message: `Seat ${s.lopa_id} ${s.seat_code} is missing from the seat CSV.`,
+          refs: ["CAND-SRC-SEATS-CSV"],
+        });
         continue;
       }
       for (const f of csv.headers) {
@@ -323,7 +449,12 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     }
   } catch (e) {
     setStatus("CAND-SRC-SEATS-CSV", `unreadable: ${(e as Error).message}`);
-    findings.push({ severity: "error", code: "SOURCE_UNREADABLE", message: `Seat CSV could not be read: ${(e as Error).message}`, refs: ["CAND-SRC-SEATS-CSV"] });
+    findings.push({
+      severity: "error",
+      code: "SOURCE_UNREADABLE",
+      message: `Seat CSV could not be read: ${(e as Error).message}`,
+      refs: ["CAND-SRC-SEATS-CSV"],
+    });
   }
   try {
     const book = readXlsx(bytesOf.get("CAND-SRC-ROWS-XLSX")!);
@@ -336,14 +467,25 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     if (sheet) {
       const headers = (sheet.rows[0] ?? []).map((h) => String(h));
       const data = sheet.rows.slice(1);
-      if (data.length !== rows.length) findings.push({ severity: "error", code: "CROSS_FORMAT_MISMATCH", message: `Rows workbook has ${data.length} data rows, JSON has ${rows.length}.`, refs: ["CAND-SRC-ROWS-XLSX"] });
+      if (data.length !== rows.length)
+        findings.push({
+          severity: "error",
+          code: "CROSS_FORMAT_MISMATCH",
+          message: `Rows workbook has ${data.length} data rows, JSON has ${rows.length}.`,
+          refs: ["CAND-SRC-ROWS-XLSX"],
+        });
       const idCol = headers.indexOf("lopa_id");
       const rowCol = headers.indexOf("row_number");
       const byKey = new Map(data.map((r) => [`${r[idCol]}|${r[rowCol]}`, r]));
       for (const r of rows) {
         const other = byKey.get(`${r.lopa_id}|${r.row_number}`);
         if (!other) {
-          findings.push({ severity: "error", code: "CROSS_FORMAT_MISMATCH", message: `Row ${r.lopa_id} ${r.row_number} is missing from the workbook.`, refs: ["CAND-SRC-ROWS-XLSX"] });
+          findings.push({
+            severity: "error",
+            code: "CROSS_FORMAT_MISMATCH",
+            message: `Row ${r.lopa_id} ${r.row_number} is missing from the workbook.`,
+            refs: ["CAND-SRC-ROWS-XLSX"],
+          });
           continue;
         }
         headers.forEach((f, col) => {
@@ -355,7 +497,12 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     }
   } catch (e) {
     setStatus("CAND-SRC-ROWS-XLSX", `unreadable: ${(e as Error).message}`);
-    findings.push({ severity: "error", code: "SOURCE_UNREADABLE", message: `Rows workbook could not be read: ${(e as Error).message}`, refs: ["CAND-SRC-ROWS-XLSX"] });
+    findings.push({
+      severity: "error",
+      code: "SOURCE_UNREADABLE",
+      message: `Rows workbook could not be read: ${(e as Error).message}`,
+      refs: ["CAND-SRC-ROWS-XLSX"],
+    });
   }
   stats.crossFormat = { attributeValuesCompared: compared, conversions };
   findings.push({
@@ -372,7 +519,10 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
   configs.forEach((c, configIndex) => {
     const lopaId = String(c.lopa_id);
     const model = String(c.boeing_model);
-    const subtypeId = `CAND-${model.replace(/^Boeing\s+/, "").replace(/\s+/g, "-").toUpperCase()}`;
+    const subtypeId = `CAND-${model
+      .replace(/^Boeing\s+/, "")
+      .replace(/\s+/g, "-")
+      .toUpperCase()}`;
     if (!subtypes.has(subtypeId)) subtypes.set(subtypeId, { id: subtypeId, namespace: "candidate", name: `${model} (as named by the registry)` });
     const layoutId = `CAND-${lopaId}`;
     layouts.push({ id: layoutId, namespace: "candidate", subtypeId, name: `${model} - ${c.configuration_name}`, note: String(c.notes ?? "") });
@@ -429,12 +579,25 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       const label = String(r.row_number);
       const present = locations.filter((l) => l.seat!.printedRow === label).map((l) => l.seat!.letter);
       if (typeof r.active_seat_count === "number" && r.active_seat_count !== present.length) {
-        findings.push({ severity: "error", code: "ROW_SEAT_COUNT", message: `${lopaId} row ${label} declares ${r.active_seat_count} active seats but ${present.length} seat records exist.`, refs: [`${lopaId}|${label}`] });
+        findings.push({
+          severity: "error",
+          code: "ROW_SEAT_COUNT",
+          message: `${lopaId} row ${label} declares ${r.active_seat_count} active seats but ${present.length} seat records exist.`,
+          refs: [`${lopaId}|${label}`],
+        });
       }
-      const omitted = String(r.omitted_seat_letters ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+      const omitted = String(r.omitted_seat_letters ?? "")
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean);
       const expectedOmitted = ["A", "B", "C", "D", "E", "F"].filter((l) => !present.includes(l));
       if (omitted.join(",") !== expectedOmitted.join(",")) {
-        findings.push({ severity: "error", code: "ROW_OMITTED_LETTERS", message: `${lopaId} row ${label} lists omitted letters "${omitted.join(",")}" but seat records imply "${expectedOmitted.join(",")}".`, refs: [`${lopaId}|${label}`] });
+        findings.push({
+          severity: "error",
+          code: "ROW_OMITTED_LETTERS",
+          message: `${lopaId} row ${label} lists omitted letters "${omitted.join(",")}" but seat records imply "${expectedOmitted.join(",")}".`,
+          refs: [`${lopaId}|${label}`],
+        });
       }
       // partial-side bulkhead ambiguity: the row flag and the seat flags describe different scopes
       const flags = locations.filter((l) => l.seat!.printedRow === label).map((l) => l.seat!.bulkhead);
@@ -463,7 +626,8 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
         return left.size > 0 && right.size > 0 && [...left].some((t) => !right.has(t));
       })
       .map((r) => r.printedLabel);
-    if (splitRows.length) notes.push(`Rows with different commercial tiers on the left and right blocks: ${splitRows.join(", ")}. Tier is held per seat, never per row.`);
+    if (splitRows.length)
+      notes.push(`Rows with different commercial tiers on the left and right blocks: ${splitRows.join(", ")}. Tier is held per seat, never per row.`);
     const skipped = rowLabels.filter((r) => !r.exists).map((r) => r.printedLabel);
     if (skipped.length) notes.push(`Printed row labels that do not physically exist: ${skipped.join(", ")}.`);
 
@@ -513,7 +677,12 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       for (const quote of c.quotes) {
         const hit = paragraphs.find((p) => p.norm.includes(normaliseForQuote(quote)));
         if (!hit) {
-          findings.push({ severity: "error", code: "QUOTE_NOT_FOUND", message: `Curated quote "${quote}" for ${c.id} was not found in the supplied DOCX. Nothing is assumed about its contents.`, refs: [c.id] });
+          findings.push({
+            severity: "error",
+            code: "QUOTE_NOT_FOUND",
+            message: `Curated quote "${quote}" for ${c.id} was not found in the supplied DOCX. Nothing is assumed about its contents.`,
+            refs: [c.id],
+          });
           continue;
         }
         claims.push({ text: hit.text.trim(), sourceId: "CAND-SRC-DOCX", locator: `${ORIGINAL_FILES.docx}#${hit.locator}` });
@@ -523,7 +692,12 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
         .filter((id): id is string => Boolean(id))
         .map((layoutRevisionId) => ({ layoutRevisionId, basis: "inferred" as const }));
       if (crosswalk.length !== c.crosswalk.length) {
-        findings.push({ severity: "error", code: "CROSSWALK", message: `Layout category ${c.id} crosswalks to a registry configuration that is not present.`, refs: [c.id] });
+        findings.push({
+          severity: "error",
+          code: "CROSSWALK",
+          message: `Layout category ${c.id} crosswalks to a registry configuration that is not present.`,
+          refs: [c.id],
+        });
       }
       layoutCategories.push({
         id: c.id,
@@ -536,9 +710,19 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
         note: c.note,
       });
       if (crosswalk.length === 0) {
-        findings.push({ severity: "conflict", code: "LAYOUT_NOT_SUPPLIED", message: `${c.name}: described in the DOCX but no seat set is supplied. Kept as an explicit unresolved category; no layout is derived.`, refs: [c.id] });
+        findings.push({
+          severity: "conflict",
+          code: "LAYOUT_NOT_SUPPLIED",
+          message: `${c.name}: described in the DOCX but no seat set is supplied. Kept as an explicit unresolved category; no layout is derived.`,
+          refs: [c.id],
+        });
       } else if (crosswalk.length > 1) {
-        findings.push({ severity: "info", code: "GRAIN_DIFFERENCE", message: `${c.name}: one document category maps (by inference) to ${crosswalk.length} registry configurations. Both records are kept.`, refs: [c.id] });
+        findings.push({
+          severity: "info",
+          code: "GRAIN_DIFFERENCE",
+          message: `${c.name}: one document category maps (by inference) to ${crosswalk.length} registry configurations. Both records are kept.`,
+          refs: [c.id],
+        });
       }
     }
   } catch (e) {

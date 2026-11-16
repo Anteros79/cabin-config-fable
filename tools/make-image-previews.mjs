@@ -49,7 +49,9 @@ for (const name of images) {
   const base = name.replace(/\.[^.]+$/, "");
   if (meta.format === "heif" || meta.format === "avif" || meta.format === "webp") {
     const file = join("full", `${base}.png`);
-    await sharp(bytes).png({ compressionLevel: 9 }).toFile(join(projectRoot, "evidence", "image-previews", file));
+    await sharp(bytes)
+      .png({ compressionLevel: 9 })
+      .toFile(join(projectRoot, "evidence", "image-previews", file));
     entry.previews.push({ file, kind: "lossless decode at native size" });
   }
   const view = join("view", `${base}.jpg`);

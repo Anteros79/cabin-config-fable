@@ -1,11 +1,4 @@
-import type {
-  FrozenRule,
-  LookupResult,
-  PartLine,
-  RecordInput,
-  ReferenceRelease,
-  VisitSnapshot,
-} from "./types.ts";
+import type { FrozenRule, LookupResult, PartLine, RecordInput, ReferenceRelease, VisitSnapshot } from "./types.ts";
 import { DATE_RULE } from "./types.ts";
 
 export class DomainError extends Error {
@@ -74,8 +67,10 @@ export function deriveRecord(snapshot: VisitSnapshot, raw: unknown): DerivedReco
   const { locationId, componentId, selection, quantity } = input;
   const substituteId = input.substituteId ?? null;
   const note = input.note ?? "";
-  if (typeof locationId !== "string" || locationId.length === 0 || locationId.length > 80) throw new DomainError("INVALID_LOCATION", "A location id is required.");
-  if (typeof componentId !== "string" || componentId.length === 0 || componentId.length > 80) throw new DomainError("INVALID_COMPONENT", "A component id is required.");
+  if (typeof locationId !== "string" || locationId.length === 0 || locationId.length > 80)
+    throw new DomainError("INVALID_LOCATION", "A location id is required.");
+  if (typeof componentId !== "string" || componentId.length === 0 || componentId.length > 80)
+    throw new DomainError("INVALID_COMPONENT", "A component id is required.");
   if (selection !== "PRIMARY" && selection !== "ALTERNATE") throw new DomainError("INVALID_SELECTION", "Selection must be PRIMARY or ALTERNATE.");
   if (typeof quantity !== "number" || !Number.isInteger(quantity)) throw new DomainError("INVALID_QUANTITY", "Quantity must be a whole number.");
   if (typeof note !== "string" || note.length > 1000) throw new DomainError("INVALID_NOTE", "The note must be text of at most 1000 characters.");

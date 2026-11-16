@@ -68,11 +68,13 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     dateOk(s.effectiveFrom, "effectiveFrom", s.id);
     dateOk(s.expiresOn, "expiresOn", s.id);
     intervalOk(s.effectiveFrom, s.expiresOn, s.id);
-    if (s.authority === "approved") err("UNSUPPORTED_AUTHORITY", `Source ${s.id} claims approved authority; no approved airline source has been supplied.`, [s.id]);
+    if (s.authority === "approved")
+      err("UNSUPPORTED_AUTHORITY", `Source ${s.id} claims approved authority; no approved airline source has been supplied.`, [s.id]);
   }
   for (const a of content.aircraft) {
     if (!subtypes.has(a.subtypeId)) err("ORPHAN", `Aircraft ${a.tail} refers to unknown subtype ${a.subtypeId}.`, [a.tail]);
-    if (a.namespace !== "fixture") err("NAMESPACE", `Aircraft ${a.tail} is in namespace ${a.namespace}; no approved or candidate tail data has been supplied.`, [a.tail]);
+    if (a.namespace !== "fixture")
+      err("NAMESPACE", `Aircraft ${a.tail} is in namespace ${a.namespace}; no approved or candidate tail data has been supplied.`, [a.tail]);
   }
   for (const l of content.layouts) if (!subtypes.has(l.subtypeId)) err("ORPHAN", `Layout ${l.id} refers to unknown subtype ${l.subtypeId}.`, [l.id]);
 
@@ -89,7 +91,8 @@ export function validateRelease(content: ReleaseContent): Finding[] {
       err("ROW_ORDER", `Layout revision ${r.id} has rows without a unique physical order.`, [r.id]);
     }
     for (const row of r.rows) {
-      if (!row.exists && row.physicalOrder !== null) err("ROW_ORDER", `Layout revision ${r.id} row "${row.printedLabel}" does not exist but has a physical order.`, [r.id]);
+      if (!row.exists && row.physicalOrder !== null)
+        err("ROW_ORDER", `Layout revision ${r.id} row "${row.printedLabel}" does not exist but has a physical order.`, [r.id]);
     }
     const rowByLabel = new Map(r.rows.map((row) => [row.printedLabel, row]));
     const seats = r.locations.filter((l) => l.kind === "SEAT");
@@ -97,7 +100,8 @@ export function validateRelease(content: ReleaseContent): Finding[] {
       for (const c of loc.componentIds) {
         const def = components.get(c);
         if (!def) err("ORPHAN", `Location ${r.id}#${loc.id} lists unknown component ${c}.`, [`${r.id}#${loc.id}`]);
-        else if (def.locationKind !== loc.kind) err("COMPONENT_KIND", `Component ${c} is not valid for ${loc.kind} location ${r.id}#${loc.id}.`, [`${r.id}#${loc.id}`]);
+        else if (def.locationKind !== loc.kind)
+          err("COMPONENT_KIND", `Component ${c} is not valid for ${loc.kind} location ${r.id}#${loc.id}.`, [`${r.id}#${loc.id}`]);
       }
       if (loc.kind === "SEAT") {
         const seat = loc.seat;
@@ -106,8 +110,10 @@ export function validateRelease(content: ReleaseContent): Finding[] {
           continue;
         }
         const row = rowByLabel.get(seat.printedRow);
-        if (!row || !row.exists) err("SEAT_ROW", `Seat ${r.id}#${seat.code} sits on printed row ${seat.printedRow}, which does not exist in this layout.`, [`${r.id}#${loc.id}`]);
-        else if (row.physicalOrder !== seat.physicalRow) err("SEAT_ROW", `Seat ${r.id}#${seat.code} physical row disagrees with its printed row.`, [`${r.id}#${loc.id}`]);
+        if (!row || !row.exists)
+          err("SEAT_ROW", `Seat ${r.id}#${seat.code} sits on printed row ${seat.printedRow}, which does not exist in this layout.`, [`${r.id}#${loc.id}`]);
+        else if (row.physicalOrder !== seat.physicalRow)
+          err("SEAT_ROW", `Seat ${r.id}#${seat.code} physical row disagrees with its printed row.`, [`${r.id}#${loc.id}`]);
         if (seat.code !== `${seat.printedRow}${seat.letter}` || loc.id !== `SEAT:${seat.code}`) {
           err("SEAT_IDENTITY", `Seat ${r.id}#${loc.id} has inconsistent identity (${seat.printedRow}/${seat.letter}/${seat.code}).`, [`${r.id}#${loc.id}`]);
         }
@@ -141,7 +147,8 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     for (const id of v.layoutRevisionIds) {
       const rev = revisions.get(id);
       if (!rev) err("ORPHAN", `Variant ${v.id} refers to unknown layout revision ${id}.`, [v.id]);
-      else if (rev.namespace !== v.namespace) err("NAMESPACE", `Variant ${v.id} (${v.namespace}) uses layout revision ${id} from namespace ${rev.namespace}.`, [v.id]);
+      else if (rev.namespace !== v.namespace)
+        err("NAMESPACE", `Variant ${v.id} (${v.namespace}) uses layout revision ${id} from namespace ${rev.namespace}.`, [v.id]);
     }
   }
 
@@ -152,9 +159,11 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     const variant = variants.get(a.variantId);
     if (!variant) err("ORPHAN", `Assignment ${ref} refers to unknown variant ${a.variantId}.`, [ref]);
     if (!revisions.has(a.layoutRevisionId)) err("ORPHAN", `Assignment ${ref} refers to unknown layout revision ${a.layoutRevisionId}.`, [ref]);
-    else if (variant && !variant.layoutRevisionIds.includes(a.layoutRevisionId)) err("ORPHAN", `Assignment ${ref} pairs variant ${a.variantId} with layout revision ${a.layoutRevisionId}, which that variant does not list.`, [ref]);
+    else if (variant && !variant.layoutRevisionIds.includes(a.layoutRevisionId))
+      err("ORPHAN", `Assignment ${ref} pairs variant ${a.variantId} with layout revision ${a.layoutRevisionId}, which that variant does not list.`, [ref]);
     if (!sources.has(a.sourceId)) err("ORPHAN", `Assignment ${ref} cites unknown source ${a.sourceId}.`, [ref]);
-    if (a.namespace !== "fixture") err("NAMESPACE", `Assignment ${ref} is in namespace ${a.namespace}; no approved dated tail assignment has been supplied.`, [ref]);
+    if (a.namespace !== "fixture")
+      err("NAMESPACE", `Assignment ${ref} is in namespace ${a.namespace}; no approved dated tail assignment has been supplied.`, [ref]);
     dateOk(a.effectiveFrom, "effectiveFrom", ref, false);
     dateOk(a.effectiveTo, "effectiveTo", ref);
     intervalOk(a.effectiveFrom, a.effectiveTo, ref);
@@ -171,7 +180,10 @@ export function validateRelease(content: ReleaseContent): Finding[] {
         const a = released[i];
         const b = released[j];
         if (isIsoDate(a.effectiveFrom) && isIsoDate(b.effectiveFrom) && intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) {
-          conflict("ASSIGNMENT_OVERLAP", `Tail ${tail} has overlapping released assignments ${a.id} and ${b.id}. Lookups inside the overlap are refused.`, [a.id, b.id]);
+          conflict("ASSIGNMENT_OVERLAP", `Tail ${tail} has overlapping released assignments ${a.id} and ${b.id}. Lookups inside the overlap are refused.`, [
+            a.id,
+            b.id,
+          ]);
         }
       }
     }
@@ -191,11 +203,13 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     const ref = `rule ${r.id}`;
     const def = components.get(r.componentId);
     if (!def) err("ORPHAN", `${ref} refers to unknown component ${r.componentId}.`, [r.id]);
-    else if (def.locationKind !== r.locations.kind) err("COMPONENT_KIND", `${ref} selects ${r.locations.kind} locations for a ${def.locationKind} component.`, [r.id]);
+    else if (def.locationKind !== r.locations.kind)
+      err("COMPONENT_KIND", `${ref} selects ${r.locations.kind} locations for a ${def.locationKind} component.`, [r.id]);
     if (!parts.has(r.partNo)) err("ORPHAN", `${ref} refers to unknown part ${r.partNo}.`, [r.id]);
     if (!sources.has(r.sourceId)) err("ORPHAN", `${ref} cites unknown source ${r.sourceId}.`, [r.id]);
     if (!units.includes(r.unit)) err("UNKNOWN_UNIT", `${ref} uses unknown unit ${r.unit}.`, [r.id]);
-    if (!Number.isInteger(r.qtyPerReplacement) || r.qtyPerReplacement <= 0) err("INVALID_QUANTITY", `${ref} has invalid quantity ${r.qtyPerReplacement}.`, [r.id]);
+    if (!Number.isInteger(r.qtyPerReplacement) || r.qtyPerReplacement <= 0)
+      err("INVALID_QUANTITY", `${ref} has invalid quantity ${r.qtyPerReplacement}.`, [r.id]);
     if (r.namespace !== "fixture") err("NAMESPACE", `${ref} is in namespace ${r.namespace}; no approved parts applicability has been supplied.`, [r.id]);
     dateOk(r.effectiveFrom, "effectiveFrom", ref, false);
     dateOk(r.effectiveTo, "effectiveTo", ref);
@@ -207,7 +221,8 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     else {
       for (const pair of set.pairs.keys()) {
         const revision = revisions.get(pair.split("|")[1]);
-        if (revision && revision.namespace !== r.namespace) err("NAMESPACE", `${ref} (${r.namespace}) reaches layout revision ${revision.id} in namespace ${revision.namespace}.`, [r.id]);
+        if (revision && revision.namespace !== r.namespace)
+          err("NAMESPACE", `${ref} (${r.namespace}) reaches layout revision ${revision.id} in namespace ${revision.namespace}.`, [r.id]);
       }
     }
   }
@@ -219,7 +234,10 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     for (const r of list) {
       const set = ruleSets.get(r.id);
       if (!set || set.empty) continue;
-      const sig = [...set.pairs.entries()].map(([k, v]) => `${k}:${v.size}`).sort().join(";");
+      const sig = [...set.pairs.entries()]
+        .map(([k, v]) => `${k}:${v.size}`)
+        .sort()
+        .join(";");
       bySignature.set(sig, [...(bySignature.get(sig) ?? []), r]);
     }
     for (const group of bySignature.values()) {
@@ -230,7 +248,10 @@ export function validateRelease(content: ReleaseContent): Finding[] {
           if (!isIsoDate(a.effectiveFrom) || !isIsoDate(b.effectiveFrom)) continue;
           if (!intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) continue;
           if (matchSetsEqual(ruleSets.get(a.id)!, ruleSets.get(b.id)!)) {
-            conflict("EQUAL_RULES", `Rules ${a.id} and ${b.id} have identical scope and overlapping validity. Affected components are reported as ambiguous.`, [a.id, b.id]);
+            conflict("EQUAL_RULES", `Rules ${a.id} and ${b.id} have identical scope and overlapping validity. Affected components are reported as ambiguous.`, [
+              a.id,
+              b.id,
+            ]);
           }
         }
       }
@@ -246,15 +267,19 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     if (s.altPartNo === s.primaryPartNo) err("SUBSTITUTE_INVALID", `${ref} substitutes a part for itself.`, [s.id]);
     if (!sources.has(s.sourceId)) err("ORPHAN", `${ref} cites unknown approval source ${s.sourceId}.`, [s.id]);
     if (!units.includes(s.unit)) err("UNKNOWN_UNIT", `${ref} uses unknown unit ${s.unit}.`, [s.id]);
-    if (!Number.isInteger(s.qtyPerReplacement) || s.qtyPerReplacement <= 0) err("INVALID_QUANTITY", `${ref} has invalid quantity ${s.qtyPerReplacement}.`, [s.id]);
+    if (!Number.isInteger(s.qtyPerReplacement) || s.qtyPerReplacement <= 0)
+      err("INVALID_QUANTITY", `${ref} has invalid quantity ${s.qtyPerReplacement}.`, [s.id]);
     if (s.namespace !== "fixture") err("NAMESPACE", `${ref} is in namespace ${s.namespace}; no approved substitute catalogue has been supplied.`, [s.id]);
-    if (def && s.locations && def.locationKind !== s.locations.kind) err("COMPONENT_KIND", `${ref} selects ${s.locations.kind} locations for a ${def.locationKind} component.`, [s.id]);
+    if (def && s.locations && def.locationKind !== s.locations.kind)
+      err("COMPONENT_KIND", `${ref} selects ${s.locations.kind} locations for a ${def.locationKind} component.`, [s.id]);
     dateOk(s.effectiveFrom, "effectiveFrom", ref, false);
     dateOk(s.effectiveTo, "effectiveTo", ref);
     intervalOk(s.effectiveFrom, s.effectiveTo, ref);
     constraintOk(s.constraint, ref);
-    if (!primaryParts.has(`${s.componentId}|${s.primaryPartNo}`)) warn("SUBSTITUTE_UNUSED", `${ref} stands in for ${s.primaryPartNo}, which no rule for ${s.componentId} selects.`, [s.id]);
-    else if (buildMatchSet(content, revisions, s.constraint, s.locations, s.componentId).empty) err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
+    if (!primaryParts.has(`${s.componentId}|${s.primaryPartNo}`))
+      warn("SUBSTITUTE_UNUSED", `${ref} stands in for ${s.primaryPartNo}, which no rule for ${s.componentId} selects.`, [s.id]);
+    else if (buildMatchSet(content, revisions, s.constraint, s.locations, s.componentId).empty)
+      err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
   }
   const ruleIds = new Set(content.rules.map((r) => r.id));
   for (const p of content.pendingChanges) {
@@ -263,14 +288,17 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     dateOk(p.proposedEffectiveFrom, "proposedEffectiveFrom", p.id);
   }
   for (const c of content.components) {
-    if (!Number.isInteger(c.maxReplacementsPerLocation) || c.maxReplacementsPerLocation < 1) err("INVALID_QUANTITY", `Component ${c.id} has an invalid replacement limit.`, [c.id]);
+    if (!Number.isInteger(c.maxReplacementsPerLocation) || c.maxReplacementsPerLocation < 1)
+      err("INVALID_QUANTITY", `Component ${c.id} has an invalid replacement limit.`, [c.id]);
   }
   findings.push(...validateKits(content.kitChildren, parts, units, sources));
 
   for (const c of content.layoutCategories) {
-    for (const x of c.crosswalk) if (!revisions.has(x.layoutRevisionId)) err("ORPHAN", `Layout category ${c.id} crosswalks to unknown layout revision ${x.layoutRevisionId}.`, [c.id]);
+    for (const x of c.crosswalk)
+      if (!revisions.has(x.layoutRevisionId)) err("ORPHAN", `Layout category ${c.id} crosswalks to unknown layout revision ${x.layoutRevisionId}.`, [c.id]);
     for (const claim of c.claims) if (!sources.has(claim.sourceId)) err("ORPHAN", `Layout category ${c.id} cites unknown source ${claim.sourceId}.`, [c.id]);
-    if (c.seatSetStatus === "not-supplied" && c.crosswalk.length > 0) err("CROSSWALK", `Layout category ${c.id} has no supplied seat set but is crosswalked to a layout.`, [c.id]);
+    if (c.seatSetStatus === "not-supplied" && c.crosswalk.length > 0)
+      err("CROSSWALK", `Layout category ${c.id} has no supplied seat set but is crosswalked to a layout.`, [c.id]);
   }
   return findings;
 }

@@ -254,7 +254,9 @@ export function buildBinGeometry(side: 1 | -1): { door: THREE.BufferGeometry; bo
     } else {
       const p = body.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < p.count; i += 3) {
-        const bx = p.getX(i + 1), by = p.getY(i + 1), bz = p.getZ(i + 1);
+        const bx = p.getX(i + 1),
+          by = p.getY(i + 1),
+          bz = p.getZ(i + 1);
         p.setXYZ(i + 1, p.getX(i + 2), p.getY(i + 2), p.getZ(i + 2));
         p.setXYZ(i + 2, bx, by, bz);
       }

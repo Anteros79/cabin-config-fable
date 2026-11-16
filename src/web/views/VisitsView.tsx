@@ -20,7 +20,11 @@ export function VisitsView() {
     try {
       setData(await api.visits({ status: applied.status || undefined, q: applied.q || undefined, limit: PAGE, offset }));
     } catch (e) {
-      setError(e instanceof ApiError && e.kind === "network" ? "The server could not be reached. Saved visits are still stored; retry when the connection is back." : (e as Error).message);
+      setError(
+        e instanceof ApiError && e.kind === "network"
+          ? "The server could not be reached. Saved visits are still stored; retry when the connection is back."
+          : (e as Error).message,
+      );
     } finally {
       setBusy(false);
     }

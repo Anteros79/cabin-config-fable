@@ -110,7 +110,11 @@ describe("inclusive date boundaries", () => {
     expect(kitNext.substitutes).toEqual([]);
     expect(kitNext.excludedSubstitutes[0].reasons.map((r) => r.code).sort()).toEqual(["APPROVAL_EXPIRED", "SOURCE_EXPIRED"]);
     // not yet effective the day before the approval starts
-    const early = lookup(fixtureRelease((c) => (c.assignments.find((a) => a.tail === "N100TL")!.effectiveFrom = "2025-01-01")), "N100TL", "2025-07-21");
+    const early = lookup(
+      fixtureRelease((c) => (c.assignments.find((a) => a.tail === "N100TL")!.effectiveFrom = "2025-01-01")),
+      "N100TL",
+      "2025-07-21",
+    );
     const kitEarly = early.resolution!.rules[(resolutionAt(early, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId];
     expect(kitEarly.excludedSubstitutes[0].reasons.map((r) => r.code)).toEqual(["APPROVAL_NOT_YET_EFFECTIVE"]);
   });
@@ -120,7 +124,13 @@ describe("mandatory fixture parts", () => {
   it("FAKE-SC-1001 is the V01 ELR-A cushion at 1A-5A and nowhere else", () => {
     const r = lookup(release, "N100TL", "2026-11-12");
     const where = r.resolution!.components.filter((c) => c.status === "RESOLVED" && r.resolution!.rules[c.ruleId].partNo === "FAKE-SC-1001");
-    expect(where.map((c) => `${c.locationId}/${c.componentId}`)).toEqual(["SEAT:1A/CUSHION", "SEAT:2A/CUSHION", "SEAT:3A/CUSHION", "SEAT:4A/CUSHION", "SEAT:5A/CUSHION"]);
+    expect(where.map((c) => `${c.locationId}/${c.componentId}`)).toEqual([
+      "SEAT:1A/CUSHION",
+      "SEAT:2A/CUSHION",
+      "SEAT:3A/CUSHION",
+      "SEAT:4A/CUSHION",
+      "SEAT:5A/CUSHION",
+    ]);
     expect(partAt(r, "SEAT:3A", "BACKREST")).toBe("FAKE-V01-ELR-A-BACKREST"); // cushion and backrest are independent
     expect(partAt(r, "SEAT:6A", "CUSHION")).toBe("FAKE-SC-1002");
   });
@@ -152,10 +162,27 @@ describe("mandatory fixture parts", () => {
 });
 
 // --- synthetic rule sets for specificity -----------------------------------------------------
-function rule(id: string, partNo: string, constraint: ApplicabilityRule["constraint"], locations: ApplicabilityRule["locations"], extra: Partial<ApplicabilityRule> = {}): ApplicabilityRule {
+function rule(
+  id: string,
+  partNo: string,
+  constraint: ApplicabilityRule["constraint"],
+  locations: ApplicabilityRule["locations"],
+  extra: Partial<ApplicabilityRule> = {},
+): ApplicabilityRule {
   return {
-    id, namespace: "fixture", componentId: "CUSHION", partNo, qtyPerReplacement: 1, unit: "EA", constraint, locations,
-    released: true, effectiveFrom: "2024-01-01", effectiveTo: null, sourceId: "FX-DOC-A", ...extra,
+    id,
+    namespace: "fixture",
+    componentId: "CUSHION",
+    partNo,
+    qtyPerReplacement: 1,
+    unit: "EA",
+    constraint,
+    locations,
+    released: true,
+    effectiveFrom: "2024-01-01",
+    effectiveTo: null,
+    sourceId: "FX-DOC-A",
+    ...extra,
   };
 }
 function withRules(rules: ApplicabilityRule[], more?: (c: ReleaseContent) => void) {
@@ -183,8 +210,14 @@ describe("specificity by logical implication", () => {
   });
 
   it("insertion order does not matter", () => {
-    const a = withRules([rule("BROAD", "P-BROAD", { variant: ["V01"] }, ALL_SEATS), rule("EXACT", "P-EXACT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] })]);
-    const b = withRules([rule("EXACT", "P-EXACT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] }), rule("BROAD", "P-BROAD", { variant: ["V01"] }, ALL_SEATS)]);
+    const a = withRules([
+      rule("BROAD", "P-BROAD", { variant: ["V01"] }, ALL_SEATS),
+      rule("EXACT", "P-EXACT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] }),
+    ]);
+    const b = withRules([
+      rule("EXACT", "P-EXACT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] }),
+      rule("BROAD", "P-BROAD", { variant: ["V01"] }, ALL_SEATS),
+    ]);
     expect(at3A(a)).toMatchObject({ ruleId: "EXACT" });
     expect(at3A(b)).toMatchObject({ ruleId: "EXACT" });
   });
@@ -206,10 +239,7 @@ describe("specificity by logical implication", () => {
 
   it("incomparable rules are ambiguous even when one has more selectors", () => {
     // TWO has two constraints, ONE has one; neither implies the other.
-    const rel = withRules([
-      rule("ONE", "P-ONE", { carpet: ["MOHAWK"] }, ALL_SEATS),
-      rule("TWO", "P-TWO", { variant: ["V01"], seam: ["PRE"] }, ALL_SEATS),
-    ]);
+    const rel = withRules([rule("ONE", "P-ONE", { carpet: ["MOHAWK"] }, ALL_SEATS), rule("TWO", "P-TWO", { variant: ["V01"], seam: ["PRE"] }, ALL_SEATS)]);
     const r = at3A(rel);
     expect(r.status).toBe("AMBIGUOUS");
     const index = buildIndex(rel);
@@ -295,21 +325,43 @@ describe("substitute scope", () => {
   it("is offered only where its own constraint and location scope apply", () => {
     const rel = fixtureRelease((c) => {
       c.substitutes.push({
-        id: "X-SUB-SEAT", namespace: "fixture", componentId: "CUSHION", primaryPartNo: "FAKE-SC-1001", altPartNo: "FAKE-SC-1002", qtyPerReplacement: 1, unit: "EA",
-        constraint: { variant: ["V01"], carpet: ["MOHAWK"] }, locations: { kind: "SEAT", ids: ["SEAT:3A", "SEAT:4A"] }, released: true,
-        effectiveFrom: "2024-01-01", effectiveTo: null, sourceId: "FX-DOC-A",
+        id: "X-SUB-SEAT",
+        namespace: "fixture",
+        componentId: "CUSHION",
+        primaryPartNo: "FAKE-SC-1001",
+        altPartNo: "FAKE-SC-1002",
+        qtyPerReplacement: 1,
+        unit: "EA",
+        constraint: { variant: ["V01"], carpet: ["MOHAWK"] },
+        locations: { kind: "SEAT", ids: ["SEAT:3A", "SEAT:4A"] },
+        released: true,
+        effectiveFrom: "2024-01-01",
+        effectiveTo: null,
+        sourceId: "FX-DOC-A",
       });
     });
     const r = lookup(rel, "N100TL", "2026-11-12");
     const ruleId = (resolutionAt(r, "SEAT:3A", "CUSHION") as { ruleId: string }).ruleId;
     expect(r.resolution!.rules[ruleId].substitutes.find((s) => s.id === "X-SUB-SEAT")!.locationIds).toEqual(["SEAT:3A", "SEAT:4A"]);
     // a different carpet context removes the approval entirely
-    const botany = asRelease(fixtureContent((c) => {
-      c.substitutes.push({
-        id: "X-SUB-SEAT", namespace: "fixture", componentId: "CUSHION", primaryPartNo: "FAKE-SC-1001", altPartNo: "FAKE-SC-1002", qtyPerReplacement: 1, unit: "EA",
-        constraint: { variant: ["V01"], carpet: ["BOTANY"] }, released: true, effectiveFrom: "2024-01-01", effectiveTo: null, sourceId: "FX-DOC-A",
-      });
-    }));
+    const botany = asRelease(
+      fixtureContent((c) => {
+        c.substitutes.push({
+          id: "X-SUB-SEAT",
+          namespace: "fixture",
+          componentId: "CUSHION",
+          primaryPartNo: "FAKE-SC-1001",
+          altPartNo: "FAKE-SC-1002",
+          qtyPerReplacement: 1,
+          unit: "EA",
+          constraint: { variant: ["V01"], carpet: ["BOTANY"] },
+          released: true,
+          effectiveFrom: "2024-01-01",
+          effectiveTo: null,
+          sourceId: "FX-DOC-A",
+        });
+      }),
+    );
     const rb = lookup(botany, "N100TL", "2026-11-12");
     const ruleB = (resolutionAt(rb, "SEAT:3A", "CUSHION") as { ruleId: string }).ruleId;
     expect(rb.resolution!.rules[ruleB].substitutes).toEqual([]);

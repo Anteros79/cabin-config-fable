@@ -3,7 +3,16 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FORWARD_MARGIN } from "../../domain/geometry.ts";
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { buildBinGeometry, buildSeatGeometries, SEAT, type SeatGeometries } from "./seatParts.ts";
-import { backFrontTexture, binDoorTexture, carpetTexture, PALETTES, rearShellTexture, serviceUnitTexture, sidewallTexture, type ProfilePalette } from "./textures.ts";
+import {
+  backFrontTexture,
+  binDoorTexture,
+  carpetTexture,
+  PALETTES,
+  rearShellTexture,
+  serviceUnitTexture,
+  sidewallTexture,
+  type ProfilePalette,
+} from "./textures.ts";
 
 export type LocationStatus = "recorded" | "unresolved" | "none";
 export interface LocationState {
@@ -73,7 +82,7 @@ export class CabinScene {
   private selectionMark: THREE.LineSegments;
   private selectionFill: THREE.Mesh;
   private hoverMark: THREE.LineSegments;
-  private lights: { hemi: THREE.HemisphereLight; key: THREE.DirectionalLight; fill: THREE.DirectionalLight; wash: THREE.PointLight[] } ;
+  private lights: { hemi: THREE.HemisphereLight; key: THREE.DirectionalLight; fill: THREE.DirectionalLight; wash: THREE.PointLight[] };
   private disposables: { dispose(): void }[] = [];
   private frame = 0;
   private needsRender = true;
@@ -122,7 +131,10 @@ export class CabinScene {
     const edge = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
     this.selectionMark = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: SELECT_COLOUR, depthTest: false, transparent: true }));
     this.selectionMark.renderOrder = 20;
-    this.selectionFill = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: SELECT_COLOUR, transparent: true, opacity: 0.2, depthWrite: false }));
+    this.selectionFill = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial({ color: SELECT_COLOUR, transparent: true, opacity: 0.2, depthWrite: false }),
+    );
     this.selectionFill.renderOrder = 19;
     this.hoverMark = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: "#ffffff", depthTest: false, transparent: true, opacity: 0.85 }));
     this.hoverMark.renderOrder = 18;
@@ -255,7 +267,10 @@ export class CabinScene {
       this.groups.floor.add(mesh);
       let overlay: THREE.Mesh | null = null;
       if (locationId) {
-        overlay = new THREE.Mesh(new THREE.PlaneGeometry(lx - 0.06, halfW * 2 - 0.06), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.34, depthWrite: false }));
+        overlay = new THREE.Mesh(
+          new THREE.PlaneGeometry(lx - 0.06, halfW * 2 - 0.06),
+          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.34, depthWrite: false }),
+        );
         overlay.rotation.x = -Math.PI / 2;
         overlay.position.set(x, 0.006, 0);
         overlay.visible = false;
@@ -269,7 +284,10 @@ export class CabinScene {
     else addFloor(length / 2, length, null);
     carpet.dispose();
     if (layout.locations.some((l) => l.id === "FLOOR:FULL-CABIN")) {
-      this.fullCabinOverlay = new THREE.Mesh(new THREE.PlaneGeometry(length - 0.1, 0.42), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false }));
+      this.fullCabinOverlay = new THREE.Mesh(
+        new THREE.PlaneGeometry(length - 0.1, 0.42),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false }),
+      );
       this.fullCabinOverlay.rotation.x = -Math.PI / 2;
       this.fullCabinOverlay.position.set(length / 2, 0.009, 0);
       this.fullCabinOverlay.visible = false;
@@ -320,7 +338,10 @@ export class CabinScene {
       const map = service.clone();
       map.needsUpdate = true;
       map.repeat.set(rows, 1);
-      const psu = new THREE.Mesh(new THREE.PlaneGeometry(rows * layout.geometry.rowPitch, 0.4), new THREE.MeshStandardMaterial({ map, roughness: 0.6, side: THREE.DoubleSide }));
+      const psu = new THREE.Mesh(
+        new THREE.PlaneGeometry(rows * layout.geometry.rowPitch, 0.4),
+        new THREE.MeshStandardMaterial({ map, roughness: 0.6, side: THREE.DoubleSide }),
+      );
       psu.rotation.x = Math.PI / 2;
       psu.rotation.z = sign > 0 ? 0 : Math.PI;
       psu.position.set(FORWARD_MARGIN + (rows * layout.geometry.rowPitch) / 2, 1.648, sign * 1.55);
@@ -338,7 +359,10 @@ export class CabinScene {
       const map = wallTexture.clone();
       map.needsUpdate = true;
       map.repeat.set(Math.max(rows, 1), 1);
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(length, 1.66), new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, transparent: true }));
+      const wall = new THREE.Mesh(
+        new THREE.PlaneGeometry(length, 1.66),
+        new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, transparent: true }),
+      );
       wall.position.set(length / 2, 0.83, sign * (halfW + 0.005));
       wall.rotation.y = sign > 0 ? Math.PI : 0;
       const strip = new THREE.Mesh(new THREE.BoxGeometry(length, 0.03, 0.03), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
@@ -543,7 +567,8 @@ export class CabinScene {
     const dir = direction.clone().normalize();
     const target = initialTarget.clone();
     const corners: THREE.Vector3[] = [];
-    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) corners.push(new THREE.Vector3(x, y, z));
+    for (const x of [box.min.x, box.max.x])
+      for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) corners.push(new THREE.Vector3(x, y, z));
     const place = (d: number) => {
       this.camera.position.copy(target).addScaledVector(dir, d);
       this.camera.lookAt(target);
@@ -631,7 +656,11 @@ export class CabinScene {
           this.controls.target.set(p.x + 0.12, 0.86, p.z);
         }
       } else if (location.kind === "FLOOR") {
-        this.fit(new THREE.Vector3(-0.35, 1, 0.5), new THREE.Vector3(p.x, 0, 0), new THREE.Box3(new THREE.Vector3(p.x - p.lx / 2, 0, -g.cabinHalfWidth), new THREE.Vector3(p.x + p.lx / 2, 1.2, g.cabinHalfWidth)));
+        this.fit(
+          new THREE.Vector3(-0.35, 1, 0.5),
+          new THREE.Vector3(p.x, 0, 0),
+          new THREE.Box3(new THREE.Vector3(p.x - p.lx / 2, 0, -g.cabinHalfWidth), new THREE.Vector3(p.x + p.lx / 2, 1.2, g.cabinHalfWidth)),
+        );
         return;
       } else {
         const sign = location.bin?.side === "L" ? 1 : -1;
@@ -675,7 +704,8 @@ export class CabinScene {
     const targets: THREE.Object3D[] = [];
     if (this.layers.seats) for (const s of this.seatMeshes) targets.push(s.mesh);
     if (this.layers.floor && this.pickableFloorBins) for (const f of this.floorMeshes) if (f.locationId) targets.push(f.mesh);
-    if (this.layers.bins && this.pickableFloorBins) for (const b of this.binSides) if (!b.door.userData.ghost && b.locations.length) targets.push(b.door, b.body);
+    if (this.layers.bins && this.pickableFloorBins)
+      for (const b of this.binSides) if (!b.door.userData.ghost && b.locations.length) targets.push(b.door, b.body);
     const hits = this.raycaster.intersectObjects(targets, false);
     if (hits.length === 0) return null;
     const first = hits[0];
@@ -822,7 +852,11 @@ export class CabinScene {
       layers: this.layers,
       colourMode: this.colourMode,
       selection: this.selection,
-      camera: { position: this.camera.position.toArray().map((v) => Number(v.toFixed(3))), target: this.controls.target.toArray().map((v) => Number(v.toFixed(3))), fov: this.camera.fov },
+      camera: {
+        position: this.camera.position.toArray().map((v) => Number(v.toFixed(3))),
+        target: this.controls.target.toArray().map((v) => Number(v.toFixed(3))),
+        fov: this.camera.fov,
+      },
       renderer: { drawCalls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, pixelRatio: this.renderer.getPixelRatio() },
       frames: this.frameCount,
     };

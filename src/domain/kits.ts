@@ -14,11 +14,7 @@ export class KitError extends Error {}
  * Every mandatory descendant of one unit of `partNo`, with quantities multiplied through nested
  * kits. Lines with the same part, unit and source are merged.
  */
-export function expandKit(
-  partNo: string,
-  byParent: Map<string, KitChild[]>,
-  parts: Map<string, Part>,
-): ExpandedChild[] {
+export function expandKit(partNo: string, byParent: Map<string, KitChild[]>, parts: Map<string, Part>): ExpandedChild[] {
   const merged = new Map<string, ExpandedChild>();
   const walk = (parent: string, multiplier: number, trail: string[]) => {
     for (const child of byParent.get(parent) ?? []) {
@@ -51,12 +47,18 @@ export function validateKits(kitChildren: KitChild[], parts: Map<string, Part>, 
   const seen = new Map<string, KitChild>();
   for (const k of kitChildren) {
     const ref = `${k.parentPartNo}>${k.childPartNo}`;
-    if (!parts.has(k.parentPartNo)) findings.push({ severity: "error", code: "KIT_ORPHAN_PARENT", message: `Kit parent ${k.parentPartNo} is not a known part.`, refs: [ref] });
-    if (!parts.has(k.childPartNo)) findings.push({ severity: "error", code: "KIT_ORPHAN_CHILD", message: `Kit child ${k.childPartNo} is not a known part.`, refs: [ref] });
-    if (!sourceIds.has(k.sourceId)) findings.push({ severity: "error", code: "KIT_ORPHAN_SOURCE", message: `Kit line ${ref} cites unknown source ${k.sourceId}.`, refs: [ref] });
-    if (k.parentPartNo === k.childPartNo) findings.push({ severity: "error", code: "KIT_SELF_REFERENCE", message: `Kit ${k.parentPartNo} lists itself as a child.`, refs: [ref] });
-    if (!Number.isInteger(k.qty) || k.qty <= 0) findings.push({ severity: "error", code: "KIT_INVALID_QUANTITY", message: `Kit line ${ref} has invalid quantity ${k.qty}.`, refs: [ref] });
-    if (!units.includes(k.unit)) findings.push({ severity: "error", code: "KIT_UNKNOWN_UNIT", message: `Kit line ${ref} uses unknown unit ${k.unit}.`, refs: [ref] });
+    if (!parts.has(k.parentPartNo))
+      findings.push({ severity: "error", code: "KIT_ORPHAN_PARENT", message: `Kit parent ${k.parentPartNo} is not a known part.`, refs: [ref] });
+    if (!parts.has(k.childPartNo))
+      findings.push({ severity: "error", code: "KIT_ORPHAN_CHILD", message: `Kit child ${k.childPartNo} is not a known part.`, refs: [ref] });
+    if (!sourceIds.has(k.sourceId))
+      findings.push({ severity: "error", code: "KIT_ORPHAN_SOURCE", message: `Kit line ${ref} cites unknown source ${k.sourceId}.`, refs: [ref] });
+    if (k.parentPartNo === k.childPartNo)
+      findings.push({ severity: "error", code: "KIT_SELF_REFERENCE", message: `Kit ${k.parentPartNo} lists itself as a child.`, refs: [ref] });
+    if (!Number.isInteger(k.qty) || k.qty <= 0)
+      findings.push({ severity: "error", code: "KIT_INVALID_QUANTITY", message: `Kit line ${ref} has invalid quantity ${k.qty}.`, refs: [ref] });
+    if (!units.includes(k.unit))
+      findings.push({ severity: "error", code: "KIT_UNKNOWN_UNIT", message: `Kit line ${ref} uses unknown unit ${k.unit}.`, refs: [ref] });
     const prior = seen.get(ref);
     if (prior) {
       const same = prior.qty === k.qty && prior.unit === k.unit && prior.sourceId === k.sourceId;

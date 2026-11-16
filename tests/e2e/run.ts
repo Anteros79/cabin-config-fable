@@ -66,7 +66,11 @@ async function tabTo(page: Page, selector: string, max = 140): Promise<void> {
   throw new Error(`could not reach ${selector} with Tab`);
 }
 async function api<T>(server: Server, method: string, path: string, body?: unknown): Promise<{ status: number; json: T }> {
-  const res = await fetch(`${server.url}${path}`, { method, headers: body ? { "content-type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
+  const res = await fetch(`${server.url}${path}`, {
+    method,
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
   return { status: res.status, json: (await res.json().catch(() => null)) as T };
 }
 async function pdfText(bytes: Uint8Array): Promise<{ pages: number; text: string }> {
@@ -109,7 +113,13 @@ async function openMap(page: Page): Promise<void> {
 async function selectViaGoTo(page: Page, text: string): Promise<void> {
   await page.fill("#goto-input", text);
   await page.press("#goto-input", "Enter");
-  await page.waitForFunction((t) => document.querySelector(".cabin-map .goto [role=status]")?.textContent?.includes("Selected") && document.querySelector("#inspector-heading") !== null && t.length > 0, text);
+  await page.waitForFunction(
+    (t) =>
+      document.querySelector(".cabin-map .goto [role=status]")?.textContent?.includes("Selected") &&
+      document.querySelector("#inspector-heading") !== null &&
+      t.length > 0,
+    text,
+  );
 }
 async function recordPrimary(page: Page, component: string): Promise<void> {
   const card = page.locator(`.component-card[data-component=${component}]`);
@@ -140,13 +150,29 @@ async function clickLocation(page: Page, locationId: string, part: "head" | "pan
   await page.mouse.down();
   await page.mouse.up();
 }
-const cam = (page: Page, view: string, id?: string) => page.evaluate(([v, i]) => window.__cabinKit!.scene!.setCamera(v as never, i), [view, id ?? null] as const);
-const sceneSet = (page: Page, fn: string, arg: unknown) => page.evaluate(([f, a]) => (window.__cabinKit!.scene as unknown as Record<string, (x: unknown) => void>)[f](a), [fn, arg] as const);
+const cam = (page: Page, view: string, id?: string) =>
+  page.evaluate(([v, i]) => window.__cabinKit!.scene!.setCamera(v as never, i), [view, id ?? null] as const);
+const sceneSet = (page: Page, fn: string, arg: unknown) =>
+  page.evaluate(([f, a]) => (window.__cabinKit!.scene as unknown as Record<string, (x: unknown) => void>)[f](a), [fn, arg] as const);
 async function axe(page: Page, label: string): Promise<void> {
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const serious = result.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-  writeFileSync(join(OUT, `axe-${label}.json`), JSON.stringify({ url: page.url(), violations: result.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length, sample: v.nodes[0]?.html })), passes: result.passes.length }, null, 2));
-  expect(serious.length === 0, `${serious.length} serious/critical axe violations on ${label}: ${serious.map((v) => `${v.id} (${v.nodes.length})`).join(", ")}`);
+  writeFileSync(
+    join(OUT, `axe-${label}.json`),
+    JSON.stringify(
+      {
+        url: page.url(),
+        violations: result.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length, sample: v.nodes[0]?.html })),
+        passes: result.passes.length,
+      },
+      null,
+      2,
+    ),
+  );
+  expect(
+    serious.length === 0,
+    `${serious.length} serious/critical axe violations on ${label}: ${serious.map((v) => `${v.id} (${v.nodes.length})`).join(", ")}`,
+  );
 }
 
 const server = await startServer({ testFaults: true });
@@ -256,7 +282,10 @@ try {
     await page.keyboard.press("Enter");
     await card.locator(".save-state.saved").waitFor();
     const work = (await page.textContent(".worklist"))!;
-    expect(work.includes("Alternate: FAKE-CK-2000 1 KIT, FAKE-P-39 2 PANEL, FAKE-P-40 2 PANEL, FAKE-P-41 1 PANEL, FAKE-P-42 1 PANEL"), "work list shows alternate with derived children");
+    expect(
+      work.includes("Alternate: FAKE-CK-2000 1 KIT, FAKE-P-39 2 PANEL, FAKE-P-40 2 PANEL, FAKE-P-41 1 PANEL, FAKE-P-42 1 PANEL"),
+      "work list shows alternate with derived children",
+    );
     expect(!work.includes("FAKE-CK-2001"), "primary kit is absent from recorded work");
   });
   await check("draft is saved: sample draft exported", async () => {
@@ -265,7 +294,10 @@ try {
     const draft = await api<{ report: Report }>(server, "GET", `/api/visits/${visitId}/report`);
     equal(draft.json.report.reportKind, "DRAFT_PREVIEW", "draft preview kind");
     writeFileSync(join(SAMPLES, "sample-draft-report-preview.json"), JSON.stringify(draft.json, null, 2));
-    writeFileSync(join(SAMPLES, "sample-draft-report-preview.pdf"), Buffer.from(await (await fetch(`${server.url}/api/visits/${visitId}/report.pdf`)).arrayBuffer()));
+    writeFileSync(
+      join(SAMPLES, "sample-draft-report-preview.pdf"),
+      Buffer.from(await (await fetch(`${server.url}/api/visits/${visitId}/report.pdf`)).arrayBuffer()),
+    );
   });
   await check("complete requires an explicit confirmation and opens the locked report", async () => {
     await tabTo(page, ".worklist button.primary", 400);
@@ -281,30 +313,49 @@ try {
   });
   let finalReport: Report | null = null;
   await check("report shows exactly the six mandated part/unit totals", async () => {
-    const rows = await page.$$eval("#totals-table tbody tr", (trs) => trs.map((tr) => [tr.getAttribute("data-part"), Number(tr.getAttribute("data-qty")), tr.getAttribute("data-unit")]));
+    const rows = await page.$$eval("#totals-table tbody tr", (trs) =>
+      trs.map((tr) => [tr.getAttribute("data-part"), Number(tr.getAttribute("data-qty")), tr.getAttribute("data-unit")]),
+    );
     equal(rows, SIX, "totals in the page");
     const body = (await page.textContent("article.report"))!;
-    expect(body.includes("Keyboard Tech") && body.includes("N100TL") && body.includes("2026-11-12") && body.includes("V01"), "visit and configuration context present");
+    expect(
+      body.includes("Keyboard Tech") && body.includes("N100TL") && body.includes("2026-11-12") && body.includes("V01"),
+      "visit and configuration context present",
+    );
     expect(body.includes("Not an approved maintenance authority"), "authority notice present");
   });
   await check("structured JSON, server PDF and printed PDF agree with the persisted work", async () => {
     const { json } = await api<{ report: Report; basisSha256: string }>(server, "GET", `/api/visits/${visitId}/report`);
     finalReport = json.report;
-    equal(json.report.totals.map((t) => [t.partNo, t.quantity, t.unit]), SIX, "JSON totals");
-    const stored = (await api<{ visit: { records: { lines: { partNo: string; unit: string; qty: number }[] }[]; status: string } }>(server, "GET", `/api/visits/${visitId}`)).json.visit;
+    equal(
+      json.report.totals.map((t) => [t.partNo, t.quantity, t.unit]),
+      SIX,
+      "JSON totals",
+    );
+    const stored = (
+      await api<{ visit: { records: { lines: { partNo: string; unit: string; qty: number }[] }[]; status: string } }>(server, "GET", `/api/visits/${visitId}`)
+    ).json.visit;
     const sums = new Map<string, number>();
     for (const r of stored.records) for (const l of r.lines) sums.set(`${l.partNo}|${l.unit}`, (sums.get(`${l.partNo}|${l.unit}`) ?? 0) + l.qty);
-    equal([...sums.entries()].sort(), json.report.totals.map((t) => [`${t.partNo}|${t.unit}`, t.quantity] as [string, number]).sort(), "JSON totals equal sums of persisted record lines");
+    equal(
+      [...sums.entries()].sort(),
+      json.report.totals.map((t) => [`${t.partNo}|${t.unit}`, t.quantity] as [string, number]).sort(),
+      "JSON totals equal sums of persisted record lines",
+    );
     writeFileSync(join(SAMPLES, "sample-completed-visit.json"), JSON.stringify((await api(server, "GET", `/api/visits/${visitId}`)).json, null, 2));
     writeFileSync(join(SAMPLES, "sample-completed-report.json"), JSON.stringify(json, null, 2));
     const serverPdf = new Uint8Array(await (await fetch(`${server.url}/api/visits/${visitId}/report.pdf`)).arrayBuffer());
     writeFileSync(join(SAMPLES, "sample-completed-report.pdf"), serverPdf);
     const printed = await page.pdf({ format: "Letter", printBackground: true });
     writeFileSync(join(SAMPLES, "sample-completed-report-browser-print.pdf"), printed);
-    for (const [label, bytes] of [["server PDF", serverPdf], ["browser print PDF", new Uint8Array(printed)]] as const) {
+    for (const [label, bytes] of [
+      ["server PDF", serverPdf],
+      ["browser print PDF", new Uint8Array(printed)],
+    ] as const) {
       const { text } = await pdfText(bytes);
       const f = flat(text);
-      for (const t of json.report.totals) expect(f.includes(flat(`${t.partNo}${t.description}${t.quantity}${t.unit}`)), `${label} carries total ${t.partNo} ${t.quantity} ${t.unit}`);
+      for (const t of json.report.totals)
+        expect(f.includes(flat(`${t.partNo}${t.description}${t.quantity}${t.unit}`)), `${label} carries total ${t.partNo} ${t.quantity} ${t.unit}`);
       expect(!f.includes("FAKE-CK-20011KIT"), `${label} does not total the primary kit`);
       for (const s of ["N100TL", "2026-11-12", "KeyboardTech", "Seat3A", json.report.visit.id]) expect(f.includes(s), `${label} contains ${s}`);
       expect(/FINAL/.test(text), `${label} is marked final`);
@@ -319,7 +370,9 @@ try {
     await openMap(page);
     await selectViaGoTo(page, "4A");
     equal(await page.locator(".record-form").count(), 0, "no record form on a completed visit");
-    const edit = await api<{ error: { code: string } }>(server, "PUT", `/api/visits/${visitId}/records`, { record: { locationId: "SEAT:4A", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 } });
+    const edit = await api<{ error: { code: string } }>(server, "PUT", `/api/visits/${visitId}/records`, {
+      record: { locationId: "SEAT:4A", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 },
+    });
     equal([edit.status, edit.json.error.code], [409, "VISIT_LOCKED"], "API edit refused");
   });
 
@@ -475,7 +528,10 @@ try {
     await page.click(".toolbar button:has-text('Reset')");
     await settle(page, 500);
     const fill = await page.evaluate(() => {
-      const scene = window.__cabinKit!.scene as unknown as { layout: { locations: { id: string; kind: string }[] }; screenPointOf(id: string): { x: number; y: number } };
+      const scene = window.__cabinKit!.scene as unknown as {
+        layout: { locations: { id: string; kind: string }[] };
+        screenPointOf(id: string): { x: number; y: number };
+      };
       const rect = document.querySelector("canvas")!.getBoundingClientRect();
       const pts = scene.layout.locations.filter((l) => l.kind === "SEAT").map((l) => scene.screenPointOf(l.id));
       const xs = pts.map((p) => p.x - rect.left);
@@ -491,7 +547,10 @@ try {
       const r = document.querySelector("canvas")!.getBoundingClientRect();
       return { top: Math.round(r.top), bottom: Math.round(r.bottom), viewport: window.innerHeight };
     });
-    expect(visible.bottom <= visible.viewport, `the whole 3D view is on screen without scrolling at 1440x900 (canvas ${visible.top}-${visible.bottom} of ${visible.viewport})`);
+    expect(
+      visible.bottom <= visible.viewport,
+      `the whole 3D view is on screen without scrolling at 1440x900 (canvas ${visible.top}-${visible.bottom} of ${visible.viewport})`,
+    );
   });
   await check("lighting, visual family and colour modes switch independently", async () => {
     await page.selectOption(".toolbar label:has-text('Light') select", "blue");
@@ -511,7 +570,14 @@ try {
   console.log(`\n${group}`);
   const reference = (await api<{ releaseId: string }>(server, "GET", "/api/reference")).json;
   const captureMeta: Record<string, unknown>[] = [];
-  const capture = async (name: string, profile: string, light: string, view: string, locationId?: string, layers = { seats: true, floor: true, bins: true, context: false }) => {
+  const capture = async (
+    name: string,
+    profile: string,
+    light: string,
+    view: string,
+    locationId?: string,
+    layers = { seats: true, floor: true, bins: true, context: false },
+  ) => {
     await sceneSet(page, "setProfile", profile);
     await sceneSet(page, "setLight", light);
     await sceneSet(page, "setColourMode", "none");
@@ -523,7 +589,20 @@ try {
     await page.locator("canvas").screenshot({ path: join(CAPTURES, file) });
     const info = await sceneInfo(page);
     const box = (await page.locator("canvas").boundingBox())!;
-    captureMeta.push({ file, referenceRelease: reference.releaseId, geometryVersion: "cabin-kit.geometry/1", layout: "FX-L-S176-MAX8@1", profile, light, cameraView: view, location: locationId ?? null, layers, camera: info.camera, viewport: { width: Math.round(box.width), height: Math.round(box.height), deviceScaleFactor: 1 }, capturedAt: new Date().toISOString() });
+    captureMeta.push({
+      file,
+      referenceRelease: reference.releaseId,
+      geometryVersion: "cabin-kit.geometry/1",
+      layout: "FX-L-S176-MAX8@1",
+      profile,
+      light,
+      cameraView: view,
+      location: locationId ?? null,
+      layers,
+      camera: info.camera,
+      viewport: { width: Math.round(box.width), height: Math.round(box.height), deviceScaleFactor: 1 },
+      capturedAt: new Date().toISOString(),
+    });
   };
   await check("save full-cabin, seat-front, seat-rear, carpet and bin captures for each family and light", async () => {
     const ctx = { seats: true, floor: true, bins: true, context: true };
@@ -541,7 +620,14 @@ try {
     await capture("seat-front_photo-navy-plain_neutral", "photo-navy-plain", "neutral", "focus", "SEAT:7C", ctx);
     await capture("seat-front_concept-gray_neutral", "concept-gray", "neutral", "focus", "SEAT:7C", ctx);
     await capture("full-cabin-cutaway_concept-gray_neutral", "concept-gray", "neutral", "cutaway");
-    writeFileSync(join(CAPTURES, "captures.json"), JSON.stringify({ note: "Actual renders of this build. Geometry is an illustrative approximation.", chrome: chromeVersion, captures: captureMeta }, null, 2));
+    writeFileSync(
+      join(CAPTURES, "captures.json"),
+      JSON.stringify(
+        { note: "Actual renders of this build. Geometry is an illustrative approximation.", chrome: chromeVersion, captures: captureMeta },
+        null,
+        2,
+      ),
+    );
     await sceneSet(page, "setProfile", "photo-navy-band");
     await sceneSet(page, "setLight", "neutral");
     await sceneSet(page, "setColourMode", "status");
@@ -564,11 +650,31 @@ try {
     const latencies = await page.evaluate(() => [...window.__cabinKit!.scene!.pickLatencies]);
     const info = await sceneInfo(page);
     const perf = {
-      device: { cpu: cpus()[0]?.model, cores: cpus().length, memoryGb: Math.round(totalmem() / 2 ** 30), os: `${platform()} ${release()}`, browser: `Chrome ${chromeVersion} (headless)`, webgl: JSON.parse(readFileSync(join(OUT, "webgl.json"), "utf8")).renderer },
+      device: {
+        cpu: cpus()[0]?.model,
+        cores: cpus().length,
+        memoryGb: Math.round(totalmem() / 2 ** 30),
+        os: `${platform()} ${release()}`,
+        browser: `Chrome ${chromeVersion} (headless)`,
+        webgl: JSON.parse(readFileSync(join(OUT, "webgl.json"), "utf8")).renderer,
+      },
       viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
       scene: { layout: "FX-L-S176-MAX8@1", seats: info.seats, renderer: info.renderer },
-      frameRate: { method: "continuous orbit for 4 s with seats, floor and bins visible (context layer off), rendering each animation frame; headless Chrome caps at the display refresh rate", fps: Number(fps.fps.toFixed(1)), frames: fps.frames, worstFrameMs: Number(fps.worstFrameMs.toFixed(1)), target: "about 30 fps" },
-      selectionFeedback: { method: "pointer pick to the next rendered frame showing the selection, 10 picks", samplesMs: latencies.map((v) => Number(v.toFixed(1))), maxMs: Number(Math.max(...latencies).toFixed(1)), medianMs: Number([...latencies].sort((a, b) => a - b)[Math.floor(latencies.length / 2)].toFixed(1)), target: "within 250 ms" },
+      frameRate: {
+        method:
+          "continuous orbit for 4 s with seats, floor and bins visible (context layer off), rendering each animation frame; headless Chrome caps at the display refresh rate",
+        fps: Number(fps.fps.toFixed(1)),
+        frames: fps.frames,
+        worstFrameMs: Number(fps.worstFrameMs.toFixed(1)),
+        target: "about 30 fps",
+      },
+      selectionFeedback: {
+        method: "pointer pick to the next rendered frame showing the selection, 10 picks",
+        samplesMs: latencies.map((v) => Number(v.toFixed(1))),
+        maxMs: Number(Math.max(...latencies).toFixed(1)),
+        medianMs: Number([...latencies].sort((a, b) => a - b)[Math.floor(latencies.length / 2)].toFixed(1)),
+        target: "within 250 ms",
+      },
       measuredAt: new Date().toISOString(),
     };
     writeFileSync(join(PROJECT_ROOT, "verification", "performance.json"), JSON.stringify(perf, null, 2));
@@ -605,8 +711,13 @@ try {
     });
     await kit.locator("button.danger").click();
     await page.waitForFunction(() => !(document.querySelector(".worklist")?.textContent ?? "").includes("FAKE-CK-2001"));
-    const visit = (await api<{ visit: { records: { locationId: string; componentId: string; quantity: number }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit;
-    equal(visit.records.map((r) => `${r.locationId}/${r.componentId}/${r.quantity}`).sort(), ["FLOOR:FWD/CARPET_PANEL/4", "SEAT:7C/CUSHION/1"], "persisted records");
+    const visit = (await api<{ visit: { records: { locationId: string; componentId: string; quantity: number }[] } }>(server, "GET", `/api/visits/${draftId}`))
+      .json.visit;
+    equal(
+      visit.records.map((r) => `${r.locationId}/${r.componentId}/${r.quantity}`).sort(),
+      ["FLOOR:FWD/CARPET_PANEL/4", "SEAT:7C/CUSHION/1"],
+      "persisted records",
+    );
   });
   await check("draft survives a service restart and a browser reload, and can be resumed from history", async () => {
     await server.restart();
@@ -653,7 +764,13 @@ try {
     await theirs.locator(".save-state.conflict").waitFor();
     expect((await theirs.locator(".save-state").textContent())!.includes("changed elsewhere"), "conflict explained");
     await other.waitForFunction(() => document.querySelector(".worklist")?.textContent?.includes("FAKE-V01-FWD-PANEL 3 PANEL"));
-    equal((await api<{ visit: { records: { componentId: string; quantity: number }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.records.find((r) => r.componentId === "CARPET_PANEL")!.quantity, 3, "first writer's value kept");
+    equal(
+      (await api<{ visit: { records: { componentId: string; quantity: number }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.records.find(
+        (r) => r.componentId === "CARPET_PANEL",
+      )!.quantity,
+      3,
+      "first writer's value kept",
+    );
     await other.close();
   });
 
@@ -688,13 +805,21 @@ try {
     await card.locator("button[type=submit]").click();
     await card.locator(".save-state.unknown").waitFor();
     await page.unroute("**/api/visits/*/records");
-    const during = (await api<{ visit: { records: { locationId: string; version: number }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.records.filter((r) => r.locationId === "SEAT:12C");
+    const during = (
+      await api<{ visit: { records: { locationId: string; version: number }[] } }>(server, "GET", `/api/visits/${draftId}`)
+    ).json.visit.records.filter((r) => r.locationId === "SEAT:12C");
     equal(during.length, 1, "the write had in fact committed");
     await card.locator("button:has-text('Retry safely')").click();
     await card.locator(".save-state.saved").waitFor();
     expect((await card.locator(".save-state").textContent())!.includes("nothing was duplicated"), "replay reported");
-    const after = (await api<{ visit: { records: { locationId: string; version: number }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.records.filter((r) => r.locationId === "SEAT:12C");
-    equal(after.map((r) => r.version), [1], "one record, version 1");
+    const after = (
+      await api<{ visit: { records: { locationId: string; version: number }[] } }>(server, "GET", `/api/visits/${draftId}`)
+    ).json.visit.records.filter((r) => r.locationId === "SEAT:12C");
+    equal(
+      after.map((r) => r.version),
+      [1],
+      "one record, version 1",
+    );
   });
   await check("storage failure: reported as not saved, retry succeeds after recovery", async () => {
     await api(server, "POST", "/api/__test/faults", { visitWrites: "fail", remaining: 1 });
@@ -703,7 +828,13 @@ try {
     await card.locator("button[type=submit]").click();
     await card.locator(".save-state.error").waitFor();
     expect((await card.locator(".save-state").textContent())!.includes("nothing was saved"), "explicit not-saved");
-    equal((await api<{ visit: { records: { locationId: string }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.records.filter((r) => r.locationId === "SEAT:12D").length, 0, "nothing stored");
+    equal(
+      (await api<{ visit: { records: { locationId: string }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.records.filter(
+        (r) => r.locationId === "SEAT:12D",
+      ).length,
+      0,
+      "nothing stored",
+    );
     await card.locator("button:has-text('Retry safely')").click();
     await card.locator(".save-state.saved").waitFor();
   });
@@ -781,7 +912,11 @@ try {
   await check("blocked localStorage does not break the app", async () => {
     const ctx = await browser!.newContext({ viewport: { width: 1280, height: 860 } });
     await ctx.addInitScript(() => {
-      Object.defineProperty(window, "localStorage", { get: () => { throw new Error("blocked"); } });
+      Object.defineProperty(window, "localStorage", {
+        get: () => {
+          throw new Error("blocked");
+        },
+      });
     });
     const p = await ctx.newPage();
     await p.goto(`${server.url}/#/check`);
@@ -841,7 +976,10 @@ try {
     await page.fill(".prep input[type=search]", "FAKE-P-41");
     await page.waitForFunction(() => document.querySelectorAll("#prep-table tbody tr").length === 1);
     const row = (await page.textContent("#prep-table tbody tr"))!;
-    expect(row.includes("FAKE-CK-2001") && row.includes("Alternate FAKE-CK-2000") && row.includes("Required: FAKE-P-41 × 1 PANEL"), "alternate and supplements are separate from the primary");
+    expect(
+      row.includes("FAKE-CK-2001") && row.includes("Alternate FAKE-CK-2000") && row.includes("Required: FAKE-P-41 × 1 PANEL"),
+      "alternate and supplements are separate from the primary",
+    );
     await page.fill(".prep input[type=search]", "");
     await page.selectOption(".prep label:has-text('Component') select", "CUSHION");
     await page.fill(".prep input[type=search]", "1001");
@@ -883,7 +1021,11 @@ try {
   });
   await check("more than 100 visits remain navigable in saved history", async () => {
     for (let i = 0; i < 118; i++) {
-      const res = await api(server, "POST", "/api/visits", { tail: i % 2 ? "N100TL" : "N300TL", checkDate: "2026-11-12", technician: `Bulk ${String(i).padStart(3, "0")}` });
+      const res = await api(server, "POST", "/api/visits", {
+        tail: i % 2 ? "N100TL" : "N300TL",
+        checkDate: "2026-11-12",
+        technician: `Bulk ${String(i).padStart(3, "0")}`,
+      });
       equal(res.status, 201, "created");
     }
     await page.goto(`${server.url}/#/visits`);
@@ -899,12 +1041,20 @@ try {
     await page.selectOption("form.filters select", "COMPLETED");
     await page.fill("form.filters input", "");
     await page.click("form.filters button[type=submit]");
-    await page.waitForFunction(() => Array.from(document.querySelectorAll("tbody tr")).every((tr) => tr.textContent!.includes("Completed")) && document.querySelectorAll("tbody tr").length >= 1);
+    await page.waitForFunction(
+      () =>
+        Array.from(document.querySelectorAll("tbody tr")).every((tr) => tr.textContent!.includes("Completed")) &&
+        document.querySelectorAll("tbody tr").length >= 1,
+    );
   });
   await check("a reference update leaves the completed report unchanged and is flagged, not applied", async () => {
     const before = (await api<{ report: Report; basisSha256: string }>(server, "GET", `/api/visits/${visitId}/report`)).json;
     const { importReference } = await import("../../src/importer/cli.ts");
-    const outcome = importReference({ referencePath: join(server.dataDir, "reference.sqlite"), visitsPath: join(server.dataDir, "visits.sqlite"), label: "Second release for the stability check" });
+    const outcome = importReference({
+      referencePath: join(server.dataDir, "reference.sqlite"),
+      visitsPath: join(server.dataDir, "visits.sqlite"),
+      label: "Second release for the stability check",
+    });
     expect(outcome.activated && outcome.visitsUnchanged === true, "new release activated; visit history fingerprint unchanged");
     const after = (await api<{ report: Report; basisSha256: string }>(server, "GET", `/api/visits/${visitId}/report`)).json;
     equal(after.basisSha256, before.basisSha256, "report basis hash");
@@ -912,13 +1062,21 @@ try {
     await page.goto(`${server.url}/#/visit/${draftId}`);
     await page.waitForSelector("#work-h");
     expect((await page.textContent(".visit-head"))!.includes("not rebased"), "draft warns that reference data moved on but is not rebased");
-    equal((await api<{ visit: { referenceReleaseId: string } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.referenceReleaseId, finalReport!.configuration.referenceReleaseId, "draft keeps its original release");
+    equal(
+      (await api<{ visit: { referenceReleaseId: string } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.referenceReleaseId,
+      finalReport!.configuration.referenceReleaseId,
+      "draft keeps its original release",
+    );
     await page.goto(`${server.url}/#/visit/${visitId}/report`);
     await page.waitForSelector("#totals-table");
     await page.fill(".note-form input[required]", "Rule revised in a later release; no change to work performed.");
     await page.click(".note-form button[type=submit]");
     await page.waitForFunction(() => document.querySelector("section[aria-labelledby=r-linked]")?.textContent?.includes("Rule revised in a later release"));
-    equal((await api<{ report: Report; basisSha256: string }>(server, "GET", `/api/visits/${visitId}/report`)).json.basisSha256, before.basisSha256, "linked advisory leaves the report basis unchanged");
+    equal(
+      (await api<{ report: Report; basisSha256: string }>(server, "GET", `/api/visits/${visitId}/report`)).json.basisSha256,
+      before.basisSha256,
+      "linked advisory leaves the report basis unchanged",
+    );
   });
 
   // ---------------------------------------------------------------------------------------
@@ -954,7 +1112,12 @@ try {
       h1: document.querySelectorAll("h1").length,
       unlabeled: Array.from(document.querySelectorAll("input, select, textarea, button")).filter((el) => {
         const e = el as HTMLElement;
-        const label = e.getAttribute("aria-label") || e.getAttribute("aria-labelledby") || (e.id && document.querySelector(`label[for="${e.id}"]`)) || e.closest("label") || (e.tagName === "BUTTON" && e.textContent!.trim());
+        const label =
+          e.getAttribute("aria-label") ||
+          e.getAttribute("aria-labelledby") ||
+          (e.id && document.querySelector(`label[for="${e.id}"]`)) ||
+          e.closest("label") ||
+          (e.tagName === "BUTTON" && e.textContent!.trim());
         return !label;
       }).length,
       tabs: Array.from(document.querySelectorAll("[role=tab]")).map((t) => t.getAttribute("aria-selected")),
@@ -970,14 +1133,23 @@ try {
     expect(facts.seatLabel!.includes("Seat 7C") && facts.seatLabel!.includes("recorded"), `seat label carries state: ${facts.seatLabel}`);
     await page.click("#tab-3d");
     await waitFor3D(page);
-    const canvas = await page.evaluate(() => ({ tabindex: document.querySelector("canvas")!.getAttribute("tabindex"), label: document.querySelector("canvas")!.getAttribute("aria-label") }));
+    const canvas = await page.evaluate(() => ({
+      tabindex: document.querySelector("canvas")!.getAttribute("tabindex"),
+      label: document.querySelector("canvas")!.getAttribute("aria-label"),
+    }));
     expect(canvas.tabindex === "0" && canvas.label!.includes("Map and list"), "canvas is focusable and points keyboard users to the map");
   });
 
   // ---------------------------------------------------------------------------------------
   group = "mobile viewport";
   console.log(`\n${group}`);
-  const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" });
+  const mobile = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  });
   const m = await mobile.newPage();
   let mobileVisit = "";
   await check("mobile: lookup, start visit, no horizontal overflow", async () => {
@@ -1010,8 +1182,16 @@ try {
   await check("mobile: record through the map with touch-sized targets, complete and read the report", async () => {
     await m.tap("#tab-map");
     await m.waitForSelector(".cabin-map");
-    const sizes = await m.$$eval(".cabin-map button[data-seat]", (els) => els.slice(0, 40).map((e) => e.getBoundingClientRect()).map((r) => [r.width, r.height]));
-    expect(sizes.every(([w, h]) => w >= 36 && h >= 40), `seat buttons are touch sized (min ${Math.min(...sizes.map((s) => s[0])).toFixed(0)}x${Math.min(...sizes.map((s) => s[1])).toFixed(0)})`);
+    const sizes = await m.$$eval(".cabin-map button[data-seat]", (els) =>
+      els
+        .slice(0, 40)
+        .map((e) => e.getBoundingClientRect())
+        .map((r) => [r.width, r.height]),
+    );
+    expect(
+      sizes.every(([w, h]) => w >= 36 && h >= 40),
+      `seat buttons are touch sized (min ${Math.min(...sizes.map((s) => s[0])).toFixed(0)}x${Math.min(...sizes.map((s) => s[1])).toFixed(0)})`,
+    );
     await m.tap("button[data-seat='3A']");
     await m.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 3A");
     await m.tap(".component-card[data-component=CUSHION] button[type=submit]");
@@ -1026,7 +1206,9 @@ try {
     await m.tap(".worklist > button.primary");
     await m.tap(".confirm button.primary");
     await m.waitForSelector("#totals-table");
-    const rows = await m.$$eval("#totals-table tbody tr", (trs) => trs.map((tr) => [tr.getAttribute("data-part"), Number(tr.getAttribute("data-qty")), tr.getAttribute("data-unit")]));
+    const rows = await m.$$eval("#totals-table tbody tr", (trs) =>
+      trs.map((tr) => [tr.getAttribute("data-part"), Number(tr.getAttribute("data-qty")), tr.getAttribute("data-unit")]),
+    );
     equal(rows, SIX, "six totals on mobile");
     const overflow = await m.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow <= 1, `report overflows horizontally by ${overflow}px`);
@@ -1062,14 +1244,25 @@ try {
   const summary = {
     startedAt,
     finishedAt: new Date().toISOString(),
-    environment: { node: process.version, chrome: chromeVersion, os: `${platform()} ${release()}`, server: "real server process on a free loopback port with disposable stores" },
+    environment: {
+      node: process.version,
+      chrome: chromeVersion,
+      os: `${platform()} ${release()}`,
+      server: "real server process on a free loopback port with disposable stores",
+    },
     totals: { checks: results.length, passed: results.length - failed.length, failed: failed.length },
     results,
   };
   writeFileSync(join(OUT, "e2e-results.json"), JSON.stringify(summary, null, 2));
   writeFileSync(
     join(OUT, "e2e-results.txt"),
-    [`Cabin Kit end-to-end run ${startedAt}`, `Node ${process.version}, Chrome ${chromeVersion}, ${platform()} ${release()}`, `${summary.totals.passed}/${summary.totals.checks} passed`, "", ...results.map((r) => `${r.status}  [${r.group}] ${r.name}${r.detail ? `\n      ${r.detail}` : ""}`)].join("\n") + "\n",
+    [
+      `Cabin Kit end-to-end run ${startedAt}`,
+      `Node ${process.version}, Chrome ${chromeVersion}, ${platform()} ${release()}`,
+      `${summary.totals.passed}/${summary.totals.checks} passed`,
+      "",
+      ...results.map((r) => `${r.status}  [${r.group}] ${r.name}${r.detail ? `\n      ${r.detail}` : ""}`),
+    ].join("\n") + "\n",
   );
   console.log(`\n${summary.totals.passed}/${summary.totals.checks} checks passed`);
   if (failed.length) process.exitCode = 1;

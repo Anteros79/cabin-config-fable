@@ -234,14 +234,18 @@ describe("store guards", () => {
     // a visit database that also carries the reference marker and reference tables
     const mixed = join(dir, "mixed.sqlite");
     const db = new DatabaseSync(mixed);
-    db.exec("CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES('store_kind','cabin-kit-reference'); CREATE TABLE release(id TEXT); CREATE TABLE visits(id TEXT); INSERT INTO visits VALUES('user-history');");
+    db.exec(
+      "CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES('store_kind','cabin-kit-reference'); CREATE TABLE release(id TEXT); CREATE TABLE visits(id TEXT); INSERT INTO visits VALUES('user-history');",
+    );
     db.close();
     expect(inspectStore(mixed).kind).toBe("mixed");
     expect(refCode(() => resetReferenceStore(mixed, visitsPath, () => undefined))).toBe("VISIT_DATA_PRESENT");
     // an unrelated database carrying only the marker
     const marked = join(dir, "marked.sqlite");
     const db2 = new DatabaseSync(marked);
-    db2.exec("CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES('store_kind','cabin-kit-reference'); CREATE TABLE customer_orders(id TEXT); INSERT INTO customer_orders VALUES('keep me');");
+    db2.exec(
+      "CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES('store_kind','cabin-kit-reference'); CREATE TABLE customer_orders(id TEXT); INSERT INTO customer_orders VALUES('keep me');",
+    );
     db2.close();
     expect(inspectStore(marked).kind).toBe("unknown");
     expect(refCode(() => resetReferenceStore(marked, visitsPath, () => undefined))).toBe("UNKNOWN_STORE");

@@ -41,7 +41,10 @@ if (process.argv.includes("--write")) {
   }
   const now = current(sourceRoot);
   mkdirSync(dirname(manifestPath), { recursive: true });
-  writeFileSync(manifestPath, JSON.stringify({ sourceRoot: "../.. (development folder root)", recordedAt: new Date().toISOString(), files: now }, null, 2) + "\n");
+  writeFileSync(
+    manifestPath,
+    JSON.stringify({ sourceRoot: "../.. (development folder root)", recordedAt: new Date().toISOString(), files: now }, null, 2) + "\n",
+  );
   console.log(`manifest written: ${now.length} files`);
 } else {
   if (!existsSync(manifestPath)) {
@@ -63,7 +66,10 @@ if (process.argv.includes("--write")) {
       console.log(`skipped (not present)  ${expected.path}`);
       continue;
     }
-    for (const [where, actual] of [["vendored", vendored], ["source   ", original]] as const) {
+    for (const [where, actual] of [
+      ["vendored", vendored],
+      ["source   ", original],
+    ] as const) {
       if (!actual) continue;
       checked += 1;
       const ok = same(actual, expected);
@@ -71,6 +77,8 @@ if (process.argv.includes("--write")) {
       console.log(`${ok ? "unchanged" : "CHANGED  "}  ${where}  ${expected.sha256.slice(0, 16)}  ${String(expected.bytes).padStart(8)}  ${expected.path}`);
     }
   }
-  console.log(`\n${checked - bad}/${checked} checks unchanged since ${manifest.recordedAt}, ${skipped} skipped (not present), ${bad} changed (checked ${new Date().toISOString()})`);
+  console.log(
+    `\n${checked - bad}/${checked} checks unchanged since ${manifest.recordedAt}, ${skipped} skipped (not present), ${bad} changed (checked ${new Date().toISOString()})`,
+  );
   if (bad) process.exit(1);
 }

@@ -44,7 +44,12 @@ export function PrepView({ visitId, tail, date }: Props) {
       if (only === "pending" && l.pendingChanges.length === 0) return false;
       if (!needle) return true;
       const hay = [
-        l.partNo, l.description, l.componentName, l.coverageSummary, l.source?.id ?? "", l.coverageLocationIds.join(" "),
+        l.partNo,
+        l.description,
+        l.componentName,
+        l.coverageSummary,
+        l.source?.id ?? "",
+        l.coverageLocationIds.join(" "),
         ...l.alternates.flatMap((a) => [a.altPartNo, a.altDescription, ...a.requiredSupplements.map((s) => s.partNo)]),
       ]
         .join(" ")
@@ -53,7 +58,9 @@ export function PrepView({ visitId, tail, date }: Props) {
     });
   }, [prep, text, component, only]);
 
-  const csvHref = visitId ? `/api/visits/${visitId}/preparation?format=csv` : `/api/preparation?tail=${encodeURIComponent(tail ?? "")}&date=${encodeURIComponent(date ?? "")}&format=csv`;
+  const csvHref = visitId
+    ? `/api/visits/${visitId}/preparation?format=csv`
+    : `/api/preparation?tail=${encodeURIComponent(tail ?? "")}&date=${encodeURIComponent(date ?? "")}&format=csv`;
 
   return (
     <section className="panel prep" aria-labelledby="prep-h">
@@ -71,7 +78,8 @@ export function PrepView({ visitId, tail, date }: Props) {
       {prep && (
         <>
           <p>
-            Variant {prep.variantId}, layout {prep.layoutRevisionId}, reference release {prep.referenceReleaseId}.{visitId ? " Frozen with the visit." : " Live lookup."}
+            Variant {prep.variantId}, layout {prep.layoutRevisionId}, reference release {prep.referenceReleaseId}.
+            {visitId ? " Frozen with the visit." : " Live lookup."}
           </p>
           <p className="advisory" role="note">
             {prep.note}
@@ -108,8 +116,8 @@ export function PrepView({ visitId, tail, date }: Props) {
             </a>
           </form>
           <p role="status" className="fine">
-            Showing {lines.length} of {prep.counts.parts} primary parts · {prep.counts.resolvedComponents} resolved components · {prep.counts.unresolvedComponents} unresolved · {prep.counts.alternates}{" "}
-            alternates · {prep.counts.pendingChanges} pending changes
+            Showing {lines.length} of {prep.counts.parts} primary parts · {prep.counts.resolvedComponents} resolved components ·{" "}
+            {prep.counts.unresolvedComponents} unresolved · {prep.counts.alternates} alternates · {prep.counts.pendingChanges} pending changes
           </p>
           <div className="table-scroll" tabIndex={0} role="region" aria-label="Applicable parts table">
             <table id="prep-table">
@@ -162,7 +170,8 @@ export function PrepView({ visitId, tail, date }: Props) {
                           Alternate <span className="partno">{a.altPartNo}</span> {a.qtyPerReplacement} {a.unit}
                           <br />
                           <span className="fine">
-                            Approval {a.approvalSource ? `${a.approvalSource.id} rev ${a.approvalSource.revision}` : a.substituteId}, {a.effectiveFrom} to {a.effectiveTo ?? "open"}
+                            Approval {a.approvalSource ? `${a.approvalSource.id} rev ${a.approvalSource.revision}` : a.substituteId}, {a.effectiveFrom} to{" "}
+                            {a.effectiveTo ?? "open"}
                           </span>
                           {a.requiredSupplements.length > 0 && (
                             <ul className="plain">

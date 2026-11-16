@@ -69,7 +69,13 @@ describe("lookup API", () => {
 
   it("a visit needs an unambiguous configuration", async () => {
     const app = makeApp();
-    for (const [tail, date, state] of [["N400TL", "2026-09-15", "OVERLAP"], ["N000TL", "2026-11-12", "UNCONFIGURED"], ["N110TL", "2026-11-12", "PLANNED"], ["N999ZZ", "2026-11-12", "UNKNOWN_TAIL"], ["N600TL", "2026-03-01", "SOURCE_INVALID"]]) {
+    for (const [tail, date, state] of [
+      ["N400TL", "2026-09-15", "OVERLAP"],
+      ["N000TL", "2026-11-12", "UNCONFIGURED"],
+      ["N110TL", "2026-11-12", "PLANNED"],
+      ["N999ZZ", "2026-11-12", "UNKNOWN_TAIL"],
+      ["N600TL", "2026-03-01", "SOURCE_INVALID"],
+    ]) {
       const res = await post(app, "/api/visits", { tail, checkDate: date });
       expect(res.statusCode).toBe(422);
       expect(json(res).error).toMatchObject({ code: "CONFIGURATION_NOT_RESOLVED", details: { state } });
@@ -77,7 +83,9 @@ describe("lookup API", () => {
     expect(json(await app.app.inject("/api/visits")).total).toBe(0);
     // a partial configuration can start a visit; its gaps stay unrecordable and reported
     const partial = await newVisit(app, "N090TL");
-    const refused = await put(app, `/api/visits/${partial.id}/records`, { record: { locationId: "BIN:L-01", componentId: "BIN_DOOR", selection: "PRIMARY", quantity: 1 } });
+    const refused = await put(app, `/api/visits/${partial.id}/records`, {
+      record: { locationId: "BIN:L-01", componentId: "BIN_DOOR", selection: "PRIMARY", quantity: 1 },
+    });
     expect(refused.statusCode).toBe(422);
     expect(json(refused).error.code).toBe("UNRESOLVED_COMPONENT");
     const report = json(await app.app.inject(`/api/visits/${partial.id}/report`)).report as Report;
@@ -223,7 +231,19 @@ describe("reports: PDF and JSON agree with persisted work", () => {
       expect(text).toMatch(new RegExp(`${t.partNo}\\s.*?\\s${t.quantity}\\s+${t.unit}\\b`));
     }
     expect(flat).not.toContain("FAKE-CK-20011KIT");
-    for (const expected of ["N100TL", "2026-11-12", "Demo tech", report.visit.id, "V01", "MOHAWK / PRE", "Seat 3A", "Torn seam on leading edge", "ALTERNATE FAKE-CK-2000 (replaces primary FAKE-CK-2001)", "FX-DOC-DEV", report.configuration.snapshotSha256]) {
+    for (const expected of [
+      "N100TL",
+      "2026-11-12",
+      "Demo tech",
+      report.visit.id,
+      "V01",
+      "MOHAWK / PRE",
+      "Seat 3A",
+      "Torn seam on leading edge",
+      "ALTERNATE FAKE-CK-2000 (replaces primary FAKE-CK-2001)",
+      "FX-DOC-DEV",
+      report.configuration.snapshotSha256,
+    ]) {
       expect(flat).toContain(expected.replace(/\s+/g, ""));
     }
     await app.close();
@@ -236,7 +256,9 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     for (let row = 1; row <= 30; row++) for (const letter of ["A", "C", "D", "F"]) seats.push(`${row}${letter}`);
     for (const seat of seats) {
       for (const componentId of ["CUSHION", "BACKREST"]) {
-        const res = await put(app, `/api/visits/${visit.id}/records`, { record: { locationId: `SEAT:${seat}`, componentId, selection: "PRIMARY", quantity: 1, note: seat === "7C" ? "Stain" : "" } });
+        const res = await put(app, `/api/visits/${visit.id}/records`, {
+          record: { locationId: `SEAT:${seat}`, componentId, selection: "PRIMARY", quantity: 1, note: seat === "7C" ? "Stain" : "" },
+        });
         expect(res.statusCode).toBe(200);
       }
     }

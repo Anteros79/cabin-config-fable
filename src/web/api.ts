@@ -50,7 +50,13 @@ async function request<T>(method: string, url: string, body?: unknown, timeoutMs
       signal: controller.signal,
     });
   } catch (e) {
-    throw new ApiError("network", 0, "NETWORK", controller.signal.aborted ? "The server did not answer in time." : "The server could not be reached.", String(e));
+    throw new ApiError(
+      "network",
+      0,
+      "NETWORK",
+      controller.signal.aborted ? "The server did not answer in time." : "The server could not be reached.",
+      String(e),
+    );
   } finally {
     clearTimeout(timer);
   }
@@ -63,7 +69,13 @@ async function request<T>(method: string, url: string, body?: unknown, timeoutMs
   if (!response.ok) {
     const p = payload as { error?: { code?: string; message?: string; details?: unknown }; state?: string; message?: string } | null;
     if (p?.state) return payload as T; // lookup answers carry their own state even on 503
-    throw new ApiError("http", response.status, p?.error?.code ?? `HTTP_${response.status}`, p?.error?.message ?? `Request failed (${response.status}).`, p?.error?.details ?? null);
+    throw new ApiError(
+      "http",
+      response.status,
+      p?.error?.code ?? `HTTP_${response.status}`,
+      p?.error?.message ?? `Request failed (${response.status}).`,
+      p?.error?.details ?? null,
+    );
   }
   return payload as T;
 }
@@ -150,7 +162,11 @@ export const api = {
   removeRecord: (id: string, locationId: string, componentId: string, expectedRecordVersion: number, idempotencyKey: string) =>
     request<VisitEnvelope>("POST", `/api/visits/${id}/records/remove`, { locationId, componentId, expectedRecordVersion, idempotencyKey }),
   complete: (id: string, expectedVisitVersion: number, idempotencyKey: string) =>
-    request<{ visit: Visit; report: Report; alreadyCompleted: boolean }>("POST", `/api/visits/${id}/complete`, { confirm: true, expectedVisitVersion, idempotencyKey }),
+    request<{ visit: Visit; report: Report; alreadyCompleted: boolean }>("POST", `/api/visits/${id}/complete`, {
+      confirm: true,
+      expectedVisitVersion,
+      idempotencyKey,
+    }),
   report: (id: string) => request<ReportEnvelope>("GET", `/api/visits/${id}/report`),
   addEvent: (id: string, type: string, note: string, author: string) => request<{ visit: Visit }>("POST", `/api/visits/${id}/events`, { type, note, author }),
 };

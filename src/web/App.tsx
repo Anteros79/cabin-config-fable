@@ -160,12 +160,14 @@ export function App() {
       <div aria-live="assertive" className="no-print">
         {offline && (
           <p className="system-banner bad" role="alert">
-            The Cabin Kit server cannot be reached. Saved work stays on the server. Nothing you do now is saved until the connection returns; each screen offers a retry.
+            The Cabin Kit server cannot be reached. Saved work stays on the server. Nothing you do now is saved until the connection returns; each screen offers
+            a retry.
           </p>
         )}
         {!offline && health && !health.reference.available && (
           <p className="system-banner warn" role="alert">
-            Reference data is unavailable ({health.reference.message}). Lookups and new visits are refused until it is restored. Saved visits and reports remain available.
+            Reference data is unavailable ({health.reference.message}). Lookups and new visits are refused until it is restored. Saved visits and reports remain
+            available.
           </p>
         )}
         {!offline && health && !health.visits.available && (
