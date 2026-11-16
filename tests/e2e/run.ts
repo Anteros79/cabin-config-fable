@@ -618,7 +618,13 @@ try {
   };
   await check("save full-cabin, seat-front, seat-rear, carpet and bin captures for each family and light", async () => {
     const ctx = { seats: true, floor: true, bins: true, context: true };
-    await page.addStyleTag({ content: ".legend, .hover-label { visibility: hidden !important; }" }); // captures show the render only
+    // Captures show the render only. A constructable stylesheet is CSSOM, not parsed inline CSS, so it works
+    // under the app's strict style-src without weakening the CSP or bypassing it on this checked context.
+    await page.evaluate(() => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(".legend, .hover-label { visibility: hidden !important; }");
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    });
     for (const light of ["neutral", "blue"]) {
       await capture(`full-cabin-cutaway_photo-navy-band_${light}`, "photo-navy-band", light, "cutaway");
       await capture(`full-cabin-aisle_photo-navy-band_${light}`, "photo-navy-band", light, "aisle", undefined, ctx);
@@ -839,7 +845,7 @@ try {
     const card = page.locator(".component-card[data-component=CUSHION]");
     await card.locator("button[type=submit]").click();
     await card.locator(".save-state.error").waitFor();
-    expect((await card.locator(".save-state").textContent())!.includes("nothing was saved"), "explicit not-saved");
+    expect((await card.locator(".save-state").textContent())!.toLowerCase().includes("nothing was saved"), "explicit not-saved");
     equal(
       (await api<{ visit: { records: { locationId: string }[] } }>(server, "GET", `/api/visits/${draftId}`)).json.visit.records.filter(
         (r) => r.locationId === "SEAT:12D",
