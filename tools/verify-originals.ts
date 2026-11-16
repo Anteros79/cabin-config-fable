@@ -3,14 +3,15 @@
 //   node tools/verify-originals.ts --write            write the manifest from the current files (refuses to replace one)
 //   node tools/verify-originals.ts --write --force    replace an existing manifest
 // Originals are only read. The files checked are the union of the nine data originals, the fourteen images and the
-// manifest entries. Exit code 1 if the manifest is empty, a file is missing, an original is not in the manifest or a
-// file differs; 64 for a command line that cannot be used.
+// manifest entries. The source root (CABIN_KIT_SOURCE_ROOT, else ../..) is checked when it was named, or when it
+// holds at least one original; otherwise the images are skipped. Exit code 1 if the manifest is empty, a file is
+// missing, an original is not in the manifest or a file differs; 64 for a command line that cannot be used.
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint, parseCliArgs, UsageError } from "../src/importer/args.ts";
-import { DATA_ORIGINALS, IMAGE_ORIGINALS, resolveImageRoot } from "../src/importer/originals.ts";
+import { DATA_ORIGINALS, IMAGE_ORIGINALS, isRegularFile, isSourceRootExplicit, resolveImageRoot } from "../src/importer/originals.ts";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -22,11 +23,14 @@ export interface VerifyPaths {
   /** The folder with all the originals (images included); may be absent. */
   sourceRoot: string;
   manifestPath: string;
+  /** True when CABIN_KIT_SOURCE_ROOT named `sourceRoot`: it then counts as present and must hold every original. */
+  sourceRootExplicit?: boolean;
 }
 
 export const DEFAULT_PATHS: VerifyPaths = {
   vendoredRoot: join(projectRoot, "fixtures", "originals"),
   sourceRoot: resolveImageRoot(),
+  sourceRootExplicit: isSourceRootExplicit(),
   manifestPath: join(projectRoot, "evidence", "originals-manifest.json"),
 };
 
@@ -53,6 +57,17 @@ const isDirectory = (path: string): boolean => {
     return false;
   }
 };
+
+/**
+ * Whether the source root is there to check (Task 6.6 ruling): it counts as present when CABIN_KIT_SOURCE_ROOT named
+ * it, or when it holds at least one of the originals. A default `../..` that merely exists (a clone outside the
+ * development folder, or a CI runner's work folder) is not a folder of originals.
+ */
+function sourceRootPresent(paths: VerifyPaths): boolean {
+  if (paths.sourceRootExplicit) return true;
+  if (!isDirectory(paths.sourceRoot)) return false;
+  return ORIGINALS.some((name) => isRegularFile(join(paths.sourceRoot, name)));
+}
 
 export type Log = (line: string) => void;
 
@@ -103,7 +118,7 @@ export function verifyOriginals(paths: VerifyPaths, log: Log, logError: Log): nu
     return 1;
   }
   const recorded = new Map(files.map((f) => [f.path, f]));
-  const sourcePresent = isDirectory(paths.sourceRoot);
+  const sourcePresent = sourceRootPresent(paths);
   const hasImageFolder = sourcePresent && resolve(paths.sourceRoot) !== resolve(paths.vendoredRoot);
   const union = [...new Set([...ORIGINALS, ...recorded.keys()])];
   const same = (actual: Hashed, expected: Entry): boolean => !("missing" in actual) && actual.sha256 === expected.sha256 && actual.bytes === expected.bytes;
@@ -124,8 +139,8 @@ export function verifyOriginals(paths: VerifyPaths, log: Log, logError: Log): nu
     if (isData) places.push(["vendored", hashFile(paths.vendoredRoot, path)]);
     // When the source root is the vendored folder, the vendored pass already covered it.
     if (sourcePresent && (!isData || hasImageFolder)) places.push(["source  ", hashFile(paths.sourceRoot, path)]);
-    // An image is optional while no folder that holds images is present (the folder is absent, or is the vendored
-    // data folder); everything else must be on disk.
+    // An image is optional while no folder of originals is present (absent, holding none of them, or the vendored
+    // data folder); once one is present, every original must be in it. Everything else must be on disk.
     if (isImage && !hasImageFolder) {
       skipped += 1;
       log(`skipped (not present)  ${path}`);

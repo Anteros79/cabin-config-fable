@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -113,11 +114,34 @@ describe("verify-originals", () => {
     expect(missing.out).toContain(`MISSING    vendored`);
   });
 
-  test("an image that is absent while the image folder exists fails", () => {
+  test("a folder that exists but holds none of the originals counts as absent: images skipped, exit 0", () => {
     const ws = workspace();
-    const images = join(tempDir("cabin-kit-verify-"), "images");
-    mkdirSync(images);
-    expect(verify({ ...ws, sourceRoot: images }).code).toBe(1);
+    const unrelated = join(tempDir("cabin-kit-verify-"), "work");
+    mkdirSync(unrelated);
+    writeFileSync(join(unrelated, "something-else.txt"), "not an original");
+    const r = verify({ ...ws, sourceRoot: unrelated });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain(`${IMAGE_ORIGINALS.length} skipped`);
+  });
+
+  test("a source root named explicitly must hold every original, even when it holds none", () => {
+    const ws = workspace();
+    const named = join(tempDir("cabin-kit-verify-"), "named");
+    mkdirSync(named);
+    const r = verify({ ...ws, sourceRoot: named, sourceRootExplicit: true });
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(`MISSING    source    `);
+  });
+
+  test("a folder holding some originals must hold all of them: the absent images fail, by name", () => {
+    const ws = workspace();
+    const some = join(tempDir("cabin-kit-verify-"), "some");
+    mkdirSync(some);
+    const [present] = IMAGE_ORIGINALS as [string];
+    writeFileSync(join(some, present), "an image");
+    const r = verify({ ...ws, sourceRoot: some });
+    expect(r.code).toBe(1);
+    for (const name of IMAGE_ORIGINALS.slice(1)) expect(r.out).toMatch(new RegExp(`MISSING .* ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m"));
   });
 
   test("--write refuses when a file is missing, and refuses to overwrite without --force", () => {
@@ -173,6 +197,74 @@ describe("verify-originals", () => {
     const r = await runNode(["tools/verify-originals.ts"]);
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/\d+\/\d+ checks unchanged/);
+  });
+});
+
+/** Fake bytes for every original, and a manifest of them: the hashes are all the tool compares. */
+function fakeOriginals(): { bytes: Map<string, string>; manifest: string } {
+  const bytes = new Map([...DATA_ORIGINALS, ...IMAGE_ORIGINALS].map((name) => [name, `fake bytes of ${name}`]));
+  const files = [...bytes].map(([path, text]) => ({ path, bytes: Buffer.byteLength(text), sha256: createHash("sha256").update(text).digest("hex") }));
+  return { bytes, manifest: JSON.stringify({ recordedAt: "2026-11-15T00:00:00.000Z", files }) };
+}
+
+/**
+ * A copy of the tool at <tmp>/work/checkout/project, as a clone sits on a CI runner, so that the tool's own `../..`
+ * (the default image and source root) is <tmp>/work, a folder that exists and holds only what `outer` puts there.
+ */
+function toolCopyUnder(outer: (work: string, bytes: Map<string, string>) => void): string {
+  const work = join(tempDir("cabin-kit-verify-clone-"), "work");
+  const project = join(work, "checkout", "project");
+  for (const dir of ["tools", join("src", "importer"), join("fixtures", "originals"), "evidence"]) mkdirSync(join(project, dir), { recursive: true });
+  for (const file of [join("tools", "verify-originals.ts"), join("src", "importer", "args.ts"), join("src", "importer", "originals.ts")])
+    cpSync(join(PROJECT_ROOT, file), join(project, file));
+  writeFileSync(join(project, "package.json"), JSON.stringify({ type: "module" }));
+  const { bytes, manifest } = fakeOriginals();
+  for (const name of DATA_ORIGINALS) writeFileSync(join(project, "fixtures", "originals", name), bytes.get(name) as string);
+  writeFileSync(join(project, "evidence", "originals-manifest.json"), manifest);
+  writeFileSync(join(work, "unrelated.txt"), "a runner's work folder holds other things");
+  outer(work, bytes);
+  return join(project, "tools", "verify-originals.ts");
+}
+
+describe("verify-originals from a clone outside the development folder (Task 6.6 ruling)", () => {
+  test("all originals in ../..: every copy is verified, nothing skipped", async () => {
+    const tool = toolCopyUnder((work, bytes) => {
+      for (const [name, text] of bytes) writeFileSync(join(work, name), text);
+    });
+    const r = await runNode([tool]);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain(`${2 * DATA_ORIGINALS.length + IMAGE_ORIGINALS.length}/${2 * DATA_ORIGINALS.length + IMAGE_ORIGINALS.length} checks unchanged`);
+    expect(r.stdout).toContain(" 0 skipped");
+  });
+
+  test("none in ../.. (it exists, as /home/runner/work does): the images are skipped and it passes", async () => {
+    const tool = toolCopyUnder(() => {});
+    const r = await runNode([tool]);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain(`${DATA_ORIGINALS.length}/${DATA_ORIGINALS.length} checks unchanged`);
+    expect(r.stdout).toContain(`${IMAGE_ORIGINALS.length} skipped (not present)`);
+  });
+
+  test("some in ../..: it fails and names every missing file", async () => {
+    const [kept] = IMAGE_ORIGINALS as [string];
+    const tool = toolCopyUnder((work, bytes) => writeFileSync(join(work, kept), bytes.get(kept) as string));
+    const r = await runNode([tool]);
+    expect(r.code).toBe(1);
+    const missing = r.stdout.split("\n").filter((line) => line.startsWith("MISSING"));
+    for (const name of [...DATA_ORIGINALS, ...IMAGE_ORIGINALS.slice(1)])
+      expect(
+        missing.some((line) => line.endsWith(`  ${name}`)),
+        name,
+      ).toBe(true);
+    expect(missing.some((line) => line.endsWith(`  ${kept}`))).toBe(false);
+  });
+
+  test("CABIN_KIT_SOURCE_ROOT naming a folder without the originals fails", async () => {
+    const empty = tempDir("cabin-kit-verify-empty-");
+    const tool = toolCopyUnder(() => {});
+    const r = await runNode([tool], { CABIN_KIT_SOURCE_ROOT: empty });
+    expect(r.code).toBe(1);
+    expect(r.stdout).toMatch(/^MISSING +source/m);
   });
 });
 

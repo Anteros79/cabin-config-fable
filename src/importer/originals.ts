@@ -57,6 +57,11 @@ export function resolveSourceRoot(env: NodeJS.ProcessEnv = process.env): string 
   return join(PROJECT_ROOT, "..", "..");
 }
 
+/** True when CABIN_KIT_SOURCE_ROOT names the source root (a non-blank value). */
+export function isSourceRootExplicit(env: NodeJS.ProcessEnv = process.env): boolean {
+  return explicitRoot(env) !== undefined;
+}
+
 /** Where the images are read from: CABIN_KIT_SOURCE_ROOT, then ../.. (images are never vendored). */
 export function resolveImageRoot(env: NodeJS.ProcessEnv = process.env): string {
   return explicitRoot(env) ?? join(PROJECT_ROOT, "..", "..");
