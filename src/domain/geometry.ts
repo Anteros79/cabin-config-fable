@@ -16,6 +16,12 @@ export const SEAT_HEIGHT = 1.16;
 export const BIN_BOTTOM = 1.66;
 export const BIN_HEIGHT = 0.44;
 export const BIN_DEPTH = 0.78;
+/** Height of the ceiling on the cabin centreline. Illustrative, not from a drawing; places no location. */
+export const CEILING_HEIGHT = 2.15;
+/** Radius of the curved sidewall, a circle centred on the centreline through the floor edge. Illustrative, not from a drawing; places no location. */
+export const SIDEWALL_CURVE_RADIUS = 1.9;
+/** The light channel recessed into the ceiling each side runs between these distances from the centreline. Illustrative. */
+export const LIGHT_CHANNEL_Z = { from: 0.56, to: 0.68 } as const;
 
 // Right-handed frame with +X aft and +Y up puts +Z on the left (port, A/B/C) side when facing forward.
 const LATERAL: ReadonlyMap<string, number> = new Map([
@@ -86,4 +92,67 @@ export function binPlacement(side: "L" | "R", rowFrom: number, rowTo: number): P
   const x1 = rowCentreX(rowTo) + ROW_PITCH / 2;
   const z = (side === "L" ? 1 : -1) * (CABIN_HALF_WIDTH - BIN_DEPTH / 2 - 0.08);
   return { x: (x0 + x1) / 2, y: BIN_BOTTOM, z, lx: x1 - x0, lz: BIN_DEPTH, ly: BIN_HEIGHT };
+}
+
+/** Longest step between two consecutive points of shellProfile(). */
+const SHELL_STEP = 0.1;
+/** The sidewall arc ends this far below the bins, where the shell steps out behind them. */
+const BIN_RECESS_BELOW = 0.06;
+/** Clearance between the shell and the bin box above and inboard of it. */
+const BIN_CLEARANCE = 0.03;
+/** How much higher the ceiling is on the centreline than where it meets the bins, and where that is. */
+const CEILING_RISE = 0.09;
+const CEILING_EDGE_Z = 0.8;
+const LIGHT_CHANNEL_DEPTH = 0.05;
+
+/**
+ * The half cross-section of the cabin shell, from the floor edge (z = CABIN_HALF_WIDTH) to the ceiling on the centreline,
+ * as a polyline in the y-z plane on the port (+z) side; the starboard half is its mirror. Illustrative, like every other
+ * value here: it places no location. In order:
+ * - the sidewall: an arc of SIDEWALL_CURVE_RADIUS centred on the centreline, through the floor edge, up to just below the bins;
+ * - the bin recess: out to the floor-edge width, up behind the bins and in over them;
+ * - the ceiling: a shallow arch to CEILING_HEIGHT on the centreline, with a light channel recessed into it (LIGHT_CHANNEL_Z).
+ * No two consecutive points are more than 0.1 m apart, and no point lies inside a seat or bin placement box.
+ */
+export function shellProfile(): { y: number; z: number }[] {
+  const points: { y: number; z: number }[] = [{ y: 0, z: CABIN_HALF_WIDTH }];
+  const lineTo = (z: number, y: number) => {
+    const from = points[points.length - 1] ?? { y, z };
+    const n = Math.max(1, Math.ceil(Math.hypot(z - from.z, y - from.y) / SHELL_STEP));
+    for (let i = 1; i <= n; i++) points.push({ y: from.y + ((y - from.y) * i) / n, z: from.z + ((z - from.z) * i) / n });
+  };
+  // sidewall arc
+  const r = SIDEWALL_CURVE_RADIUS;
+  const centreY = Math.sqrt(r * r - CABIN_HALF_WIDTH * CABIN_HALF_WIDTH);
+  const a0 = Math.asin(-centreY / r);
+  const a1 = Math.asin((BIN_BOTTOM - BIN_RECESS_BELOW - centreY) / r);
+  const arcSteps = Math.ceil((r * (a1 - a0)) / SHELL_STEP);
+  for (let i = 1; i <= arcSteps; i++) {
+    const a = a0 + ((a1 - a0) * i) / arcSteps;
+    points.push({ y: centreY + r * Math.sin(a), z: r * Math.cos(a) });
+  }
+  // bin recess, round the bin box of binPlacement()
+  const binInner = CABIN_HALF_WIDTH - 0.08 - BIN_DEPTH;
+  const overBins = BIN_BOTTOM + BIN_HEIGHT + BIN_CLEARANCE;
+  lineTo(CABIN_HALF_WIDTH, BIN_BOTTOM - BIN_RECESS_BELOW);
+  lineTo(CABIN_HALF_WIDTH, overBins);
+  lineTo(binInner - BIN_CLEARANCE, overBins);
+  // ceiling: a circular arch through (CEILING_EDGE_Z, CEILING_HEIGHT - CEILING_RISE) and (0, CEILING_HEIGHT)
+  const archR = (CEILING_EDGE_Z * CEILING_EDGE_Z + CEILING_RISE * CEILING_RISE) / (2 * CEILING_RISE);
+  const ceilingY = (z: number) => CEILING_HEIGHT - archR + Math.sqrt(archR * archR - z * z);
+  const archTo = (z: number) => {
+    const from = points[points.length - 1]?.z ?? z;
+    const n = Math.max(1, Math.ceil((from - z) / SHELL_STEP));
+    for (let i = 1; i <= n; i++) {
+      const zi = from + ((z - from) * i) / n;
+      points.push({ y: ceilingY(zi), z: zi });
+    }
+  };
+  lineTo(CEILING_EDGE_Z, ceilingY(CEILING_EDGE_Z));
+  archTo(LIGHT_CHANNEL_Z.to);
+  lineTo(LIGHT_CHANNEL_Z.to, ceilingY(LIGHT_CHANNEL_Z.to) + LIGHT_CHANNEL_DEPTH);
+  lineTo(LIGHT_CHANNEL_Z.from, ceilingY(LIGHT_CHANNEL_Z.from) + LIGHT_CHANNEL_DEPTH);
+  lineTo(LIGHT_CHANNEL_Z.from, ceilingY(LIGHT_CHANNEL_Z.from));
+  archTo(0);
+  return points;
 }

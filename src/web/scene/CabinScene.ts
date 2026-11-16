@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { FORWARD_MARGIN } from "../../domain/geometry.ts";
+import { AFT_MARGIN, BIN_DEPTH, CEILING_HEIGHT, FORWARD_MARGIN, shellProfile } from "../../domain/geometry.ts";
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.ts";
 import { boundPose, type CabinBounds, type CameraPose, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
@@ -9,6 +9,7 @@ import { createOverlayMaterial, createSeatMaterials, type SeatMaps, STATUS_COLOU
 import { createBadges, createFrame, createOutline, frameGeometry, HOVER_OUTLINE, hullGeometry, SELECTION_OUTLINE, type ViewportUniform } from "./outline.ts";
 import { PickGesture, type PointerSample, TouchAxisLock } from "./pickGesture.ts";
 import { buildBinGeometry, buildSeatGeometries, SEAT, type SeatGeometries } from "./seatParts.ts";
+import { buildShellGeometries, lightChannelMask } from "./shell.ts";
 import {
   BADGE_ATLAS_SIZE,
   BADGE_GLYPHS,
@@ -31,11 +32,9 @@ import {
   SEAT_TEXTURE_SIZE,
   SERVICE_UNIT_TEXTURE_SIZE,
   type SeatSurface,
-  SIDEWALL_TEXTURE_SIZE,
   seatNormalTexture,
   seatRoughnessTexture,
   serviceUnitTexture,
-  sidewallTexture,
   statusBadgeAtlas,
   textureKey,
 } from "./textures.ts";
@@ -244,7 +243,8 @@ export class CabinScene {
     ghost: boolean;
     level: number;
   }[] = [];
-  private contextSides: { side: "L" | "R"; wallMaterial: THREE.MeshStandardMaterial; ghost: boolean; level: number }[] = [];
+  /** the shell's sidewalls and ceiling, each ghosted on its own (see updateGhosting) */
+  private shellParts: { part: "L" | "R" | "ceiling"; material: THREE.MeshStandardMaterial; ghost: boolean; level: number }[] = [];
   /** when the ghosting fade last stepped; null while nothing fades */
   private ghostClock: number | null = null;
   private states = new Map<string, LocationState>();
@@ -562,7 +562,7 @@ export class CabinScene {
     this.floorMeshes = [];
     this.floorTintEntries = [];
     this.binSides = [];
-    this.contextSides = [];
+    this.shellParts = [];
     this.paletteMaterials = [];
     this.floorMaterials = [];
     this.seatParts = {};
@@ -793,31 +793,30 @@ export class CabinScene {
     }
 
     // context (secondary, hidden by default) --------------------------------------------------
-    const wallTexture = getTexture(textureKey("sidewall", "shared", SIDEWALL_TEXTURE_SIZE), sidewallTexture);
+    // The cabin shell from shellProfile() (WEB-21): two sidewalls with a recessed window per row pitch, the arched ceiling
+    // with its light channels, and the two plain end bulkheads: four draw calls. Shell materials draw back faces only, so
+    // from outside the near wall shows nothing and the far wall its inside; ghosting fades what is left (updateGhosting).
+    const pitch = layout.geometry.rowPitch;
+    const windowCount = Math.max(0, Math.round((length - FORWARD_MARGIN - AFT_MARGIN) / pitch));
+    const windowXs = Array.from({ length: windowCount }, (_, i) => FORWARD_MARGIN + (i + 0.5) * pitch);
+    const shell = buildShellGeometries(shellProfile(), length, windowXs, halfW - 0.08 - BIN_DEPTH);
+    for (const g of Object.values(shell)) own(g);
+    // Transparent from the start, so ghosting changes only opacity and depth writes, never the shader program.
+    const shellMaterial = (extra: THREE.MeshStandardMaterialParameters) => std("#ffffff", 0.85, 0, { side: THREE.BackSide, transparent: true, ...extra });
     for (const side of ["L", "R"] as const) {
-      const sign = side === "L" ? 1 : -1;
-      const map = own(wallTexture.clone());
-      map.needsUpdate = true;
-      map.repeat.set(Math.max(rows, 1), 1);
-      const wallMaterial = own(new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, forceSinglePass: true, transparent: true }));
-      const wall = new THREE.Mesh(own(new THREE.PlaneGeometry(length, 1.66)), wallMaterial);
-      wall.position.set(length / 2, 0.83, sign * (halfW + 0.005));
-      wall.rotation.y = sign > 0 ? Math.PI : 0;
-      // the wash-light strip glows; it lights nothing (the environment does that)
-      const strip = new THREE.Mesh(
-        own(new THREE.BoxGeometry(length, 0.03, 0.03)),
-        own(new THREE.MeshStandardMaterial({ color: "#000000", emissive: "#ffffff", emissiveIntensity: 1.6 })),
-      );
-      strip.position.set(length / 2, 1.63, sign * (halfW - 0.03));
-      strip.userData.wash = true;
-      this.groups.context.add(wall, strip);
-      this.contextSides.push({ side, wallMaterial, ghost: false, level: 0 });
+      const material = shellMaterial({ vertexColors: true });
+      this.groups.context.add(new THREE.Mesh(side === "L" ? shell.left : shell.right, material));
+      this.shellParts.push({ part: side, material, ghost: false, level: 0 });
     }
-    for (const x of [0.02, length - 0.02]) {
-      const bulkhead = new THREE.Mesh(own(new THREE.BoxGeometry(0.04, 2.25, halfW * 2)), std("#e2e4ea", 0.7, 0, { transparent: true, opacity: 0.55 }));
-      bulkhead.position.set(x, 1.125, 0);
-      this.groups.context.add(bulkhead);
-    }
+    // the light channels glow (emissive, masked to the channels); they light nothing, the environment does that
+    const ceilingMaterial = shellMaterial({ color: "#f1f2f5", emissive: "#ffffff", emissiveIntensity: 1.6, emissiveMap: own(lightChannelMask()) });
+    const ceilingMesh = new THREE.Mesh(shell.ceiling, ceilingMaterial);
+    ceilingMesh.userData.wash = true;
+    this.groups.context.add(ceilingMesh);
+    this.shellParts.push({ part: "ceiling", material: ceilingMaterial, ghost: false, level: 0 });
+    // a transparent double-sided plate would draw in two passes; at this opacity one is enough
+    const bulkheadMaterial = std("#e2e4ea", 0.7, 0, { transparent: true, opacity: 0.55, side: THREE.DoubleSide, forceSinglePass: true });
+    this.groups.context.add(new THREE.Mesh(shell.bulkheads, bulkheadMaterial));
 
     // status badges: one instanced mesh for every seat, floor area and bin module (one draw call)
     if (this.badgeEntries.length > 0) {
@@ -993,9 +992,10 @@ export class CabinScene {
   }
 
   /**
-   * In an outside view, the bins and wall nearest the camera are ghosted and excluded from
-   * picking so they never block the seats; seen from above, both bin rows are ghosted. Picking follows at once; the look
-   * fades over 150 ms (WEB-21), or changes at once with reduced motion or when `instant` (a new layout).
+   * In an outside view, the bins and the shell's sidewall nearest the camera are ghosted, and the bins excluded from
+   * picking so they never block the seats; seen from above, both bin rows and both sidewalls are ghosted, and from
+   * anywhere outside the shell its ceiling. Picking follows at once; the look fades over 150 ms (WEB-21), or changes at
+   * once with reduced motion or when `instant` (a new layout).
    */
   private updateGhosting(instant = false): void {
     const cam = this.camera.position;
@@ -1007,12 +1007,18 @@ export class CabinScene {
       b.door.userData.ghost = b.ghost;
     }
     for (const m of [this.selectionMarks, this.hoverMarks]) this.ghostOutline(m);
-    for (const c of this.contextSides) c.ghost = !inside && (c.side === "L" ? cam.z > 0.7 : cam.z < -0.7);
+    // The shell: from outside it (above the ceiling, or beside the aisle) the ceiling ghosts, and so does each sidewall
+    // between the camera and the centreline; from above, both. From inside, as in the aisle view, all of it is solid.
+    const insideShell = Math.abs(cam.z) < 0.7 && cam.y < CEILING_HEIGHT;
+    for (const c of this.shellParts) {
+      const near = c.part === "ceiling" || above || (c.part === "L" ? cam.z > 0.7 : cam.z < -0.7);
+      c.ghost = !insideShell && near;
+    }
     if (instant || this.reducedMotion) {
-      for (const g of [...this.binSides, ...this.contextSides]) g.level = g.ghost ? 1 : 0;
+      for (const g of [...this.binSides, ...this.shellParts]) g.level = g.ghost ? 1 : 0;
       this.ghostClock = null;
       this.applyGhostLevels();
-    } else if (this.ghostClock === null && [...this.binSides, ...this.contextSides].some((g) => g.level !== (g.ghost ? 1 : 0))) {
+    } else if (this.ghostClock === null && [...this.binSides, ...this.shellParts].some((g) => g.level !== (g.ghost ? 1 : 0))) {
       this.ghostClock = performance.now();
       this.invalidate();
     }
@@ -1024,7 +1030,7 @@ export class CabinScene {
     const step = Math.max(now - this.ghostClock, 0) / GHOST_FADE_MS;
     this.ghostClock = now;
     let fading = false;
-    for (const g of [...this.binSides, ...this.contextSides]) {
+    for (const g of [...this.binSides, ...this.shellParts]) {
       const goal = g.ghost ? 1 : 0;
       g.level = goal > g.level ? Math.min(goal, g.level + step) : Math.max(goal, g.level - step);
       if (g.level !== goal) fading = true;
@@ -1039,9 +1045,9 @@ export class CabinScene {
         setGhosted(o.material as THREE.Material, b.level > 0, THREE.MathUtils.lerp(1, BIN_GHOST_OPACITY, b.level));
       }
     }
-    for (const c of this.contextSides) {
-      c.wallMaterial.opacity = THREE.MathUtils.lerp(1, WALL_GHOST_OPACITY, c.level);
-      c.wallMaterial.depthWrite = c.level === 0;
+    for (const c of this.shellParts) {
+      c.material.opacity = THREE.MathUtils.lerp(1, WALL_GHOST_OPACITY, c.level);
+      c.material.depthWrite = c.level === 0;
     }
   }
 

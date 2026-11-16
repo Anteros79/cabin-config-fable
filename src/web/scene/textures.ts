@@ -97,7 +97,6 @@ export const SEAT_TEXTURE_SIZE: TextureSize = { width: 512, height: 1024 };
 export const CARPET_TEXTURE_SIZE: TextureSize = { width: 1024, height: 1024 };
 export const BIN_DOOR_TEXTURE_SIZE: TextureSize = { width: 512, height: 256 };
 export const SERVICE_UNIT_TEXTURE_SIZE: TextureSize = { width: 256, height: 128 };
-export const SIDEWALL_TEXTURE_SIZE: TextureSize = { width: 256, height: 256 };
 /** the soft dark patch drawn on the carpet under each seat */
 export const CONTACT_TEXTURE_SIZE: TextureSize = { width: 128, height: 128 };
 /** The status badge atlas: one square cell per glyph, side by side, in BADGE_GLYPHS order. */
@@ -767,30 +766,6 @@ export function serviceUnitTexture(): THREE.CanvasTexture {
   }
   g.fillStyle = "#9aa0ae";
   for (let i = 0; i < 4; i++) g.fillRect(166, h / 2 + 4 + i * 6, 44, 2.5);
-  return toTexture(c, true);
-}
-
-/** Sidewall context panel with a window reveal. Context only. */
-export function sidewallTexture(): THREE.CanvasTexture {
-  const { width: w, height: h } = SIDEWALL_TEXTURE_SIZE;
-  const { c, g } = canvas(w, h);
-  g.fillStyle = "#e3e5ea";
-  g.fillRect(0, 0, w, h);
-  g.strokeStyle = "rgba(120,126,142,0.5)";
-  g.lineWidth = 2;
-  g.strokeRect(1, 1, w - 2, h - 2);
-  // The panel is mapped onto one row pitch by the full wall height, so the window is drawn squat here.
-  g.fillStyle = "#cfd3db";
-  g.beginPath();
-  g.ellipse(w / 2, h * 0.36, 66, 46, 0, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = "#f3f6fb";
-  g.beginPath();
-  g.ellipse(w / 2, h * 0.36, 40, 29, 0, 0, Math.PI * 2);
-  g.fill();
-  g.strokeStyle = "rgba(110,118,136,0.7)";
-  g.lineWidth = 3;
-  g.stroke();
   return toTexture(c, true);
 }
 

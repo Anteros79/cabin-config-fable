@@ -15,7 +15,7 @@ Nothing here was filled in from general knowledge or from the baseline.
 | Floor and carpet panel map | Three illustrative zones plus a whole-cabin scope | Panel ids, extents and seam positions per layout |
 | Overhead bin map | Illustrative bins by side and index | Bin ids and positions per layout |
 | Coordinate frame and station data | Model uses its own frame (metres, +X aft, +Y up, +Z port) with an illustrative 0.81 m pitch | Station/butt-line data or a drawing |
-| Cabin height and cross-section | Illustrative | Drawing |
+| Cabin height and cross-section | Illustrative. The context layer's shell (ceiling 2.15 m on the centreline, a sidewall arc of 1.9 m radius, a recessed window per row pitch) is drawn from illustrative constants and places no location | Drawing |
 | Link from any image to a layout, tail or date | All three visual profiles are `unassigned-illustrative` | A statement of which appearance applies to which configuration |
 | Seat set for the 138-seat 737-700 described in the DOCX | The DOCX category is listed as "seat set not supplied" and no candidate layout is created for it. A separate fictional 138-seat fixture exists for regression tests only | A seat list for that layout |
 | Who may accept reference data, and how | The `accepted` namespace is empty and validation rejects anything claiming it | A named approval process |

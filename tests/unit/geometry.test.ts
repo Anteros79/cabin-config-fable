@@ -1,5 +1,17 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, test } from "vitest";
-import { CABIN_HALF_WIDTH, lateralCentre, seatPlacement, sideOf } from "../../src/domain/geometry.ts";
+import {
+  binPlacement,
+  CABIN_HALF_WIDTH,
+  CEILING_HEIGHT,
+  GEOMETRY_VERSION,
+  isKnownSeatLetter,
+  lateralCentre,
+  SIDEWALL_CURVE_RADIUS,
+  seatPlacement,
+  shellProfile,
+  sideOf,
+} from "../../src/domain/geometry.ts";
 import type { Finding, ReleaseContent } from "../../src/domain/types.ts";
 import { validateRelease } from "../../src/domain/validate.ts";
 import { fixtureContent, stagedFull } from "../helpers.ts";
@@ -82,5 +94,79 @@ describe("seat letter and side findings", () => {
     const findings = validateRelease(stagedFull().content);
     expect(codes(findings, "SEAT_LETTER_UNKNOWN")).toEqual([]);
     expect(codes(findings, "SEAT_SIDE_MISMATCH")).toEqual([]);
+  });
+});
+
+describe("cabin shell (WEB-21)", () => {
+  it("adds illustrative constants and keeps the geometry version", () => {
+    expect(CEILING_HEIGHT).toBe(2.15);
+    expect(SIDEWALL_CURVE_RADIUS).toBe(1.9);
+    expect(GEOMETRY_VERSION).toBe("cabin-kit.geometry/1");
+  });
+
+  it("every placement of the 176-seat layout is unchanged (snapshot taken before the shell was added)", () => {
+    const revision = stagedFull().content.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1");
+    if (!revision) throw new Error("fixture has no 176-seat layout");
+    const kinds = { SEAT: 0, FLOOR: 0, BIN: 0 };
+    for (const l of revision.locations) kinds[l.kind] += 1;
+    expect(kinds).toEqual({ SEAT: 176, FLOOR: 4, BIN: 20 });
+    // the placements seatPlacement, floorPlacement and binPlacement produced for this layout before Task 5.6
+    const json = JSON.stringify(revision.locations.map((l) => [l.id, l.placement]));
+    expect(createHash("sha256").update(json).digest("hex")).toBe("ffc6b2c564a630d787eb264dd1978fc157ab38a630fa6162c58926332d6e0268");
+    expect(revision.geometry.cabinLength).toBe(26);
+    expect(revision.geometry.cabinHalfWidth).toBe(1.76);
+  });
+
+  const profile = shellProfile();
+
+  it("is a continuous polyline: consecutive points within 0.15 m", () => {
+    expect(profile.length).toBeGreaterThan(10);
+    for (let i = 1; i < profile.length; i++) {
+      const a = profile[i - 1];
+      const b = profile[i];
+      if (!a || !b) throw new Error("invariant");
+      expect(Math.hypot(b.y - a.y, b.z - a.z), `segment ${i}`).toBeLessThanOrEqual(0.15);
+      expect(Math.hypot(b.y - a.y, b.z - a.z), `segment ${i} has length`).toBeGreaterThan(0);
+    }
+  });
+
+  it("starts at the floor edge and ends on the centreline at the ceiling height", () => {
+    expect(profile[0]).toEqual({ y: 0, z: CABIN_HALF_WIDTH });
+    const last = profile.at(-1);
+    expect(last?.z).toBeCloseTo(0, 9);
+    expect(last?.y).toBeCloseTo(CEILING_HEIGHT, 9);
+  });
+
+  it("the sidewall bulges to the curve radius, and the shell stays on the half it describes", () => {
+    for (const p of profile) {
+      expect(p.z).toBeGreaterThanOrEqual(0);
+      expect(p.z).toBeLessThanOrEqual(SIDEWALL_CURVE_RADIUS + 1e-9);
+      expect(p.y).toBeGreaterThanOrEqual(0);
+    }
+    expect(Math.max(...profile.map((p) => p.z))).toBeCloseTo(SIDEWALL_CURVE_RADIUS, 2);
+  });
+
+  it("no point, and no point between two, lies inside a seat envelope or the bin box", () => {
+    const boxes = [...["A", "B", "C", "D", "E", "F"].filter(isKnownSeatLetter).map((letter) => seatPlacement(1, letter)), binPlacement("L", 1, 3)].filter(
+      (b) => b.z > 0,
+    );
+    expect(boxes).toHaveLength(4);
+    const inside = (y: number, z: number) => boxes.some((b) => y >= b.y && y <= b.y + b.ly && z >= b.z - b.lz / 2 && z <= b.z + b.lz / 2);
+    for (let i = 0; i < profile.length; i++) {
+      const a = profile[i];
+      const b = profile[i + 1] ?? a;
+      if (!a || !b) throw new Error("invariant");
+      for (let t = 0; t <= 1; t += 0.1) {
+        const y = a.y + (b.y - a.y) * t;
+        const z = a.z + (b.z - a.z) * t;
+        expect(inside(y, z), `point ${i} + ${t.toFixed(1)}: y ${y.toFixed(3)}, z ${z.toFixed(3)}`).toBe(false);
+      }
+    }
+  });
+
+  it("is pure: every call returns the same new array", () => {
+    const again = shellProfile();
+    expect(again).toEqual(profile);
+    expect(again).not.toBe(profile);
   });
 });

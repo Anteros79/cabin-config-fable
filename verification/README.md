@@ -61,6 +61,8 @@ The E2E run checks that the JSON, the server PDF and the printed PDF carry the s
 
 Method: `captures/` holds 19 real renders from this build (`captures/captures.json` records release, layout, profile, light, camera and layers for each). `comparisons/` holds 12 sheets placing a supplied original on the left and a render on the right (`comparisons/index.json`). I looked at each sheet and judged each feature. The judgments are mine, by eye. Nothing was measured, because no dimensions were supplied.
 
+The three rows marked "(5.6)" were re-judged after Task 5.6 (curved sidewall with recessed windows, arched ceiling with light channels, in the context layer) against sheets 09, 10 and 11 regenerated from that commit's renders the same way; they are not committed either.
+
 The six rows marked "(5.3)" were re-judged after Task 5.3 (environment light, physical upholstery with stitched normal maps, contact shading) against sheets regenerated from that commit's renders with `npm run test:e2e && npm run comparisons`; those regenerated captures and sheets are not committed, so the files in `captures/` and `comparisons/` may predate the judgment.
 
 PASS means the feature is present and reads as the same thing. PARTIAL means present but visibly different. FAIL means absent or wrong. UNKNOWN means the originals do not settle what is correct.
@@ -85,10 +87,10 @@ PASS means the feature is present and reads as the same thing. PARTIAL means pre
 | Dashed-arc carpet | `carpet.jpg` | 08 | PASS | Arc scale is close; the original's arcs are less regular |
 | Pale border strips along the aisle | `carpet.jpg` | 08 | PASS | |
 | Convex pale bin doors with seams and handle | `seats 4.jpg`, `seats 2 .jpeg` | 09, 10 | PARTIAL | Shape and seams read correctly. Handle size and door depth are guesses |
-| Segmented bin underside with service units | `seats 4.jpg` | 09 | PARTIAL | Segments and round fittings present; far less detail than the original |
-| Window surrounds | `seats 5.jpg`, `recarro 2.jpg` | 01, 03 | PARTIAL | Plain ovals on a flat sidewall, one per row. Only in the optional context layer |
-| Ceiling arch | `seats 2 .jpeg` | 10 | FAIL | The model has no sculpted ceiling; it is open above the bins |
-| Blue cabin light (5.3) | `seats 1.jpeg`, `seats 4.jpg`, `seats 5.jpg` | 02, 03, 09 | PARTIAL | A blue wash with pale whites, as in the photographs, and no longer oversaturated. Still dimmer and greyer than the luminous blue of `seats 1.jpeg` and `seats 5.jpg`, with no glow from the ceiling |
+| Segmented bin underside with service units (5.6) | `seats 4.jpg` | 09 | PARTIAL | Segments and round fittings present; far less detail than the original. Below the bins the shell now shows a pale ledge where it steps out behind them, but not the original's lit wash under the bins |
+| Window surrounds (5.6) | `seats 5.jpg`, `recarro 2.jpg`, `seats 4.jpg` | 01, 03, 09 | PARTIAL | Rounded-rectangle recesses with a reveal, one per row pitch, set into a curved sidewall. The originals' windows are rounder, with a bright pane and a thicker moulded surround; the model's panes are a dim blue-grey. Only in the optional context layer |
+| Ceiling arch (5.6) | `seats 2 .jpeg`, `southwest seats-7.webp` | 10, 11 | PARTIAL | A closed, gently arched ceiling between the bins with a glowing light channel along each bin edge. The original's ceiling is a much higher dome, brightly lit from its centre; the model's rises only 9 cm and reads almost flat. Only in the optional context layer |
+| Blue cabin light (5.3) | `seats 1.jpeg`, `seats 4.jpg`, `seats 5.jpg` | 02, 03, 09 | PARTIAL | A blue wash with pale whites, as in the photographs, and no longer oversaturated. Still dimmer and greyer than the luminous blue of `seats 1.jpeg` and `seats 5.jpg`. The ceiling's light channels and faint glow (5.6) show only in the optional context layer |
 | Neutral light (5.3) | `recarro 2.jpg` | 01 | PARTIAL | Environment light with a key from the window side gives the forms direction and soft modelling. No hard sunlit highlights or cast shadows as in the original |
 | Seat belts, heart mark, literature cards | several | — | FAIL (by decision) | Not modelled. Brand marks are deliberately left out |
 | Galleys, barrier, lavatories | `barrier.webp`, `rear galley.jpg`, `forward galley flight deck.jpg` | — | FAIL (by decision) | Not modelled. The context layer has only a plain translucent bulkhead at each end |
@@ -96,7 +98,7 @@ PASS means the feature is present and reads as the same thing. PARTIAL means pre
 | True colours | — | — | UNKNOWN | Every photograph is under tinted or strong light |
 | Which family belongs to which layout | — | — | UNKNOWN | No supplied file says |
 
-Summary: 8 PASS, 12 PARTIAL, 3 FAIL, 5 UNKNOWN. The model is recognisable as the cabin in the photographs and works as a spatial index for picking seats, floor areas and bins. It is not a faithful reproduction. The headrest shape is now the weakest point; the material finish is closer but less glossy than the photographed leather.
+Summary: 8 PASS, 13 PARTIAL, 2 FAIL, 5 UNKNOWN. The model is recognisable as the cabin in the photographs and works as a spatial index for picking seats, floor areas and bins. It is not a faithful reproduction. The headrest shape is now the weakest point; the material finish is closer but less glossy than the photographed leather.
 
 ## Not verified
 
