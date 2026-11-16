@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { render, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import type { VisitRecord } from "../../src/domain/types.ts";
@@ -9,6 +7,7 @@ import { buildStates, type LocationStatus, STATUS_ENCODING, type Workspace } fro
 import { STATUS_COLOUR } from "../../src/web/scene/materials.ts";
 import { BADGE_GLYPHS } from "../../src/web/scene/textures.ts";
 import { fixtureRelease, snapshotFor } from "../helpers.ts";
+import { lightTokens } from "./css.ts";
 
 // jsdom has no WebGL; the legend does not need a scene.
 vi.mock("../../src/web/scene/CabinScene.ts", () => ({
@@ -20,13 +19,11 @@ vi.mock("../../src/web/scene/CabinScene.ts", () => ({
 }));
 
 const STATUSES = Object.keys(STATUS_ENCODING) as LocationStatus[];
-const css = readFileSync(join(import.meta.dirname, "../../src/web/styles.css"), "utf8");
-
-/** The value of a `--status-*` custom property in styles.css. */
+/** The value of a `--status-*` token in tokens.css: one hex colour, the same in every theme. */
 function tokenHex(token: string): string {
-  const match = new RegExp(`${token}:\\s*(#[0-9a-fA-F]{6});`).exec(css);
-  if (!match?.[1]) throw new Error(`no value for ${token} in styles.css`);
-  return match[1];
+  const value = lightTokens().get(token) ?? "";
+  if (!/^#[0-9a-fA-F]{6}$/.test(value)) throw new Error(`no hex value for ${token} in tokens.css`);
+  return value;
 }
 
 // ---- colour vision deficiency simulation ------------------------------------------------------
@@ -119,7 +116,7 @@ describe("STATUS_ENCODING", () => {
     expect(STATUS_ENCODING.none.glyph).toBe("none");
     for (const s of STATUSES) {
       expect(STATUS_ENCODING[s].label.trim().length).toBeGreaterThan(0);
-      // a status with a glyph has a colour token defined in styles.css
+      // a status with a glyph has a colour token defined in tokens.css
       if (STATUS_ENCODING[s].glyph !== "none") expect(tokenHex(STATUS_ENCODING[s].token)).toMatch(/^#/);
     }
   });

@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import * as THREE from "three";
 import { describe, expect, test } from "vitest";
 import { STATUS_ENCODING } from "../../src/web/model.ts";
@@ -16,6 +14,7 @@ import {
   UPHOLSTERY,
 } from "../../src/web/scene/materials.ts";
 import { normalFromHeight, PALETTES, REAR_SHELL_POWER_PANEL, SEAT_TEXTURE_SIZE, textureKey } from "../../src/web/scene/textures.ts";
+import { lightTokens, styleFile } from "./css.ts";
 
 /** A height map shaped like ImageData (PF-20: jsdom has no ImageData), every pixel the grey `level` unless `at` says otherwise. */
 function heightMap(width: number, height: number, at: (x: number, y: number) => number = () => 128) {
@@ -176,16 +175,16 @@ function deltaE(a: THREE.Color, b: THREE.Color): number {
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
 
-/** The legend colour for a status (its `--status-*` token) or a tier (its `.swatch.tier-*` background) in styles.css. */
+/** The legend colour for a status (its `--status-*` token) or a tier (the token its `.swatch.tier-*` background names). */
 function legendSwatch(kind: "status" | "tier", name: string): THREE.Color {
-  const css = readFileSync(join(import.meta.dirname, "../../src/web/styles.css"), "utf8");
-  const pattern =
+  const tokens = lightTokens();
+  const token =
     kind === "status"
-      ? new RegExp(`${STATUS_ENCODING[name as keyof typeof STATUS_ENCODING].token}:\\s*(#[0-9a-fA-F]{6})`)
-      : new RegExp(`\\.swatch\\.${name}\\s*\\{[^}]*background:\\s*(#[0-9a-fA-F]{6})`);
-  const match = pattern.exec(css);
-  if (!match?.[1]) throw new Error(`no legend colour for ${kind} ${name}`);
-  return new THREE.Color(match[1]);
+      ? STATUS_ENCODING[name as keyof typeof STATUS_ENCODING].token
+      : new RegExp(`\\.swatch\\.${name}\\s*\\{[^}]*background:\\s*var\\((--[\\w-]+)\\)`).exec(styleFile("viewer.css"))?.[1];
+  const value = token ? tokens.get(token) : undefined;
+  if (!value || !/^#[0-9a-fA-F]{6}$/.test(value)) throw new Error(`no legend colour for ${kind} ${name}`);
+  return new THREE.Color(value);
 }
 
 /** Every overlay colour drawn in 3D with the legend entry it must match: the status tints and the tier tints. */

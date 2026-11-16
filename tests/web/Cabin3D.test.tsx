@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { Cabin3D, hoverLabelPosition, WHEEL_HINT, WHEEL_HINT_MS } from "../../src/web/components/Cabin3D.tsx";
@@ -7,6 +5,7 @@ import { Viewer } from "../../src/web/components/Viewer.tsx";
 import { buildStates, type Workspace } from "../../src/web/model.ts";
 import type { SceneCallbacks } from "../../src/web/scene/CabinScene.ts";
 import { at, fixtureRelease } from "../helpers.ts";
+import { styleFile } from "./css.ts";
 
 // jsdom has no WebGL: the scene is a recording stand-in, so these tests see exactly which scene methods the component calls.
 const scenes = vi.hoisted(() => ({ constructed: 0, calls: [] as { name: string; args: unknown[] }[], callbacks: null as unknown }));
@@ -187,7 +186,7 @@ test("the wheel hint shows for 2 s the first time the wheel scrolls past the vie
 });
 
 test("the canvas lets a vertical touch drag scroll the page", () => {
-  const css = readFileSync(join(import.meta.dirname, "../../src/web/styles.css"), "utf8");
+  const css = styleFile("viewer.css");
   const rule = /\.canvas-wrap canvas \{([^}]*)\}/.exec(css)?.[1] ?? "";
   expect(rule).toMatch(/touch-action:\s*pan-y;/);
 });

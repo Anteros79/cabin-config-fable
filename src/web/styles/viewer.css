@@ -1,0 +1,247 @@
+/* Viewer: the tabs, the 3D toolbar, the canvas with its hint, label and legend, and the status and tier keys. */
+.tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4rem var(--space-4) 0;
+}
+.tabs [role="tab"] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: 0;
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.tabs [role="tab"][aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+.viewer-counts {
+  margin-left: auto;
+  font-size: var(--font-size-fine);
+  color: var(--text-muted);
+  padding: 0 0.4rem;
+}
+.viewer .alert {
+  margin: var(--space-4);
+}
+[role="tabpanel"] {
+  padding: var(--space-4);
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  align-items: flex-end;
+  border: 0;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  min-width: 0;
+}
+.tool-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.tool-group .group-label,
+.tool-group.select span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0;
+}
+.tool-group.select {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+.toolbar button,
+.toolbar select {
+  min-height: 2.05rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.9rem;
+}
+.toolbar .check {
+  min-height: 2.05rem;
+  font-size: 0.9rem;
+}
+.canvas-wrap {
+  position: relative;
+  height: clamp(360px, calc(100vh - 29rem), 900px);
+  background: var(--scene-bg);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+}
+.canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* one finger: a vertical drag scrolls the page, a sideways drag orbits; two fingers pinch and pan the view */
+  touch-action: pan-y;
+  cursor: grab;
+}
+/* the wrapper clips overflow, so the ring is drawn inside the canvas */
+.canvas-wrap canvas:focus-visible {
+  outline-offset: -3px;
+}
+/* shown for 2 s when the wheel scrolls the page past an unfocused view */
+.canvas-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0.75rem;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.2rem var(--space-5);
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--hint-bg);
+  color: var(--hint-text);
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-small);
+}
+/* empty between hints: nothing to see, but the live region stays in place */
+.canvas-hint:empty {
+  padding: 0;
+  background: none;
+}
+.canvas-note {
+  position: absolute;
+  inset: 45% 0 auto 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+/* placed beside the pointer by Cabin3D; white-space keeps its measured width stable */
+.hover-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  margin: 0;
+  padding: 0.1rem var(--space-4);
+  border-radius: var(--radius-2);
+  background: var(--overlay-bg);
+  color: var(--overlay-text);
+  font-size: var(--font-size-small);
+  min-height: 1.4rem;
+  pointer-events: none;
+}
+.hover-label:empty,
+.hover-label:has(> :empty) {
+  display: none;
+}
+.legend {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.7rem;
+  background: var(--legend-bg);
+  border-radius: var(--radius-2);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+/* a status: a disc in its --status-* colour with an ink glyph, as on the 3D badges (STATUS_ENCODING) */
+.status-glyph {
+  display: inline-block;
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  vertical-align: -0.2rem;
+}
+.status-glyph circle {
+  fill: var(--status-colour);
+  stroke: var(--status-glyph);
+  stroke-width: 1.5;
+}
+.status-glyph path {
+  fill: none;
+  stroke: var(--status-glyph);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.legend li,
+.status-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.status-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.9rem;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-small);
+}
+.swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: var(--radius-1);
+  vertical-align: -0.1rem;
+  border: 1px solid var(--swatch-border);
+}
+.swatch.selected {
+  background: var(--select);
+}
+.swatch.tier-elr {
+  background: var(--tier-elr);
+}
+.swatch.tier-pref {
+  background: var(--tier-pref);
+}
+.swatch.tier-exit {
+  background: var(--tier-exit);
+}
+
+@media (max-width: 1100px) {
+  .canvas-wrap {
+    height: clamp(300px, 52vh, 560px);
+  }
+}
+@media (max-width: 720px) {
+  .viewer-counts {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (forced-colors: active) {
+  .tabs [role="tab"][aria-selected="true"] {
+    border-bottom: 3px solid Highlight;
+  }
+  .swatch {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+  /* the glyph alone tells the statuses apart: system colours, a filled disc so it stands out from the button */
+  .status-glyph {
+    forced-color-adjust: none;
+  }
+  .status-glyph circle {
+    fill: CanvasText;
+    stroke: CanvasText;
+  }
+  .status-glyph path {
+    stroke: Canvas;
+  }
+}

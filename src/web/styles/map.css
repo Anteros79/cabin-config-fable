@@ -1,0 +1,201 @@
+/* Map and list: the go-to field, the seat grid, the floor and bin lists and the location buttons. */
+.cabin-map {
+  display: grid;
+  grid-template-columns: minmax(17rem, 24rem) 1fr;
+  gap: 0.4rem 1.2rem;
+  align-items: start;
+}
+.cabin-map .goto {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+}
+.cabin-map .goto label {
+  font-weight: 600;
+}
+.cabin-map section:first-of-type {
+  grid-row: span 2;
+}
+/* the seat map, its rows and the bin sides are fieldsets (named groups); they keep the plain look */
+fieldset.seat-grid,
+fieldset.seat-row,
+fieldset.bin-side {
+  margin-inline: 0;
+  min-width: 0;
+}
+fieldset.seat-row,
+fieldset.bin-side {
+  border: 0;
+  padding: 0;
+}
+.seat-grid {
+  max-height: min(64vh, 46rem);
+  overflow-y: auto;
+  padding: 0.3rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2);
+}
+.seat-row {
+  display: grid;
+  grid-template-columns: 2rem repeat(3, minmax(2.3rem, 1fr)) 0.7rem repeat(3, minmax(2.3rem, 1fr));
+  gap: 0.2rem;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+.seat-row .after-aisle {
+  grid-column-start: 6;
+}
+.seat-row.head {
+  position: sticky;
+  top: -0.3rem;
+  background: var(--surface-1);
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: var(--space-1) 0;
+  z-index: 1;
+}
+.seat-row .letter {
+  text-align: center;
+}
+.row-label {
+  font-weight: 700;
+  font-size: 0.86rem;
+  text-align: right;
+  padding-right: 0.3rem;
+  color: var(--text-muted);
+}
+.cell.empty {
+  min-height: 2.3rem;
+  border: 1px dashed var(--border-empty);
+  border-radius: var(--radius-2);
+  background: repeating-linear-gradient(45deg, var(--empty-cell-a), var(--empty-cell-a) 4px, var(--empty-cell-b) 4px, var(--empty-cell-b) 8px);
+}
+.cell button {
+  width: 100%;
+}
+.skipped {
+  margin: 0.3rem 0;
+  padding: 0.2rem var(--space-4);
+  font-size: 0.82rem;
+  background: var(--surface-muted);
+  border-radius: var(--radius-2);
+  color: var(--text-muted);
+  text-align: center;
+}
+button.loc {
+  position: relative;
+  min-height: 2.3rem;
+  padding: 0.2rem 0.3rem;
+  background: var(--surface-control);
+  border-color: var(--border-seat);
+  gap: var(--space-1);
+  font-weight: 600;
+}
+button.loc.tier-extra-legroom,
+button.loc.tier-elr {
+  --tier: var(--tier-elr);
+}
+button.loc.tier-preferred {
+  --tier: var(--tier-pref);
+}
+button.loc.tier-exit {
+  --tier: var(--tier-exit);
+}
+/* the tier mark is its own box, so the selection ring and forced colours leave it alone */
+button.loc.tier-extra-legroom::before,
+button.loc.tier-elr::before,
+button.loc.tier-preferred::before,
+button.loc.tier-exit::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--tier);
+  pointer-events: none;
+}
+button.loc.recorded {
+  background: var(--status-recorded-bg);
+  border-color: var(--success);
+  color: var(--status-recorded-text);
+}
+button.loc.unresolved {
+  background: var(--status-unresolved-bg);
+  border-color: var(--danger);
+  color: var(--status-unresolved-text);
+  border-style: dashed;
+}
+button.loc.partial {
+  border-color: var(--danger);
+  border-style: dashed;
+}
+/* selection is drawn inside the button, so the focus outline stays visible on a selected seat;
+   the ink ring gives the 3:1 contrast, the select band inside it matches the 3D selection colour */
+button.loc.selected {
+  border-color: var(--text-strong);
+  box-shadow: var(--shadow-select);
+}
+/* on a selected seat the tier bar sits inside the selection rings, not over them */
+button.loc.selected::before {
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+}
+button.loc.alternate {
+  border-color: var(--accent);
+}
+/* the status glyph is decorative: the state is in each button's accessible name */
+button.loc .status-glyph {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.loc-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.loc-list button.loc {
+  padding: 0.3rem var(--space-5);
+  text-align: left;
+}
+.bin-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-5);
+}
+
+@media (max-width: 720px) {
+  .cabin-map {
+    grid-template-columns: 1fr;
+  }
+  .cabin-map section:first-of-type {
+    grid-row: auto;
+  }
+  .seat-grid {
+    max-height: 55vh;
+  }
+  button.loc,
+  .cell.empty {
+    min-height: 2.75rem;
+  }
+}
+
+@media (forced-colors: active) {
+  button.loc::before {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+  button.loc.selected {
+    outline: 3px solid Highlight;
+    outline-offset: 1px;
+  }
+  /* selected and focused at once: a double ring, distinct from either alone */
+  button.loc.selected:focus-visible {
+    outline: 6px double Highlight;
+    outline-offset: 2px;
+  }
+}

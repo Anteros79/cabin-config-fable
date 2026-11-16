@@ -1,7 +1,7 @@
 import { Component, type ReactNode, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
-import "./styles.css";
+import "./styles/index.css";
 
 /** Last resort above the whole app: a plain message and a way back, never a blank page. */
 class RootErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {

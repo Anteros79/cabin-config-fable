@@ -1,0 +1,120 @@
+/*
+ * Design tokens (WEB-16). Every colour the stylesheets use is named here, and only here and in print.css may a colour
+ * be written as a literal (tests/web/tokens.test.ts). Spacing, radii, type families, the selection shadow and durations
+ * live here too.
+ */
+:root {
+  /* surfaces, from the page up */
+  --surface-0: #f3f4f7;
+  --surface-1: #ffffff;
+  --surface-2: #e8ecf5;
+  --surface-hover: #eef1f7;
+  --surface-muted: #f2f3f7;
+  --surface-control: #f7f8fb;
+
+  /* text */
+  --text-strong: #141a2e;
+  --text-body: #141a2e;
+  --text-muted: #545b70;
+
+  /* borders */
+  --border-subtle: #cfd4df;
+  --border-strong: #8791a8;
+  --border-head: #aab3c7;
+  --border-seat: #9aa3b8;
+  --border-empty: #c8cdd9;
+
+  /* accent, focus and selection */
+  --accent: #1b2d6b;
+  --accent-hover: #24398a;
+  --accent-contrast: #ffffff;
+  --focus: #0b57d0;
+  --select: #ffc531;
+
+  /* the header */
+  --header-bg: #1b2d6b;
+  --header-text: #ffffff;
+  --header-focus: #ffffff;
+  --header-current-bg: #ffffff;
+  --header-current-text: #1b2d6b;
+  --badge-bg: #ffe9a8;
+  --badge-text: #3d2a00;
+
+  /* outcomes */
+  --success: #17693c;
+  --success-bg: #e3f4ea;
+  --success-border: #a9d8ba;
+  --success-text: #0d3f23;
+  --warning: #7a4d00;
+  --warning-bg: #fff3d1;
+  --warning-border: #e6c877;
+  --warning-text: #4a3200;
+  --danger: #a3201a;
+  --danger-bg: #fde7e5;
+  --danger-border: #e3a5a0;
+  --danger-text: #5c120e;
+  --danger-contrast: #ffffff;
+  --info-bg: #f7f3ff;
+  --info-border: #c9b8f5;
+  --info-text: #3b2a80;
+
+  /* location status: the 3D badges and tints, the map key and the legends (STATUS_ENCODING); the same in every theme */
+  --status-recorded: #2fe08a;
+  --status-unresolved: #ff5757;
+  --status-alternate: #5b8cff;
+  --status-glyph: #141a2e;
+  --status-recorded-bg: var(--success-bg);
+  --status-recorded-text: var(--success-text);
+  --status-unresolved-bg: var(--danger-bg);
+  --status-unresolved-text: var(--danger-text);
+  --status-alternate-bg: var(--info-bg);
+  --status-alternate-border: var(--info-border);
+  --status-alternate-text: var(--info-text);
+
+  /* seat tiers: the 3D tints and the legend swatches (TIER_COLOUR); the same in every theme */
+  --tier-elr: #19c8b4;
+  --tier-pref: #b08cff;
+  --tier-exit: #ff9550;
+
+  /* the 3D view and what is drawn over it */
+  --scene-bg: #eef0f4;
+  --scene-outline: #ffffff;
+  --legend-bg: rgba(255, 255, 255, 0.9);
+  --overlay-bg: rgba(20, 26, 46, 0.82);
+  --overlay-text: #ffffff;
+  --hint-bg: #141a2e;
+  --hint-text: #ffffff;
+  --backdrop: rgba(20, 26, 46, 0.45);
+  --swatch-border: rgba(0, 0, 0, 0.35);
+  --empty-cell-a: #f4f5f8;
+  --empty-cell-b: #eceef3;
+
+  /* space steps */
+  --space-1: 0.15rem;
+  --space-2: 0.25rem;
+  --space-3: 0.35rem;
+  --space-4: 0.5rem;
+  --space-5: 0.6rem;
+  --space-6: 0.8rem;
+  --space-7: 1rem;
+  --space-8: 1.5rem;
+
+  /* radii */
+  --radius-1: 2px;
+  --radius-2: 6px;
+  --radius-3: 999px;
+
+  /* type */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-size-small: 0.85rem;
+  --font-size-fine: 0.84rem;
+  --line-height: 1.45;
+
+  /* the selected seat: an ink ring for the 3:1 contrast, the select colour inside it as in the 3D view */
+  --shadow-select: inset 0 0 0 2px var(--text-strong), inset 0 0 0 5px var(--select);
+
+  /* durations */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+}

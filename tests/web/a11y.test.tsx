@@ -1,10 +1,9 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../src/web/App.tsx";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
 import { CUSHION_3A, fixtureRelease, snapshotFor, visitWith } from "../helpers.ts";
+import { allCss, blocks, lightTokens, styleFiles } from "./css.ts";
 import { type Answer, deferred, stubFetch } from "./fetchStub.ts";
 
 // jsdom has no WebGL: the scene is a stand-in whose every method does nothing (or fails, when a test asks). The 3D component,
@@ -280,26 +279,31 @@ describe("focus and announcements", () => {
 });
 
 describe("styles", () => {
-  const css = readFileSync(join(process.cwd(), "src/web/styles.css"), "utf8");
-  /** The declarations of every rule whose selector list is exactly `selector`, outside the forced-colours block. */
+  const css = allCss();
+  /** The declarations of every rule whose selector list is exactly `selector`. */
   const rulesFor = (source: string, selector: string): string[] => {
     const out: string[] = [];
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     for (const m of source.matchAll(new RegExp(`(^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`, "g"))) out.push(m[2] ?? "");
     return out;
   };
-  const forcedStart = css.indexOf("@media (forced-colors: active)");
-  const forcedEnd = css.indexOf("\n}\n", forcedStart);
-  const outsideForced = css.slice(0, forcedStart) + css.slice(forcedEnd + 3);
-  const forced = css.slice(forcedStart, forcedEnd);
+  // each file keeps the forced-colours rules for its own parts
+  const forced = blocks(css, "@media (forced-colors: active)").join("\n");
+  const outsideForced = styleFiles()
+    .map((f) => {
+      const at = f.css.indexOf("@media (forced-colors: active)");
+      return at < 0 ? f.css : f.css.slice(0, at);
+    })
+    .join("\n");
 
-  it("styles: header focus ring is white; selection does not use outline", () => {
-    expect(rulesFor(css, ".app-header :focus-visible").join("")).toMatch(/outline-color:\s*#fff;/);
+  it("styles: header focus ring uses the header focus token; selection does not use outline", () => {
+    expect(rulesFor(css, ".app-header :focus-visible").join("")).toMatch(/outline-color:\s*var\(--header-focus\);/);
     const selected = rulesFor(outsideForced, "button.loc.selected");
     expect(selected).toHaveLength(1);
     expect(selected[0]).not.toMatch(/outline/);
-    // an ink ring carries the 3:1 contrast; the yellow band matches the 3D selection colour
-    expect(selected[0]).toMatch(/box-shadow:\s*inset 0 0 0 2px var\(--ink\),\s*inset 0 0 0 5px var\(--select\);/);
+    // an ink ring carries the 3:1 contrast; the select band inside it matches the 3D selection colour
+    expect(selected[0]).toMatch(/box-shadow:\s*var\(--shadow-select\);/);
+    expect(lightTokens().get("--shadow-select")).toMatch(/^inset 0 0 0 2px var\(--text-strong\), inset 0 0 0 5px var\(--select\)$/);
     expect(rulesFor(css, "button.loc.selected::before").join("")).toMatch(/bottom:\s*5px;/);
     expect(rulesFor(css, ".canvas-wrap canvas:focus-visible").join("")).toMatch(/outline-offset:\s*-3px;/);
   });
@@ -312,9 +316,13 @@ describe("styles", () => {
   });
 
   it("styles: forced colours mark the current tab, nav item and selected seat, and keep swatches", () => {
-    expect(forcedStart).toBeGreaterThan(-1);
-    expect(forced).toMatch(/\[aria-selected="true"\],\s*\.app-header nav a\[aria-current="page"\]\s*\{\s*border-bottom: 3px solid Highlight;/);
-    expect(forced).toMatch(/\.swatch,\s*button\.loc::before\s*\{\s*forced-color-adjust: none;\s*border: 1px solid CanvasText;/);
+    expect(forced).not.toBe("");
+    for (const selector of ['.tabs [role="tab"][aria-selected="true"]', '.app-header nav a[aria-current="page"]']) {
+      expect(rulesFor(forced, selector).join(""), selector).toMatch(/border-bottom: 3px solid Highlight;/);
+    }
+    for (const selector of [".swatch", "button.loc::before"]) {
+      expect(rulesFor(forced, selector).join(""), selector).toMatch(/forced-color-adjust: none;\s*border: 1px solid CanvasText;/);
+    }
     expect(rulesFor(forced, "button.loc.selected").join("")).toMatch(/outline: 3px solid Highlight;/);
   });
 });

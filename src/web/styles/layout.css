@@ -1,0 +1,152 @@
+/* Layout: the header, banners, main and footer, and the visit workspace grid with its boxes. */
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  padding: 0.55rem var(--space-7);
+  background: var(--header-bg);
+  color: var(--header-text);
+}
+/* the page's focus colour is about 2:1 on the header */
+.app-header :focus-visible {
+  outline-color: var(--header-focus);
+}
+.brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem var(--space-6);
+}
+.brand h1 {
+  margin: 0;
+}
+.demo-badge {
+  margin: 0;
+  font-size: 0.82rem;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  padding: 0.1rem var(--space-4);
+  border-radius: var(--radius-3);
+  font-weight: 600;
+}
+.app-header nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.app-header nav a {
+  display: block;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-2);
+  color: var(--header-text);
+  text-decoration: none;
+  font-weight: 600;
+}
+.app-header nav a[aria-current="page"] {
+  background: var(--header-current-bg);
+  color: var(--header-current-text);
+}
+.app-header nav a:hover {
+  text-decoration: underline;
+}
+.system-banner {
+  margin: 0;
+  padding: var(--space-5) var(--space-7);
+  font-weight: 600;
+}
+.system-banner.bad {
+  background: var(--danger);
+  color: var(--danger-contrast);
+}
+.system-banner.warn {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+main {
+  padding: var(--space-6) var(--space-7) 2rem;
+  max-width: 1720px;
+  margin: 0 auto;
+}
+main:focus {
+  outline: none;
+}
+.app-footer {
+  padding: var(--space-6) var(--space-7) var(--space-8);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
+/* the visit workspace: the viewer beside a column of side boxes */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 27rem);
+  gap: var(--space-6);
+  align-items: start;
+}
+.viewer,
+.side > * {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2);
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.side > * {
+  padding: 0.7rem 0.85rem;
+}
+.viewer {
+  min-width: 0;
+}
+.panel.config {
+  padding: 0.45rem var(--space-7);
+}
+.panel.config dl.facts {
+  margin: 0;
+  columns: 10rem 7;
+}
+.visit-head {
+  padding: var(--space-5) var(--space-7);
+}
+.head-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem var(--space-8);
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.head-main {
+  flex: 1 1 26rem;
+  min-width: 0;
+}
+.head-row .actions {
+  margin-top: 0;
+}
+
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 720px) {
+  main {
+    padding: var(--space-4) var(--space-4) 2rem;
+  }
+  .panel {
+    padding: 0.7rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .app-header nav a[aria-current="page"] {
+    border-bottom: 3px solid Highlight;
+  }
+}

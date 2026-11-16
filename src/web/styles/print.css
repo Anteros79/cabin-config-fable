@@ -1,0 +1,48 @@
+/* Print: paper layout. Colour literals are allowed here (with tokens.css) for the table head and page. */
+@media print {
+  :root {
+    font-size: 10.5pt;
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0;
+    max-width: none;
+  }
+  .panel,
+  .report {
+    border: 0;
+    padding: 0;
+  }
+  .table-scroll {
+    overflow: visible;
+  }
+  thead {
+    display: table-header-group;
+  }
+  thead th {
+    background: #e8ecf5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  tr {
+    break-inside: avoid;
+  }
+  h3 {
+    break-after: avoid;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .authority,
+  .advisory {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    margin: 14mm 12mm;
+  }
+}

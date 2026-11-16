@@ -1,0 +1,299 @@
+/* Base: the page, type, focus, and the building blocks every view uses (panels, pills, notices, facts, tables). */
+:root {
+  font-family: var(--font-body);
+  line-height: var(--line-height);
+  color: var(--text-body);
+  background: var(--surface-0);
+}
+
+/* 15px at the browser default of 16px; a larger setting scales everything */
+html {
+  font-size: 93.75%;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+h1,
+h2,
+h3,
+h4,
+h5 {
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+h1 {
+  font-size: 1.25rem;
+}
+h2 {
+  font-size: 1.3rem;
+}
+h3 {
+  font-size: 1.05rem;
+  margin-top: 0.9rem;
+}
+h4 {
+  font-size: 0.98rem;
+}
+h5 {
+  font-size: 0.9rem;
+  margin-top: 0.7rem;
+}
+p {
+  margin: 0.35rem 0;
+}
+a {
+  color: var(--accent);
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skip {
+  position: absolute;
+  left: var(--space-4);
+  top: -4rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-2);
+  z-index: 50;
+}
+.skip:focus {
+  top: var(--space-4);
+}
+/* outweighs the general button hover, so the link keeps its colours */
+button.skip:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.boot-note {
+  padding: 2rem;
+}
+
+/* building blocks */
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2);
+  padding: var(--space-6) var(--space-7);
+  margin-bottom: var(--space-6);
+}
+.fine {
+  font-size: var(--font-size-fine);
+  color: var(--text-muted);
+}
+.mono,
+.partno,
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.mono {
+  overflow-wrap: anywhere;
+}
+.partno {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.code {
+  color: var(--text-muted);
+  font-size: 0.78em;
+}
+.count {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.pill {
+  display: inline-block;
+  padding: 0.05rem var(--space-4);
+  border-radius: var(--radius-3);
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid currentColor;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+.pill.recorded,
+.pill.ok {
+  color: var(--success);
+  background: var(--success-bg);
+}
+.pill.unresolved {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.pill.draft,
+.pill.candidate {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+.alert,
+.notice,
+.advisory,
+.status-card,
+.save-banner,
+.confirm {
+  border-radius: var(--radius-2);
+  padding: 0.55rem 0.75rem;
+  margin: var(--space-4) 0;
+  border: 1px solid;
+}
+.alert,
+.status-card.bad,
+.save-banner.error,
+.save-banner.unknown,
+.save-banner.conflict {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+.notice {
+  background: var(--surface-muted);
+  border-color: var(--border-subtle);
+}
+.notice ul {
+  margin: 0.2rem 0;
+  padding-left: 1.1rem;
+}
+.advisory,
+.status-card.warn,
+.confirm {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+dialog.confirm {
+  max-width: min(34rem, calc(100vw - 2rem));
+  padding: 0.9rem 1.1rem;
+}
+dialog.confirm::backdrop {
+  background: var(--backdrop);
+}
+dialog.confirm h2 {
+  font-size: 1.1rem;
+}
+.advisory-inline {
+  color: var(--warning);
+  font-weight: 600;
+}
+.status-card.ok,
+.save-banner.saved {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+.save-banner.saving {
+  background: var(--surface-hover);
+  border-color: var(--border-subtle);
+}
+.status-card h3 {
+  margin-top: 0;
+}
+.authority {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  color: var(--warning-text);
+  padding: var(--space-4) 0.7rem;
+  border-radius: var(--radius-2);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+dl.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-6);
+  margin: 0.4rem 0;
+}
+dl.facts dt {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+dl.facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+dl.facts.wide {
+  display: block;
+  columns: 12rem 6;
+  column-gap: var(--space-8);
+}
+dl.facts.wide dt {
+  break-after: avoid;
+  margin-top: 0.2rem;
+}
+dl.facts.wide dd {
+  break-before: avoid;
+  break-inside: avoid;
+  margin-bottom: var(--space-1);
+}
+dl.facts.wide .pair {
+  display: block;
+  break-inside: avoid;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+thead th {
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--border-head);
+}
+tbody th {
+  font-weight: 600;
+}
+td.num,
+th.num {
+  text-align: right;
+}
+table.compact {
+  margin-top: 0.4rem;
+}
+caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.2rem;
+}
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+ul.plain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 720px) {
+  html {
+    font-size: 96.875%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

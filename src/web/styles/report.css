@@ -1,0 +1,30 @@
+/* Report: the report sheet, its actions and section headings. */
+.report {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2);
+  padding: var(--space-7) 1.2rem;
+}
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.report-kind {
+  font-weight: 700;
+}
+.report-kind.final {
+  color: var(--success);
+}
+.report-kind.draft {
+  color: var(--warning);
+}
+.report section {
+  margin-top: var(--space-7);
+}
+.report h3 {
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: var(--space-1);
+  color: var(--accent);
+}
