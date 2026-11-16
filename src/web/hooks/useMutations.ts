@@ -1,11 +1,11 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError, newKey } from "../api.ts";
 
 export type SaveStatus =
   | { phase: "idle" }
   | { phase: "saving" }
   | { phase: "saved"; at: string; replayed: boolean }
-  | { phase: "failed"; message: string } // server answered: not saved
+  | { phase: "failed"; message: string; retryable: boolean } // server answered: not saved; retryable when the refusal was a 5xx
   | { phase: "unknown"; message: string } // no answer: may or may not be saved
   | { phase: "conflict"; message: string; current: unknown };
 
@@ -16,7 +16,7 @@ export interface Mutations<R> {
   /** True while any target's last write has an unknown outcome (PF-18: the leave-page guard needs it). */
   anyUnknown: boolean;
   run(target: string, send: (idempotencyKey: string) => Promise<R>, fingerprint: string): Promise<R | undefined>;
-  /** Re-sends the last write of a target with its key. Valid after an unknown outcome or a refusal; otherwise ignored. */
+  /** Re-sends the last write of a target with its key. Valid when `canRetry(statusOf(target))`; otherwise ignored. */
   retry(target: string): Promise<R | undefined>;
   dismiss(target: string): void;
 }
@@ -37,11 +37,19 @@ export const recordTarget = (locationId: string, componentId: string): string =>
 
 function outcomeOf(error: unknown): SaveStatus {
   if (error instanceof ApiError && error.kind === "http") {
-    return CONFLICT_CODES.has(error.code) ? { phase: "conflict", message: error.message, current: error.details } : { phase: "failed", message: error.message };
+    return CONFLICT_CODES.has(error.code)
+      ? { phase: "conflict", message: error.message, current: error.details }
+      : { phase: "failed", message: error.message, retryable: error.status >= 500 };
   }
   // No answer, a cancelled request, or anything else: the write may have reached the server.
   return { phase: "unknown", message: UNKNOWN_OUTCOME };
 }
+
+/**
+ * Whether "Retry safely" applies: after an unknown outcome (same key, so it is stored at most once), or after a
+ * server-side failure (5xx: nothing was stored, so the same key is free). A 4xx refusal would only fail again.
+ */
+export const canRetry = (status: SaveStatus): boolean => status.phase === "unknown" || (status.phase === "failed" && status.retryable);
 
 const isReplay = (result: unknown): boolean => typeof result === "object" && result !== null && (result as { replayed?: unknown }).replayed === true;
 
@@ -79,6 +87,14 @@ export function useMutations<R>(onResult: (result: R) => void): Mutations<R> {
     onResultRef.current = onResult;
   });
   const [, setRevision] = useState(0);
+  // An answer that arrives after the view is gone must not navigate or set state on its behalf.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const put = useCallback((target: string, entry: Entry<R>) => {
     entries.current.set(target, entry);
@@ -97,11 +113,17 @@ export function useMutations<R>(onResult: (result: R) => void): Mutations<R> {
           return undefined;
         }
         put(target, { status: { phase: "saved", at: new Date().toISOString(), replayed: isReplay(result) }, key, fingerprint, send });
-        onResultRef.current(result);
+        if (mounted.current) {
+          try {
+            onResultRef.current(result);
+          } catch (e) {
+            // The write is saved; a fault in applying its answer is reported, not turned into a rejected run().
+            console.error(e);
+          }
+        }
         return result;
       });
-      // A throwing onResult must not stall the writes queued behind this one.
-      queue.current = job.catch(() => undefined);
+      queue.current = job;
       return job;
     },
     [put],
@@ -120,8 +142,7 @@ export function useMutations<R>(onResult: (result: R) => void): Mutations<R> {
   const retry = useCallback(
     (target: string): Promise<R | undefined> => {
       const current = entries.current.get(target);
-      // After a refusal nothing was stored under the key, so re-sending it is as safe as after an unknown outcome.
-      if (!current || (current.status.phase !== "unknown" && current.status.phase !== "failed")) return Promise.resolve(undefined);
+      if (!current || !canRetry(current.status)) return Promise.resolve(undefined);
       return enqueue(target, current.key, current.fingerprint, current.send);
     },
     [enqueue],

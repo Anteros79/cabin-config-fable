@@ -4,7 +4,7 @@ import type { LookupResult, RecordInput, Visit, VisitRecord, VisualProfile } fro
 import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
 import { Inspector } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
-import { describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
+import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
 import type { Workspace } from "../model.ts";
 
 interface Props {
@@ -91,7 +91,8 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
     setVisitError(null);
     try {
       const res = await api.visit(id);
-      setVisit(res.visit);
+      // A write answer that arrived while this read was in flight may already be newer; keep the newer copy.
+      setVisit((cur) => (cur && cur.id === res.visit.id && cur.version > res.visit.version ? cur : res.visit));
       setReferenceChanged(res.referenceNow?.changedSinceVisit ?? false);
       if (res.visit.status === "DRAFT") remember(id);
     } catch (e) {
@@ -111,20 +112,19 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
     navigate(`#/visit/${res.visit.id}`);
   });
   // Answers apply in call order; one older than the copy on screen (another tab wrote since) is not applied.
-  const writes = useMutations<WriteResult>((res) =>
-    setVisit((cur) => (cur && cur.id === res.visit.id && res.visit.version >= cur.version ? { ...res.visit, snapshot: cur.snapshot } : cur)),
-  );
-
-  useEffect(() => {
-    setConfirming(false);
-    if (visitId) {
-      // Keep an already loaded copy of the same visit on screen while refreshing it.
-      setVisit((v) => (v && v.id === visitId ? v : null));
-      void loadVisit(visitId);
-    } else {
-      setVisit(null);
-      setVisitError(null);
+  // A replayed answer may be the response stored when the write first ran, older than the visit is now, so the
+  // visit is read again instead of trusting it.
+  const writes = useMutations<WriteResult>((res) => {
+    if (res.replayed) {
+      if (visitId) void loadVisit(visitId);
+      return;
     }
+    setVisit((cur) => (cur && cur.id === res.visit.id && res.visit.version >= cur.version ? { ...res.visit, snapshot: cur.snapshot } : cur));
+  });
+
+  // App keys this view by visit, so visitId is fixed for the life of the component.
+  useEffect(() => {
+    if (visitId) void loadVisit(visitId);
   }, [visitId, loadVisit]);
 
   const workspace: Workspace | null = useMemo(() => {
@@ -404,7 +404,7 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
           role={bannerStatus.phase === "saving" || bannerStatus.phase === "saved" ? "status" : "alert"}
         >
           <p>{bannerText(bannerTarget, bannerStatus)}</p>
-          {(bannerStatus.phase === "unknown" || bannerStatus.phase === "failed") && (
+          {canRetry(bannerStatus) && (
             <button type="button" onClick={() => (visitId ? void retry("complete") : void creation.retry("create"))}>
               Retry safely
             </button>
@@ -512,8 +512,13 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                         {visit.checkDate}. Completed visits cannot be edited.
                         {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
                       </p>
+                      {writes.anyBusy && <p className="fine">Waiting for saves in progress to finish before completing.</p>}
+                      {!writes.anyBusy && writes.anyUnknown && (
+                        <p className="fine">A save has an unknown outcome. Retry it safely before completing, so the report includes it.</p>
+                      )}
                       <div className="actions">
-                        <button type="button" className="primary" onClick={() => void complete()} disabled={writes.isBusy("complete")}>
+                        {/* the expected visit version is taken at the click: a queued or unresolved save would make it stale */}
+                        <button type="button" className="primary" onClick={() => void complete()} disabled={writes.anyBusy || writes.anyUnknown}>
                           Confirm completion
                         </button>
                         <button type="button" onClick={() => setConfirming(false)}>

@@ -119,25 +119,41 @@ describe("CheckView writes", () => {
     expect(sent.filter((s) => s.method === "POST")).toHaveLength(1);
   });
 
+  it("Confirm completion waits while a record save is in flight or has an unknown outcome", async () => {
+    const answer = deferred<"reject">();
+    stubFetch((method): Answer => (method === "GET" ? { body: { visit: base } } : answer.promise));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Complete visit…" }));
+    const confirm = screen.getByRole("button", { name: "Confirm completion" });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: removeLabel(cushion) }));
+    expect(confirm).toBeDisabled();
+    answer.resolve("reject");
+    await screen.findByText(/A save has an unknown outcome/);
+    expect(confirm).toBeDisabled();
+  });
+
   it("two tabs: the tab whose answer was lost retries with the same key and the other tab's save survives", async () => {
-    // A tiny stand-in for the server: removals, versions and idempotency keys, as the real store treats them.
+    // A tiny stand-in for the server: removals, versions and idempotency keys. A replay answers with the response
+    // stored for the key, which may be older than the visit is now (the strictest behaviour a store may have).
     let server: VisitState = stateOf(base, {});
-    const seen = new Map<string, string>();
+    const seen = new Map<string, { scope: string; response: VisitState }>();
     let dropNextAnswer = true;
     const sent = stubFetch((method, _url, body): Answer => {
       if (method === "GET") return { body: { visit: { ...server, snapshot: snap } } };
       const key = String(body?.idempotencyKey);
       const scope = `${body?.locationId}|${body?.componentId}|${body?.expectedRecordVersion}`;
-      if (seen.has(key)) {
-        if (seen.get(key) !== scope) return { status: 422, body: { error: { code: "IDEMPOTENCY_KEY_REUSED", message: "reused", details: null } } };
-        return { body: { visit: server, replayed: true } };
+      const prior = seen.get(key);
+      if (prior) {
+        if (prior.scope !== scope) return { status: 422, body: { error: { code: "IDEMPOTENCY_KEY_REUSED", message: "reused", details: null } } };
+        return { body: { visit: prior.response, replayed: true } };
       }
-      seen.set(key, scope);
       server = {
         ...server,
         version: server.version + 1,
         records: server.records.filter((r) => !(r.locationId === body?.locationId && r.componentId === body?.componentId)),
       };
+      seen.set(key, { scope, response: server });
       if (dropNextAnswer) {
         // Committed on the server, but the answer never reaches the tab.
         dropNextAnswer = false;
@@ -161,12 +177,13 @@ describe("CheckView writes", () => {
     await waitFor(() => expect(within(tabB).queryByRole("button", { name: removeLabel(kit) })).toBeNull());
     const afterB = server.version;
 
-    // Tab A retries safely: same key, so the server replays instead of applying the removal again.
+    // Tab A retries safely: same key, so the server replays instead of applying the removal again. The replayed
+    // answer predates tab B's removal, so tab A must not show it as current; it reloads and shows what is stored.
     fireEvent.click(within(cardA).getByRole("button", { name: "Retry safely" }));
     await within(tabA).findByText(/nothing was duplicated/);
     expect(server.version).toBe(afterB);
     expect(server.records).toEqual([]);
-    expect(workCount(tabA)).toContain("(0)");
+    await waitFor(() => expect(workCount(tabA)).toContain("(0)"));
     expect(workCount(tabB)).toContain("(0)");
 
     const removals = sent.filter((s) => s.method === "POST");

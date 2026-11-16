@@ -211,7 +211,7 @@ export const api = {
   removeRecord: (id: string, locationId: string, componentId: string, expectedRecordVersion: number, idempotencyKey: string, o?: RequestOptions) =>
     request<VisitStateEnvelope>("POST", visitUrl(id, "/records/remove"), { locationId, componentId, expectedRecordVersion, idempotencyKey }, o),
   complete: (id: string, expectedVisitVersion: number, idempotencyKey: string, o?: RequestOptions) =>
-    request<{ visit: VisitState; report: Report; alreadyCompleted: boolean }>(
+    request<{ visit: VisitState; report: Report; alreadyCompleted: boolean; replayed?: boolean }>(
       "POST",
       visitUrl(id, "/complete"),
       { confirm: true, expectedVisitVersion, idempotencyKey },

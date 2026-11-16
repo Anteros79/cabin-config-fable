@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../src/web/api.ts";
-import { type Mutations, useMutations } from "../../src/web/hooks/useMutations.ts";
+import { canRetry, type Mutations, useMutations } from "../../src/web/hooks/useMutations.ts";
 
 /** A promise the test settles by hand, so no network and no timers are involved. */
 function deferred<T>() {
@@ -17,11 +17,16 @@ function deferred<T>() {
 const lost = () => new ApiError("network", 0, "NETWORK", "The server could not be reached.");
 const refused = (code: string, status = 409, details: unknown = null) => new ApiError("http", status, code, `${code} message`, details);
 
-function setup<R = string>() {
+function setup<R = string>(onResult?: (r: R) => void) {
   const results: R[] = [];
-  const hook = renderHook(() => useMutations<R>((r) => results.push(r)));
+  const hook = renderHook(() =>
+    useMutations<R>((r) => {
+      results.push(r);
+      onResult?.(r);
+    }),
+  );
   const m = (): Mutations<R> => hook.result.current;
-  return { results, m };
+  return { results, m, unmount: hook.unmount };
 }
 
 describe("useMutations", () => {
@@ -162,7 +167,7 @@ describe("useMutations", () => {
       const b = m().run("B", () => Promise.resolve("B"), "b");
       await Promise.all([a, b]);
     });
-    expect(m().statusOf("A")).toEqual({ phase: "failed", message: "STORAGE_UNAVAILABLE message" });
+    expect(m().statusOf("A")).toEqual({ phase: "failed", message: "STORAGE_UNAVAILABLE message", retryable: true });
     expect(results).toEqual(["B"]);
   });
 
@@ -181,6 +186,58 @@ describe("useMutations", () => {
     });
     const status = m().statusOf("A");
     expect(status.phase === "saved" && status.replayed).toBe(true);
+  });
+
+  it("a 4xx refusal offers no retry; a 5xx refusal does, with the same key", async () => {
+    const { m } = setup();
+    const keys: string[] = [];
+    const refuse = (error: ApiError) => (k: string) => {
+      keys.push(k);
+      return Promise.reject(error);
+    };
+    await act(async () => {
+      await m().run("bad", refuse(refused("VALIDATION", 400)), "b");
+      await m().run("down", refuse(refused("STORAGE_UNAVAILABLE", 503)), "d");
+    });
+    expect(canRetry(m().statusOf("bad"))).toBe(false);
+    expect(canRetry(m().statusOf("down"))).toBe(true);
+    await act(async () => {
+      expect(await m().retry("bad")).toBeUndefined();
+      await m().retry("down");
+    });
+    expect(keys).toHaveLength(3);
+    expect(keys[2]).toBe(keys[1]);
+  });
+
+  it("an onResult that throws neither rejects run nor stalls the queue", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { m, results } = setup((r) => {
+      if (r === "first") throw new Error("apply failed");
+    });
+    let first: string | undefined;
+    await act(async () => {
+      const a = m().run("A", () => Promise.resolve("first"), "a");
+      const b = m().run("B", () => Promise.resolve("second"), "b");
+      first = await a;
+      await b;
+    });
+    expect(first).toBe("first");
+    expect(results).toEqual(["first", "second"]);
+    expect(error).toHaveBeenCalledTimes(1);
+    error.mockRestore();
+  });
+
+  it("an answer that arrives after unmount is not applied", async () => {
+    const { m, results, unmount } = setup();
+    const answer = deferred<string>();
+    let pending: Promise<string | undefined> | undefined;
+    act(() => {
+      pending = m().run("A", () => answer.promise, "a");
+    });
+    unmount();
+    answer.resolve("late");
+    expect(await pending).toBe("late");
+    expect(results).toEqual([]);
   });
 
   it("retry is ignored unless the last outcome was unknown or refused", async () => {

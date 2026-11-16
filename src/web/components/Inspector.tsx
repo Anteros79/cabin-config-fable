@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { excludedOf, rulesNotUsedLine } from "../../domain/report.ts";
 import type { CabinLocation, RecordInput, SourceArtifact, VisitRecord } from "../../domain/types.ts";
-import { describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
+import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
 
 interface Props {
@@ -234,7 +234,7 @@ function ComponentCard({
               <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
                 {message || (record ? `Saved. Record version ${record.version}, last changed ${record.updatedAt}.` : "")}
               </p>
-              {(status.phase === "unknown" || status.phase === "failed") && (
+              {canRetry(status) && (
                 <button type="button" onClick={() => onRetry(target)}>
                   Retry safely
                 </button>

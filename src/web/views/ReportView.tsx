@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
 import { rulesNotUsedLine } from "../../domain/report.ts";
 import { ApiError, api, type ReportEnvelope } from "../api.ts";
-import { describeSaveStatus, useMutations } from "../hooks/useMutations.ts";
+import { canRetry, describeSaveStatus, useMutations } from "../hooks/useMutations.ts";
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
@@ -377,7 +377,7 @@ export function ReportView({ visitId }: { visitId: string }) {
           <span role="status" className="fine">
             {noteState}
           </span>
-          {(noteStatus.phase === "unknown" || noteStatus.phase === "failed") && (
+          {canRetry(noteStatus) && (
             <button type="button" onClick={() => void notes.retry("note")}>
               Retry safely
             </button>
