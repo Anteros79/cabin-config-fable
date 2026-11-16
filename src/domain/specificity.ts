@@ -1,3 +1,4 @@
+import { buildKitIndex, type KitIndex } from "./kits.ts";
 import type {
   Aircraft,
   AircraftSubtype,
@@ -5,7 +6,6 @@ import type {
   CabinLocation,
   ComponentDef,
   ContextConstraint,
-  KitChild,
   Layout,
   LayoutRevision,
   LocationSelector,
@@ -65,7 +65,8 @@ export interface ReleaseIndex {
   components: Map<string, ComponentDef>;
   parts: Map<string, Part>;
   assignmentsByTail: Map<string, TailAssignment[]>;
-  kitChildrenByParent: Map<string, KitChild[]>;
+  /** Kit expansion, memoised per part; shared by lookup, kit-source checks and validation. */
+  kits: KitIndex;
   pendingByRule: Map<string, PendingChange[]>;
   rulesByComponent: Map<string, ApplicabilityRule[]>;
   ruleMatch: Map<string, MatchSet>;
@@ -308,6 +309,7 @@ export function buildIndex(release: ReleaseContent): ReleaseIndex {
   for (const sub of release.substitutes) {
     substituteMatch.set(sub.id, buildMatchSet(release, layoutRevisions, sub.constraint, sub.locations, sub.componentId));
   }
+  const parts = toMap(release.parts, (p) => p.partNo);
   const index: ReleaseIndex = {
     release,
     sources: toMap(release.sources, (s) => s.id),
@@ -318,9 +320,9 @@ export function buildIndex(release: ReleaseContent): ReleaseIndex {
     layoutRevisions,
     locations,
     components: toMap(release.components, (c) => c.id),
-    parts: toMap(release.parts, (p) => p.partNo),
+    parts,
     assignmentsByTail: group(release.assignments, (a) => a.tail),
-    kitChildrenByParent: group(release.kitChildren, (k) => k.parentPartNo),
+    kits: buildKitIndex(release.kitChildren, parts),
     pendingByRule: group(release.pendingChanges, (p) => p.ruleId),
     rulesByComponent: group(release.rules, (r) => r.componentId),
     ruleMatch,

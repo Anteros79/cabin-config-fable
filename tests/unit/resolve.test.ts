@@ -142,7 +142,15 @@ describe("inclusive date boundaries", () => {
     const kitNext = entry(next.resolution!.rules, (resolutionAt(next, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId);
     expect(kitNext.partNo).toBe("FAKE-CK-2001"); // the primary stays valid
     expect(kitNext.substitutes).toEqual([]);
-    expect(kitNext.excludedSubstitutes[0]?.reasons.map((r) => r.code).sort()).toEqual(["APPROVAL_EXPIRED", "SOURCE_EXPIRED"]);
+    // the four kit lines cite the same expired source, and kit-source reasons are always listed
+    expect(kitNext.excludedSubstitutes[0]?.reasons.map((r) => r.code).sort()).toEqual([
+      "APPROVAL_EXPIRED",
+      "KIT_SOURCE_INVALID",
+      "KIT_SOURCE_INVALID",
+      "KIT_SOURCE_INVALID",
+      "KIT_SOURCE_INVALID",
+      "SOURCE_EXPIRED",
+    ]);
     // not yet effective the day before the approval starts
     const early = lookup(
       fixtureRelease((c) => (c.assignments.find((a) => a.tail === "N100TL")!.effectiveFrom = "2025-01-01")),

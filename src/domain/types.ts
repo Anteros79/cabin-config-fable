@@ -378,7 +378,9 @@ export interface ExclusionReason {
     | "APPROVAL_NOT_YET_EFFECTIVE"
     | "APPROVAL_EXPIRED"
     /** A mandatory kit child, at any depth below the part, cites a source that is not valid on the date. */
-    | "KIT_SOURCE_INVALID";
+    | "KIT_SOURCE_INVALID"
+    /** The kit below the part cannot be expanded: it is cyclic, nested too deep or its quantities overflow. */
+    | "KIT_INVALID";
   message: string;
 }
 

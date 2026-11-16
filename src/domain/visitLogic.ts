@@ -1,3 +1,4 @@
+import { MAX_DERIVED_QTY } from "./limits.ts";
 import type { FrozenRule, LookupResult, PartLine, RecordInput, ReferenceRelease, VisitSnapshot } from "./types.ts";
 import { DATE_RULE } from "./types.ts";
 
@@ -40,6 +41,19 @@ export function buildSnapshot(release: ReferenceRelease, result: LookupResult, c
     dateRule: DATE_RULE,
     geometryVersion: result.context.layoutRevision.geometry.version,
   });
+}
+
+/** A computed line quantity, refused when it is not a safe integer or exceeds `MAX_DERIVED_QTY` (DOM-05). */
+function lineQty(partNo: string, unit: string, ...factors: number[]): number {
+  const qty = factors.reduce((product, f) => product * f, 1);
+  if (!Number.isSafeInteger(qty) || qty > MAX_DERIVED_QTY) {
+    throw new DomainError("QUANTITY_TOO_LARGE", `The quantity of ${partNo} (${unit}) for this record would exceed ${MAX_DERIVED_QTY}.`, 422, {
+      partNo,
+      unit,
+      max: MAX_DERIVED_QTY,
+    });
+  }
+  return qty;
 }
 
 const RECORD_FIELDS = new Set(["locationId", "componentId", "selection", "substituteId", "quantity", "note", "ruleId", "partNo", "unit"]);
@@ -112,7 +126,7 @@ export function deriveRecord(snapshot: VisitSnapshot, raw: unknown): DerivedReco
     lines.push({
       partNo: rule.partNo,
       description: rule.partDescription,
-      qty: quantity * rule.qtyPerReplacement,
+      qty: lineQty(rule.partNo, rule.unit, quantity, rule.qtyPerReplacement),
       unit: rule.unit,
       role: "PRIMARY",
       parentPartNo: null,
@@ -122,7 +136,7 @@ export function deriveRecord(snapshot: VisitSnapshot, raw: unknown): DerivedReco
       lines.push({
         partNo: child.partNo,
         description: child.description,
-        qty: quantity * rule.qtyPerReplacement * child.qty,
+        qty: lineQty(child.partNo, child.unit, quantity, rule.qtyPerReplacement, child.qty),
         unit: child.unit,
         role: "MANDATORY_CHILD",
         parentPartNo: rule.partNo,
@@ -140,7 +154,7 @@ export function deriveRecord(snapshot: VisitSnapshot, raw: unknown): DerivedReco
     lines.push({
       partNo: sub.altPartNo,
       description: sub.altDescription,
-      qty: quantity * sub.qtyPerReplacement,
+      qty: lineQty(sub.altPartNo, sub.unit, quantity, sub.qtyPerReplacement),
       unit: sub.unit,
       role: "ALTERNATE",
       parentPartNo: null,
@@ -150,7 +164,7 @@ export function deriveRecord(snapshot: VisitSnapshot, raw: unknown): DerivedReco
       lines.push({
         partNo: child.partNo,
         description: child.description,
-        qty: quantity * sub.qtyPerReplacement * child.qty,
+        qty: lineQty(child.partNo, child.unit, quantity, sub.qtyPerReplacement, child.qty),
         unit: child.unit,
         role: "MANDATORY_CHILD",
         parentPartNo: sub.altPartNo,

@@ -399,7 +399,7 @@ export function validateRelease(input: unknown): Finding[] {
     if (!ruleIds.has(p.ruleId)) err("ORPHAN", `Pending change ${p.id} refers to unknown rule ${p.ruleId}.`, [p.id]);
     if (p.sourceId !== null && !sources.has(p.sourceId)) err("ORPHAN", `Pending change ${p.id} cites unknown source ${p.sourceId}.`, [p.id]);
   }
-  findings.push(...validateKits(content.kitChildren, parts, units, sources));
+  findings.push(...validateKits(content.kitChildren, parts, units, sources, index.kits));
   // A kit child citing an unreleased source makes every rule or alternate that needs it ineligible at lookup (D3).
   const sourceById = new Map(content.sources.map((s) => [s.id, s]));
   for (const k of content.kitChildren) {

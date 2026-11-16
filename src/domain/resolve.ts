@@ -1,5 +1,5 @@
 import { isIsoDate, withinInclusive } from "./dates.ts";
-import { expandKit } from "./kits.ts";
+import { KitError } from "./kits.ts";
 import { compareCodePoints } from "./order.ts";
 import { type AssignmentContext, buildIndex, isReleasedPair, matchesContext, type ReleaseIndex, undominated } from "./specificity.ts";
 import type {
@@ -62,31 +62,39 @@ export function substituteExclusions(index: ReleaseIndex, sub: SubstituteApprova
 
 /**
  * Why the mandatory kit below `partNo` cannot be used on this date: one `KIT_SOURCE_INVALID` reason per
- * kit line, at any depth, whose source fails the source check, and the ids of those sources. Each
- * parent is walked once, so shared sub-kits are not repeated and a cyclic definition cannot loop
- * (cycles are reported by `validateKits` and handled by kit expansion).
+ * kit line, at any depth, whose source fails the source check, and the ids of those sources. The lines
+ * come from the release's `KitIndex`, the same lines kit expansion uses; each is visited once, so
+ * shared sub-kits are not repeated and a cyclic definition cannot loop.
  */
 export function kitSourceExclusions(index: ReleaseIndex, partNo: string, date: IsoDate): { reasons: ExclusionReason[]; sourceIds: string[] } {
   const reasons: ExclusionReason[] = [];
   const sourceIds: string[] = [];
-  const walked = new Set<string>();
-  const walk = (parent: string) => {
-    if (walked.has(parent)) return;
-    walked.add(parent);
-    for (const line of index.kitChildrenByParent.get(parent) ?? []) {
-      const problems = sourceExclusions(line.sourceId, index.sources.get(line.sourceId), date);
-      if (problems.length > 0) {
-        reasons.push({
-          code: "KIT_SOURCE_INVALID",
-          message: `Kit child ${line.childPartNo} of ${parent} cites source ${line.sourceId}, which is not valid on ${date}: ${problems.map((p) => p.message).join(" ")}`,
-        });
-        if (!sourceIds.includes(line.sourceId)) sourceIds.push(line.sourceId);
-      }
-      walk(line.childPartNo);
-    }
-  };
-  walk(partNo);
+  for (const line of index.kits.descendantLines(partNo)) {
+    const problems = sourceExclusions(line.sourceId, index.sources.get(line.sourceId), date);
+    if (problems.length === 0) continue;
+    reasons.push({
+      code: "KIT_SOURCE_INVALID",
+      message: `Kit child ${line.childPartNo} of ${line.parentPartNo} cites source ${line.sourceId}, which is not valid on ${date}: ${problems.map((p) => p.message).join(" ")}`,
+    });
+    if (!sourceIds.includes(line.sourceId)) sourceIds.push(line.sourceId);
+  }
   return { reasons, sourceIds };
+}
+
+/**
+ * Everything wrong with the kit below `partNo` on this date: its kit-source reasons, then `KIT_INVALID`
+ * when the kit cannot be expanded (cyclic, too deep, quantities too large). Expansion is memoised in
+ * the index, so freezing the part later reuses this result and cannot throw.
+ */
+function kitExclusions(index: ReleaseIndex, partNo: string, date: IsoDate): { reasons: ExclusionReason[]; sourceIds: string[] } {
+  const kit = kitSourceExclusions(index, partNo, date);
+  try {
+    index.kits.expand(partNo, 1);
+  } catch (e) {
+    if (!(e instanceof KitError)) throw e;
+    kit.reasons.push({ code: "KIT_INVALID", message: `The mandatory kit below ${partNo} cannot be expanded: ${e.message}` });
+  }
+  return kit;
 }
 
 function base(tail: string, checkDate: string, releaseId: string | null) {
@@ -294,15 +302,16 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
   };
 
   // Rules whose context constraints accept this assignment, with their eligibility on the date.
-  // An otherwise eligible rule is excluded when a kit child of its primary part cites an invalid source (D3).
+  // A rule is also excluded when a kit child of its primary part cites an invalid source (D3) or the
+  // kit cannot be expanded (DOM-08); those reasons are always listed, beside any other.
   const inContext = new Map<string, { rule: ApplicabilityRule; locations: Set<string>; exclusions: ExclusionReason[]; kitSourceIds: string[] }[]>();
   for (const rule of index.release.rules) {
     if (!matchesContext(rule.constraint, ctx)) continue;
     const locations = index.ruleMatch.get(rule.id)?.pairs.get(pairKey);
     if (!locations) continue;
-    let exclusions = ruleExclusions(index, rule, date);
-    let kitSourceIds: string[] = [];
-    if (exclusions.length === 0) ({ reasons: exclusions, sourceIds: kitSourceIds } = kitSourceExclusions(index, rule.partNo, date));
+    const kit = kitExclusions(index, rule.partNo, date);
+    const exclusions = [...ruleExclusions(index, rule, date), ...kit.reasons];
+    const kitSourceIds = kit.sourceIds;
     const list = inContext.get(rule.componentId) ?? [];
     list.push({ rule, locations, exclusions, kitSourceIds });
     inContext.set(rule.componentId, list);
@@ -320,18 +329,15 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
       if (!matchesContext(sub.constraint, ctx)) continue;
       const covered = index.substituteMatch.get(sub.id)?.pairs.get(pairKey);
       if (!covered) continue;
-      let exclusions = substituteExclusions(index, sub, date);
-      if (exclusions.length === 0) {
-        const kit = kitSourceExclusions(index, sub.altPartNo, date);
-        exclusions = kit.reasons;
-        for (const id of kit.sourceIds) noteSource(id);
-      }
+      const kit = kitExclusions(index, sub.altPartNo, date);
+      const exclusions = [...substituteExclusions(index, sub, date), ...kit.reasons];
       if (exclusions.length > 0) {
         excludedSubstitutes.push({ id: sub.id, altPartNo: sub.altPartNo, reasons: exclusions });
         noteSource(sub.sourceId);
+        for (const id of kit.sourceIds) noteSource(id);
         continue;
       }
-      const children = expandKit(sub.altPartNo, index.kitChildrenByParent, index.parts);
+      const children = index.kits.expand(sub.altPartNo, 1);
       children.forEach((c) => {
         noteSource(c.sourceId);
       });
@@ -354,7 +360,7 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
     pendingChanges.forEach((p) => {
       noteSource(p.sourceId);
     });
-    const children = expandKit(rule.partNo, index.kitChildrenByParent, index.parts);
+    const children = index.kits.expand(rule.partNo, 1); // cannot throw: a rule with a broken kit is excluded above
     children.forEach((c) => {
       noteSource(c.sourceId);
     });
