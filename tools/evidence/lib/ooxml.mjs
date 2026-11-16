@@ -1,7 +1,11 @@
 // OOXML packages are read strictly as ZIP + XML. Nothing is executed:
 // formulas are reported as text, macros/external links are only detected by presence.
-import { unzipSync, strFromU8 } from 'fflate';
+// Archives are opened through the importer's capped reader (entry and total size limits, OoxmlError).
+// The evidence keeps its own XML parser configuration: it reports prefixed names (w:p, vt:lpstr, r:id),
+// which the importer's parser removes.
+import { strFromU8 } from 'fflate';
 import { XMLParser } from 'fast-xml-parser';
+import { readZipEntries } from '../../../src/importer/readers/ooxml.ts';
 import { decodeXmlEntities } from './common.mjs';
 
 const parser = new XMLParser({
@@ -16,7 +20,7 @@ const parser = new XMLParser({
 });
 
 export function openZip(buf) {
-  const files = unzipSync(new Uint8Array(buf));
+  const files = Object.fromEntries(readZipEntries(new Uint8Array(buf), () => true));
   const entries = Object.keys(files).map((name) => ({ name, size: files[name].length }));
   return {
     entries,

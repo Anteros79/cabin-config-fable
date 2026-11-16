@@ -7,7 +7,7 @@ import type { AircraftSubtype, CabinLocation, Finding, Layout, LayoutCategory, L
 import { checkOriginals, ORIGINAL_FILES, ORIGINALS_MANIFEST_PATH } from "./originals.ts";
 import { parseCsv } from "./readers/csv.ts";
 import { normaliseForQuote, readDocxParagraphs } from "./readers/docx.ts";
-import { readXlsx } from "./readers/xlsx.ts";
+import { columnName, readXlsx } from "./readers/xlsx.ts";
 
 /**
  * Stages the supplied registry as CANDIDATE layouts: explorable, visibly unassigned, with no
@@ -530,7 +530,19 @@ function stageCandidate(sourceRoot: string, options: CandidateOptions, out: Cand
         });
       // a workbook without a sheet compares as an empty table, so every row and column is reported missing
       const headers = (sheet?.rows[0] ?? []).map((h) => (h === null ? "" : String(h)));
-      const records = (sheet?.rows.slice(1) ?? []).map((cells) => Object.fromEntries(headers.map((h, col) => [h, cells[col] ?? null])));
+      const dataRows = sheet?.rows.slice(1) ?? [];
+      // a value right of the last header has no column to be compared under; like a ragged CSV row, it is reported
+      const beyondHeaders = dataRows.flatMap((cells, i) =>
+        cells.flatMap((value, col) => (col >= headers.length && value !== null && value !== "" ? [`${columnName(col + 1)}${i + 2}`] : [])),
+      );
+      if (beyondHeaders.length)
+        findings.push({
+          severity: "error",
+          code: "CROSS_FORMAT_MISMATCH",
+          message: `Rows workbook has ${beyondHeaders.length} value(s) right of the last header (${headers.length ? `column ${columnName(headers.length)}` : "the header row is empty"}): ${listKeys(beyondHeaders)}. They have no column to be compared under; resolve the difference before import.`,
+          refs: ["CAND-SRC-ROWS-XLSX"],
+        });
+      const records = dataRows.map((cells) => Object.fromEntries(headers.map((h, col) => [h, cells[col] ?? null])));
       rowTable = { headers, records };
     } catch (e) {
       setStatus("CAND-SRC-ROWS-XLSX", `invalid: ${(e as Error).message}`);

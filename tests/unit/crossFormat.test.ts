@@ -141,6 +141,29 @@ describe("a hand-edited export is rejected and the previous release stays active
   });
 });
 
+describe("workbook content the reader cannot place (Task 3.5)", () => {
+  test("a value right of the last header is reported, not dropped", () => {
+    // row 5 gains a cell in column K; the header row ends at J
+    const root = editXlsx("xl/worksheets/sheet1.xml", (x) =>
+      x.replace(/(<row r="5"[^>]*>[\s\S]*?)<\/row>/, '$1<c r="K5" t="inlineStr"><is><t>stray</t></is></c></row>'),
+    )();
+    const { findings } = buildStagedRelease({ sourceRoot: root, acceptChanged: true });
+    const beyond = findings.filter((f) => f.code === "CROSS_FORMAT_MISMATCH" && /right of the last header/.test(f.message));
+    expect(beyond.map((f) => [f.severity, f.refs])).toEqual([["error", ["CAND-SRC-ROWS-XLSX"]]]);
+    expect(beyond[0]?.message).toMatch(/1 value\(s\) right of the last header \(column J\): K5\./);
+  });
+
+  test("a workbook the OOXML reader refuses is SOURCE_UNREADABLE with the reader's message", () => {
+    const root = editXlsx("xl/worksheets/sheet1.xml", (x) => x.replace('<c r="B2">', '<c r="B2" t="d">'))();
+    const { findings, content } = buildStagedRelease({ sourceRoot: root, acceptChanged: true });
+    const unreadable = findings.filter((f) => f.code === "SOURCE_UNREADABLE");
+    expect(unreadable.map((f) => [f.severity, f.refs, f.message])).toEqual([
+      ["error", ["CAND-SRC-ROWS-XLSX"], "Rows workbook could not be read: unsupported cell type d at B2"],
+    ]);
+    expect(content.sources.find((s) => s.id === "CAND-SRC-ROWS-XLSX")?.file?.parseStatus).toBe("invalid: unsupported cell type d at B2");
+  });
+});
+
 describe("the unmodified originals", () => {
   test("compare exactly 16,641 values at run time, with no error", () => {
     const { stats, findings } = stagedFull();
