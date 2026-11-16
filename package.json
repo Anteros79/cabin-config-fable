@@ -33,6 +33,7 @@
     "verify": "npm run typecheck && npm run test && npm run test:e2e && npm run comparisons && npm run originals:verify"
   },
   "dependencies": {
+    "@fastify/compress": "^9.3.0",
     "@fastify/static": "^10.1.11",
     "fast-xml-parser": "^5.0.0",
     "fastify": "^5.12.8",
