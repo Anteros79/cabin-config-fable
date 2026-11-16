@@ -1,5 +1,6 @@
-import { intervalsOverlap, isIsoDate } from "./dates.ts";
+import { intervalsOverlap } from "./dates.ts";
 import { validateKits } from "./kits.ts";
+import { structuralFindings } from "./schema.ts";
 import { buildMatchSet, type MatchSet, matchSetsEqual } from "./specificity.ts";
 import type { ContextConstraint, Finding, LayoutRevision, ReleaseContent } from "./types.ts";
 
@@ -17,8 +18,13 @@ function duplicates<T>(items: T[], key: (item: T) => string): string[] {
 /**
  * Validate a staged release. "error" findings block activation. "conflict" findings are recorded
  * and activation proceeds, because the resolver refuses the affected lookups instead of guessing.
+ * Structure (shape, enums, dates, quantity bounds, tail form) is checked first by the schema; when
+ * it fails only those findings are returned, because the semantic checks assume sound structure.
  */
-export function validateRelease(content: ReleaseContent): Finding[] {
+export function validateRelease(input: unknown): Finding[] {
+  const structural = structuralFindings(input);
+  if (structural.length > 0) return structural;
+  const content = input as ReleaseContent;
   const findings: Finding[] = [];
   const err = (code: string, message: string, refs?: string[]) => findings.push({ severity: "error", code, message, refs });
   const conflict = (code: string, message: string, refs?: string[]) => findings.push({ severity: "conflict", code, message, refs });
@@ -51,22 +57,13 @@ export function validateRelease(content: ReleaseContent): Finding[] {
   const parts = new Map(content.parts.map((p) => [p.partNo, p]));
   const { units, carpets, seams, upholsteries } = content.vocabulary;
 
-  const dateOk = (value: string | null, label: string, ref: string, nullable = true) => {
-    if (value === null) {
-      if (!nullable) err("INVALID_DATE", `${label} is required on ${ref}.`, [ref]);
-      return;
-    }
-    if (!isIsoDate(value)) err("INVALID_DATE", `${label} "${value}" on ${ref} is not a valid calendar date.`, [ref]);
-  };
   const intervalOk = (from: string | null, to: string | null, ref: string) => {
-    if (from !== null && to !== null && isIsoDate(from) && isIsoDate(to) && to < from) {
+    if (from !== null && to !== null && to < from) {
       err("INVALID_INTERVAL", `${ref} ends (${to}) before it starts (${from}).`, [ref]);
     }
   };
 
   for (const s of content.sources) {
-    dateOk(s.effectiveFrom, "effectiveFrom", s.id);
-    dateOk(s.expiresOn, "expiresOn", s.id);
     intervalOk(s.effectiveFrom, s.expiresOn, s.id);
     if (s.authority === "approved")
       err("UNSUPPORTED_AUTHORITY", `Source ${s.id} claims approved authority; no approved airline source has been supplied.`, [s.id]);
@@ -164,8 +161,6 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     if (!sources.has(a.sourceId)) err("ORPHAN", `Assignment ${ref} cites unknown source ${a.sourceId}.`, [ref]);
     if (a.namespace !== "fixture")
       err("NAMESPACE", `Assignment ${ref} is in namespace ${a.namespace}; no approved dated tail assignment has been supplied.`, [ref]);
-    dateOk(a.effectiveFrom, "effectiveFrom", ref, false);
-    dateOk(a.effectiveTo, "effectiveTo", ref);
     intervalOk(a.effectiveFrom, a.effectiveTo, ref);
     if (a.carpet !== null && !carpets.includes(a.carpet)) err("VOCABULARY", `Assignment ${ref} uses unknown carpet ${a.carpet}.`, [ref]);
     if (a.seam !== null && !seams.includes(a.seam)) err("VOCABULARY", `Assignment ${ref} uses unknown seam ${a.seam}.`, [ref]);
@@ -177,7 +172,7 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     const released = list.filter((a) => a.status === "released");
     for (const [i, a] of released.entries()) {
       for (const b of released.slice(i + 1)) {
-        if (isIsoDate(a.effectiveFrom) && isIsoDate(b.effectiveFrom) && intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) {
+        if (intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) {
           conflict("ASSIGNMENT_OVERLAP", `Tail ${tail} has overlapping released assignments ${a.id} and ${b.id}. Lookups inside the overlap are refused.`, [
             a.id,
             b.id,
@@ -206,11 +201,7 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     if (!parts.has(r.partNo)) err("ORPHAN", `${ref} refers to unknown part ${r.partNo}.`, [r.id]);
     if (!sources.has(r.sourceId)) err("ORPHAN", `${ref} cites unknown source ${r.sourceId}.`, [r.id]);
     if (!units.includes(r.unit)) err("UNKNOWN_UNIT", `${ref} uses unknown unit ${r.unit}.`, [r.id]);
-    if (!Number.isInteger(r.qtyPerReplacement) || r.qtyPerReplacement <= 0)
-      err("INVALID_QUANTITY", `${ref} has invalid quantity ${r.qtyPerReplacement}.`, [r.id]);
     if (r.namespace !== "fixture") err("NAMESPACE", `${ref} is in namespace ${r.namespace}; no approved parts applicability has been supplied.`, [r.id]);
-    dateOk(r.effectiveFrom, "effectiveFrom", ref, false);
-    dateOk(r.effectiveTo, "effectiveTo", ref);
     intervalOk(r.effectiveFrom, r.effectiveTo, ref);
     constraintOk(r.constraint, ref);
     const set = buildMatchSet(content, revisions, r.constraint, r.locations, r.componentId);
@@ -242,7 +233,6 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     for (const group of bySignature.values()) {
       for (const [i, a] of group.entries()) {
         for (const b of group.slice(i + 1)) {
-          if (!isIsoDate(a.effectiveFrom) || !isIsoDate(b.effectiveFrom)) continue;
           if (!intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) continue;
           if (matchSetsEqual(ruleSets.get(a.id)!, ruleSets.get(b.id)!)) {
             conflict("EQUAL_RULES", `Rules ${a.id} and ${b.id} have identical scope and overlapping validity. Affected components are reported as ambiguous.`, [
@@ -264,13 +254,9 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     if (s.altPartNo === s.primaryPartNo) err("SUBSTITUTE_INVALID", `${ref} substitutes a part for itself.`, [s.id]);
     if (!sources.has(s.sourceId)) err("ORPHAN", `${ref} cites unknown approval source ${s.sourceId}.`, [s.id]);
     if (!units.includes(s.unit)) err("UNKNOWN_UNIT", `${ref} uses unknown unit ${s.unit}.`, [s.id]);
-    if (!Number.isInteger(s.qtyPerReplacement) || s.qtyPerReplacement <= 0)
-      err("INVALID_QUANTITY", `${ref} has invalid quantity ${s.qtyPerReplacement}.`, [s.id]);
     if (s.namespace !== "fixture") err("NAMESPACE", `${ref} is in namespace ${s.namespace}; no approved substitute catalogue has been supplied.`, [s.id]);
     if (def && s.locations && def.locationKind !== s.locations.kind)
       err("COMPONENT_KIND", `${ref} selects ${s.locations.kind} locations for a ${def.locationKind} component.`, [s.id]);
-    dateOk(s.effectiveFrom, "effectiveFrom", ref, false);
-    dateOk(s.effectiveTo, "effectiveTo", ref);
     intervalOk(s.effectiveFrom, s.effectiveTo, ref);
     constraintOk(s.constraint, ref);
     if (!primaryParts.has(`${s.componentId}|${s.primaryPartNo}`))
@@ -282,11 +268,6 @@ export function validateRelease(content: ReleaseContent): Finding[] {
   for (const p of content.pendingChanges) {
     if (!ruleIds.has(p.ruleId)) err("ORPHAN", `Pending change ${p.id} refers to unknown rule ${p.ruleId}.`, [p.id]);
     if (p.sourceId !== null && !sources.has(p.sourceId)) err("ORPHAN", `Pending change ${p.id} cites unknown source ${p.sourceId}.`, [p.id]);
-    dateOk(p.proposedEffectiveFrom, "proposedEffectiveFrom", p.id);
-  }
-  for (const c of content.components) {
-    if (!Number.isInteger(c.maxReplacementsPerLocation) || c.maxReplacementsPerLocation < 1)
-      err("INVALID_QUANTITY", `Component ${c.id} has an invalid replacement limit.`, [c.id]);
   }
   findings.push(...validateKits(content.kitChildren, parts, units, sources));
 

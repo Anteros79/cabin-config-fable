@@ -19,7 +19,7 @@ import type {
   TailAssignment,
 } from "./types.ts";
 
-const TAIL_PATTERN = /^[A-Z0-9][A-Z0-9-]{1,9}$/;
+export const TAIL_PATTERN = /^[A-Z0-9][A-Z0-9-]{1,9}$/;
 
 export function normalizeTail(raw: unknown): string {
   return typeof raw === "string" ? raw.trim().toUpperCase() : "";

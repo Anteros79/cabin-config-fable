@@ -248,9 +248,9 @@ describe("release validation blocks bad reference data", () => {
   });
   it("units, quantities and date intervals", () => {
     expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).unit = "BOX")))).toContain("UNKNOWN_UNIT");
-    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).qtyPerReplacement = 0)))).toContain("INVALID_QUANTITY");
+    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).qtyPerReplacement = 0)))).toContain("SCHEMA_INVALID");
     expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).effectiveTo = "2020-01-01")))).toContain("INVALID_INTERVAL");
-    expect(errorsOf(fixtureContent((c) => (at(c.assignments, 0).effectiveFrom = "2026-02-30")))).toContain("INVALID_DATE");
+    expect(errorsOf(fixtureContent((c) => (at(c.assignments, 0).effectiveFrom = "2026-02-30")))).toContain("SCHEMA_INVALID");
     expect(errorsOf(fixtureContent((c) => (at(c.assignments, 0).carpet = "SHAG")))).toContain("VOCABULARY");
   });
   it("unreachable rule locations", () => {
@@ -268,7 +268,7 @@ describe("release validation blocks bad reference data", () => {
     expect(errorsOf(fixtureContent((c) => c.kitChildren.push(kit("FAKE-P-39", "FAKE-P-39"))))).toContain("KIT_SELF_REFERENCE");
     expect(errorsOf(fixtureContent((c) => c.kitChildren.push(kit("FAKE-CK-2000", "FAKE-P-39", 2))))).toContain("KIT_DUPLICATE");
     expect(errorsOf(fixtureContent((c) => c.kitChildren.push(kit("FAKE-CK-2000", "FAKE-P-39", 3))))).toContain("KIT_CONFLICT");
-    expect(errorsOf(fixtureContent((c) => c.kitChildren.push(kit("FAKE-CK-2000", "FAKE-P-41", 0))))).toContain("KIT_INVALID_QUANTITY");
+    expect(errorsOf(fixtureContent((c) => c.kitChildren.push(kit("FAKE-CK-2000", "FAKE-P-41", 0))))).toContain("SCHEMA_INVALID");
     expect(errorsOf(fixtureContent((c) => c.kitChildren.push(kit("FAKE-CK-2000", "NOPE"))))).toContain("KIT_ORPHAN_CHILD");
   });
   it("airline-looking data cannot enter without an approved source", () => {

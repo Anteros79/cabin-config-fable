@@ -56,8 +56,6 @@ export function validateKits(kitChildren: KitChild[], parts: Map<string, Part>, 
       findings.push({ severity: "error", code: "KIT_ORPHAN_SOURCE", message: `Kit line ${ref} cites unknown source ${k.sourceId}.`, refs: [ref] });
     if (k.parentPartNo === k.childPartNo)
       findings.push({ severity: "error", code: "KIT_SELF_REFERENCE", message: `Kit ${k.parentPartNo} lists itself as a child.`, refs: [ref] });
-    if (!Number.isInteger(k.qty) || k.qty <= 0)
-      findings.push({ severity: "error", code: "KIT_INVALID_QUANTITY", message: `Kit line ${ref} has invalid quantity ${k.qty}.`, refs: [ref] });
     if (!units.includes(k.unit))
       findings.push({ severity: "error", code: "KIT_UNKNOWN_UNIT", message: `Kit line ${ref} uses unknown unit ${k.unit}.`, refs: [ref] });
     const prior = seen.get(ref);
