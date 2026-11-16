@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, describe, expect, test, vi } from "vitest";
@@ -241,6 +241,10 @@ describe("verify-originals from a clone outside the development folder (Task 6.6
     const tool = toolCopyUnder(() => {});
     const r = await runNode([tool]);
     expect(r.code).toBe(0);
+    const work = join(tool, "..", "..", "..", "..");
+    expect(r.stdout).toContain(
+      `source root ${realpathSync(work)} holds no originals; images and source copies not checked (set CABIN_KIT_SOURCE_ROOT to require them)`,
+    );
     expect(r.stdout).toContain(`${DATA_ORIGINALS.length}/${DATA_ORIGINALS.length} checks unchanged`);
     expect(r.stdout).toContain(`${IMAGE_ORIGINALS.length} skipped (not present)`);
   });

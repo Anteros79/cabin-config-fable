@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
-import { createServer, type Server } from "node:net";
+import { connect, createServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -165,6 +165,53 @@ describe("server process", () => {
     expect(exit.code).toBe(0);
     expect(exit.stderr).toBe("");
     expect(exit.stdout, "the copy was already imported").not.toContain("Reference store created");
+  });
+
+  it("a second SIGTERM while the server is closing exits 1 at once, without waiting for the shutdown timeout (SRV-08)", async () => {
+    const dataDir = importedDataDir();
+    const server = startMain(dataDir);
+    const port = await server.port();
+    // A request whose body never finishes keeps a connection active, so the first SIGTERM's close cannot complete.
+    const pending = connect(port, "127.0.0.1");
+    await new Promise<void>((resolve, reject) => pending.once("connect", resolve).once("error", reject));
+    pending.on("error", () => {});
+    pending.write(`POST /api/visits HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{`);
+    server.child.kill("SIGTERM");
+    // The first signal was handled once the listener refuses new connections; only then is the second one sent.
+    for (;;) {
+      const refused = await new Promise<boolean>((resolve) => {
+        const probe = connect(port, "127.0.0.1");
+        probe.once("connect", () => {
+          probe.destroy();
+          resolve(false);
+        });
+        probe.once("error", () => resolve(true));
+      });
+      if (refused) break;
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    server.child.kill("SIGTERM");
+    const exit = await server.done;
+    pending.destroy();
+    expect(exit.code).toBe(1);
+    // Exiting through the 5 s timeout would print this line: the exit came from the second signal instead.
+    expect(exit.stderr).not.toContain("did not finish");
+  });
+
+  it("an unhandled rejection is logged on stderr and exits 1 (SRV-08)", async () => {
+    const dataDir = importedDataDir();
+    // Test-only preload: once main.ts has installed its handler, reject a promise nobody handles.
+    const preload = `data:text/javascript,${encodeURIComponent(
+      'const t = setInterval(() => { if (process.listenerCount("unhandledRejection") > 0) { clearInterval(t); Promise.reject(new Error("probe rejection")); } }, 1);',
+    )}`;
+    const child = spawn(process.execPath, ["--import", preload, MAIN], {
+      env: cleanEnv({ CABIN_KIT_DATA_DIR: dataDir, CABIN_KIT_PORT: "0" }),
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    children.push(child);
+    const exit = await collect(child).done;
+    expect(exit.code).toBe(1);
+    expect(exit.stderr).toContain("Unhandled rejection: probe rejection");
   });
 
   it("an occupied port exits 1 with a clear message", async () => {

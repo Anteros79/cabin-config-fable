@@ -23,7 +23,10 @@ export interface VerifyPaths {
   /** The folder with all the originals (images included); may be absent. */
   sourceRoot: string;
   manifestPath: string;
-  /** True when CABIN_KIT_SOURCE_ROOT named `sourceRoot`: it then counts as present and must hold every original. */
+  /**
+   * True when CABIN_KIT_SOURCE_ROOT named `sourceRoot`: it then counts as present and must hold every data original and,
+   * unless it is the vendored folder itself (which holds no images, so the images are skipped), every image.
+   */
   sourceRootExplicit?: boolean;
 }
 
@@ -120,6 +123,9 @@ export function verifyOriginals(paths: VerifyPaths, log: Log, logError: Log): nu
   const recorded = new Map(files.map((f) => [f.path, f]));
   const sourcePresent = sourceRootPresent(paths);
   const hasImageFolder = sourcePresent && resolve(paths.sourceRoot) !== resolve(paths.vendoredRoot);
+  if (!sourcePresent) {
+    log(`source root ${resolve(paths.sourceRoot)} holds no originals; images and source copies not checked (set CABIN_KIT_SOURCE_ROOT to require them)`);
+  }
   const union = [...new Set([...ORIGINALS, ...recorded.keys()])];
   const same = (actual: Hashed, expected: Entry): boolean => !("missing" in actual) && actual.sha256 === expected.sha256 && actual.bytes === expected.bytes;
 
