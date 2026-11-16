@@ -5,7 +5,7 @@ const apiPort = process.env.CABIN_KIT_PORT ?? "4310";
 
 export default defineConfig({
   root: "src/web",
-  base: "./",
+  base: "/",
   plugins: [react()],
   build: {
     outDir: "../../dist/web",

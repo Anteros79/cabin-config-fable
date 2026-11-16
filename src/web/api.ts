@@ -20,12 +20,23 @@ import type {
  * kind "network": no answer arrived. For a write this means the outcome is UNKNOWN: it may or may
  * not have been saved, so the caller retries with the same idempotency key.
  */
+const API_BASE = "/api";
+const visitUrl = (id: string, suffix = "") => `${API_BASE}/visits/${encodeURIComponent(id)}${suffix}`;
+
+export type ApiErrorKind = "network" | "http" | "aborted";
+
+/**
+ * kind "http": the server answered; the outcome is known.
+ * kind "network": no usable answer arrived. For a write this means the outcome is UNKNOWN: it may or may
+ * not have been saved, so the caller retries with the same idempotency key.
+ * kind "aborted": the caller cancelled the request; callers ignore it.
+ */
 export class ApiError extends Error {
-  kind: "http" | "network";
+  kind: ApiErrorKind;
   status: number;
   code: string;
   details: unknown;
-  constructor(kind: "http" | "network", status: number, code: string, message: string, details: unknown = null) {
+  constructor(kind: ApiErrorKind, status: number, code: string, message: string, details: unknown = null) {
     super(message);
     this.kind = kind;
     this.status = status;
@@ -39,46 +50,77 @@ export function newKey(): string {
   return `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
-async function request<T>(method: string, url: string, body?: unknown, timeoutMs = 20000): Promise<T> {
+export interface RequestOptions {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+interface ErrorEnvelope {
+  error: { code: string; message?: string; details?: unknown };
+}
+const isEnvelope = (p: unknown): p is ErrorEnvelope =>
+  typeof p === "object" && p !== null && typeof (p as { error?: { code?: unknown } }).error?.code === "string";
+/** Server answers that prove nothing was saved: the transaction rolled back before it answered. */
+const NOT_SAVED_CODES = new Set(["STORAGE_UNAVAILABLE", "INTERNAL_ERROR"]);
+
+export async function request<T>(method: string, url: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
+  const { timeoutMs = 20000, signal } = options;
+  const isWrite = method !== "GET";
+  const aborted = () => new ApiError("aborted", 0, "ABORTED", "The request was cancelled.");
+  if (signal?.aborted) throw aborted();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  let response: Response;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const onCallerAbort = () => controller.abort();
+  signal?.addEventListener("abort", onCallerAbort, { once: true });
+  // The timer stays armed until the body has been read: a stalled body must not hang the caller.
   try {
-    response = await fetch(url, {
-      method,
-      headers: body === undefined ? undefined : { "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal,
-    });
-  } catch (e) {
-    throw new ApiError(
-      "network",
-      0,
-      "NETWORK",
-      controller.signal.aborted ? "The server did not answer in time." : "The server could not be reached.",
-      String(e),
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    if (response.ok) throw new ApiError("network", response.status, "BAD_RESPONSE", "The server answer could not be read.");
-  }
-  if (!response.ok) {
-    const p = payload as { error?: { code?: string; message?: string; details?: unknown }; state?: string; message?: string } | null;
-    if (p?.state) return payload as T; // lookup answers carry their own state even on 503
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method,
+        headers: body === undefined ? undefined : { "content-type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (signal?.aborted) throw aborted();
+      throw new ApiError("network", 0, "NETWORK", timedOut ? "The server did not answer in time." : "The server could not be reached.", String(e));
+    }
+    let payload: unknown = null;
+    let readable = true;
+    try {
+      payload = await response.json();
+    } catch (e) {
+      if (signal?.aborted) throw aborted();
+      if (timedOut) throw new ApiError("network", response.status, "NETWORK", "The server did not answer in time.", String(e));
+      readable = false;
+    }
+    if (response.ok) {
+      if (!readable) throw new ApiError("network", response.status, "BAD_RESPONSE", "The server answer could not be read.");
+      return payload as T;
+    }
+    const p = payload as { state?: string } | null;
+    if (readable && p?.state) return payload as T; // lookup answers carry their own state even on 503
+    if (isWrite && response.status >= 500 && !(readable && isEnvelope(payload) && NOT_SAVED_CODES.has(payload.error.code))) {
+      // A 5xx that is not the server's own envelope may come from a proxy after the write was applied.
+      throw new ApiError("network", response.status, "OUTCOME_UNKNOWN", "The server answer could not be trusted; the outcome is unknown.");
+    }
+    const envelope = readable && isEnvelope(payload) ? payload.error : null;
     throw new ApiError(
       "http",
       response.status,
-      p?.error?.code ?? `HTTP_${response.status}`,
-      p?.error?.message ?? `Request failed (${response.status}).`,
-      p?.error?.details ?? null,
+      envelope?.code ?? `HTTP_${response.status}`,
+      envelope?.message ?? `Request failed (${response.status}).`,
+      envelope?.details ?? null,
     );
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onCallerAbort);
   }
-  return payload as T;
 }
 
 export interface Health {
@@ -150,30 +192,32 @@ const q = (params: Record<string, string | number | undefined>) =>
     .join("&");
 
 export const api = {
-  health: () => request<Health>("GET", "/api/health", undefined, 8000),
-  reference: () => request<ReferenceInfo>("GET", "/api/reference"),
-  tails: () => request<{ tails: { tail: string; note: string }[] }>("GET", "/api/tails"),
-  layouts: () => request<{ layouts: LayoutSummary[]; layoutCategories: LayoutCategory[]; visualProfiles: VisualProfile[] }>("GET", "/api/layouts"),
-  layout: (id: string) => request<LayoutDetail>("GET", `/api/layouts/${encodeURIComponent(id)}`),
-  lookup: (tail: string, date: string) => request<LookupResult>("GET", `/api/lookup?${q({ tail, date })}`),
-  preparation: (tail: string, date: string) => request<PrepOverview>("GET", `/api/preparation?${q({ tail, date })}`),
-  visitPreparation: (id: string) => request<PrepOverview>("GET", `/api/visits/${id}/preparation`),
-  visits: (params: { status?: string; q?: string; limit?: number; offset?: number }) =>
-    request<{ items: VisitSummary[]; total: number; limit: number; offset: number }>("GET", `/api/visits?${q(params)}`),
-  visit: (id: string) => request<VisitEnvelope>("GET", `/api/visits/${id}`),
-  createVisit: (tail: string, checkDate: string, technician: string, idempotencyKey: string) =>
-    request<VisitEnvelope>("POST", "/api/visits", { tail, checkDate, technician, idempotencyKey }),
-  upsertRecord: (id: string, record: RecordInput, expectedRecordVersion: number, idempotencyKey: string) =>
-    request<VisitStateEnvelope>("PUT", `/api/visits/${id}/records`, { record, expectedRecordVersion, idempotencyKey }),
-  removeRecord: (id: string, locationId: string, componentId: string, expectedRecordVersion: number, idempotencyKey: string) =>
-    request<VisitStateEnvelope>("POST", `/api/visits/${id}/records/remove`, { locationId, componentId, expectedRecordVersion, idempotencyKey }),
-  complete: (id: string, expectedVisitVersion: number, idempotencyKey: string) =>
-    request<{ visit: VisitState; report: Report; alreadyCompleted: boolean }>("POST", `/api/visits/${id}/complete`, {
-      confirm: true,
-      expectedVisitVersion,
-      idempotencyKey,
-    }),
-  report: (id: string) => request<ReportEnvelope>("GET", `/api/visits/${id}/report`),
-  addEvent: (id: string, type: string, note: string, author: string, idempotencyKey: string) =>
-    request<{ visit: VisitState; replayed: boolean }>("POST", `/api/visits/${id}/events`, { type, note, author, idempotencyKey }),
+  health: (o?: RequestOptions) => request<Health>("GET", `${API_BASE}/health`, undefined, { timeoutMs: 8000, ...o }),
+  reference: (o?: RequestOptions) => request<ReferenceInfo>("GET", `${API_BASE}/reference`, undefined, o),
+  tails: (o?: RequestOptions) => request<{ tails: { tail: string; note: string }[] }>("GET", `${API_BASE}/tails`, undefined, o),
+  layouts: (o?: RequestOptions) =>
+    request<{ layouts: LayoutSummary[]; layoutCategories: LayoutCategory[]; visualProfiles: VisualProfile[] }>("GET", `${API_BASE}/layouts`, undefined, o),
+  layout: (id: string, o?: RequestOptions) => request<LayoutDetail>("GET", `${API_BASE}/layouts/${encodeURIComponent(id)}`, undefined, o),
+  lookup: (tail: string, date: string, o?: RequestOptions) => request<LookupResult>("GET", `${API_BASE}/lookup?${q({ tail, date })}`, undefined, o),
+  preparation: (tail: string, date: string, o?: RequestOptions) => request<PrepOverview>("GET", `${API_BASE}/preparation?${q({ tail, date })}`, undefined, o),
+  visitPreparation: (id: string, o?: RequestOptions) => request<PrepOverview>("GET", visitUrl(id, "/preparation"), undefined, o),
+  visits: (params: { status?: string; q?: string; limit?: number; offset?: number }, o?: RequestOptions) =>
+    request<{ items: VisitSummary[]; total: number; limit: number; offset: number }>("GET", `${API_BASE}/visits?${q(params)}`, undefined, o),
+  visit: (id: string, o?: RequestOptions) => request<VisitEnvelope>("GET", visitUrl(id), undefined, o),
+  createVisit: (tail: string, checkDate: string, technician: string, idempotencyKey: string, o?: RequestOptions) =>
+    request<VisitEnvelope>("POST", `${API_BASE}/visits`, { tail, checkDate, technician, idempotencyKey }, o),
+  upsertRecord: (id: string, record: RecordInput, expectedRecordVersion: number, idempotencyKey: string, o?: RequestOptions) =>
+    request<VisitStateEnvelope>("PUT", visitUrl(id, "/records"), { record, expectedRecordVersion, idempotencyKey }, o),
+  removeRecord: (id: string, locationId: string, componentId: string, expectedRecordVersion: number, idempotencyKey: string, o?: RequestOptions) =>
+    request<VisitStateEnvelope>("POST", visitUrl(id, "/records/remove"), { locationId, componentId, expectedRecordVersion, idempotencyKey }, o),
+  complete: (id: string, expectedVisitVersion: number, idempotencyKey: string, o?: RequestOptions) =>
+    request<{ visit: VisitState; report: Report; alreadyCompleted: boolean }>(
+      "POST",
+      visitUrl(id, "/complete"),
+      { confirm: true, expectedVisitVersion, idempotencyKey },
+      o,
+    ),
+  report: (id: string, o?: RequestOptions) => request<ReportEnvelope>("GET", visitUrl(id, "/report"), undefined, o),
+  addEvent: (id: string, type: string, note: string, author: string, idempotencyKey: string, o?: RequestOptions) =>
+    request<{ visit: VisitState; replayed: boolean }>("POST", visitUrl(id, "/events"), { type, note, author, idempotencyKey }, o),
 };

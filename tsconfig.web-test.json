@@ -1,0 +1,12 @@
+{
+  // Web tests: browser code under test plus Node types, because the tests read files and share tests/helpers.ts with the
+  // server tests (PF-4). Only tests/web gets Node types alongside the DOM library; src/web stays in tsconfig.web.json.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"],
+    "jsx": "react-jsx",
+    "tsBuildInfoFile": "./node_modules/.cache/tsc/web-test.tsbuildinfo"
+  },
+  "include": ["tests/web", "tests/helpers.ts", "tests/helpers", "src/web", "src/domain", "src/importer", "src/server"]
+}
