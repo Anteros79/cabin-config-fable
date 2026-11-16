@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
-import { fixtureRelease, snapshotFor, visitWith } from "../helpers.ts";
+import { CUSHION_3A, fixtureRelease, KIT_PRIMARY, snapshotFor, visitWith } from "../helpers.ts";
 import { type Answer, stubFetch } from "./fetchStub.ts";
 
 // The 3D view is not under test here; stand-in buttons select a location the way a click in the cabin would.
@@ -73,7 +73,7 @@ describe("Inspector quantity field", () => {
     expect(sent.find((s) => s.method === "PUT")?.body).toMatchObject({ record: { quantity: 3 } });
   });
 
-  it.each(["", "0", "1.5", "abc", "999"])("quantity %j is invalid and blocks saving", async (typed) => {
+  it.each(["", "0", "1.5", "abc", "999", "-1", "9".repeat(30), " 3 ", "1e2"])("quantity %j is invalid and blocks saving", async (typed) => {
     const { sent, card } = await openPanel();
     const field = quantityField(card);
     fireEvent.change(field, { target: { value: typed } });
@@ -152,7 +152,7 @@ describe("Inspector draft and conflicts", () => {
     render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Pick forward floor" }));
     const card = await screen.findByRole("region", { name: /^Carpet panel/ });
-    // Another tab's change reaches this tab through a reload after a conflict on a different target.
+    // Removing the record from the worklist is refused (409) and the reload brings it back changed. The form had nothing typed, so it follows.
     fireEvent.click(screen.getByRole("button", { name: /^Remove Forward floor/ }));
     await waitFor(() => expect(quantityField(card).value).toBe("3"));
     expect(within(card).getByLabelText("Note (optional)")).toHaveValue("worn");
@@ -229,5 +229,137 @@ describe("Inspector unrecorded changes", () => {
     expect(add.mock.calls.filter(([type]) => type === "beforeunload")).toHaveLength(1);
     add.mockRestore();
     await act(async () => {});
+  });
+});
+
+const note = (card: HTMLElement) => within(card).getByLabelText("Note (optional)");
+
+describe("Inspector removed records", () => {
+  it("a record removed elsewhere is not shown as a saved value", async () => {
+    let removed = false;
+    stubFetch((method): Answer => {
+      if (method === "GET") return { body: { visit: removed ? { ...base, version: 3, records: [] } : base } };
+      removed = true;
+      return stale;
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Pick forward floor" }));
+    const card = await screen.findByRole("region", { name: /^Carpet panel/ });
+    fireEvent.change(note(card), { target: { value: "frayed edge" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Remove Forward floor/ }));
+    await within(card).findByText("This replacement was removed. Nothing is saved for it.");
+    expect(within(card).queryByText(/Saved value/)).toBeNull();
+    expect(note(card)).toHaveValue("frayed edge");
+  });
+
+  it("the person's own Remove resets the card and leaves nothing to discard", async () => {
+    const { card } = await openPanel(() => ({ body: { visit: stateOf(base, { version: 3, records: [] }), replayed: false } }));
+    fireEvent.change(note(card), { target: { value: "frayed edge" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(within(card).queryByRole("button", { name: "Remove" })).toBeNull());
+    expect(note(card)).toHaveValue("");
+    expect(within(card).queryByText(/changed elsewhere|was removed/)).toBeNull();
+    const confirm = vi.fn((_message: string) => false);
+    vi.stubGlobal("confirm", confirm);
+    fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
+    expect(confirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("Inspector notices and discards", () => {
+  it("the changed-elsewhere notice is announced politely", async () => {
+    const { card } = await conflictWithTypedNote();
+    const notice = within(card)
+      .getByText(/changed elsewhere/)
+      .closest("[role=status]");
+    expect(notice).not.toBeNull();
+    expect(notice).toHaveAttribute("aria-live", "polite");
+  });
+
+  it("agreeing to discard on Complete resets the dirty form", async () => {
+    const { card } = await openPanel();
+    fireEvent.change(note(card), { target: { value: "frayed edge" } });
+    vi.stubGlobal(
+      "confirm",
+      vi.fn((_message: string) => true),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Complete visit…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    const again = screen.getByRole("region", { name: /^Carpet panel/ });
+    expect(note(again)).toHaveValue("");
+    expect(within(again).getByText(/^Saved\./)).toBeInTheDocument();
+  });
+
+  it("the discard prompt names every dirty card", async () => {
+    stubFetch((): Answer => ({ body: { visit: base } }));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Pick seat 3A" }));
+    const cushion = await screen.findByRole("region", { name: /^Seat cushion cover/ });
+    const backrest = await screen.findByRole("region", { name: /^Seat backrest cover/ });
+    fireEvent.change(note(cushion), { target: { value: "a" } });
+    fireEvent.change(note(backrest), { target: { value: "b" } });
+    const confirm = vi.fn((_message: string) => false);
+    vi.stubGlobal("confirm", confirm);
+    fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
+    const message = confirm.mock.calls[0]?.[0] ?? "";
+    expect(message).toContain("Seat cushion cover");
+    expect(message).toContain("Seat backrest cover");
+  });
+
+  it("typed input survives a save of a different card", async () => {
+    const after = visitWith(snap, [PANEL, CUSHION_3A, KIT_PRIMARY]);
+    stubFetch((method): Answer => {
+      if (method === "GET") return { body: { visit: base } };
+      return { body: { visit: stateOf(after, { version: base.version + 1 }), replayed: false } };
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Pick seat 3A" }));
+    const cushion = await screen.findByRole("region", { name: /^Seat cushion cover/ });
+    const backrest = await screen.findByRole("region", { name: /^Seat backrest cover/ });
+    fireEvent.change(note(backrest), { target: { value: "typed" } });
+    fireEvent.click(within(cushion).getByRole("button", { name: "Record replacement" }));
+    await within(cushion).findByText(/^Saved\./);
+    expect(note(backrest)).toHaveValue("typed");
+    expect(within(backrest).queryByText(/changed elsewhere|was removed/)).toBeNull();
+  });
+
+  it("a later change equal to the person's earlier save still shows the notice", async () => {
+    const saved: Visit = { ...base, version: 3, records: [{ ...panel, version: 2, note: "A" }] };
+    const later: Visit = { ...base, version: 5, records: [{ ...panel, version: 4, note: "A" }] };
+    let phase: "start" | "saved" | "later" = "start";
+    stubFetch((method, url): Answer => {
+      if (method === "GET") return { body: { visit: phase === "start" ? base : phase === "saved" ? saved : later } };
+      if (url.endsWith("/records/remove")) {
+        phase = "later";
+        return stale;
+      }
+      phase = "saved";
+      return { body: { visit: stateOf(saved, {}), replayed: false } };
+    });
+    const { card } = await (async () => {
+      render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+      fireEvent.click(await screen.findByRole("button", { name: "Pick forward floor" }));
+      return { card: await screen.findByRole("region", { name: /^Carpet panel/ }) };
+    })();
+    fireEvent.change(note(card), { target: { value: "A" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Update record" }));
+    await within(card).findByText(/^Saved\./);
+    fireEvent.change(note(card), { target: { value: "B" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Remove Forward floor/ }));
+    await within(card).findByText(/changed elsewhere/);
+  });
+
+  it("pasting a quantity is checked like typing", async () => {
+    const { card } = await openPanel();
+    const user = userEvent.setup();
+    const field = quantityField(card);
+    await user.clear(field);
+    await user.click(field);
+    await user.paste("1e2");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    await user.clear(field);
+    await user.paste("4");
+    expect(field).not.toHaveAttribute("aria-invalid");
+    expect(within(card).getByRole("button", { name: "Update record" })).toBeEnabled();
   });
 });

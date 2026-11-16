@@ -6,9 +6,12 @@ afterEach(() => cleanup());
 
 // jsdom implements neither window.confirm nor the dialog methods; tests that need them override these.
 beforeEach(() => {
+  // A prompt nobody expected fails the test; a test that expects one stubs its own answer.
   vi.stubGlobal(
     "confirm",
-    vi.fn(() => true),
+    vi.fn((message?: string) => {
+      throw new Error(`Unexpected window.confirm: ${message}`);
+    }),
   );
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     this.setAttribute("open", "");

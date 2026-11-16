@@ -17,6 +17,8 @@ interface Props {
   onSelect(locationId: string): void;
   /** A card holds typed input that is not saved (`dirty`), or no longer does. The target is `record:<locationId>|<componentId>`. */
   onDirtyChange(target: string, dirty: boolean): void;
+  /** A new value discards every card's unsaved input (the person agreed to). */
+  resetKey?: number;
 }
 
 /** What the form holds. The quantity stays the text that was typed, so clearing the field and typing a new number works. */
@@ -70,17 +72,23 @@ function ComponentCard({
   const [base, setBase] = useState<{ record: VisitRecord | null; version: number }>({ record, version: serverVersion });
   // What the last save sent, so the answer to the person's own save is not taken for a change made elsewhere.
   const [sent, setSent] = useState<Draft | null>(null);
+  // Set when the person pressed Remove on this card, so the record going away is their own doing.
+  const [removing, setRemoving] = useState(false);
   if (base.version !== serverVersion && !(sent && sameDraft(sent, saved))) {
     // The saved record changed. A form with nothing unsaved follows it; one with typed input keeps it and says so below.
-    if (sameDraft(draft, draftOf(base.record))) {
+    if ((removing && record === null) || sameDraft(draft, draftOf(base.record))) {
       setDraft(saved);
       setBase({ record, version: serverVersion });
+      setRemoving(false);
     }
   } else if (base.version !== serverVersion) {
+    // The answer to the person's own save: the base moves, and the mark is spent.
     setBase({ record, version: serverVersion });
+    setSent(null);
   }
   const dirty = !sameDraft(draft, saved);
   const changedElsewhere = dirty && base.version !== serverVersion;
+  const removedElsewhere = changedElsewhere && record === null;
   const limit = view.maxReplacements;
   const quantityOk = quantityValid(draft.quantityText, limit);
   const quantityHelp = `${id}-quantity-help`;
@@ -92,6 +100,10 @@ function ComponentCard({
   }, [target, dirty, onDirtyChange]);
 
   const status = statusOf(target);
+  const writePhase = status.phase;
+  useEffect(() => {
+    if (writePhase === "failed" || writePhase === "conflict") setRemoving(false);
+  }, [writePhase]);
   const busy = status.phase === "saving";
   const message = status.phase === "conflict" ? `${describeSaveStatus(status)} The current saved state has been reloaded.` : describeSaveStatus(status);
   const savedText = `${saved.selection === "PRIMARY" ? "Primary" : `Alternate ${alternates.find((s) => s.id === saved.substituteId)?.altPartNo ?? saved.substituteId}`}, ${saved.quantityText}, note ${saved.note === "" ? "none" : `“${saved.note}”`}`;
@@ -267,25 +279,31 @@ function ComponentCard({
                 ) : (
                   <p className="fine">Replacements: 1. {view.countNote}</p>
                 )}
-                {changedElsewhere && (
-                  <div className="notice" role="note">
-                    <p>This replacement changed elsewhere. Saved value: {savedText}.</p>
-                    <div className="actions">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDraft(saved);
-                          setBase({ record, version: serverVersion });
-                        }}
-                      >
-                        Use saved value
-                      </button>
-                      <button type="button" onClick={() => setBase({ record, version: serverVersion })}>
-                        Keep mine
-                      </button>
+                <div role="status" aria-live="polite">
+                  {changedElsewhere && (
+                    <div className="notice">
+                      <p>
+                        {removedElsewhere
+                          ? "This replacement was removed. Nothing is saved for it."
+                          : `This replacement changed elsewhere. Saved value: ${savedText}.`}
+                      </p>
+                      <div className="actions">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDraft(saved);
+                            setBase({ record, version: serverVersion });
+                          }}
+                        >
+                          {removedElsewhere ? "Discard mine" : "Use saved value"}
+                        </button>
+                        <button type="button" onClick={() => setBase({ record, version: serverVersion })}>
+                          Keep mine
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
                 <label className="field">
                   <span>Note (optional)</span>
                   <textarea value={draft.note} maxLength={1000} rows={2} onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))} />
@@ -295,7 +313,15 @@ function ComponentCard({
                     {record ? "Update record" : "Record replacement"}
                   </button>
                   {record && (
-                    <button type="button" className="danger" disabled={busy} onClick={() => onRemove(record)}>
+                    <button
+                      type="button"
+                      className="danger"
+                      disabled={busy}
+                      onClick={() => {
+                        setRemoving(true);
+                        onRemove(record);
+                      }}
+                    >
                       Remove
                     </button>
                   )}
@@ -325,7 +351,7 @@ function ComponentCard({
 }
 
 /** Component-level parts for the selected location: primary part, separate alternates, record form. */
-export function Inspector({ workspace, location, focusComponent, statusOf, onRecord, onRemove, onRetry, onSelect, onDirtyChange }: Props) {
+export function Inspector({ workspace, location, focusComponent, statusOf, onRecord, onRemove, onRetry, onSelect, onDirtyChange, resetKey = 0 }: Props) {
   if (!location) {
     return (
       <div className="inspector empty">
@@ -362,7 +388,7 @@ export function Inspector({ workspace, location, focusComponent, statusOf, onRec
       {views.length === 0 && <p className="notice">{workspace.unresolvedReason ?? "No components are defined for this location."}</p>}
       {views.map((view) => (
         <ComponentCard
-          key={`${location.id}|${view.componentId}`}
+          key={`${location.id}|${view.componentId}|${resetKey}`}
           view={view}
           workspace={workspace}
           location={location}

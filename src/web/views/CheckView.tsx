@@ -243,14 +243,22 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     });
   }, []);
   /** True when nothing unrecorded is lost, or the person agreed to lose it. */
+  const [resetKey, setResetKey] = useState(0);
   const mayDiscard = (): boolean => {
-    const [first] = dirtyTargets;
-    if (!first || !workspace) return true;
-    const [locationId = "", componentId = ""] = first.slice("record:".length).split("|");
-    const where = workspace.layout.locations.find((l) => l.id === locationId)?.label ?? locationId;
-    const what = workspace.componentDefs[componentId]?.name ?? componentId;
+    if (dirtyTargets.size === 0 || !workspace) return true;
+    const names = [...dirtyTargets].map((target) => {
+      const [locationId = "", componentId = ""] = target.slice("record:".length).split("|");
+      return `${workspace.layout.locations.find((l) => l.id === locationId)?.label ?? locationId} / ${workspace.componentDefs[componentId]?.name ?? componentId}`;
+    });
     // Task 4.6 replaces this with the confirm dialog ("Discard" / "Go back").
-    return window.confirm(`You have an unrecorded change for ${where} / ${what}. Discard it?`);
+    const text = names.length === 1 ? `an unrecorded change for ${names[0]}. Discard it?` : `unrecorded changes for ${names.join("; ")}. Discard them?`;
+    return window.confirm(`You have ${text}`);
+  };
+  /** Agreeing to discard really resets the forms, so the draft does not outlive the answer. */
+  const discardAll = (): boolean => {
+    if (!mayDiscard()) return false;
+    if (dirtyTargets.size > 0) setResetKey((k) => k + 1);
+    return true;
   };
   const select = (locationId: string, componentId: string | null) => {
     if (locationId !== selection && !mayDiscard()) return;
@@ -575,6 +583,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                 onRemove={remove}
                 onRetry={retry}
                 onDirtyChange={onDirtyChange}
+                resetKey={resetKey}
                 onSelect={(id) => select(id, null)}
               />
               {visit && visitId && (
@@ -617,7 +626,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                     </ul>
                   )}
                   {visit.status === "DRAFT" && !confirming && (
-                    <button type="button" className="primary" disabled={visit.records.length === 0} onClick={() => mayDiscard() && setConfirming(true)}>
+                    <button type="button" className="primary" disabled={visit.records.length === 0} onClick={() => discardAll() && setConfirming(true)}>
                       Complete visit…
                     </button>
                   )}

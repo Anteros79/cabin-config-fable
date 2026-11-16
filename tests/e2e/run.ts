@@ -710,10 +710,10 @@ try {
     await openMap(page);
     await selectViaGoTo(page, "FWD");
     const panel = page.locator(".component-card[data-component=CARPET_PANEL]");
-    await panel.locator("input[type=number]").fill("2");
+    await panel.getByLabel(/^Replacements/).fill("2");
     await panel.locator("button[type=submit]").click();
     await panel.locator(".save-state.saved").waitFor();
-    await panel.locator("input[type=number]").fill("4");
+    await panel.getByLabel(/^Replacements/).fill("4");
     await panel.locator("button[type=submit]").click();
     await page.waitForFunction(() => document.querySelector(".worklist")?.textContent?.includes("FAKE-V01-FWD-PANEL 4 PANEL"));
     await selectViaGoTo(page, "FULL-CABIN");
@@ -773,11 +773,11 @@ try {
     await openMap(page);
     await selectViaGoTo(page, "FWD");
     const mine = page.locator(".component-card[data-component=CARPET_PANEL]");
-    await mine.locator("input[type=number]").fill("3");
+    await mine.getByLabel(/^Replacements/).fill("3");
     await mine.locator("button[type=submit]").click();
     await mine.locator(".save-state.saved").waitFor();
     const theirs = other.locator(".component-card[data-component=CARPET_PANEL]");
-    await theirs.locator("input[type=number]").fill("1");
+    await theirs.getByLabel(/^Replacements/).fill("1");
     await theirs.locator("button[type=submit]").click();
     await theirs.locator(".save-state.conflict").waitFor();
     expect((await theirs.locator(".save-state").textContent())!.includes("changed elsewhere"), "conflict explained");
