@@ -4,7 +4,7 @@
     "cores": 14,
     "memoryGb": 24,
     "os": "darwin 27.3.0",
-    "browser": "Chrome 157.0.8103.51 (headless)",
+    "browser": "Chromium 159.0.8154.6 (headless)",
     "webgl": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4 Pro, Unspecified Version)"
   },
   "viewport": {
@@ -17,34 +17,36 @@
     "seats": 176,
     "renderer": {
       "drawCalls": 23,
-      "triangles": 1314218,
-      "pixelRatio": 1
+      "triangles": 488858,
+      "pixelRatio": 1,
+      "geometries": 25,
+      "textures": 14,
+      "textureBytes": 26410353
     }
   },
   "frameRate": {
-    "method": "continuous orbit for 4 s with seats, floor and bins visible (context layer off), rendering each animation frame; headless Chrome caps at the display refresh rate",
-    "fps": 60.1,
-    "frames": 241,
-    "worstFrameMs": 19,
+    "method": "continuous orbit for 4 s with seats, floor and bins visible (context layer off), rendering each animation frame; headless Chromium caps at the display refresh rate",
+    "fps": 59.8,
+    "frames": 240,
+    "worstFrameMs": 18.9,
     "target": "about 30 fps"
   },
   "selectionFeedback": {
     "method": "pointer pick to the next rendered frame showing the selection, 10 picks",
     "samplesMs": [
-      7.9,
-      8.8,
-      10.1,
-      8.1,
       7.5,
-      7.2,
-      9.3,
+      6.1,
+      7.3,
       8.7,
+      11.2,
+      10,
+      7.4,
+      6.4,
       10.5,
-      6.4
+      16.9
     ],
-    "maxMs": 10.5,
+    "maxMs": 16.9,
     "medianMs": 8.7,
     "target": "within 250 ms"
-  },
-  "measuredAt": "2026-11-15T03:53:16.784Z"
+  }
 }

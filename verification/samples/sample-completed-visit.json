@@ -1,22 +1,159 @@
 {
   "visit": {
-    "id": "3be0adb7-2805-4a91-a373-0722dcc9e697",
+    "id": "25b5ebe8-5471-4a1f-91fb-9640a8be131f",
     "number": 1,
     "tail": "N100TL",
     "checkDate": "2026-11-12",
-    "technician": "Keyboard Tech",
+    "technician": "Sample Technician (fictional)",
     "status": "COMPLETED",
     "version": 4,
-    "createdAt": "2026-11-15T03:52:44.142Z",
-    "updatedAt": "2026-11-15T03:52:44.490Z",
-    "completedAt": "2026-11-15T03:52:44.490Z",
+    "createdAt": "2026-11-12T09:00:00.000Z",
+    "updatedAt": "2026-11-12T09:00:00.000Z",
+    "completedAt": "2026-11-12T09:00:00.000Z",
     "recordCount": 2,
-    "referenceReleaseId": "REL-0001-6df51180",
+    "referenceReleaseId": "REL-0001-9cf6c6d2",
     "lookupState": "RESOLVED",
     "variantId": "V01",
     "layoutRevisionId": "FX-L-S176-MAX8@1",
+    "snapshotSha256": "e4bd9b4b6eaedc8e7373503f0810e457948f302aeedbdf614dcea47cf73fe5b0",
+    "records": [
+      {
+        "locationId": "FLOOR:FULL-CABIN",
+        "componentId": "CARPET_KIT",
+        "version": 1,
+        "selection": "ALTERNATE",
+        "substituteId": "FX-SUB-KIT-1",
+        "quantity": 1,
+        "note": "Sample: alternate kit used under the fictional deviation.",
+        "ruleId": "FX-R-V01-CARPET-KIT",
+        "primaryPartNo": "FAKE-CK-2001",
+        "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
+        "componentName": "Full-cabin carpet kit",
+        "lines": [
+          {
+            "partNo": "FAKE-CK-2000",
+            "description": "Fictional alternate carpet kit (deviation)",
+            "qty": 1,
+            "unit": "KIT",
+            "role": "ALTERNATE",
+            "parentPartNo": null,
+            "sourceId": "FX-DOC-DEV"
+          },
+          {
+            "partNo": "FAKE-P-39",
+            "description": "Fictional supplement panel 39",
+            "qty": 2,
+            "unit": "PANEL",
+            "role": "MANDATORY_CHILD",
+            "parentPartNo": "FAKE-CK-2000",
+            "sourceId": "FX-DOC-DEV"
+          },
+          {
+            "partNo": "FAKE-P-40",
+            "description": "Fictional supplement panel 40",
+            "qty": 2,
+            "unit": "PANEL",
+            "role": "MANDATORY_CHILD",
+            "parentPartNo": "FAKE-CK-2000",
+            "sourceId": "FX-DOC-DEV"
+          },
+          {
+            "partNo": "FAKE-P-41",
+            "description": "Fictional supplement panel 41",
+            "qty": 1,
+            "unit": "PANEL",
+            "role": "MANDATORY_CHILD",
+            "parentPartNo": "FAKE-CK-2000",
+            "sourceId": "FX-DOC-DEV"
+          },
+          {
+            "partNo": "FAKE-P-42",
+            "description": "Fictional supplement panel 42",
+            "qty": 1,
+            "unit": "PANEL",
+            "role": "MANDATORY_CHILD",
+            "parentPartNo": "FAKE-CK-2000",
+            "sourceId": "FX-DOC-DEV"
+          }
+        ],
+        "createdAt": "2026-11-12T09:00:00.000Z",
+        "updatedAt": "2026-11-12T09:00:00.000Z"
+      },
+      {
+        "locationId": "SEAT:3A",
+        "componentId": "CUSHION",
+        "version": 1,
+        "selection": "PRIMARY",
+        "substituteId": null,
+        "quantity": 1,
+        "note": "Sample: torn seam on the leading edge.",
+        "ruleId": "FX-R-V01-ELR-A-CUSHION",
+        "primaryPartNo": "FAKE-SC-1001",
+        "locationLabel": "Seat 3A",
+        "componentName": "Seat cushion cover",
+        "lines": [
+          {
+            "partNo": "FAKE-SC-1001",
+            "description": "Fictional cushion cover, V01 ELR seat A",
+            "qty": 1,
+            "unit": "EA",
+            "role": "PRIMARY",
+            "parentPartNo": null,
+            "sourceId": "FX-DOC-A"
+          }
+        ],
+        "createdAt": "2026-11-12T09:00:00.000Z",
+        "updatedAt": "2026-11-12T09:00:00.000Z"
+      }
+    ],
+    "events": [
+      {
+        "seq": 1,
+        "type": "CREATED",
+        "at": "2026-11-12T09:00:00.000Z",
+        "payload": {
+          "referenceReleaseId": "REL-0001-9cf6c6d2",
+          "snapshotSha256": "e4bd9b4b6eaedc8e7373503f0810e457948f302aeedbdf614dcea47cf73fe5b0",
+          "lookupState": "RESOLVED"
+        }
+      },
+      {
+        "seq": 2,
+        "type": "RECORD_ADDED",
+        "at": "2026-11-12T09:00:00.000Z",
+        "payload": {
+          "locationId": "SEAT:3A",
+          "componentId": "CUSHION",
+          "selection": "PRIMARY",
+          "substituteId": null,
+          "quantity": 1,
+          "recordVersion": 1
+        }
+      },
+      {
+        "seq": 3,
+        "type": "RECORD_ADDED",
+        "at": "2026-11-12T09:00:00.000Z",
+        "payload": {
+          "locationId": "FLOOR:FULL-CABIN",
+          "componentId": "CARPET_KIT",
+          "selection": "ALTERNATE",
+          "substituteId": "FX-SUB-KIT-1",
+          "quantity": 1,
+          "recordVersion": 1
+        }
+      },
+      {
+        "seq": 4,
+        "type": "COMPLETED",
+        "at": "2026-11-12T09:00:00.000Z",
+        "payload": {
+          "records": 2
+        }
+      }
+    ],
     "snapshot": {
-      "capturedAt": "2026-11-15T03:52:44.141Z",
+      "capturedAt": "2026-11-12T09:00:00.000Z",
       "checkDate": "2026-11-12",
       "context": {
         "aircraft": {
@@ -6429,8 +6566,8 @@
       "dateRule": "Effective-from and effective-to/expiry dates are calendar dates and are both inclusive.",
       "geometryVersion": "cabin-kit.geometry/1",
       "lookupState": "RESOLVED",
-      "referenceContentHash": "6df5118095a4e9416c3e409a62edabb0a10e38bbb17e50a2f4d8615776969400",
-      "referenceReleaseId": "REL-0001-6df51180",
+      "referenceContentHash": "9cf6c6d29e468c944381a11f9042c89f2ad30cfd07d852720796ce14b2d8ed72",
+      "referenceReleaseId": "REL-0001-9cf6c6d2",
       "resolution": {
         "componentDefs": {
           "BACKREST": {
@@ -6473,6 +6610,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1A",
             "ruleId": "FX-R-V01-ELR-A-CUSHION",
             "status": "RESOLVED"
@@ -6480,6 +6618,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1A",
             "ruleId": "FX-R-V01-ELR-A-BACKREST",
             "status": "RESOLVED"
@@ -6487,6 +6626,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1B",
             "ruleId": "FX-R-V01-ELR-B-CUSHION",
             "status": "RESOLVED"
@@ -6494,6 +6634,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1B",
             "ruleId": "FX-R-V01-ELR-B-BACKREST",
             "status": "RESOLVED"
@@ -6501,6 +6642,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1C",
             "ruleId": "FX-R-V01-ELR-C-CUSHION",
             "status": "RESOLVED"
@@ -6508,6 +6650,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1C",
             "ruleId": "FX-R-V01-ELR-C-BACKREST",
             "status": "RESOLVED"
@@ -6515,6 +6658,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1D",
             "ruleId": "FX-R-V01-ELR-D-CUSHION",
             "status": "RESOLVED"
@@ -6522,6 +6666,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1D",
             "ruleId": "FX-R-V01-ELR-D-BACKREST",
             "status": "RESOLVED"
@@ -6529,6 +6674,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1E",
             "ruleId": "FX-R-V01-ELR-E-CUSHION",
             "status": "RESOLVED"
@@ -6536,6 +6682,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1E",
             "ruleId": "FX-R-V01-ELR-E-BACKREST",
             "status": "RESOLVED"
@@ -6543,6 +6690,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1F",
             "ruleId": "FX-R-V01-ELR-F-CUSHION",
             "status": "RESOLVED"
@@ -6550,6 +6698,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:1F",
             "ruleId": "FX-R-V01-ELR-F-BACKREST",
             "status": "RESOLVED"
@@ -6557,6 +6706,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2A",
             "ruleId": "FX-R-V01-ELR-A-CUSHION",
             "status": "RESOLVED"
@@ -6564,6 +6714,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2A",
             "ruleId": "FX-R-V01-ELR-A-BACKREST",
             "status": "RESOLVED"
@@ -6571,6 +6722,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2B",
             "ruleId": "FX-R-V01-ELR-B-CUSHION",
             "status": "RESOLVED"
@@ -6578,6 +6730,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2B",
             "ruleId": "FX-R-V01-ELR-B-BACKREST",
             "status": "RESOLVED"
@@ -6585,6 +6738,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2C",
             "ruleId": "FX-R-V01-ELR-C-CUSHION",
             "status": "RESOLVED"
@@ -6592,6 +6746,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2C",
             "ruleId": "FX-R-V01-ELR-C-BACKREST",
             "status": "RESOLVED"
@@ -6599,6 +6754,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2D",
             "ruleId": "FX-R-V01-ELR-D-CUSHION",
             "status": "RESOLVED"
@@ -6606,6 +6762,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2D",
             "ruleId": "FX-R-V01-ELR-D-BACKREST",
             "status": "RESOLVED"
@@ -6613,6 +6770,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2E",
             "ruleId": "FX-R-V01-ELR-E-CUSHION",
             "status": "RESOLVED"
@@ -6620,6 +6778,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2E",
             "ruleId": "FX-R-V01-ELR-E-BACKREST",
             "status": "RESOLVED"
@@ -6627,6 +6786,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2F",
             "ruleId": "FX-R-V01-ELR-F-CUSHION",
             "status": "RESOLVED"
@@ -6634,6 +6794,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:2F",
             "ruleId": "FX-R-V01-ELR-F-BACKREST",
             "status": "RESOLVED"
@@ -6641,6 +6802,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3A",
             "ruleId": "FX-R-V01-ELR-A-CUSHION",
             "status": "RESOLVED"
@@ -6648,6 +6810,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3A",
             "ruleId": "FX-R-V01-ELR-A-BACKREST",
             "status": "RESOLVED"
@@ -6655,6 +6818,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3B",
             "ruleId": "FX-R-V01-ELR-B-CUSHION",
             "status": "RESOLVED"
@@ -6662,6 +6826,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3B",
             "ruleId": "FX-R-V01-ELR-B-BACKREST",
             "status": "RESOLVED"
@@ -6669,6 +6834,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3C",
             "ruleId": "FX-R-V01-ELR-C-CUSHION",
             "status": "RESOLVED"
@@ -6676,6 +6842,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3C",
             "ruleId": "FX-R-V01-ELR-C-BACKREST",
             "status": "RESOLVED"
@@ -6683,6 +6850,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3D",
             "ruleId": "FX-R-V01-ELR-D-CUSHION",
             "status": "RESOLVED"
@@ -6690,6 +6858,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3D",
             "ruleId": "FX-R-V01-ELR-D-BACKREST",
             "status": "RESOLVED"
@@ -6697,6 +6866,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3E",
             "ruleId": "FX-R-V01-ELR-E-CUSHION",
             "status": "RESOLVED"
@@ -6704,6 +6874,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3E",
             "ruleId": "FX-R-V01-ELR-E-BACKREST",
             "status": "RESOLVED"
@@ -6711,6 +6882,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3F",
             "ruleId": "FX-R-V01-ELR-F-CUSHION",
             "status": "RESOLVED"
@@ -6718,6 +6890,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:3F",
             "ruleId": "FX-R-V01-ELR-F-BACKREST",
             "status": "RESOLVED"
@@ -6725,6 +6898,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4A",
             "ruleId": "FX-R-V01-ELR-A-CUSHION",
             "status": "RESOLVED"
@@ -6732,6 +6906,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4A",
             "ruleId": "FX-R-V01-ELR-A-BACKREST",
             "status": "RESOLVED"
@@ -6739,6 +6914,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4B",
             "ruleId": "FX-R-V01-ELR-B-CUSHION",
             "status": "RESOLVED"
@@ -6746,6 +6922,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4B",
             "ruleId": "FX-R-V01-ELR-B-BACKREST",
             "status": "RESOLVED"
@@ -6753,6 +6930,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4C",
             "ruleId": "FX-R-V01-ELR-C-CUSHION",
             "status": "RESOLVED"
@@ -6760,6 +6938,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4C",
             "ruleId": "FX-R-V01-ELR-C-BACKREST",
             "status": "RESOLVED"
@@ -6767,6 +6946,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4D",
             "ruleId": "FX-R-V01-ELR-D-CUSHION",
             "status": "RESOLVED"
@@ -6774,6 +6954,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4D",
             "ruleId": "FX-R-V01-ELR-D-BACKREST",
             "status": "RESOLVED"
@@ -6781,6 +6962,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4E",
             "ruleId": "FX-R-V01-ELR-E-CUSHION",
             "status": "RESOLVED"
@@ -6788,6 +6970,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4E",
             "ruleId": "FX-R-V01-ELR-E-BACKREST",
             "status": "RESOLVED"
@@ -6795,6 +6978,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4F",
             "ruleId": "FX-R-V01-ELR-F-CUSHION",
             "status": "RESOLVED"
@@ -6802,6 +6986,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:4F",
             "ruleId": "FX-R-V01-ELR-F-BACKREST",
             "status": "RESOLVED"
@@ -6809,6 +6994,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5A",
             "ruleId": "FX-R-V01-ELR-A-CUSHION",
             "status": "RESOLVED"
@@ -6816,6 +7002,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5A",
             "ruleId": "FX-R-V01-ELR-A-BACKREST",
             "status": "RESOLVED"
@@ -6823,6 +7010,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5B",
             "ruleId": "FX-R-V01-ELR-B-CUSHION",
             "status": "RESOLVED"
@@ -6830,6 +7018,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5B",
             "ruleId": "FX-R-V01-ELR-B-BACKREST",
             "status": "RESOLVED"
@@ -6837,6 +7026,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5C",
             "ruleId": "FX-R-V01-ELR-C-CUSHION",
             "status": "RESOLVED"
@@ -6844,6 +7034,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5C",
             "ruleId": "FX-R-V01-ELR-C-BACKREST",
             "status": "RESOLVED"
@@ -6851,6 +7042,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5D",
             "ruleId": "FX-R-V01-ELR-D-CUSHION",
             "status": "RESOLVED"
@@ -6858,6 +7050,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5D",
             "ruleId": "FX-R-V01-ELR-D-BACKREST",
             "status": "RESOLVED"
@@ -6865,6 +7058,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5E",
             "ruleId": "FX-R-V01-ELR-E-CUSHION",
             "status": "RESOLVED"
@@ -6872,6 +7066,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5E",
             "ruleId": "FX-R-V01-ELR-E-BACKREST",
             "status": "RESOLVED"
@@ -6879,6 +7074,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5F",
             "ruleId": "FX-R-V01-ELR-F-CUSHION",
             "status": "RESOLVED"
@@ -6886,6 +7082,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:5F",
             "ruleId": "FX-R-V01-ELR-F-BACKREST",
             "status": "RESOLVED"
@@ -6893,6 +7090,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -6900,6 +7098,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -6907,6 +7106,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -6914,6 +7114,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -6921,6 +7122,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -6928,6 +7130,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -6935,6 +7138,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -6942,6 +7146,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -6949,6 +7154,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -6956,6 +7162,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -6963,6 +7170,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -6970,6 +7178,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:6F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -6977,6 +7186,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -6984,6 +7194,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -6991,6 +7202,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -6998,6 +7210,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7005,6 +7218,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7012,6 +7226,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7019,6 +7234,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7026,6 +7242,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7033,6 +7250,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7040,6 +7258,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7047,6 +7266,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7054,6 +7274,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:7F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7061,6 +7282,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7068,6 +7290,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7075,6 +7298,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7082,6 +7306,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7089,6 +7314,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7096,6 +7322,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7103,6 +7330,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7110,6 +7338,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7117,6 +7346,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7124,6 +7354,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7131,6 +7362,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7138,6 +7370,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:8F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7145,6 +7378,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7152,6 +7386,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7159,6 +7394,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7166,6 +7402,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7173,6 +7410,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7180,6 +7418,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7187,6 +7426,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7194,6 +7434,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7201,6 +7442,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7208,6 +7450,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7215,6 +7458,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7222,6 +7466,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:9F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7229,6 +7474,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7236,6 +7482,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7243,6 +7490,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7250,6 +7498,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7257,6 +7506,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7264,6 +7514,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7271,6 +7522,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7278,6 +7530,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7285,6 +7538,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7292,6 +7546,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7299,6 +7554,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7306,6 +7562,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:10F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7313,6 +7570,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7320,6 +7578,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7327,6 +7586,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7334,6 +7594,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7341,6 +7602,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7348,6 +7610,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7355,6 +7618,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7362,6 +7626,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7369,6 +7634,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7376,6 +7642,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7383,6 +7650,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7390,6 +7658,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:11F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7397,6 +7666,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7404,6 +7674,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7411,6 +7682,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7418,6 +7690,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7425,6 +7698,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7432,6 +7706,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7439,6 +7714,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7446,6 +7722,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7453,6 +7730,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7460,6 +7738,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7467,6 +7746,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7474,6 +7754,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:12F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7481,6 +7762,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7488,6 +7770,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7495,6 +7778,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7502,6 +7786,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7509,6 +7794,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7516,6 +7802,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7523,6 +7810,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7530,6 +7818,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7537,6 +7826,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7544,6 +7834,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7551,6 +7842,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7558,6 +7850,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:13F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7565,6 +7858,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14A",
             "ruleId": "FX-R-V01-EXIT-A-CUSHION",
             "status": "RESOLVED"
@@ -7572,6 +7866,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14A",
             "ruleId": "FX-R-V01-EXIT-A-BACKREST",
             "status": "RESOLVED"
@@ -7579,6 +7874,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14C",
             "ruleId": "FX-R-V01-EXIT-C-CUSHION",
             "status": "RESOLVED"
@@ -7586,6 +7882,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14C",
             "ruleId": "FX-R-V01-EXIT-C-BACKREST",
             "status": "RESOLVED"
@@ -7593,6 +7890,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14D",
             "ruleId": "FX-R-V01-EXIT-D-CUSHION",
             "status": "RESOLVED"
@@ -7600,6 +7898,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14D",
             "ruleId": "FX-R-V01-EXIT-D-BACKREST",
             "status": "RESOLVED"
@@ -7607,6 +7906,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14F",
             "ruleId": "FX-R-V01-EXIT-F-CUSHION",
             "status": "RESOLVED"
@@ -7614,6 +7914,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:14F",
             "ruleId": "FX-R-V01-EXIT-F-BACKREST",
             "status": "RESOLVED"
@@ -7621,6 +7922,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15A",
             "ruleId": "FX-R-V01-EXIT-A-CUSHION",
             "status": "RESOLVED"
@@ -7628,6 +7930,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15A",
             "ruleId": "FX-R-V01-EXIT-A-BACKREST",
             "status": "RESOLVED"
@@ -7635,6 +7938,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15C",
             "ruleId": "FX-R-V01-EXIT-C-CUSHION",
             "status": "RESOLVED"
@@ -7642,6 +7946,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15C",
             "ruleId": "FX-R-V01-EXIT-C-BACKREST",
             "status": "RESOLVED"
@@ -7649,6 +7954,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15D",
             "ruleId": "FX-R-V01-EXIT-D-CUSHION",
             "status": "RESOLVED"
@@ -7656,6 +7962,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15D",
             "ruleId": "FX-R-V01-EXIT-D-BACKREST",
             "status": "RESOLVED"
@@ -7663,6 +7970,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15F",
             "ruleId": "FX-R-V01-EXIT-F-CUSHION",
             "status": "RESOLVED"
@@ -7670,6 +7978,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:15F",
             "ruleId": "FX-R-V01-EXIT-F-BACKREST",
             "status": "RESOLVED"
@@ -7677,6 +7986,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7684,6 +7994,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7691,6 +8002,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7698,6 +8010,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7705,6 +8018,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7712,6 +8026,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7719,6 +8034,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7726,6 +8042,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7733,6 +8050,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7740,6 +8058,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7747,6 +8066,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7754,6 +8074,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:16F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7761,6 +8082,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7768,6 +8090,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7775,6 +8098,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7782,6 +8106,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7789,6 +8114,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7796,6 +8122,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7803,6 +8130,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7810,6 +8138,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7817,6 +8146,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7824,6 +8154,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7831,6 +8162,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7838,6 +8170,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:17F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7845,6 +8178,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7852,6 +8186,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7859,6 +8194,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7866,6 +8202,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7873,6 +8210,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7880,6 +8218,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7887,6 +8226,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7894,6 +8234,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7901,6 +8242,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7908,6 +8250,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7915,6 +8258,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -7922,6 +8266,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:18F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -7929,6 +8274,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -7936,6 +8282,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -7943,6 +8290,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -7950,6 +8298,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -7957,6 +8306,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -7964,6 +8314,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -7971,6 +8322,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -7978,6 +8330,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -7985,6 +8338,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -7992,6 +8346,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -7999,6 +8354,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8006,6 +8362,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:19F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8013,6 +8370,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8020,6 +8378,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8027,6 +8386,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8034,6 +8394,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8041,6 +8402,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8048,6 +8410,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8055,6 +8418,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8062,6 +8426,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8069,6 +8434,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8076,6 +8442,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8083,6 +8450,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8090,6 +8458,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:20F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8097,6 +8466,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8104,6 +8474,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8111,6 +8482,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8118,6 +8490,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8125,6 +8498,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8132,6 +8506,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8139,6 +8514,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8146,6 +8522,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8153,6 +8530,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8160,6 +8538,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8167,6 +8546,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8174,6 +8554,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:21F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8181,6 +8562,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8188,6 +8570,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8195,6 +8578,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8202,6 +8586,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8209,6 +8594,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8216,6 +8602,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8223,6 +8610,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8230,6 +8618,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8237,6 +8626,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8244,6 +8634,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8251,6 +8642,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8258,6 +8650,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:22F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8265,6 +8658,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8272,6 +8666,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8279,6 +8674,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8286,6 +8682,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8293,6 +8690,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8300,6 +8698,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8307,6 +8706,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8314,6 +8714,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8321,6 +8722,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8328,6 +8730,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8335,6 +8738,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8342,6 +8746,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:23F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8349,6 +8754,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8356,6 +8762,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8363,6 +8770,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8370,6 +8778,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8377,6 +8786,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8384,6 +8794,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8391,6 +8802,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8398,6 +8810,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8405,6 +8818,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8412,6 +8826,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8419,6 +8834,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8426,6 +8842,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:24F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8433,6 +8850,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8440,6 +8858,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8447,6 +8866,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8454,6 +8874,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8461,6 +8882,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8468,6 +8890,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8475,6 +8898,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8482,6 +8906,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8489,6 +8914,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8496,6 +8922,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8503,6 +8930,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8510,6 +8938,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:25F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8517,6 +8946,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8524,6 +8954,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8531,6 +8962,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8538,6 +8970,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8545,6 +8978,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8552,6 +8986,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8559,6 +8994,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8566,6 +9002,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8573,6 +9010,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8580,6 +9018,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8587,6 +9026,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8594,6 +9034,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:26F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8601,6 +9042,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8608,6 +9050,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8615,6 +9058,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8622,6 +9066,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8629,6 +9074,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8636,6 +9082,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8643,6 +9090,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8650,6 +9098,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8657,6 +9106,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8664,6 +9114,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8671,6 +9122,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8678,6 +9130,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:27F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8685,6 +9138,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8692,6 +9146,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8699,6 +9154,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8706,6 +9162,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8713,6 +9170,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8720,6 +9178,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8727,6 +9186,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8734,6 +9194,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8741,6 +9202,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8748,6 +9210,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8755,6 +9218,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8762,6 +9226,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:28F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8769,6 +9234,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8776,6 +9242,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8783,6 +9250,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8790,6 +9258,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8797,6 +9266,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8804,6 +9274,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8811,6 +9282,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8818,6 +9290,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8825,6 +9298,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8832,6 +9306,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8839,6 +9314,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8846,6 +9322,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:29F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8853,6 +9330,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30A",
             "ruleId": "FX-R-V01-STD-A-CUSHION",
             "status": "RESOLVED"
@@ -8860,6 +9338,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30A",
             "ruleId": "FX-R-V01-STD-A-BACKREST",
             "status": "RESOLVED"
@@ -8867,6 +9346,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30B",
             "ruleId": "FX-R-V01-STD-B-CUSHION",
             "status": "RESOLVED"
@@ -8874,6 +9354,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30B",
             "ruleId": "FX-R-V01-STD-B-BACKREST",
             "status": "RESOLVED"
@@ -8881,6 +9362,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30C",
             "ruleId": "FX-R-V01-STD-C-CUSHION",
             "status": "RESOLVED"
@@ -8888,6 +9370,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30C",
             "ruleId": "FX-R-V01-STD-C-BACKREST",
             "status": "RESOLVED"
@@ -8895,6 +9378,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30D",
             "ruleId": "FX-R-V01-STD-D-CUSHION",
             "status": "RESOLVED"
@@ -8902,6 +9386,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30D",
             "ruleId": "FX-R-V01-STD-D-BACKREST",
             "status": "RESOLVED"
@@ -8909,6 +9394,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30E",
             "ruleId": "FX-R-V01-STD-E-CUSHION",
             "status": "RESOLVED"
@@ -8916,6 +9402,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30E",
             "ruleId": "FX-R-V01-STD-E-BACKREST",
             "status": "RESOLVED"
@@ -8923,6 +9410,7 @@
           {
             "componentId": "CUSHION",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30F",
             "ruleId": "FX-R-V01-STD-F-CUSHION",
             "status": "RESOLVED"
@@ -8930,6 +9418,7 @@
           {
             "componentId": "BACKREST",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "SEAT:30F",
             "ruleId": "FX-R-V01-STD-F-BACKREST",
             "status": "RESOLVED"
@@ -8937,6 +9426,7 @@
           {
             "componentId": "CARPET_KIT",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "FLOOR:FULL-CABIN",
             "ruleId": "FX-R-V01-CARPET-KIT",
             "status": "RESOLVED"
@@ -8944,6 +9434,7 @@
           {
             "componentId": "CARPET_PANEL",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "FLOOR:FWD",
             "ruleId": "FX-R-V01-FWD-PANEL",
             "status": "RESOLVED"
@@ -8951,6 +9442,7 @@
           {
             "componentId": "CARPET_PANEL",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "FLOOR:MID",
             "ruleId": "FX-R-V01-MID-PANEL",
             "status": "RESOLVED"
@@ -8958,6 +9450,7 @@
           {
             "componentId": "CARPET_PANEL",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "FLOOR:AFT",
             "ruleId": "FX-R-V01-AFT-PANEL",
             "status": "RESOLVED"
@@ -8965,6 +9458,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-01",
             "ruleId": "FX-R-V01-BIN-L-01",
             "status": "RESOLVED"
@@ -8972,6 +9466,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-02",
             "ruleId": "FX-R-V01-BIN-L-02",
             "status": "RESOLVED"
@@ -8979,6 +9474,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-03",
             "ruleId": "FX-R-V01-BIN-L-03",
             "status": "RESOLVED"
@@ -8986,6 +9482,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-04",
             "ruleId": "FX-R-V01-BIN-L-04",
             "status": "RESOLVED"
@@ -8993,6 +9490,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-05",
             "ruleId": "FX-R-V01-BIN-L-05",
             "status": "RESOLVED"
@@ -9000,6 +9498,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-06",
             "ruleId": "FX-R-V01-BIN-L-06",
             "status": "RESOLVED"
@@ -9007,6 +9506,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-07",
             "ruleId": "FX-R-V01-BIN-L-07",
             "status": "RESOLVED"
@@ -9014,6 +9514,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-08",
             "ruleId": "FX-R-V01-BIN-L-08",
             "status": "RESOLVED"
@@ -9021,6 +9522,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-09",
             "ruleId": "FX-R-V01-BIN-L-09",
             "status": "RESOLVED"
@@ -9028,6 +9530,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:L-10",
             "ruleId": "FX-R-V01-BIN-L-10",
             "status": "RESOLVED"
@@ -9035,6 +9538,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-01",
             "ruleId": "FX-R-V01-BIN-R-01",
             "status": "RESOLVED"
@@ -9042,6 +9546,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-02",
             "ruleId": "FX-R-V01-BIN-R-02",
             "status": "RESOLVED"
@@ -9049,6 +9554,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-03",
             "ruleId": "FX-R-V01-BIN-R-03",
             "status": "RESOLVED"
@@ -9056,6 +9562,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-04",
             "ruleId": "FX-R-V01-BIN-R-04",
             "status": "RESOLVED"
@@ -9063,6 +9570,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-05",
             "ruleId": "FX-R-V01-BIN-R-05",
             "status": "RESOLVED"
@@ -9070,6 +9578,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-06",
             "ruleId": "FX-R-V01-BIN-R-06",
             "status": "RESOLVED"
@@ -9077,6 +9586,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-07",
             "ruleId": "FX-R-V01-BIN-R-07",
             "status": "RESOLVED"
@@ -9084,6 +9594,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-08",
             "ruleId": "FX-R-V01-BIN-R-08",
             "status": "RESOLVED"
@@ -9091,6 +9602,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-09",
             "ruleId": "FX-R-V01-BIN-R-09",
             "status": "RESOLVED"
@@ -9098,6 +9610,7 @@
           {
             "componentId": "BIN_DOOR",
             "dominatedRuleIds": [],
+            "excluded": [],
             "locationId": "BIN:R-10",
             "ruleId": "FX-R-V01-BIN-R-10",
             "status": "RESOLVED"
@@ -10758,147 +11271,10 @@
       },
       "schema": "cabin-kit.snapshot/1",
       "tail": "N100TL"
-    },
-    "snapshotSha256": "3e3303f5847f07d8deeb31d70925db853aedba8995090070cf835c321f244a92",
-    "records": [
-      {
-        "locationId": "SEAT:3A",
-        "componentId": "CUSHION",
-        "version": 1,
-        "selection": "PRIMARY",
-        "substituteId": null,
-        "quantity": 1,
-        "note": "",
-        "ruleId": "FX-R-V01-ELR-A-CUSHION",
-        "primaryPartNo": "FAKE-SC-1001",
-        "locationLabel": "Seat 3A",
-        "componentName": "Seat cushion cover",
-        "lines": [
-          {
-            "partNo": "FAKE-SC-1001",
-            "description": "Fictional cushion cover, V01 ELR seat A",
-            "qty": 1,
-            "unit": "EA",
-            "role": "PRIMARY",
-            "parentPartNo": null,
-            "sourceId": "FX-DOC-A"
-          }
-        ],
-        "createdAt": "2026-11-15T03:52:44.349Z",
-        "updatedAt": "2026-11-15T03:52:44.349Z"
-      },
-      {
-        "locationId": "FLOOR:FULL-CABIN",
-        "componentId": "CARPET_KIT",
-        "version": 1,
-        "selection": "ALTERNATE",
-        "substituteId": "FX-SUB-KIT-1",
-        "quantity": 1,
-        "note": "",
-        "ruleId": "FX-R-V01-CARPET-KIT",
-        "primaryPartNo": "FAKE-CK-2001",
-        "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
-        "componentName": "Full-cabin carpet kit",
-        "lines": [
-          {
-            "partNo": "FAKE-CK-2000",
-            "description": "Fictional alternate carpet kit (deviation)",
-            "qty": 1,
-            "unit": "KIT",
-            "role": "ALTERNATE",
-            "parentPartNo": null,
-            "sourceId": "FX-DOC-DEV"
-          },
-          {
-            "partNo": "FAKE-P-39",
-            "description": "Fictional supplement panel 39",
-            "qty": 2,
-            "unit": "PANEL",
-            "role": "MANDATORY_CHILD",
-            "parentPartNo": "FAKE-CK-2000",
-            "sourceId": "FX-DOC-DEV"
-          },
-          {
-            "partNo": "FAKE-P-40",
-            "description": "Fictional supplement panel 40",
-            "qty": 2,
-            "unit": "PANEL",
-            "role": "MANDATORY_CHILD",
-            "parentPartNo": "FAKE-CK-2000",
-            "sourceId": "FX-DOC-DEV"
-          },
-          {
-            "partNo": "FAKE-P-41",
-            "description": "Fictional supplement panel 41",
-            "qty": 1,
-            "unit": "PANEL",
-            "role": "MANDATORY_CHILD",
-            "parentPartNo": "FAKE-CK-2000",
-            "sourceId": "FX-DOC-DEV"
-          },
-          {
-            "partNo": "FAKE-P-42",
-            "description": "Fictional supplement panel 42",
-            "qty": 1,
-            "unit": "PANEL",
-            "role": "MANDATORY_CHILD",
-            "parentPartNo": "FAKE-CK-2000",
-            "sourceId": "FX-DOC-DEV"
-          }
-        ],
-        "createdAt": "2026-11-15T03:52:44.423Z",
-        "updatedAt": "2026-11-15T03:52:44.423Z"
-      }
-    ],
-    "events": [
-      {
-        "seq": 1,
-        "type": "CREATED",
-        "at": "2026-11-15T03:52:44.142Z",
-        "payload": {
-          "referenceReleaseId": "REL-0001-6df51180",
-          "snapshotSha256": "3e3303f5847f07d8deeb31d70925db853aedba8995090070cf835c321f244a92",
-          "lookupState": "RESOLVED"
-        }
-      },
-      {
-        "seq": 2,
-        "type": "RECORD_ADDED",
-        "at": "2026-11-15T03:52:44.349Z",
-        "payload": {
-          "locationId": "SEAT:3A",
-          "componentId": "CUSHION",
-          "selection": "PRIMARY",
-          "substituteId": null,
-          "quantity": 1,
-          "recordVersion": 1
-        }
-      },
-      {
-        "seq": 3,
-        "type": "RECORD_ADDED",
-        "at": "2026-11-15T03:52:44.423Z",
-        "payload": {
-          "locationId": "FLOOR:FULL-CABIN",
-          "componentId": "CARPET_KIT",
-          "selection": "ALTERNATE",
-          "substituteId": "FX-SUB-KIT-1",
-          "quantity": 1,
-          "recordVersion": 1
-        }
-      },
-      {
-        "seq": 4,
-        "type": "COMPLETED",
-        "at": "2026-11-15T03:52:44.490Z",
-        "payload": {
-          "records": 2
-        }
-      }
-    ]
+    }
   },
   "referenceNow": {
-    "releaseId": "REL-0001-6df51180",
+    "releaseId": "REL-0001-9cf6c6d2",
     "changedSinceVisit": false
   }
 }

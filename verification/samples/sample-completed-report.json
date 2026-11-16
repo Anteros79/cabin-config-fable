@@ -5,7 +5,7 @@
       "assignmentEffectiveFrom": "2025-10-01",
       "assignmentEffectiveTo": null,
       "assignmentId": "FX-TA-N100TL-V01-2025-10-01",
-      "capturedAt": "2026-11-15T03:52:44.141Z",
+      "capturedAt": "2026-11-12T09:00:00.000Z",
       "carpet": "MOHAWK",
       "configurationSourceId": "FX-DOC-CONFIG",
       "geometryVersion": "cabin-kit.geometry/1",
@@ -15,11 +15,11 @@
       "layoutRevisionId": "FX-L-S176-MAX8@1",
       "lookupState": "RESOLVED",
       "namespace": "fixture",
-      "referenceContentHash": "6df5118095a4e9416c3e409a62edabb0a10e38bbb17e50a2f4d8615776969400",
-      "referenceReleaseId": "REL-0001-6df51180",
+      "referenceContentHash": "9cf6c6d29e468c944381a11f9042c89f2ad30cfd07d852720796ce14b2d8ed72",
+      "referenceReleaseId": "REL-0001-9cf6c6d2",
       "seam": "PRE",
       "seatCount": 176,
-      "snapshotSha256": "3e3303f5847f07d8deeb31d70925db853aedba8995090070cf835c321f244a92",
+      "snapshotSha256": "e4bd9b4b6eaedc8e7373503f0810e457948f302aeedbdf614dcea47cf73fe5b0",
       "subtype": "Fictional MAX8 sub-fleet",
       "upholstery": null,
       "variantId": "V01",
@@ -33,11 +33,11 @@
     },
     "dateRule": "Effective-from and effective-to/expiry dates are calendar dates and are both inclusive.",
     "gaps": [],
-    "generatedAt": "2026-11-15T03:52:44.490Z",
+    "generatedAt": "2026-11-12T09:00:00.000Z",
     "linkedEvents": [],
     "replacementCountSemantics": "Replacements = number of that component replaced at that location during this visit (one record per visit, location and component). Line quantity = replacements x quantity per replacement; mandatory children = replacements x alternate quantity x child quantity.",
     "reportKind": "FINAL",
-    "schema": "cabin-kit.report/1",
+    "schema": "cabin-kit.report/2",
     "sources": [
       {
         "authority": "fictional-fixture",
@@ -200,19 +200,20 @@
     ],
     "visit": {
       "checkDate": "2026-11-12",
-      "completedAt": "2026-11-15T03:52:44.490Z",
-      "createdAt": "2026-11-15T03:52:44.142Z",
-      "id": "3be0adb7-2805-4a91-a373-0722dcc9e697",
+      "completedAt": "2026-11-12T09:00:00.000Z",
+      "createdAt": "2026-11-12T09:00:00.000Z",
+      "id": "25b5ebe8-5471-4a1f-91fb-9640a8be131f",
       "number": 1,
       "status": "COMPLETED",
       "tail": "N100TL",
-      "technician": "Keyboard Tech",
+      "technician": "Sample Technician (fictional)",
       "version": 4
     },
     "work": [
       {
         "componentId": "CUSHION",
         "componentName": "Seat cushion cover",
+        "excludedRules": [],
         "lines": [
           {
             "description": "Fictional cushion cover, V01 ELR seat A",
@@ -227,11 +228,11 @@
         "locationId": "SEAT:3A",
         "locationKind": "SEAT",
         "locationLabel": "Seat 3A",
-        "note": "",
+        "note": "Sample: torn seam on the leading edge.",
         "pendingChanges": [],
         "primaryPartNo": "FAKE-SC-1001",
         "recordVersion": 1,
-        "recordedAt": "2026-11-15T03:52:44.349Z",
+        "recordedAt": "2026-11-12T09:00:00.000Z",
         "replacements": 1,
         "ruleId": "FX-R-V01-ELR-A-CUSHION",
         "ruleSourceId": "FX-DOC-A",
@@ -239,11 +240,12 @@
         "selection": "PRIMARY",
         "selectionSourceId": "FX-DOC-A",
         "substituteId": null,
-        "updatedAt": "2026-11-15T03:52:44.349Z"
+        "updatedAt": "2026-11-12T09:00:00.000Z"
       },
       {
         "componentId": "CARPET_KIT",
         "componentName": "Full-cabin carpet kit",
+        "excludedRules": [],
         "lines": [
           {
             "description": "Fictional alternate carpet kit (deviation)",
@@ -294,11 +296,11 @@
         "locationId": "FLOOR:FULL-CABIN",
         "locationKind": "FLOOR",
         "locationLabel": "Full cabin floor (fictional carpet-kit scope)",
-        "note": "",
+        "note": "Sample: alternate kit used under the fictional deviation.",
         "pendingChanges": [],
         "primaryPartNo": "FAKE-CK-2001",
         "recordVersion": 1,
-        "recordedAt": "2026-11-15T03:52:44.423Z",
+        "recordedAt": "2026-11-12T09:00:00.000Z",
         "replacements": 1,
         "ruleId": "FX-R-V01-CARPET-KIT",
         "ruleSourceId": "FX-DOC-B",
@@ -306,10 +308,10 @@
         "selection": "ALTERNATE",
         "selectionSourceId": "FX-DOC-DEV",
         "substituteId": "FX-SUB-KIT-1",
-        "updatedAt": "2026-11-15T03:52:44.423Z"
+        "updatedAt": "2026-11-12T09:00:00.000Z"
       }
     ]
   },
-  "basisSha256": "ab6e9e7343114d8d0ed12103dfb60173f23de5914c921e803e05b634674aca0f",
+  "basisSha256": "97fc9c31a97d66c32e46111f505edc48620e36505ae92b0403fd3041f34a8a97",
   "linkedEvents": []
 }

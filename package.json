@@ -23,6 +23,7 @@
     "evidence:build": "node tools/evidence/build-all.mjs",
     "images:previews": "node tools/make-image-previews.mjs",
     "comparisons": "node tools/make-comparisons.mjs",
+    "evidence:capture": "npm run build:e2e && node tools/capture-evidence.ts",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome ci . && npm run typecheck && vitest run",
@@ -33,7 +34,8 @@
     "test:process": "vitest run tests/process",
     "test:e2e": "npm run build:e2e && playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "verify": "npm run typecheck && npm run test && npm run test:e2e && npm run comparisons && npm run originals:verify"
+    "verify": "npm run check && npm run build && npm run test:e2e && npm run originals:verify",
+    "verify:clean": "npm run verify && git diff --exit-code && test -z \"$(git status --porcelain)\""
   },
   "dependencies": {
     "@fastify/compress": "^9.3.0",

@@ -1,10 +1,10 @@
 {
-  "note": "Actual renders of this build. Geometry is an illustrative approximation.",
-  "chrome": "157.0.8103.51",
+  "note": "Actual renders of this build. Geometry is an illustrative approximation. When and where they were captured: PROVENANCE.json.",
+  "browser": "Chromium 159.0.8154.6 (headless)",
   "captures": [
     {
       "file": "full-cabin-cutaway_photo-navy-band_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -20,12 +20,12 @@
       "camera": {
         "position": [
           -0.384,
-          9.389,
+          9.692,
           12.075
         ],
         "target": [
           9.808,
-          -0.803,
+          -0.5,
           -1.253
         ],
         "fov": 36
@@ -34,12 +34,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:52:56.056Z"
+      }
     },
     {
       "file": "full-cabin-aisle_photo-navy-band_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -69,12 +68,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:52:56.848Z"
+      }
     },
     {
       "file": "seat-front_photo-navy-band_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -89,9 +87,9 @@
       },
       "camera": {
         "position": [
-          4.865,
-          1.46,
-          -0.02
+          4.554,
+          1.751,
+          -0.455
         ],
         "target": [
           6.335,
@@ -104,12 +102,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:52:57.651Z"
+      }
     },
     {
       "file": "seat-rear_photo-navy-band_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -139,12 +136,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:52:58.430Z"
+      }
     },
     {
       "file": "carpet_photo-navy-band_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -174,12 +170,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:52:59.229Z"
+      }
     },
     {
       "file": "bin-detail_photo-navy-band_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -195,7 +190,7 @@
       "camera": {
         "position": [
           4.7,
-          1.2,
+          1.62,
           0.3
         ],
         "target": [
@@ -209,12 +204,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:00.020Z"
+      }
     },
     {
       "file": "full-cabin-cutaway_photo-navy-band_blue.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -230,12 +224,12 @@
       "camera": {
         "position": [
           -0.384,
-          9.389,
+          9.692,
           12.075
         ],
         "target": [
           9.808,
-          -0.803,
+          -0.5,
           -1.253
         ],
         "fov": 36
@@ -244,12 +238,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:00.794Z"
+      }
     },
     {
       "file": "full-cabin-aisle_photo-navy-band_blue.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -279,12 +272,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:01.584Z"
+      }
     },
     {
       "file": "seat-front_photo-navy-band_blue.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -299,9 +291,9 @@
       },
       "camera": {
         "position": [
-          4.865,
-          1.46,
-          -0.02
+          4.554,
+          1.751,
+          -0.455
         ],
         "target": [
           6.335,
@@ -314,12 +306,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:02.378Z"
+      }
     },
     {
       "file": "seat-rear_photo-navy-band_blue.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -349,12 +340,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:03.174Z"
+      }
     },
     {
       "file": "carpet_photo-navy-band_blue.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -384,12 +374,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:03.975Z"
+      }
     },
     {
       "file": "bin-detail_photo-navy-band_blue.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -405,7 +394,7 @@
       "camera": {
         "position": [
           4.7,
-          1.2,
+          1.62,
           0.3
         ],
         "target": [
@@ -419,12 +408,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:04.751Z"
+      }
     },
     {
       "file": "full-cabin-overhead_photo-navy-band_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-band",
@@ -454,12 +442,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:05.497Z"
+      }
     },
     {
       "file": "seat-front_photo-navy-plain_blue.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-plain",
@@ -474,9 +461,9 @@
       },
       "camera": {
         "position": [
-          4.865,
-          1.46,
-          -0.02
+          4.554,
+          1.751,
+          -0.455
         ],
         "target": [
           6.335,
@@ -489,12 +476,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:06.428Z"
+      }
     },
     {
       "file": "seat-front_photo-navy-plain_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "photo-navy-plain",
@@ -509,9 +495,9 @@
       },
       "camera": {
         "position": [
-          4.865,
-          1.46,
-          -0.02
+          4.554,
+          1.751,
+          -0.455
         ],
         "target": [
           6.335,
@@ -524,12 +510,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:07.233Z"
+      }
     },
     {
       "file": "seat-front_concept-gray_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "concept-gray",
@@ -544,9 +529,9 @@
       },
       "camera": {
         "position": [
-          4.865,
-          1.46,
-          -0.02
+          4.554,
+          1.751,
+          -0.455
         ],
         "target": [
           6.335,
@@ -559,12 +544,11 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
-      },
-      "capturedAt": "2026-11-15T03:53:08.135Z"
+      }
     },
     {
       "file": "full-cabin-cutaway_concept-gray_neutral.png",
-      "referenceRelease": "REL-0001-6df51180",
+      "referenceRelease": "REL-0001-9cf6c6d2",
       "geometryVersion": "cabin-kit.geometry/1",
       "layout": "FX-L-S176-MAX8@1",
       "profile": "concept-gray",
@@ -580,12 +564,12 @@
       "camera": {
         "position": [
           -0.384,
-          9.389,
+          9.692,
           12.075
         ],
         "target": [
           9.808,
-          -0.803,
+          -0.5,
           -1.253
         ],
         "fov": 36
@@ -594,8 +578,41 @@
         "width": 976,
         "height": 465,
         "deviceScaleFactor": 1
+      }
+    },
+    {
+      "file": "mobile-full-cabin-cutaway_photo-navy-band_neutral.png",
+      "referenceRelease": "REL-0001-9cf6c6d2",
+      "geometryVersion": "cabin-kit.geometry/1",
+      "layout": "FX-L-S176-MAX8@1",
+      "profile": "photo-navy-band",
+      "light": "neutral",
+      "cameraView": "cutaway",
+      "location": null,
+      "layers": {
+        "seats": true,
+        "floor": true,
+        "bins": true,
+        "context": false
       },
-      "capturedAt": "2026-11-15T03:53:08.892Z"
+      "camera": {
+        "position": [
+          -10.676,
+          17.535,
+          7.2
+        ],
+        "target": [
+          10.866,
+          -0.5,
+          -1.316
+        ],
+        "fov": 36
+      },
+      "viewport": {
+        "width": 357,
+        "height": 439,
+        "deviceScaleFactor": 2
+      }
     }
   ]
 }

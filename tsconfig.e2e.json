@@ -1,5 +1,5 @@
 {
-  // The Playwright specs, fixtures and config. Node code whose page.evaluate callbacks run in the page, so it needs Node
+  // The Playwright specs, fixtures and config, and the evidence capture tool that reuses them. Node code whose page.evaluate callbacks run in the page, so it needs Node
   // types and the DOM library, and it sees src/web for the window.__cabinKit test hook type.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
@@ -8,6 +8,6 @@
     "jsx": "react-jsx",
     "tsBuildInfoFile": "./node_modules/.cache/tsc/e2e.tsbuildinfo"
   },
-  "include": ["e2e", "playwright.config.ts", "src/web"],
+  "include": ["e2e", "playwright.config.ts", "tools/capture-evidence.ts", "src/web"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

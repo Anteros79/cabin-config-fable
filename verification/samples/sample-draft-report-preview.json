@@ -1,27 +1,27 @@
 {
   "report": {
-    "schema": "cabin-kit.report/1",
+    "schema": "cabin-kit.report/2",
     "reportKind": "DRAFT_PREVIEW",
-    "generatedAt": "2026-11-15T03:52:44.457Z",
+    "generatedAt": "2026-11-12T09:00:00.000Z",
     "authorityNotice": "Fictional home-lab demonstration. Not an approved maintenance authority, engineering source or work instruction. Part numbers, tails, applicability and geometry shown are fictional fixtures or unverified candidate data.",
     "replacementCountSemantics": "Replacements = number of that component replaced at that location during this visit (one record per visit, location and component). Line quantity = replacements x quantity per replacement; mandatory children = replacements x alternate quantity x child quantity.",
     "dateRule": "Effective-from and effective-to/expiry dates are calendar dates and are both inclusive.",
     "visit": {
-      "id": "3be0adb7-2805-4a91-a373-0722dcc9e697",
-      "number": 1,
+      "id": "cc62499b-c9d9-4607-8e95-574374e72276",
+      "number": 2,
       "status": "DRAFT",
       "tail": "N100TL",
       "checkDate": "2026-11-12",
-      "technician": "Keyboard Tech",
-      "createdAt": "2026-11-15T03:52:44.142Z",
+      "technician": "Sample Technician (fictional)",
+      "createdAt": "2026-11-12T09:00:00.000Z",
       "completedAt": null,
       "version": 3
     },
     "configuration": {
-      "referenceReleaseId": "REL-0001-6df51180",
-      "referenceContentHash": "6df5118095a4e9416c3e409a62edabb0a10e38bbb17e50a2f4d8615776969400",
-      "snapshotSha256": "3e3303f5847f07d8deeb31d70925db853aedba8995090070cf835c321f244a92",
-      "capturedAt": "2026-11-15T03:52:44.141Z",
+      "referenceReleaseId": "REL-0001-9cf6c6d2",
+      "referenceContentHash": "9cf6c6d29e468c944381a11f9042c89f2ad30cfd07d852720796ce14b2d8ed72",
+      "snapshotSha256": "e4bd9b4b6eaedc8e7373503f0810e457948f302aeedbdf614dcea47cf73fe5b0",
+      "capturedAt": "2026-11-12T09:00:00.000Z",
       "lookupState": "RESOLVED",
       "subtype": "Fictional MAX8 sub-fleet",
       "variantId": "V01",
@@ -64,14 +64,15 @@
             "sourceId": "FX-DOC-A"
           }
         ],
-        "note": "",
+        "note": "Sample: torn seam on the leading edge.",
         "ruleId": "FX-R-V01-ELR-A-CUSHION",
         "ruleSourceId": "FX-DOC-A",
         "selectionSourceId": "FX-DOC-A",
         "pendingChanges": [],
-        "recordedAt": "2026-11-15T03:52:44.349Z",
-        "updatedAt": "2026-11-15T03:52:44.349Z",
-        "recordVersion": 1
+        "recordedAt": "2026-11-12T09:00:00.000Z",
+        "updatedAt": "2026-11-12T09:00:00.000Z",
+        "recordVersion": 1,
+        "excludedRules": []
       },
       {
         "locationId": "FLOOR:FULL-CABIN",
@@ -131,14 +132,15 @@
             "sourceId": "FX-DOC-DEV"
           }
         ],
-        "note": "",
+        "note": "Sample: alternate kit used under the fictional deviation.",
         "ruleId": "FX-R-V01-CARPET-KIT",
         "ruleSourceId": "FX-DOC-B",
         "selectionSourceId": "FX-DOC-DEV",
         "pendingChanges": [],
-        "recordedAt": "2026-11-15T03:52:44.423Z",
-        "updatedAt": "2026-11-15T03:52:44.423Z",
-        "recordVersion": 1
+        "recordedAt": "2026-11-12T09:00:00.000Z",
+        "updatedAt": "2026-11-12T09:00:00.000Z",
+        "recordVersion": 1,
+        "excludedRules": []
       }
     ],
     "totals": [

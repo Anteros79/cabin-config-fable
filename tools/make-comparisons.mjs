@@ -1,5 +1,8 @@
 // Builds side-by-side comparison sheets: a supplied original (left) and an actual render of this
-// build (right). Output: verification/comparisons/*.jpg. Originals are only read.
+// build (right). Reads the renders from verification/out/captures (written by `npm run evidence:capture`) and the
+// image originals from the image root (CABIN_KIT_SOURCE_ROOT, else ../../). Output: verification/out/comparisons/*.jpg,
+// which is git-ignored; `evidence:capture -- --promote` copies the sheets to verification/comparisons. Originals are only read.
+// When the image originals are not present (a clean clone, CI), it says so and exits 0.
 //   node tools/make-comparisons.mjs [--stamp]
 // The sheets are rendered into a temporary folder next to the output and swapped in only when every sheet rendered;
 // a failed run leaves the previous output untouched. index.json carries `generatedAt` only with --stamp, so a plain
@@ -9,7 +12,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { parseCliArgs, UsageError } from "../src/importer/args.ts";
-import { resolveImageRoot } from "../src/importer/originals.ts";
+import { isRegularFile, resolveImageRoot } from "../src/importer/originals.ts";
 
 let stamp;
 try {
@@ -22,11 +25,8 @@ try {
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = resolveImageRoot();
-const captures = join(projectRoot, "verification", "captures");
-const out = join(projectRoot, "verification", "comparisons");
-const staging = `${out}.tmp-${process.pid}`;
-rmSync(staging, { recursive: true, force: true });
-mkdirSync(staging, { recursive: true });
+const captures = join(projectRoot, "verification", "out", "captures");
+const out = join(projectRoot, "verification", "out", "comparisons");
 
 const PAIRS = [
   {
@@ -92,6 +92,26 @@ const PAIRS = [
     topic: "Headrests, navy family without band",
   },
 ];
+
+const originals = [...new Set(PAIRS.map((p) => p.original))];
+const missing = originals.filter((name) => !isRegularFile(join(sourceRoot, name)));
+if (missing.length === originals.length) {
+  console.log(`image originals not present; skipped (looked in ${sourceRoot})`);
+  process.exit(0);
+}
+if (missing.length > 0) {
+  console.error(`${missing.length} of ${originals.length} image originals are missing from ${sourceRoot}: ${missing.join(", ")}`);
+  process.exit(1);
+}
+const absentCaptures = [...new Set(PAIRS.map((p) => p.capture))].filter((name) => !isRegularFile(join(captures, name)));
+if (absentCaptures.length > 0) {
+  console.error(`No render for ${absentCaptures.join(", ")} in ${captures}. Run "npm run evidence:capture" first.`);
+  process.exit(1);
+}
+
+const staging = `${out}.tmp-${process.pid}`;
+rmSync(staging, { recursive: true, force: true });
+mkdirSync(staging, { recursive: true });
 
 const W = 760;
 const H = 500;

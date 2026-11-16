@@ -103,13 +103,27 @@ The reference store can always be rebuilt with `npm run reference:import`, provi
 ## Checks
 
 ```
-npm run verify           # typecheck, vitest, build + E2E, comparison sheets, originals check
+npm run verify           # check (lint, format, typecheck, vitest), build, browser tests, originals check
+npm run verify:clean     # verify, then fail if the working tree changed (CI runs the same check)
 npm run test             # vitest only
-npm run test:e2e         # browser run; builds dist/web-e2e with test hooks first; needs Google Chrome installed
+npm run test:e2e         # Playwright; builds dist/web-e2e with test hooks first; needs `npx playwright install chromium`
 npm run build:e2e        # the client with window.__cabinKit test hooks, in dist/web-e2e (never ship this build)
 ```
 
-The E2E run starts its own server on a spare port with temporary stores. It does not touch `./data`. It rewrites the files under `verification/`.
+The browser tests start their own servers on spare ports with temporary stores. They do not touch `./data`, and nothing a check or test writes is tracked: results stay in the ignored `test-results/` and `playwright-report/` folders, and in CI.
+
+## Evidence
+
+Evidence (renders, comparison sheets, sample visits and reports, performance) is captured on purpose, never by a test run:
+
+```
+npm run evidence:capture                     # writes verification/out/ (git-ignored)
+npm run evidence:capture -- --assert-perf    # also fails under 30 fps or over 250 ms per pick
+npm run evidence:capture -- --promote        # capture, then copy the curated subset into verification/
+npm run evidence:capture -- --promote-only   # copy what the last capture left in verification/out/
+```
+
+The capture uses its own server on the e2e build with temporary stores, and the bundled Chromium. The comparison sheets need the 14 image originals (`CABIN_KIT_SOURCE_ROOT`, else `../../`); without them they are skipped and nothing can be promoted. Promotion replaces `verification/captures/`, `comparisons/`, `samples/`, `performance.json` and `PROVENANCE.json`. Look at every promoted image, update the judgments in `verification/README.md`, then commit by hand.
 
 ## Problems
 

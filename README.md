@@ -54,7 +54,10 @@ Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Reco
 | `npm run visits:backup -- [--out <file>]` | Verified copy of the visit store (default `backups/visits-<UTC stamp>Z.sqlite`); safe while the server runs |
 | `npm test` | 132 unit, integration and separate-process race tests (disposable stores) |
 | `npm run test:e2e` | 62 browser checks with the installed Google Chrome (disposable stores, free port) |
-| `npm run verify` | Typecheck, all tests, comparison sheets, original-hash recheck |
+| `npm run verify` | `check`, build, browser tests and the originals check. Writes nothing tracked |
+| `npm run verify:clean` | `verify`, then fails if the working tree changed |
+| `npm run evidence:capture` | Renders, sample visits and reports, performance and axe results into `verification/out/` (git-ignored). `-- --promote` copies the curated subset into `verification/` to be committed by hand; `-- --assert-perf` also checks the frame-rate and pick targets |
+| `npm run comparisons` | Comparison sheets from the captures in `verification/out/` and the image originals; skipped when the images are not present |
 | `npm run originals:verify` | Re-hash the 23 supplied originals against the manifest |
 | `npm run evidence:build` | Regenerate the evidence inventory, extracts and registers from the originals. Offline by default; `-- --online` adds the public-hyperlink reachability check. Step names run a subset, with the steps it needs |
 
@@ -78,7 +81,7 @@ src/web/        React client, accessible map/list, three.js scene
 fixtures/       mandatory fictional regression data (declarative)
 evidence/       inventory, located extracts, crosswalk, seat sets, conflict register, image previews
 docs/           logical model, visual families, operations, missing evidence, baseline review
-verification/   current test logs, captures, comparison sheets, performance, sample visits and reports
+verification/   curated captures, comparison sheets, performance, sample visits and reports, and their provenance
 inspection/     isolated copy of the baseline and the record of running it
 data/           runtime stores (git-ignored)
 tests/          unit, integration, process (races), e2e
