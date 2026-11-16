@@ -1068,9 +1068,17 @@ try {
   await check("a reference update leaves the completed report unchanged and is flagged, not applied", async () => {
     const before = (await api<{ report: Report; basisSha256: string }>(server, "GET", `/api/visits/${visitId}/report`)).json;
     const { importReference } = await import("../../src/importer/cli.ts");
+    // A label alone is not hashed (an unchanged import is a no-op), so revise one fictional rule in a temp copy of the fixtures.
+    const fixtures = JSON.parse(readFileSync(join(PROJECT_ROOT, "fixtures", "fixture-data.json"), "utf8")) as { extraRules: { id: string; note: string }[] };
+    const revised = fixtures.extraRules.find((r) => r.id === "FX-R4");
+    if (!revised) throw new Error("fixture rule FX-R4 not found");
+    revised.note = `${revised.note} Revised in a later (fictional) release.`;
+    const fixturePath = join(server.dataDir, "fixture-data-revised.json");
+    writeFileSync(fixturePath, JSON.stringify(fixtures));
     const outcome = importReference({
       referencePath: join(server.dataDir, "reference.sqlite"),
       visitsPath: join(server.dataDir, "visits.sqlite"),
+      fixturePath,
       label: "Second release for the stability check",
     });
     expect(outcome.activated && outcome.visitsUnchanged === true, "new release activated; visit history fingerprint unchanged");

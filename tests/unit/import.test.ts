@@ -310,6 +310,16 @@ function releasesOf(stores: { referencePath: string; visitsPath: string }) {
   }
 }
 
+/** Every release row and every release event: what an import may change in the reference store. */
+function storeState(stores: { referencePath: string; visitsPath: string }) {
+  const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+  try {
+    return { releases: store.listReleases(), events: store.events(), active: store.activeReleaseId() };
+  } finally {
+    store.close();
+  }
+}
+
 /** A fixture file that is not valid JSON; `variant` changes the bytes (and so the finding) but not the content. */
 function brokenFixturePath(variant: string): string {
   const path = join(tempDir("cabin-kit-fx-"), "fixture-data.json");
@@ -349,9 +359,13 @@ describe("stable content hash and no-op re-import (IMP-09, IMP-10)", () => {
     const stores = tempStores();
     const first = importReference({ ...stores });
     expect(first).toMatchObject({ status: "validated", activated: true, unchanged: false });
+    const before = storeState(stores);
     const second = importReference({ ...stores, label: "a different label" });
     expect(second).toMatchObject({ releaseId: first.releaseId, status: "validated", activated: false, unchanged: true });
     expect(releasesOf(stores).map((r) => [r.id, r.status])).toEqual([[first.releaseId, "active"]]);
+    // Untouched: no release row, no status, no timestamp and no event changed.
+    expect(storeState(stores)).toEqual(before);
+    expect(before.events.map((e) => e.type)).toEqual(["VALIDATED", "ACTIVATED"]);
   });
 
   it("two rejected runs with the same bad input record one rejected release", () => {
@@ -380,5 +394,21 @@ describe("stable content hash and no-op re-import (IMP-09, IMP-10)", () => {
       [changed.releaseId, "active"],
       [first.releaseId, "superseded"],
     ]);
+  });
+
+  it("a changed original accepted with acceptChanged after an unchanged import still stages and activates", () => {
+    const stores = tempStores();
+    const first = importReference({ ...stores });
+    expect(importReference({ ...stores }).unchanged).toBe(true);
+    const root = copyOfOriginals();
+    writeFileSync(join(root, ORIGINAL_FILES.rtf), "A changed narrative document (fictional).");
+    const changed = importReference({ ...stores, sourceRoot: root, acceptChanged: true });
+    expect(changed).toMatchObject({ status: "validated", activated: true, unchanged: false });
+    expect(changed.findingCounts.warning).toBe(1);
+    expect(releasesOf(stores).map((r) => [r.id, r.status])).toEqual([
+      [changed.releaseId, "active"],
+      [first.releaseId, "superseded"],
+    ]);
+    expect(importReference({ ...stores, sourceRoot: root, acceptChanged: true })).toMatchObject({ unchanged: true, releaseId: changed.releaseId });
   });
 });
