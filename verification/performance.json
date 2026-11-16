@@ -28,25 +28,25 @@
     "method": "continuous orbit for 4 s with seats, floor and bins visible (context layer off), rendering each animation frame; headless Chromium caps at the display refresh rate",
     "fps": 59.8,
     "frames": 240,
-    "worstFrameMs": 18.9,
+    "worstFrameMs": 18.8,
     "target": "about 30 fps"
   },
   "selectionFeedback": {
     "method": "pointer pick to the next rendered frame showing the selection, 10 picks",
     "samplesMs": [
+      8,
       7.5,
-      6.1,
-      7.3,
+      8.2,
+      11.6,
+      5.8,
+      5.8,
       8.7,
-      11.2,
-      10,
       7.4,
-      6.4,
-      10.5,
-      16.9
+      11.2,
+      14.3
     ],
-    "maxMs": 16.9,
-    "medianMs": 8.7,
+    "maxMs": 14.3,
+    "medianMs": 8.2,
     "target": "within 250 ms"
   }
 }

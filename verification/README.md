@@ -49,8 +49,8 @@ The sample visits are written with fixed idempotency keys and a fixed clock (202
 
 | Measure | Result | Target |
 | --- | --- | --- |
-| Frame rate during a 4 s continuous orbit | 59.8 fps (240 frames), worst frame 18.9 ms | about 30 fps |
-| Selection feedback, pick to next rendered frame, 10 picks | median 8.7 ms, max 16.9 ms | within 250 ms |
+| Frame rate during a 4 s continuous orbit | 59.8 fps (240 frames), worst frame 18.8 ms | about 30 fps |
+| Selection feedback, pick to next rendered frame, 10 picks | median 8.2 ms, max 14.3 ms | within 250 ms |
 | Scene size | about 489,000 triangles, 23 draw calls | — |
 
 60 fps is the display cap in headless Chromium, so the true headroom is not measured. These figures apply only to the machine named in `PROVENANCE.json`. The targets are checked only by `evidence:capture -- --assert-perf`, never by the tests; the browser tests check the scene's draw-call and triangle budgets instead.

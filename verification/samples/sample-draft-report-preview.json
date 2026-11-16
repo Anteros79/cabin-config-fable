@@ -7,7 +7,7 @@
     "replacementCountSemantics": "Replacements = number of that component replaced at that location during this visit (one record per visit, location and component). Line quantity = replacements x quantity per replacement; mandatory children = replacements x alternate quantity x child quantity.",
     "dateRule": "Effective-from and effective-to/expiry dates are calendar dates and are both inclusive.",
     "visit": {
-      "id": "cc62499b-c9d9-4607-8e95-574374e72276",
+      "id": "632e44fb-daa0-4b54-ba82-d03f3468bba4",
       "number": 2,
       "status": "DRAFT",
       "tail": "N100TL",
