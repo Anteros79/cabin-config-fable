@@ -8,11 +8,14 @@ import {
   backFrontTexture,
   binDoorTexture,
   carpetTexture,
+  disposeTextureCache,
+  getTexture,
   PALETTES,
   type ProfilePalette,
   rearShellTexture,
   serviceUnitTexture,
   sidewallTexture,
+  textureKey,
 } from "./textures.ts";
 
 export type LocationStatus = "recorded" | "unresolved" | "none";
@@ -37,6 +40,7 @@ export interface SceneCallbacks {
 }
 
 const STATUS_COLOUR = { recorded: new THREE.Color("#2fe08a"), unresolved: new THREE.Color("#ff5757") };
+const BIN_STATUS_COLOUR = { recorded: new THREE.Color("#7df0b3"), unresolved: new THREE.Color("#ff9d9d") };
 const TIER_COLOURS: Record<string, THREE.Color> = {
   "Extra Legroom": new THREE.Color("#19c8b4"),
   Preferred: new THREE.Color("#b08cff"),
@@ -51,6 +55,16 @@ const FULL_CABIN = "FLOOR:FULL-CABIN";
 interface SeatEntry {
   location: CabinLocation;
   matrix: THREE.Matrix4;
+}
+
+/** The palette colours a material can follow; applyProfile() sets each such material's colour from the palette. */
+type PaletteColour = "metal" | "upholstery" | "upholsteryDark" | "shell" | "headrest" | "arm" | "armPad" | "paleFace" | "aisleBorder";
+
+/** How often each update ran, for the e2e build's describeScene(): a recorded replacement must not rebuild the layout or the profile. */
+interface UpdateCounts {
+  buildLayout: number;
+  applyProfile: number;
+  applyStates: number;
 }
 
 /** Set only by the e2e build (`npm run build:e2e`): the hooks below, and the drawing buffer they read, are absent from the shipped bundle. */
@@ -143,8 +157,21 @@ export class CabinScene {
   private selectionFill: THREE.Mesh;
   private hoverMark: THREE.LineSegments;
   private lights: { hemi: THREE.HemisphereLight; key: THREE.DirectionalLight; fill: THREE.DirectionalLight; wash: THREE.PointLight[] };
-  /** everything the current layout built; released at the start of every rebuild */
+  /** everything the current layout built; released at the start of every buildLayout() */
   private layoutResources = new ResourceTracker();
+  /** the per-layout copies of palette textures (carpet repeats); replaced by every palette change */
+  private profileResources = new ResourceTracker();
+  /** the palette the materials show; null makes the next applyProfile() apply it again */
+  private appliedPalette: ProfilePalette | null = null;
+  private paletteMaterials: { material: THREE.MeshStandardMaterial; colour: PaletteColour }[] = [];
+  private backFrontMaterial: THREE.MeshStandardMaterial | null = null;
+  private rearShellMaterial: THREE.MeshStandardMaterial | null = null;
+  private floorMaterials: { material: THREE.MeshStandardMaterial; lx: number; lz: number; offsetX: number }[] = [];
+  /** the window-side pale wing, shown only by families with both wings pale */
+  private windowWing: THREE.InstancedMesh | null = null;
+  private updates: UpdateCounts = { buildLayout: 0, applyProfile: 0, applyStates: 0 };
+  /** scenes alive on the page; the last one to go releases the shared texture cache */
+  private static liveScenes = 0;
   /** everything that lives as long as the scene; released in dispose() */
   private sceneResources = new ResourceTracker();
   /** set by the test hooks to record the frame that follows a pick */
@@ -237,7 +264,7 @@ export class CabinScene {
     canvas.addEventListener("pointerleave", this.onPointerLeave);
     canvas.addEventListener("webglcontextlost", this.onContextLost);
     document.addEventListener("visibilitychange", this.onVisibilityChange);
-    this.applyLight();
+    this.applyProfile();
     this.resize();
     if (TEST_HOOKS) {
       const pickLatencies: number[] = [];
@@ -327,16 +354,18 @@ export class CabinScene {
           frames: this.frameCount,
           frameRequests: this.frameRequests,
           framePending: this.frame !== 0,
+          updates: { ...this.updates },
         }),
       };
       Object.assign(this, hooks);
     }
+    CabinScene.liveScenes += 1;
     this.invalidate();
   }
 
   // ---- construction ---------------------------------------------------------------------------
 
-  /** Remove a layout group's children from the scene. Their GPU resources belong to layoutResources, which rebuild() releases. */
+  /** Remove a layout group's children from the scene. Their GPU resources belong to layoutResources, which buildLayout() releases. */
   private clearGroup(group: THREE.Group): void {
     for (const child of [...group.children]) group.remove(child);
   }
@@ -350,13 +379,19 @@ export class CabinScene {
     if (sameRevision && this.pickableFloorBins === pickableFloorBins) return;
     this.layout = layout;
     this.pickableFloorBins = pickableFloorBins;
-    this.rebuild();
+    this.buildLayout();
     if (!sameRevision) this.setCamera("cutaway");
   }
 
-  private rebuild(): void {
+  /**
+   * Build everything that depends on the layout (WEB-20): instanced meshes and their matrices, floor, bins and context.
+   * Runs only when the layout revision or pickability changes. Colours and maps come from applyProfile(), instance
+   * colours from applyStates(), both called at the end.
+   */
+  private buildLayout(): void {
     const layout = this.layout;
     if (!layout) return;
+    this.updates.buildLayout += 1;
     this.clearGroup(this.groups.seats);
     this.clearGroup(this.groups.floor);
     this.clearGroup(this.groups.bins);
@@ -366,12 +401,14 @@ export class CabinScene {
     this.floorMeshes = [];
     this.binSides = [];
     this.contextSides = [];
+    this.paletteMaterials = [];
+    this.floorMaterials = [];
+    this.backFrontMaterial = this.rearShellMaterial = this.windowWing = null;
     this.lights.wash.forEach((l) => {
       this.scene.remove(l);
     });
     this.lights.wash = [];
     const own = <T extends Disposable>(resource: T): T => this.layoutResources.track(resource);
-    const p = this.palette;
     const length = layout.geometry.cabinLength;
     const halfW = layout.geometry.cabinHalfWidth;
     const rows = layout.rows.filter((r) => r.exists).length;
@@ -383,6 +420,12 @@ export class CabinScene {
     const n = this.seats.length;
     const std = (color: string, roughness: number, metalness = 0, extra: THREE.MeshStandardMaterialParameters = {}) =>
       own(new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra }));
+    // a material whose colour follows the visual family; applyProfile() sets it
+    const paletteStd = (colour: PaletteColour, roughness: number, metalness = 0, extra: THREE.MeshStandardMaterialParameters = {}) => {
+      const material = std("#ffffff", roughness, metalness, extra);
+      this.paletteMaterials.push({ material, colour });
+      return material;
+    };
     const addSeatMesh = (geometry: THREE.BufferGeometry, material: THREE.Material, component: string | null, matrices?: (THREE.Matrix4 | null)[]) => {
       if (n === 0) return null;
       const mesh = own(new THREE.InstancedMesh(geometry, material, n));
@@ -396,24 +439,26 @@ export class CabinScene {
       return mesh;
     };
     const leather = { roughness: 0.52 };
-    addSeatMesh(this.geoms.legs, std(p.metal, 0.35, 0.75), null);
-    addSeatMesh(this.geoms.pan, std(p.upholstery, leather.roughness), "CUSHION");
-    addSeatMesh(this.geoms.backCore, std(p.upholsteryDark, leather.roughness), "BACKREST");
-    addSeatMesh(this.geoms.backFront, own(new THREE.MeshStandardMaterial({ map: own(backFrontTexture(p)), roughness: leather.roughness })), "BACKREST");
-    addSeatMesh(this.geoms.rearShell, own(new THREE.MeshStandardMaterial({ map: own(rearShellTexture(p, true)), roughness: 0.6 })), "BACKREST");
-    addSeatMesh(this.geoms.rearRelief, std(p.shell, 0.6), "BACKREST");
-    addSeatMesh(this.geoms.headrest, std(p.headrest, 0.46), "BACKREST");
-    addSeatMesh(this.geoms.arms, std(p.arm, 0.55), null);
-    addSeatMesh(this.geoms.armPads, std(p.armPad, 0.5), null);
-    // pale wing faces: the aisle-side wing always, the window-side wing only in the banded family
+    addSeatMesh(this.geoms.legs, paletteStd("metal", 0.35, 0.75), null);
+    addSeatMesh(this.geoms.pan, paletteStd("upholstery", leather.roughness), "CUSHION");
+    addSeatMesh(this.geoms.backCore, paletteStd("upholsteryDark", leather.roughness), "BACKREST");
+    // the textured faces get their maps (cached per family) from applyProfile()
+    this.backFrontMaterial = own(new THREE.MeshStandardMaterial({ roughness: leather.roughness }));
+    this.rearShellMaterial = own(new THREE.MeshStandardMaterial({ roughness: 0.6 }));
+    addSeatMesh(this.geoms.backFront, this.backFrontMaterial, "BACKREST");
+    addSeatMesh(this.geoms.rearShell, this.rearShellMaterial, "BACKREST");
+    addSeatMesh(this.geoms.rearRelief, paletteStd("shell", 0.6), "BACKREST");
+    addSeatMesh(this.geoms.headrest, paletteStd("headrest", 0.46), "BACKREST");
+    addSeatMesh(this.geoms.arms, paletteStd("arm", 0.55), null);
+    addSeatMesh(this.geoms.armPads, paletteStd("armPad", 0.5), null);
+    // Pale wing faces: the aisle-side wing always, the window-side wing only in the banded family. Both are built for
+    // every family; applyProfile() shows or hides the window-side one, so a family change does no geometry work.
     const mirror = new THREE.Matrix4().makeScale(1, 1, -1);
-    const pale = std(p.paleFace, 0.5, 0, { side: THREE.DoubleSide });
+    const pale = paletteStd("paleFace", 0.5, 0, { side: THREE.DoubleSide });
     const aisleSide = this.seats.map((s) => (s.location.placement.z > 0 ? s.matrix.clone().multiply(mirror) : s.matrix));
     addSeatMesh(this.geoms.wingFace, pale, "BACKREST", aisleSide);
-    if (p.paleBothWings) {
-      const windowSide = this.seats.map((s) => (s.location.placement.z > 0 ? s.matrix : s.matrix.clone().multiply(mirror)));
-      addSeatMesh(this.geoms.wingFace, own(pale.clone()), "BACKREST", windowSide);
-    }
+    const windowSide = this.seats.map((s) => (s.location.placement.z > 0 ? s.matrix : s.matrix.clone().multiply(mirror)));
+    this.windowWing = addSeatMesh(this.geoms.wingFace, pale, "BACKREST", windowSide);
     // (the pale surround of the banded family is the upper-back band itself, drawn in the texture)
 
     const overlayMaterial = () => own(new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false, color: "#ffffff" }));
@@ -427,16 +472,11 @@ export class CabinScene {
     }
 
     // floor ------------------------------------------------------------------------------------
-    const carpet = own(carpetTexture(p));
-    const floorMaterial = (lx: number, lz: number, offsetX: number) => {
-      const map = own(carpet.clone());
-      map.needsUpdate = true;
-      map.repeat.set(lx / 1.3, lz / 1.3);
-      map.offset.set(offsetX / 1.3, 0);
-      return own(new THREE.MeshStandardMaterial({ map, roughness: 0.95 }));
-    };
     const addFloor = (x: number, lx: number, locationId: string | null) => {
-      const mesh = new THREE.Mesh(own(new THREE.PlaneGeometry(lx, halfW * 2)), floorMaterial(lx, halfW * 2, x - lx / 2));
+      // the carpet map, repeated to this area's size, comes from applyProfile()
+      const material = own(new THREE.MeshStandardMaterial({ roughness: 0.95 }));
+      this.floorMaterials.push({ material, lx, lz: halfW * 2, offsetX: x - lx / 2 });
+      const mesh = new THREE.Mesh(own(new THREE.PlaneGeometry(lx, halfW * 2)), material);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(x, 0, 0);
       this.groups.floor.add(mesh);
@@ -471,15 +511,18 @@ export class CabinScene {
       this.groups.floor.add(this.fullCabinOverlay);
     } else this.fullCabinOverlay = null;
     // narrow aisle borders
+    const border = paletteStd("aisleBorder", 0.35, 0.6);
     for (const sign of [1, -1]) {
-      const strip = new THREE.Mesh(own(new THREE.BoxGeometry(length, 0.008, 0.022)), std(p.aisleBorder, 0.35, 0.6));
+      const strip = new THREE.Mesh(own(new THREE.BoxGeometry(length, 0.008, 0.022)), border);
       strip.position.set(length / 2, 0.004, sign * 0.262);
       this.groups.floor.add(strip);
     }
 
     // bins -------------------------------------------------------------------------------------
     const binLocations = layout.locations.filter((l) => l.kind === "BIN");
-    const service = own(serviceUnitTexture());
+    // Textures shared by every family come from the cache and are not this layout's to release; the repeated copies are.
+    const service = getTexture(textureKey("serviceUnit", "shared", 256), serviceUnitTexture);
+    const doorTexture = getTexture(textureKey("binDoor", "shared", 512), binDoorTexture);
     for (const side of ["L", "R"] as const) {
       const sign = side === "L" ? 1 : -1;
       const { door, body } = buildBinGeometry(sign);
@@ -501,9 +544,7 @@ export class CabinScene {
       // Double-sided surfaces that turn transparent when ghosted draw in one pass, not two (WEB-20); at ghost opacity
       // the back-then-front ordering a second pass buys is not visible.
       const singlePass = { side: THREE.DoubleSide, forceSinglePass: true };
-      const doorMesh = own(
-        new THREE.InstancedMesh(door, own(new THREE.MeshStandardMaterial({ map: own(binDoorTexture()), roughness: 0.42, ...singlePass })), count),
-      );
+      const doorMesh = own(new THREE.InstancedMesh(door, own(new THREE.MeshStandardMaterial({ map: doorTexture, roughness: 0.42, ...singlePass })), count));
       const bodyMesh = own(new THREE.InstancedMesh(body, std("#d5d8df", 0.6, 0, singlePass), count));
       spans.forEach((s, i) => {
         const m = new THREE.Matrix4().makeScale(s.lx, 1, 1).setPosition(s.x, 0, 0);
@@ -533,7 +574,7 @@ export class CabinScene {
     }
 
     // context (secondary, hidden by default) --------------------------------------------------
-    const wallTexture = own(sidewallTexture());
+    const wallTexture = getTexture(textureKey("sidewall", "shared", 256), sidewallTexture);
     for (const side of ["L", "R"] as const) {
       const sign = side === "L" ? 1 : -1;
       const map = own(wallTexture.clone());
@@ -562,7 +603,9 @@ export class CabinScene {
     }
 
     this.applyLayers();
-    this.applyLight();
+    // the new materials have no palette yet
+    this.appliedPalette = null;
+    this.applyProfile();
     this.applyStates();
     this.applySelection();
     this.updateGhosting();
@@ -575,12 +618,45 @@ export class CabinScene {
     const next = PALETTES[profileId];
     if (!next || next === this.palette) return;
     this.palette = next;
-    this.rebuild();
+    this.applyProfile();
   }
 
   setLight(mode: LightMode): void {
+    if (mode === this.light) return;
     this.light = mode;
+    this.applyProfile();
+  }
+
+  /**
+   * Show the visual family and the cabin light on what buildLayout() built (WEB-20): material colours and maps, the
+   * window-side wing, lights and background. No geometry work; the family's textures are made once and then cached.
+   */
+  private applyProfile(): void {
+    this.updates.applyProfile += 1;
+    if (this.appliedPalette !== this.palette) this.applyPalette(this.palette);
     this.applyLight();
+    this.invalidate();
+  }
+
+  private applyPalette(p: ProfilePalette): void {
+    for (const { material, colour } of this.paletteMaterials) material.color.set(p[colour]);
+    if (this.backFrontMaterial) this.backFrontMaterial.map = getTexture(textureKey("backFront", p.id, 256), () => backFrontTexture(p));
+    if (this.rearShellMaterial) this.rearShellMaterial.map = getTexture(textureKey("rearShell", p.id, 256), () => rearShellTexture(p, true));
+    if (this.windowWing) this.windowWing.visible = p.paleBothWings;
+    // Each floor area repeats the carpet to its own size, so it draws a copy of the cached texture. The copies of the
+    // previous family are released once the new ones are in place.
+    const carpet = getTexture(textureKey("carpet", p.id, 1024), () => carpetTexture(p));
+    const previous = this.profileResources;
+    this.profileResources = new ResourceTracker();
+    for (const f of this.floorMaterials) {
+      const map = this.profileResources.track(carpet.clone());
+      map.needsUpdate = true;
+      map.repeat.set(f.lx / 1.3, f.lz / 1.3);
+      map.offset.set(f.offsetX / 1.3, 0);
+      f.material.map = map;
+    }
+    previous.disposeAll();
+    this.appliedPalette = p;
   }
 
   private applyLight(): void {
@@ -602,7 +678,6 @@ export class CabinScene {
     this.groups.context.traverse((o) => {
       if (o.userData.wash) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).color.set(blue ? "#6f8dff" : "#ffffff");
     });
-    this.invalidate();
   }
 
   setColourMode(mode: ColourMode): void {
@@ -668,7 +743,9 @@ export class CabinScene {
     return "none";
   }
 
+  /** Show record states and the colour mode (WEB-20): instance colours and overlay visibility only, no geometry or material work. */
   private applyStates(): void {
+    this.updates.applyStates += 1;
     const colourFor = (status: LocationStatus) => (status === "none" ? null : STATUS_COLOUR[status]);
     if (this.panOverlay && this.backOverlay) {
       let anyPan = false;
@@ -712,7 +789,7 @@ export class CabinScene {
     for (const b of this.binSides) {
       b.locations.forEach((l, i) => {
         const status = this.colourMode === "status" ? this.statusOf(l.id) : "none";
-        b.door.setColorAt(i, status === "recorded" ? new THREE.Color("#7df0b3") : status === "unresolved" ? new THREE.Color("#ff9d9d") : WHITE);
+        b.door.setColorAt(i, status === "none" ? WHITE : BIN_STATUS_COLOUR[status]);
       });
       if (b.door.instanceColor) b.door.instanceColor.needsUpdate = true;
     }
@@ -888,7 +965,8 @@ export class CabinScene {
     this.raycaster.setFromCamera(ndc, this.camera);
     // Only visible, unghosted, selectable objects take part: a hidden layer can never block a pick.
     const targets: THREE.Object3D[] = [];
-    if (this.layers.seats) for (const s of this.seatMeshes) targets.push(s.mesh);
+    // raycasting ignores visibility, so a hidden mesh (the window-side wing of a family without it) is left out here
+    if (this.layers.seats) for (const s of this.seatMeshes) if (s.mesh.visible) targets.push(s.mesh);
     if (this.layers.floor && this.pickableFloorBins) {
       for (const f of this.floorMeshes) if (f.locationId) targets.push(f.mesh);
       // raycasting ignores visibility, so the strip is a target even while it shows no status
@@ -1074,7 +1152,9 @@ export class CabinScene {
   };
 
   dispose(): void {
+    if (this.disposed) return;
     this.disposed = true;
+    CabinScene.liveScenes -= 1;
     this.cancelFrame();
     this.measureStep?.();
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
@@ -1087,10 +1167,15 @@ export class CabinScene {
     this.controls.dispose();
     for (const g of [this.groups.seats, this.groups.floor, this.groups.bins, this.groups.context]) this.clearGroup(g);
     try {
-      ResourceTracker.disposeEach(this.layoutResources, this.sceneResources);
+      ResourceTracker.disposeEach(this.layoutResources, this.profileResources, this.sceneResources);
     } finally {
-      this.renderer.dispose();
-      this.renderer.forceContextLoss();
+      try {
+        // the cached textures are shared by every scene on the page: the last scene to go releases them
+        if (CabinScene.liveScenes === 0) disposeTextureCache();
+      } finally {
+        this.renderer.dispose();
+        this.renderer.forceContextLoss();
+      }
     }
   }
 }

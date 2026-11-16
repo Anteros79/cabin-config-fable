@@ -85,6 +85,33 @@ export const PALETTES: { "photo-navy-band": ProfilePalette; [id: string]: Profil
   },
 };
 
+/** The cache key of a generated texture: what it shows, for which palette ("shared" when it has none), at what size. */
+export function textureKey(kind: string, paletteId: string, size: number): string {
+  return `${kind}|${paletteId}|${size}`;
+}
+
+const textureCache = new Map<string, THREE.Texture>();
+
+/**
+ * The texture for a key, made by `make` only the first time (WEB-20): switching visual family A → B → A draws each canvas
+ * once. Cached textures belong to the cache, not to a scene; they are released by disposeTextureCache() only.
+ */
+export function getTexture(key: string, make: () => THREE.Texture): THREE.Texture {
+  let texture = textureCache.get(key);
+  if (!texture) {
+    texture = make();
+    textureCache.set(key, texture);
+  }
+  return texture;
+}
+
+/** Dispose every cached texture once and empty the cache. Called when the last scene goes away. */
+export function disposeTextureCache(): void {
+  const textures = [...textureCache.values()];
+  textureCache.clear();
+  for (const texture of textures) texture.dispose();
+}
+
 function canvas(w: number, h: number): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
   const c = document.createElement("canvas");
   c.width = w;
