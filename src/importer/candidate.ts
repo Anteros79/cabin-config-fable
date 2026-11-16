@@ -120,8 +120,16 @@ function widthClaim(value: unknown): RangeClaim {
   };
 }
 
+/** Plain decimal text: no sign other than a leading minus, no leading zeros, no exponent, hex or padding. */
+const DECIMAL_TEXT = /^-?(0|[1-9]\d*)(\.\d+)?$/;
+
+/** A string equals a number only when it is plain decimal text with the same numeric value. */
+function decimalTextEquals(text: string, value: number): boolean {
+  return DECIMAL_TEXT.test(text) && Number(text) === value;
+}
+
 /** Compare a JSON value with its CSV/XLSX counterpart under declared, counted conversions. */
-function sameValue(jsonValue: unknown, other: unknown, conversions: Record<string, number>): boolean {
+export function sameValue(jsonValue: unknown, other: unknown, conversions: Record<string, number> = {}): boolean {
   if (other === null || other === undefined) {
     if (jsonValue === "") {
       conversions.blankToEmptyString = (conversions.blankToEmptyString ?? 0) + 1;
@@ -139,7 +147,7 @@ function sameValue(jsonValue: unknown, other: unknown, conversions: Record<strin
   }
   if (typeof jsonValue === "number") {
     if (typeof other === "number") return jsonValue === other;
-    if (typeof other === "string" && other.trim() !== "" && Number(other) === jsonValue) {
+    if (typeof other === "string" && decimalTextEquals(other, jsonValue)) {
       conversions.numericText = (conversions.numericText ?? 0) + 1;
       return true;
     }
@@ -147,13 +155,104 @@ function sameValue(jsonValue: unknown, other: unknown, conversions: Record<strin
   }
   if (typeof jsonValue === "string") {
     if (typeof other === "string") return jsonValue === other;
-    if (typeof other === "number" && String(other) === jsonValue) {
+    if (typeof other === "number" && decimalTextEquals(jsonValue, other)) {
       conversions.numericIdentifierToString = (conversions.numericIdentifierToString ?? 0) + 1;
       return true;
     }
     return false;
   }
   return false;
+}
+
+const MAX_LISTED_KEYS = 10;
+
+function listKeys(keys: readonly string[]): string {
+  const shown = keys.slice(0, MAX_LISTED_KEYS).join(", ");
+  return keys.length > MAX_LISTED_KEYS ? `${shown} and ${keys.length - MAX_LISTED_KEYS} more` : shown;
+}
+
+/** Keys that occur more than once among `records`, in first-seen order. */
+function duplicateKeys(records: readonly Json[], keyOf: (record: Json) => string): string[] {
+  const seen = new Set<string>();
+  const duplicated = new Set<string>();
+  for (const record of records) {
+    const key = keyOf(record);
+    if (seen.has(key)) duplicated.add(key);
+    seen.add(key);
+  }
+  return [...duplicated];
+}
+
+/**
+ * Compare one export table with the registry JSON, value by value, and return the number of values
+ * compared. Every structural difference is a CROSS_FORMAT_MISMATCH error: a header set other than
+ * `expectedFields`, a duplicate key on either side, a key present on one side only, a differing value.
+ * A missing record or column is reported, never skipped silently.
+ */
+function compareTable(args: {
+  sourceId: string;
+  label: string;
+  expectedFields: readonly string[];
+  keyOf: (record: Json) => string;
+  reference: Json[];
+  other: { headers: string[]; records: Json[] };
+  conversions: Record<string, number>;
+  findings: Finding[];
+}): number {
+  const { sourceId, label, expectedFields, keyOf, reference, other, conversions, findings } = args;
+  const mismatch = (message: string, refs: string[] = [sourceId]) => findings.push({ severity: "error", code: "CROSS_FORMAT_MISMATCH", message, refs });
+
+  const missingColumns = expectedFields.filter((f) => !other.headers.includes(f));
+  const extraColumns = [...new Set(other.headers.filter((h) => !expectedFields.includes(h)))];
+  const repeatedColumns = [...new Set(other.headers.filter((h, i) => other.headers.indexOf(h) !== i))];
+  if (missingColumns.length || extraColumns.length || repeatedColumns.length) {
+    const parts = [
+      missingColumns.length ? `missing: ${missingColumns.join(", ")}` : "",
+      extraColumns.length ? `extra: ${extraColumns.join(", ")}` : "",
+      repeatedColumns.length ? `repeated: ${repeatedColumns.join(", ")}` : "",
+    ].filter(Boolean);
+    mismatch(
+      `${label} columns do not match the registry fields (${parts.join("; ")}). The export was not compared column by column; resolve the difference before import.`,
+    );
+  }
+
+  for (const [side, records] of [
+    ["the JSON registry", reference],
+    [`the ${label}`, other.records],
+  ] as const) {
+    const duplicated = duplicateKeys(records, keyOf);
+    if (duplicated.length) mismatch(`${label}: ${duplicated.length} key(s) occur more than once in ${side}: ${listKeys(duplicated)}.`);
+  }
+
+  const otherByKey = new Map<string, Json>();
+  for (const record of other.records) {
+    const key = keyOf(record);
+    if (!otherByKey.has(key)) otherByKey.set(key, record);
+  }
+  const referenceKeys = new Set(reference.map(keyOf));
+  const onlyInReference = [...referenceKeys].filter((k) => !otherByKey.has(k));
+  const onlyInOther = [...otherByKey.keys()].filter((k) => !referenceKeys.has(k));
+  if (onlyInReference.length) mismatch(`${label}: ${onlyInReference.length} key(s) only in the JSON registry: ${listKeys(onlyInReference)}.`);
+  if (onlyInOther.length) mismatch(`${label}: ${onlyInOther.length} key(s) only in the ${label}: ${listKeys(onlyInOther)}.`);
+
+  const comparable = expectedFields.filter((f) => other.headers.includes(f));
+  let compared = 0;
+  for (const record of reference) {
+    const key = keyOf(record);
+    // A record without a counterpart is reported above as a key on one side only; it leaves the count short.
+    const counterpart = otherByKey.get(key);
+    if (counterpart === undefined) continue;
+    for (const field of comparable) {
+      compared += 1;
+      const cell = counterpart[field] ?? null;
+      if (!sameValue(record[field], cell, conversions))
+        mismatch(
+          `${label} ${key} field "${field}" differs between exports (JSON ${JSON.stringify(record[field])} vs ${JSON.stringify(cell)}). No export is preferred; resolve the difference before import.`,
+          [sourceId, key],
+        );
+    }
+  }
+  return compared;
 }
 
 export function buildCandidateContent(sourceRoot: string): CandidateContent {
@@ -388,34 +487,25 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
   // Cross-format agreement (declared, counted conversions; any substantive difference is reported, not resolved)
   const conversions: Record<string, number> = {};
   let compared = 0;
-  const mismatch = (where: string, field: string, a: unknown, b: unknown) =>
-    findings.push({
-      severity: "error",
-      code: "CROSS_FORMAT_MISMATCH",
-      message: `${where} field "${field}" differs between exports (JSON ${JSON.stringify(a)} vs ${JSON.stringify(b)}). No export is preferred; resolve the difference before import.`,
-      refs: [where],
-    });
+  const csvTable = (text: string) => {
+    const csv = parseCsv(text);
+    // an empty CSV cell stands for a JSON null (or, as a counted conversion, an empty string)
+    const records = csv.records.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === "" ? null : v])));
+    return { csv, table: { headers: csv.headers, records } };
+  };
   try {
-    const csv = parseCsv(Buffer.from(bytesOf.get("CAND-SRC-CONFIG-CSV")!).toString("utf8"));
+    const { csv, table } = csvTable(Buffer.from(bytesOf.get("CAND-SRC-CONFIG-CSV")!).toString("utf8"));
     setStatus("CAND-SRC-CONFIG-CSV", `parsed: ${csv.records.length} records, ${csv.headers.length} columns${csv.hasBom ? ", UTF-8 BOM" : ""}`);
-    if (csv.records.length !== configs.length)
-      findings.push({
-        severity: "error",
-        code: "CROSS_FORMAT_MISMATCH",
-        message: `Configuration CSV has ${csv.records.length} records, JSON has ${configs.length}.`,
-        refs: ["CAND-SRC-CONFIG-CSV"],
-      });
-    const byId = new Map(csv.records.map((r) => [r.lopa_id, r]));
-    for (const c of configs) {
-      const other = byId.get(String(c.lopa_id));
-      if (!other) continue;
-      for (const f of csv.headers) {
-        if (!(f in c)) continue;
-        compared += 1;
-        const cell = other[f] === "" ? null : other[f];
-        if (!sameValue(c[f], cell, conversions)) mismatch(`configuration ${c.lopa_id}`, f, c[f], other[f]);
-      }
-    }
+    compared += compareTable({
+      sourceId: "CAND-SRC-CONFIG-CSV",
+      label: "Configuration CSV",
+      expectedFields: CONFIG_FIELDS,
+      keyOf: (r) => String(r.lopa_id),
+      reference: configs,
+      other: table,
+      conversions,
+      findings,
+    });
   } catch (e) {
     setStatus("CAND-SRC-CONFIG-CSV", `unreadable: ${(e as Error).message}`);
     findings.push({
@@ -426,34 +516,18 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
     });
   }
   try {
-    const csv = parseCsv(Buffer.from(bytesOf.get("CAND-SRC-SEATS-CSV")!).toString("utf8"));
+    const { csv, table } = csvTable(Buffer.from(bytesOf.get("CAND-SRC-SEATS-CSV")!).toString("utf8"));
     setStatus("CAND-SRC-SEATS-CSV", `parsed: ${csv.records.length} records, ${csv.headers.length} columns${csv.hasBom ? ", UTF-8 BOM" : ""}`);
-    if (csv.records.length !== seats.length)
-      findings.push({
-        severity: "error",
-        code: "CROSS_FORMAT_MISMATCH",
-        message: `Seat CSV has ${csv.records.length} records, JSON has ${seats.length}.`,
-        refs: ["CAND-SRC-SEATS-CSV"],
-      });
-    const byKey = new Map(csv.records.map((r) => [`${r.lopa_id}|${r.row_number}|${r.seat_letter}`, r]));
-    for (const s of seats) {
-      const other = byKey.get(`${s.lopa_id}|${s.row_number}|${s.seat_letter}`);
-      if (!other) {
-        findings.push({
-          severity: "error",
-          code: "CROSS_FORMAT_MISMATCH",
-          message: `Seat ${s.lopa_id} ${s.seat_code} is missing from the seat CSV.`,
-          refs: ["CAND-SRC-SEATS-CSV"],
-        });
-        continue;
-      }
-      for (const f of csv.headers) {
-        if (!(f in s)) continue;
-        compared += 1;
-        const cell = other[f] === "" ? null : other[f];
-        if (!sameValue(s[f], cell, conversions)) mismatch(`seat ${s.lopa_id} ${s.seat_code}`, f, s[f], other[f]);
-      }
-    }
+    compared += compareTable({
+      sourceId: "CAND-SRC-SEATS-CSV",
+      label: "Seat CSV",
+      expectedFields: SEAT_FIELDS,
+      keyOf: (r) => `${r.lopa_id}|${r.row_number}|${r.seat_letter}`,
+      reference: seats,
+      other: table,
+      conversions,
+      findings,
+    });
   } catch (e) {
     setStatus("CAND-SRC-SEATS-CSV", `unreadable: ${(e as Error).message}`);
     findings.push({
@@ -471,37 +545,29 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       "CAND-SRC-ROWS-XLSX",
       `parsed: ${book.sheets.length} sheet(s) [${book.sheets.map((s) => `${s.name}:${s.state}`).join(", ")}], ${sheet ? sheet.rows.length - 1 : 0} data rows, ${formulas} formulas, macros ${book.hasMacros ? "present (not run)" : "absent"}, external links ${book.hasExternalLinks ? "present (not opened)" : "absent"}`,
     );
-    if (sheet) {
-      const headers = (sheet.rows[0] ?? []).map((h) => String(h));
-      const data = sheet.rows.slice(1);
-      if (data.length !== rows.length)
-        findings.push({
-          severity: "error",
-          code: "CROSS_FORMAT_MISMATCH",
-          message: `Rows workbook has ${data.length} data rows, JSON has ${rows.length}.`,
-          refs: ["CAND-SRC-ROWS-XLSX"],
-        });
-      const idCol = headers.indexOf("lopa_id");
-      const rowCol = headers.indexOf("row_number");
-      const byKey = new Map(data.map((r) => [`${r[idCol]}|${r[rowCol]}`, r]));
-      for (const r of rows) {
-        const other = byKey.get(`${r.lopa_id}|${r.row_number}`);
-        if (!other) {
-          findings.push({
-            severity: "error",
-            code: "CROSS_FORMAT_MISMATCH",
-            message: `Row ${r.lopa_id} ${r.row_number} is missing from the workbook.`,
-            refs: ["CAND-SRC-ROWS-XLSX"],
-          });
-          continue;
-        }
-        headers.forEach((f, col) => {
-          if (!(f in r)) return;
-          compared += 1;
-          if (!sameValue(r[f], other[col] ?? null, conversions)) mismatch(`row ${r.lopa_id} ${r.row_number}`, f, r[f], other[col]);
-        });
-      }
-    }
+    if (book.sheets.length > 1)
+      findings.push({
+        severity: "warning",
+        code: "XLSX_EXTRA_SHEETS",
+        message: `Rows workbook has ${book.sheets.length} sheets; only the first ("${sheet?.name}") is compared. The others (${book.sheets
+          .slice(1)
+          .map((s) => `"${s.name}"`)
+          .join(", ")}) are not read.`,
+        refs: ["CAND-SRC-ROWS-XLSX"],
+      });
+    // a workbook without a sheet compares as an empty table, so every row and column is reported missing
+    const headers = (sheet?.rows[0] ?? []).map((h) => (h === null ? "" : String(h)));
+    const records = (sheet?.rows.slice(1) ?? []).map((cells) => Object.fromEntries(headers.map((h, col) => [h, cells[col] ?? null])));
+    compared += compareTable({
+      sourceId: "CAND-SRC-ROWS-XLSX",
+      label: "Rows workbook",
+      expectedFields: ROW_FIELDS,
+      keyOf: (r) => `${r.lopa_id}|${r.row_number}`,
+      reference: rows,
+      other: { headers, records },
+      conversions,
+      findings,
+    });
   } catch (e) {
     setStatus("CAND-SRC-ROWS-XLSX", `unreadable: ${(e as Error).message}`);
     findings.push({
@@ -511,6 +577,15 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       refs: ["CAND-SRC-ROWS-XLSX"],
     });
   }
+  // The comparison must have covered every registry value; anything less is a bypass, not agreement.
+  const expectedCompared = configs.length * CONFIG_FIELDS.length + seats.length * SEAT_FIELDS.length + rows.length * ROW_FIELDS.length;
+  if (compared !== expectedCompared)
+    findings.push({
+      severity: "error",
+      code: "CROSS_FORMAT_INCOMPLETE",
+      message: `${compared} attribute values were compared across the exports, but the registry holds ${expectedCompared}. The exports do not cover the registry; resolve the difference before import.`,
+      refs: ["CAND-SRC-REGISTRY-JSON", "CAND-SRC-CONFIG-CSV", "CAND-SRC-SEATS-CSV", "CAND-SRC-ROWS-XLSX"],
+    });
   stats.crossFormat = { attributeValuesCompared: compared, conversions };
   findings.push({
     severity: "info",
