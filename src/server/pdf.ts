@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { rulesNotUsedLine } from "../domain/report.ts";
 import type { Report, VisitEvent } from "../domain/types.ts";
 
 interface Column {
@@ -125,12 +126,13 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
     const table = (name: string, columns: Column[], rows: string[][], fontSize = 8) => {
       const pad = 3;
       const usable = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
+      doc.font("Helvetica-Bold").fontSize(fontSize);
+      const headerHeight = Math.max(...columns.map((c) => doc.heightOfString(safe(c.header), { width: c.width - pad * 2 }))) + pad * 2;
       ensure(40);
       const tbl = doc.struct("Table");
       root.add(tbl);
       const drawHeader = (repeat: boolean) => {
-        doc.font("Helvetica-Bold").fontSize(fontSize);
-        const h = Math.max(...columns.map((c) => doc.heightOfString(safe(c.header), { width: c.width - pad * 2 }))) + pad * 2;
+        const h = headerHeight;
         const y = doc.y;
         artifact("Layout", () => {
           doc.rect(MARGIN, y, width, h).fill("#e3e9f5");
@@ -174,7 +176,8 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
           return { column, text: safe(cell) };
         });
         const h = Math.max(...cells.map(({ column, text }) => doc.heightOfString(text, { width: column.width - pad * 2 }))) + pad * 2;
-        if (h > usable) throw new Error(`pdf: row taller than a page in ${name}`);
+        // After a page break the header is repeated above the row, so the row gets what is left below it.
+        if (h > usable - headerHeight) throw new Error(`pdf: row taller than a page in ${name}`);
         if (doc.y + h > bottom()) {
           doc.addPage();
           drawHeader(true);
@@ -345,6 +348,7 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
             ...new Set([sourceLabel(report, w.ruleSourceId), sourceLabel(report, w.selectionSourceId)]),
             w.note ? (w.note.length > LONG_NOTE ? noteCell("", `${w.locationLabel} / ${w.componentId}`, w.note) : `Note: ${w.note}`) : "",
             ...w.pendingChanges.map((p) => `Pending change: ${p.note}`),
+            rulesNotUsedLine(w.excludedRules) ?? "",
           ]
             .filter(Boolean)
             .join("\n"),

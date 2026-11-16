@@ -6,6 +6,7 @@ import type {
   Aircraft,
   ApplicabilityRule,
   ComponentResolution,
+  ExcludedRule,
   ExcludedSubstitute,
   ExclusionReason,
   FrozenRule,
@@ -322,11 +323,14 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
     for (const componentId of location.componentIds) {
       const covering = (inContext.get(componentId) ?? []).filter((c) => c.locations.has(location.id));
       const eligible = covering.filter((c) => c.exclusions.length === 0).map((c) => c.rule);
-      const excluded = covering.filter((c) => c.exclusions.length > 0).map((c) => ({ ruleId: c.rule.id, partNo: c.rule.partNo, reasons: c.exclusions }));
+      // Every exclusion is kept, whatever the outcome, with the source it cites (DOM-01).
+      const excluded: ExcludedRule[] = covering
+        .filter((c) => c.exclusions.length > 0)
+        .map((c) => ({ ruleId: c.rule.id, partNo: c.rule.partNo, sourceId: c.rule.sourceId, reasons: c.exclusions }));
+      excluded.forEach((e) => {
+        noteSource(e.sourceId ?? null);
+      });
       if (eligible.length === 0) {
-        excluded.forEach((e) => {
-          noteSource(index.release.rules.find((r) => r.id === e.ruleId)?.sourceId ?? null);
-        });
         counts.noMatch += 1;
         components.push({
           locationId: location.id,
@@ -353,6 +357,7 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
           status: "AMBIGUOUS",
           message: `${winners.length} equally specific or incomparable rules apply; no part is selected.`,
           candidates: winners.map((r) => ({ ruleId: r.id, partNo: r.partNo, sourceId: r.sourceId })),
+          excluded,
         });
         continue;
       }
@@ -364,6 +369,7 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
         status: "RESOLVED",
         ruleId: winner.id,
         dominatedRuleIds: eligible.filter((r) => r !== winner).map((r) => r.id),
+        excluded,
       });
     }
   }

@@ -432,14 +432,28 @@ export interface FrozenRule {
   note?: string;
 }
 
+/** A rule that covered a component but could not grant eligibility on the check date, with why. */
+export interface ExcludedRule {
+  ruleId: string;
+  partNo: string;
+  /** Always written by new code; absent from no-match exclusions frozen before report schema 2. */
+  sourceId?: string;
+  reasons: ExclusionReason[];
+}
+
+/**
+ * `excluded` is written on every status by new code (empty when nothing was excluded). Snapshots
+ * frozen before report schema 2 lack it on RESOLVED and AMBIGUOUS components; readers treat a
+ * missing field as `[]`.
+ */
 export type ComponentResolution =
-  | { locationId: string; componentId: string; status: "RESOLVED"; ruleId: string; dominatedRuleIds: string[] }
+  | { locationId: string; componentId: string; status: "RESOLVED"; ruleId: string; dominatedRuleIds: string[]; excluded?: ExcludedRule[] }
   | {
       locationId: string;
       componentId: string;
       status: "NO_MATCH";
       message: string;
-      excluded: { ruleId: string; partNo: string; reasons: ExclusionReason[] }[];
+      excluded: ExcludedRule[];
     }
   | {
       locationId: string;
@@ -447,6 +461,7 @@ export type ComponentResolution =
       status: "AMBIGUOUS";
       message: string;
       candidates: { ruleId: string; partNo: string; sourceId: string }[];
+      excluded?: ExcludedRule[];
     };
 
 export interface ResolvedContext {
@@ -597,6 +612,8 @@ export interface ReportWorkItem {
   recordedAt: string;
   updatedAt: string;
   recordVersion: number;
+  /** Rules that covered this component but were not used. Report schema 2; absent from /1 reports. */
+  excludedRules?: ExcludedRule[];
 }
 
 export interface ReportGap {
@@ -605,10 +622,15 @@ export interface ReportGap {
   message: string;
   locationIds: string[];
   locationSummary: string;
+  /** Sources cited by the gap's candidates or excluded rules. Report schema 2; absent from /1 reports. */
+  sourceIds?: string[];
 }
 
+/** Schema written by `buildReport`. Stored `/1` reports are served unchanged. */
+export const REPORT_SCHEMA = "cabin-kit.report/2";
+
 export interface Report {
-  schema: "cabin-kit.report/1";
+  schema: "cabin-kit.report/1" | "cabin-kit.report/2";
   reportKind: "FINAL" | "DRAFT_PREVIEW";
   generatedAt: string;
   authorityNotice: string;

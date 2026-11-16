@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { excludedOf, rulesNotUsedLine } from "../../domain/report.ts";
 import type { CabinLocation, RecordInput, SourceArtifact, VisitRecord } from "../../domain/types.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
 
@@ -102,6 +103,9 @@ function ComponentCard({
               ))}
             </ul>
           )}
+          {view.resolution.status === "AMBIGUOUS" && rulesNotUsedLine(view.resolution.excluded) && (
+            <p className="fine excluded">{rulesNotUsedLine(view.resolution.excluded)}</p>
+          )}
           {view.resolution.status === "NO_MATCH" && view.resolution.excluded.length > 0 && (
             <ul>
               {view.resolution.excluded.map((x) => (
@@ -134,6 +138,12 @@ function ComponentCard({
             <dt>Source</dt>
             <dd>{sourceText(sources, rule.sourceId)}</dd>
           </dl>
+          {/* a snapshot frozen before report schema 2 has no exclusions on a resolved component */}
+          {view.resolution && rulesNotUsedLine(excludedOf(view.resolution)) && (
+            <p className="fine excluded" role="note">
+              {rulesNotUsedLine(excludedOf(view.resolution))}
+            </p>
+          )}
           {rule.pendingChanges.map((p) => (
             <p key={p.id} className="advisory" role="note">
               <strong>Pending change (advisory):</strong> {p.note} {p.sourceId ? `Source ${sourceText(sources, p.sourceId)}.` : ""} The current rule stays in

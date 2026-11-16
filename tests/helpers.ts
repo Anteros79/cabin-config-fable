@@ -2,9 +2,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lookup } from "../src/domain/resolve.ts";
-import type { LookupResult, ReferenceRelease, ReleaseContent, VisitSnapshot } from "../src/domain/types.ts";
+import type { LookupResult, ReferenceRelease, ReleaseContent, Visit, VisitRecord, VisitSnapshot } from "../src/domain/types.ts";
 import { validateRelease } from "../src/domain/validate.ts";
-import { buildSnapshot } from "../src/domain/visitLogic.ts";
+import { buildSnapshot, deriveRecord } from "../src/domain/visitLogic.ts";
 import { buildStagedRelease, contentHash, type StagedBuild } from "../src/importer/assemble.ts";
 import { importReference } from "../src/importer/cli.ts";
 import { type AppHandle, createApp } from "../src/server/app.ts";
@@ -69,6 +69,51 @@ export function entry<T>(record: Readonly<Record<string, T>>, key: string): T {
 
 export function snapshotFor(release: ReferenceRelease, tail: string, date: string): VisitSnapshot {
   return buildSnapshot(release, lookup(release, tail, date), "2026-11-12T12:00:00.000Z");
+}
+
+/** An in-memory draft visit over `snap` with records derived from `inputs`, for the pure report builders. */
+export function visitWith(snap: VisitSnapshot, inputs: unknown[]): Visit {
+  const records: VisitRecord[] = inputs.map((input) => ({
+    ...deriveRecord(snap, input),
+    version: 1,
+    createdAt: "2026-11-12T12:01:00.000Z",
+    updatedAt: "2026-11-12T12:01:00.000Z",
+  }));
+  return {
+    id: "visit-1",
+    number: 1,
+    tail: snap.tail,
+    checkDate: snap.checkDate,
+    technician: "Demo",
+    status: "DRAFT",
+    version: 1 + records.length,
+    createdAt: "2026-11-12T12:00:00.000Z",
+    updatedAt: "2026-11-12T12:01:00.000Z",
+    completedAt: null,
+    recordCount: records.length,
+    referenceReleaseId: snap.referenceReleaseId,
+    lookupState: snap.lookupState,
+    variantId: snap.context.variant.id,
+    layoutRevisionId: snap.context.layoutRevision.id,
+    snapshot: snap,
+    snapshotSha256: "test",
+    records,
+    events: [],
+  };
+}
+
+/**
+ * The snapshot shape frozen before report schema 2: no `excluded` on resolved or ambiguous
+ * components and no `sourceId` on a no-match exclusion. Returns a copy.
+ */
+export function oldShapeSnapshot(snap: VisitSnapshot): VisitSnapshot {
+  const old = structuredClone(snap);
+  for (const c of old.resolution.components) {
+    if (c.status === "NO_MATCH") {
+      for (const e of c.excluded) delete e.sourceId;
+    } else delete c.excluded;
+  }
+  return old;
 }
 
 const dirs: string[] = [];

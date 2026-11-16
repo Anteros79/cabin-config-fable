@@ -36,7 +36,7 @@ Fixture shortcuts (zones, exit rows, floor areas, bin modules) never enter candi
 | VisualProfile | id | Unassigned, illustrative image family |
 | Visit | id, number | Tail, date, technician, status, version, frozen snapshot and its hash |
 | VisitRecord | visit + location + component | Selection (primary or alternate), replacements, note, derived part lines, version |
-| Report | visit | Stored at completion; schema `cabin-kit.report/1` |
+| Report | visit | Stored at completion; new reports use schema `cabin-kit.report/2`, stored `cabin-kit.report/1` reports are served unchanged |
 | VisitEvent | visit + sequence | Created, record added/updated/removed, completed, linked advisory or correction |
 
 One layout serves several variants (fixture `FX-L-S176-800@1` serves V04–V08); a variant may list several layout revisions.
@@ -61,7 +61,7 @@ A planned assignment beside a released one is reported as an advisory and never 
 
 ## Applicability and specificity
 
-For each location and component, candidate rules are those whose component matches, whose context constraint accepts the assignment, and whose location selector covers the location. A rule is excluded, with the reason kept, when it is unreleased, outside its own dates, or its source is missing, unreleased, not yet effective or expired. Substitute approvals are checked the same way against their own scope, dates and approval source.
+For each location and component, candidate rules are those whose component matches, whose context constraint accepts the assignment, and whose location selector covers the location. A rule is excluded, with the reason kept, when it is unreleased, outside its own dates, or its source is missing, unreleased, not yet effective or expired. Every exclusion is kept on the component whatever its outcome (resolved, ambiguous or no match), with the rule, its part and the source it cites; the inspector, the report, the PDF and the preparation list show them under a resolved component as "Rules not used". Substitute approvals are checked the same way against their own scope, dates and approval source.
 
 **Specificity is logical implication** (`src/domain/specificity.ts`). A rule's match set is every situation it accepts: (variant, layout revision, location, carpet, seam, upholstery). Rule A beats rule B only if A's match set is a strict subset of B's.
 
@@ -80,6 +80,10 @@ Replacement count: the number of that component replaced at that location in thi
 ## Visit snapshot and transactions
 
 At creation the whole context is copied into the visit: assignment, variant, layout revision with every location and its placement, resolved rules with parts, validity, pending changes, eligible and excluded alternates with expanded children, cited sources, unresolved gaps, date rule and geometry version. The snapshot is hashed and can never be updated (trigger). Records and reports are derived only from it.
+
+Backward compatibility: fields added after a snapshot was frozen are absent from it; every reader defaults them; nothing rewrites a stored snapshot. For example, snapshots frozen before report schema 2 have no `excluded` list on resolved or ambiguous components and no `sourceId` on a no-match exclusion; readers treat the list as empty and cite no source for it.
+
+Report schema 2 (`cabin-kit.report/2`) adds `excludedRules` to each work item and `sourceIds` to each gap, and `sources` lists every source the report cites: work items (rule, selection, mandatory children, pending changes), their excluded rules, and gaps (ambiguous candidates and no-match exclusions). A stored `/1` report is immutable and is returned exactly as stored; readers treat its missing fields as empty.
 
 | Operation | Guarantee |
 | --- | --- |

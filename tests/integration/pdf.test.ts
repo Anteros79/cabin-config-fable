@@ -32,6 +32,20 @@ async function pdfText(bytes: Buffer): Promise<{ pages: number; text: string }> 
   return { pages: doc.numPages, text: parts.join("\n").replace(/\s+/g, " ") };
 }
 
+/** Every text run with its page and position (PDF user space: y is the baseline, measured up from the bottom edge). */
+async function pdfItems(bytes: Buffer): Promise<{ page: number; str: string; y: number; height: number }[]> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: true, verbosity: 0 }).promise;
+  const out: { page: number; str: string; y: number; height: number }[] = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const content = await (await doc.getPage(i)).getTextContent();
+    for (const item of content.items) {
+      if ("str" in item && item.str.trim()) out.push({ page: i, str: item.str, y: item.transform[5] as number, height: item.height });
+    }
+  }
+  return out;
+}
+
 describe("reports: PDF and JSON agree with persisted work", () => {
   it("the six-line report matches in JSON, PDF and the stored records", async () => {
     const app = makeApp();
@@ -48,7 +62,7 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     expect(Object.fromEntries(report.totals.map((t) => [`${t.partNo}|${t.unit}`, t.quantity]))).toEqual(Object.fromEntries(fromRecords));
     for (const t of report.totals) expect(t.locations.reduce((n, l) => n + l.quantity, 0)).toBe(t.quantity);
     expect(report).toMatchObject({
-      schema: "cabin-kit.report/1",
+      schema: "cabin-kit.report/2",
       reportKind: "FINAL",
       visit: { tail: "N100TL", checkDate: "2026-11-12", technician: "Demo tech", status: "COMPLETED" },
       configuration: { variantId: "V01", carpet: "MOHAWK", seam: "PRE", seatCount: 176, layoutRevisionId: "FX-L-S176-MAX8@1", namespace: "fixture" },
@@ -258,6 +272,77 @@ describe("PDF robustness and accessibility", () => {
     await new Promise((r) => setTimeout(r, 1100));
     const b = (await app.app.inject(`/api/visits/${id}/report.pdf`)).rawPayload;
     expect(Buffer.compare(a, b)).toBe(0);
+    await app.close();
+  });
+
+  it("the tallest row that does not throw still fits on one page below the repeated header", async () => {
+    const app = makeApp();
+    const { report, basisSha256 } = await completedReport(app);
+    const withPending = (n: number) =>
+      ({
+        ...report,
+        work: report.work.map((w) => ({ ...w, pendingChanges: Array.from({ length: n }, (_, i) => ({ note: `PEND${i} with some words to wrap` })) })),
+      }) as unknown as Report;
+    const renders = async (n: number) =>
+      renderReportPdf(withPending(n), [], basisSha256).then(
+        (bytes) => bytes,
+        () => null,
+      );
+    // Find the largest number of pending changes the guard still accepts.
+    let lo = 1;
+    let hi = 400;
+    expect(await renders(lo)).not.toBeNull();
+    expect(await renders(hi)).toBeNull();
+    while (hi - lo > 1) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (await renders(mid)) lo = mid;
+      else hi = mid;
+    }
+    const bytes = await renders(lo);
+    if (!bytes) throw new Error("expected the accepted row to render");
+    const items = await pdfItems(bytes);
+    const rowPages = new Set(items.filter((i) => /PEND\d+/.test(i.str)).map((i) => i.page));
+    expect(rowPages.size).toBe(1); // the row was not split across pages by an overflowing text run
+    const page = [...rowPages][0];
+    const lowest = Math.min(...items.filter((i) => i.page === page && /PEND\d+|with some words|to wrap/.test(i.str)).map((i) => i.y));
+    // Page content ends MARGIN + FOOTER_SPACE (74 pt) above the bottom edge; no row text crosses it.
+    expect(lowest).toBeGreaterThanOrEqual(74);
+    await app.close();
+  });
+
+  it("a long authority notice grows its box: the next content starts below it", async () => {
+    const app = makeApp();
+    const { report, basisSha256 } = await completedReport(app);
+    const notice = `NOTICESTART ${"Fictional demonstration only, not for use. ".repeat(40)}NOTICEEND`;
+    const items = await pdfItems(await renderReportPdf({ ...report, authorityNotice: notice }, [], basisSha256));
+    const first = items.filter((i) => i.page === 1);
+    const noticeLines = first.filter((i) => /Fictional demonstration only|NOTICESTART|NOTICEEND/.test(i.str));
+    expect(noticeLines.length).toBeGreaterThan(8); // the notice wraps over many lines
+    const noticeBottom = Math.min(...noticeLines.map((i) => i.y));
+    const visit = first.find((i) => i.str === "Visit");
+    if (!visit) throw new Error("no Visit heading on page 1");
+    // y grows upwards: the heading's top (baseline + its height) sits below the notice's last line
+    // with at least the box's 6 pt inner padding and 8 pt gap between them.
+    expect(visit.y + visit.height).toBeLessThan(noticeBottom - 14);
+    await app.close();
+  });
+
+  it("a work item with excluded rules prints the rules not used", async () => {
+    const app = makeApp();
+    const { report, basisSha256 } = await completedReport(app);
+    const excludedRules = [
+      {
+        ruleId: "X-EXPIRED-EXACT",
+        partNo: "FAKE-SC-1001",
+        sourceId: "FX-DOC-A",
+        reasons: [{ code: "RULE_EXPIRED", message: "Rule X-EXPIRED-EXACT ended after 2026-11-11." }],
+      },
+    ];
+    const withExcluded = { ...report, work: report.work.map((w) => ({ ...w, excludedRules })) } as Report;
+    const { text } = await pdfText(await renderReportPdf(withExcluded, [], basisSha256));
+    expect(text.replace(/\s+/g, "")).toContain("Rulesnotused:X-EXPIRED-EXACT(FAKE-SC-1001):RuleX-EXPIRED-EXACTendedafter2026-11-11.");
+    const { text: plain } = await pdfText(await renderReportPdf(report, [], basisSha256));
+    expect(plain).not.toContain("Rules not used");
     await app.close();
   });
 

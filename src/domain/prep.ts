@@ -1,7 +1,13 @@
 import { compareCodePoints } from "./order.ts";
-import { buildGaps } from "./report.ts";
+import { buildGaps, excludedOf } from "./report.ts";
 import { summarizeLocations } from "./summarize.ts";
-import type { CabinLocation, ExcludedSubstitute, PendingChange, ReportGap, SourceArtifact, VisitSnapshot } from "./types.ts";
+import type { CabinLocation, ExcludedRule, ExcludedSubstitute, PendingChange, ReportGap, SourceArtifact, VisitSnapshot } from "./types.ts";
+
+/** A rule not used where this part applies, with the locations where it was passed over. */
+export interface PrepExcludedRule extends ExcludedRule {
+  locationIds: string[];
+  locationSummary: string;
+}
 
 export interface PrepAlternate {
   substituteId: string;
@@ -37,6 +43,8 @@ export interface PrepLine {
   requiredSupplements: { partNo: string; description: string; qty: number; unit: string; sourceId: string }[];
   alternates: PrepAlternate[];
   excludedAlternates: ExcludedSubstitute[];
+  /** Rules that covered some of these locations but were not used (expired, unreleased, invalid source). */
+  excludedRules: PrepExcludedRule[];
 }
 
 export interface PrepOverview {
@@ -60,9 +68,18 @@ export function buildPreparation(snapshot: VisitSnapshot): PrepOverview {
   const { context, resolution } = snapshot;
   const byId = new Map<string, CabinLocation>(context.layoutRevision.locations.map((l) => [l.id, l]));
   const coverage = new Map<string, string[]>();
+  /** per winning rule: excluded rule id -> the exclusion and where it was passed over */
+  const passedOver = new Map<string, Map<string, { excluded: ExcludedRule; locationIds: string[] }>>();
   for (const c of resolution.components) {
     if (c.status !== "RESOLVED") continue;
     coverage.set(c.ruleId, [...(coverage.get(c.ruleId) ?? []), c.locationId]);
+    for (const e of excludedOf(c)) {
+      const byRule = passedOver.get(c.ruleId) ?? new Map<string, { excluded: ExcludedRule; locationIds: string[] }>();
+      const entry = byRule.get(e.ruleId) ?? { excluded: e, locationIds: [] };
+      entry.locationIds.push(c.locationId);
+      byRule.set(e.ruleId, entry);
+      passedOver.set(c.ruleId, byRule);
+    }
   }
   const lines: PrepLine[] = [];
   for (const [ruleId, locationIds] of coverage) {
@@ -100,6 +117,13 @@ export function buildPreparation(snapshot: VisitSnapshot): PrepOverview {
         locationCount: s.locationIds === null ? locationIds.length : locationIds.filter((id) => s.locationIds!.includes(id)).length,
       })),
       excludedAlternates: rule.excludedSubstitutes,
+      excludedRules: [...(passedOver.get(ruleId)?.values() ?? [])]
+        .map(({ excluded, locationIds: where }) => ({
+          ...excluded,
+          locationIds: where,
+          locationSummary: summarizeLocations(where.flatMap((id) => byId.get(id) ?? [])),
+        }))
+        .sort((a, b) => compareCodePoints(a.ruleId, b.ruleId)),
     });
   }
   const kindOrder: Record<string, number> = { SEAT: 0, FLOOR: 1, BIN: 2 };

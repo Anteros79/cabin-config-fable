@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PrepOverview } from "../../domain/prep.ts";
+import { rulesNotUsedLine } from "../../domain/report.ts";
 import { ApiError, api } from "../api.ts";
 
 interface Props {
@@ -160,6 +161,12 @@ export function PrepView({ visitId, tail, date }: Props) {
                         <span key={p.id} className="advisory-inline">
                           <br />
                           Pending change: {p.note}
+                        </span>
+                      ))}
+                      {l.excludedRules.map((x) => (
+                        <span key={x.ruleId} className="fine excluded">
+                          <br />
+                          {rulesNotUsedLine([x])} ({x.locationSummary})
                         </span>
                       ))}
                     </td>

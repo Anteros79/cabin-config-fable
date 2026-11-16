@@ -3,10 +3,14 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, expect, it } from "vitest";
 import { canonicalJson } from "../../src/domain/canonical.ts";
+import { sha256Hex } from "../../src/domain/hash.ts";
+import { buildPreparation } from "../../src/domain/prep.ts";
+import type { VisitSnapshot } from "../../src/domain/types.ts";
 import { DomainError } from "../../src/domain/visitLogic.ts";
 import { type Migration, migrate, VISIT_MIGRATIONS } from "../../src/server/migrations.ts";
+import { renderReportPdf } from "../../src/server/pdf.ts";
 import { VISIT_SCHEMA_VERSION, VisitStore } from "../../src/server/visitStore.ts";
-import { at, CUSHION_3A, cleanupTempDirs, tempDir } from "../helpers.ts";
+import { at, CUSHION_3A, cleanupTempDirs, fixtureRelease, oldShapeSnapshot, snapshotFor, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -88,6 +92,63 @@ describe("visit stores written by 5d6679d", () => {
     const before = dump(copy.path);
     VisitStore.open(copy.path, copy.referencePath).close();
     expect(dump(copy.path)).toEqual(before);
+  });
+
+  it("snapshots without `excluded` fields render and the stored /1 report is served unchanged", async () => {
+    const pristine = rawReportJson(copyOfFixture().path, COMPLETED_ID);
+    const copy = copyOfFixture();
+    // Rewrite both stored snapshots without any `excluded` field (and their hashes) on this temp copy only.
+    raw(copy.path, (db) => {
+      db.exec("DROP TRIGGER visits_snapshot_immutable; DROP TRIGGER visits_completed_locked;");
+      const rows = db.prepare("SELECT id, snapshot_json FROM visits").all() as { id: string; snapshot_json: string }[];
+      for (const row of rows) {
+        const snapshot = JSON.parse(row.snapshot_json) as VisitSnapshot;
+        for (const c of snapshot.resolution.components) delete (c as { excluded?: unknown }).excluded;
+        const json = canonicalJson(snapshot);
+        db.prepare("UPDATE visits SET snapshot_json = ?, snapshot_sha256 = ? WHERE id = ?").run(json, sha256Hex(json), row.id);
+      }
+    });
+    const store = VisitStore.open(copy.path, copy.referencePath);
+    for (const id of [COMPLETED_ID, DRAFT_ID]) {
+      const visit = store.getVisit(id);
+      expect(visit.snapshot.resolution.components.some((c) => "excluded" in c)).toBe(false);
+      expect(buildPreparation(visit.snapshot).lines.every((l) => l.excludedRules.length === 0)).toBe(true);
+    }
+    // the completed visit: its stored /1 report is returned as stored and still prints
+    const stored = store.getReport(COMPLETED_ID);
+    expect(stored.report.schema).toBe("cabin-kit.report/1");
+    expect(canonicalJson(stored.report)).toBe(pristine);
+    expect((await renderReportPdf(stored.report, stored.linkedEvents, stored.basisSha256)).subarray(0, 5).toString()).toBe("%PDF-");
+    // the draft: a new preview uses /2 and reads the missing fields as empty
+    const preview = store.getReport(DRAFT_ID).report;
+    expect(preview.schema).toBe("cabin-kit.report/2");
+    expect(preview.work.map((w) => w.excludedRules)).toEqual(preview.work.map(() => []));
+    expect((await renderReportPdf(preview)).subarray(0, 5).toString()).toBe("%PDF-");
+    const done = store.completeVisit(DRAFT_ID, undefined);
+    expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
+    store.close();
+  });
+
+  it("a hand-built old-shape PARTIAL snapshot records, reports and completes", async () => {
+    const copy = copyOfFixture();
+    const old = oldShapeSnapshot(snapshotFor(fixtureRelease(), "N090TL", "2026-11-12"));
+    const noMatch = old.resolution.components.filter((c) => c.status === "NO_MATCH");
+    expect(noMatch.some((c) => c.excluded.length > 0)).toBe(true);
+    expect(noMatch.flatMap((c) => c.excluded).some((e) => "sourceId" in e)).toBe(false);
+    expect(old.resolution.components.filter((c) => c.status !== "NO_MATCH").some((c) => "excluded" in c)).toBe(false);
+    const store = VisitStore.open(copy.path, copy.referencePath);
+    const id = store.createVisit(old, "Demo tech").visit.id;
+    store.upsertRecord(id, CUSHION_3A, undefined);
+    const preview = store.getReport(id).report;
+    expect(preview.counts.unresolvedComponents).toBe(24);
+    expect(preview.work[0]?.excludedRules).toEqual([]);
+    // the ambiguous candidates still name their sources; old no-match exclusions have none to cite
+    expect(preview.gaps.find((g) => g.status === "AMBIGUOUS")?.sourceIds).toEqual(["FX-DOC-B"]);
+    expect(preview.gaps.find((g) => g.componentId === "BACKREST")?.sourceIds).toEqual([]);
+    const done = store.completeVisit(id, undefined);
+    expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
+    expect((await renderReportPdf(done.report)).subarray(0, 5).toString()).toBe("%PDF-");
+    store.close();
   });
 
   it("the old draft can still be edited and completed", () => {

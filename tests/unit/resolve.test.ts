@@ -321,6 +321,57 @@ describe("rule validity versus source validity", () => {
   });
 });
 
+describe("every exclusion is kept (DOM-01)", () => {
+  const base = fixtureContent();
+  /** The V01 cushion rule that covers `seatId`, narrowed to that one seat. */
+  const exactCushionRuleFor = (c: ReleaseContent, seatId: string): ApplicabilityRule => {
+    const v01 = c.rules.find((r) => r.componentId === "CUSHION" && r.partNo === "FAKE-SC-1001");
+    if (!v01) throw new Error("fixture has no V01 cushion rule");
+    return { ...structuredClone(v01), locations: { kind: "SEAT", ids: [seatId] } };
+  };
+  const component = (r: ReturnType<typeof lookup>, locationId: string, componentId: string) => resolutionAt(r, locationId, componentId);
+
+  it("an expired exact rule beside a broad rule is kept with its reason", () => {
+    const c = structuredClone(base);
+    c.rules.push({ ...exactCushionRuleFor(c, "SEAT:3A"), id: "X-EXPIRED-EXACT", effectiveTo: "2026-11-11" });
+    const r = lookup(asRelease(c), "N100TL", "2026-11-12");
+    const comp = component(r, "SEAT:3A", "CUSHION");
+    expect(comp.status).toBe("RESOLVED");
+    expect(comp.excluded).toEqual([
+      expect.objectContaining({
+        ruleId: "X-EXPIRED-EXACT",
+        partNo: "FAKE-SC-1001",
+        sourceId: "FX-DOC-A",
+        reasons: [expect.objectContaining({ code: "RULE_EXPIRED" })],
+      }),
+    ]);
+    // a component with nothing excluded still carries the field
+    expect(component(r, "SEAT:4A", "CUSHION").excluded).toEqual([]);
+  });
+
+  it("an unreleased rule beside two tied rules is kept on the AMBIGUOUS component", () => {
+    const rel = withRules([
+      rule("ONE", "P-ONE", { variant: ["V01"] }, ALL_SEATS),
+      rule("TWO", "P-TWO", { variant: ["V01"] }, ALL_SEATS),
+      rule("DRAFT", "P-DRAFT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] }, { released: false, sourceId: "FX-DOC-C" }),
+    ]);
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    const comp = component(r, "SEAT:3A", "CUSHION");
+    expect(comp.status).toBe("AMBIGUOUS");
+    expect(comp.excluded).toEqual([
+      expect.objectContaining({ ruleId: "DRAFT", partNo: "P-DRAFT", sourceId: "FX-DOC-C", reasons: [expect.objectContaining({ code: "NOT_RELEASED" })] }),
+    ]);
+    // the excluded rule's source is frozen with the snapshot so the report can cite it
+    expect(r.resolution?.sources["FX-DOC-C"]).toBeDefined();
+  });
+
+  it("a NO_MATCH exclusion carries its source", () => {
+    const r = lookup(release, "N090TL", "2026-11-12");
+    const backrest = component(r, "SEAT:12A", "BACKREST");
+    expect(backrest.status === "NO_MATCH" && backrest.excluded.map((x) => x.sourceId)).toEqual(["FX-DOC-OLD"]);
+  });
+});
+
 describe("substitute scope", () => {
   it("is offered only where its own constraint and location scope apply", () => {
     const rel = fixtureRelease((c) => {

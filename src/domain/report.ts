@@ -1,7 +1,18 @@
 import { compareCodePoints } from "./order.ts";
 import { summarizeLocations } from "./summarize.ts";
-import type { CabinLocation, Report, ReportGap, ReportTotalLine, ReportWorkItem, SourceArtifact, Visit, VisitSnapshot } from "./types.ts";
-import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS } from "./types.ts";
+import type {
+  CabinLocation,
+  ComponentResolution,
+  ExcludedRule,
+  Report,
+  ReportGap,
+  ReportTotalLine,
+  ReportWorkItem,
+  SourceArtifact,
+  Visit,
+  VisitSnapshot,
+} from "./types.ts";
+import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS, REPORT_SCHEMA } from "./types.ts";
 
 const KIND_ORDER = { SEAT: 0, FLOOR: 1, BIN: 2 } as const;
 
@@ -19,24 +30,49 @@ function locationOrder(snapshot: VisitSnapshot): Map<string, number> {
   return order;
 }
 
+/** The exclusions kept on a component. A snapshot frozen before report schema 2 may lack them: that reads as none. */
+export function excludedOf(c: ComponentResolution): ExcludedRule[] {
+  return c.excluded ?? [];
+}
+
+/** "Rules not used: <ruleId> (<partNo>): <reasons>", or null when nothing was excluded. */
+export function rulesNotUsedLine(excluded: readonly ExcludedRule[] | undefined): string | null {
+  if (!excluded || excluded.length === 0) return null;
+  return `Rules not used: ${excluded.map((e) => `${e.ruleId} (${e.partNo}): ${e.reasons.map((r) => r.message).join(" ")}`).join("; ")}`;
+}
+
+/** Sources a gap cites: its ambiguous candidates' and its excluded rules' (when the snapshot recorded them). */
+function gapSourceIds(c: Exclude<ComponentResolution, { status: "RESOLVED" }>): string[] {
+  const ids = excludedOf(c).flatMap((e) => (e.sourceId ? [e.sourceId] : []));
+  if (c.status === "AMBIGUOUS") ids.push(...c.candidates.map((x) => x.sourceId));
+  return ids;
+}
+
 export function buildGaps(snapshot: VisitSnapshot): ReportGap[] {
   const byId = new Map<string, CabinLocation>(snapshot.context.layoutRevision.locations.map((l) => [l.id, l]));
-  const groups = new Map<string, ReportGap>();
+  const groups = new Map<string, { gap: ReportGap; sourceIds: Set<string> }>();
   for (const c of snapshot.resolution.components) {
     if (c.status === "RESOLVED") continue;
     const detail =
       c.status === "NO_MATCH"
-        ? [...new Set(c.excluded.flatMap((e) => e.reasons.map((r) => r.message.replace(/^Rule \S+ /, "The rule "))))].join(" ")
+        ? [...new Set(excludedOf(c).flatMap((e) => e.reasons.map((r) => r.message.replace(/^Rule \S+ /, "The rule "))))].join(" ")
         : c.candidates.map((x) => `${x.partNo} (${x.ruleId})`).join(" vs ");
     const message = detail ? `${c.message} ${detail}` : c.message;
     const key = `${c.componentId}\u0000${c.status}\u0000${message}`;
-    const gap = groups.get(key) ?? { componentId: c.componentId, status: c.status, message, locationIds: [], locationSummary: "" };
-    gap.locationIds.push(c.locationId);
-    groups.set(key, gap);
+    const group = groups.get(key) ?? {
+      gap: { componentId: c.componentId, status: c.status, message, locationIds: [], locationSummary: "", sourceIds: [] },
+      sourceIds: new Set<string>(),
+    };
+    group.gap.locationIds.push(c.locationId);
+    for (const id of gapSourceIds(c)) group.sourceIds.add(id);
+    groups.set(key, group);
   }
-  const gaps = [...groups.values()];
+  const gaps = [...groups.values()].map(({ gap, sourceIds }) => {
+    gap.sourceIds = [...sourceIds].sort(compareCodePoints);
+    return gap;
+  });
   for (const gap of gaps) {
-    gap.locationIds.sort();
+    gap.locationIds.sort(compareCodePoints);
     gap.locationSummary = summarizeLocations(gap.locationIds.map((id) => byId.get(id)!).filter(Boolean));
   }
   return gaps.sort(
@@ -57,17 +93,26 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
   const records = [...visit.records].sort(
     (a, b) => (order.get(a.locationId) ?? 0) - (order.get(b.locationId) ?? 0) || compareCodePoints(a.componentId, b.componentId),
   );
+  const componentAt = new Map<string, ComponentResolution>(resolution.components.map((c) => [`${c.locationId}\u0000${c.componentId}`, c]));
+  // Every source the report cites: work items (rule, selection, mandatory children, pending changes),
+  // the rules they did not use, and the gaps (DOM-16).
   const sourceIds = new Set<string>([context.configurationSource.id]);
   const work: ReportWorkItem[] = records.map((r) => {
     const rule = resolution.rules[r.ruleId];
     const sub = r.substituteId ? rule?.substitutes.find((s) => s.id === r.substituteId) : undefined;
     const main = r.lines.find((l) => l.role !== "MANDATORY_CHILD");
+    const component = componentAt.get(`${r.locationId}\u0000${r.componentId}`);
+    const excludedRules = component ? excludedOf(component) : [];
     r.lines.forEach((l) => {
       sourceIds.add(l.sourceId);
     });
     if (rule) sourceIds.add(rule.sourceId);
+    if (sub) sourceIds.add(sub.sourceId);
     rule?.pendingChanges.forEach((p) => {
       if (p.sourceId) sourceIds.add(p.sourceId);
+    });
+    excludedRules.forEach((e) => {
+      if (e.sourceId) sourceIds.add(e.sourceId);
     });
     return {
       locationId: r.locationId,
@@ -89,6 +134,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
       recordedAt: r.createdAt,
       updatedAt: r.updatedAt,
       recordVersion: r.version,
+      excludedRules,
     };
   });
 
@@ -117,6 +163,11 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
   });
 
   const gaps = buildGaps(snapshot);
+  gaps.forEach((g) => {
+    g.sourceIds?.forEach((id) => {
+      sourceIds.add(id);
+    });
+  });
   const sources: SourceArtifact[] = [...sourceIds]
     .map((id) => resolution.sources[id])
     .filter((s): s is SourceArtifact => Boolean(s))
@@ -124,7 +175,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
 
   const seatCount = context.layoutRevision.locations.filter((l) => l.kind === "SEAT").length;
   return {
-    schema: "cabin-kit.report/1",
+    schema: REPORT_SCHEMA,
     reportKind,
     generatedAt,
     authorityNotice: AUTHORITY_NOTICE,

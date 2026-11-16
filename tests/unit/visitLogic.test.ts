@@ -4,42 +4,12 @@ import { buildPreparation } from "../../src/domain/prep.ts";
 import { buildReport } from "../../src/domain/report.ts";
 import { lookup } from "../../src/domain/resolve.ts";
 import { summarizeLocations } from "../../src/domain/summarize.ts";
-import type { KitChild, Part, Visit, VisitRecord, VisitSnapshot } from "../../src/domain/types.ts";
+import type { KitChild, Part } from "../../src/domain/types.ts";
 import { buildSnapshot, DomainError, deriveRecord } from "../../src/domain/visitLogic.ts";
-import { CUSHION_3A, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, SIX_LINE_TOTALS, snapshotFor } from "../helpers.ts";
+import { CUSHION_3A, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, SIX_LINE_TOTALS, snapshotFor, visitWith } from "../helpers.ts";
 
 const release = fixtureRelease();
 const snapshot = snapshotFor(release, "N100TL", "2026-11-12");
-
-function visitWith(snap: VisitSnapshot, inputs: unknown[]): Visit {
-  const records: VisitRecord[] = inputs.map((input) => ({
-    ...deriveRecord(snap, input),
-    version: 1,
-    createdAt: "2026-11-12T12:01:00.000Z",
-    updatedAt: "2026-11-12T12:01:00.000Z",
-  }));
-  return {
-    id: "visit-1",
-    number: 1,
-    tail: snap.tail,
-    checkDate: snap.checkDate,
-    technician: "Demo",
-    status: "DRAFT",
-    version: 1 + records.length,
-    createdAt: "2026-11-12T12:00:00.000Z",
-    updatedAt: "2026-11-12T12:01:00.000Z",
-    completedAt: null,
-    recordCount: records.length,
-    referenceReleaseId: snap.referenceReleaseId,
-    lookupState: snap.lookupState,
-    variantId: snap.context.variant.id,
-    layoutRevisionId: snap.context.layoutRevision.id,
-    snapshot: snap,
-    snapshotSha256: "test",
-    records,
-    events: [],
-  };
-}
 const code = (fn: () => unknown): string => {
   try {
     fn();

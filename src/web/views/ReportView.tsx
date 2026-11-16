@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { rulesNotUsedLine } from "../../domain/report.ts";
 import { ApiError, api, newKey, type ReportEnvelope } from "../api.ts";
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
@@ -271,6 +272,13 @@ export function ReportView({ visitId }: { visitId: string }) {
                           Pending change: {p.note}
                         </span>
                       ))}
+                      {/* excludedRules is absent from stored /1 reports; nothing is shown then */}
+                      {rulesNotUsedLine(w.excludedRules) && (
+                        <span className="fine excluded">
+                          <br />
+                          {rulesNotUsedLine(w.excludedRules)}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
