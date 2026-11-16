@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { BIN_DRAWN_TOP } from "../../domain/geometry.ts";
 
 /**
  * Seat part geometries in seat-local coordinates: origin on the floor under the seat centre,
@@ -269,8 +270,8 @@ export function buildBinGeometry(side: 1 | -1): { door: THREE.BufferGeometry; bo
   shape.moveTo(innerStart[0], innerStart[1]);
   for (const [z, y] of innerRest) shape.lineTo(z, y);
   shape.lineTo(1.74, 1.652);
-  shape.lineTo(1.74, 2.3);
-  shape.lineTo(arcStart[0], 2.3);
+  shape.lineTo(1.74, BIN_DRAWN_TOP);
+  shape.lineTo(arcStart[0], BIN_DRAWN_TOP);
   shape.closePath();
   const body = new THREE.ExtrudeGeometry(shape, { depth: 0.985, bevelEnabled: false, steps: 1 });
   // extrude runs along +Z of the shape plane (shape x = cabin z, shape y = cabin y): rotate into place

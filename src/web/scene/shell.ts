@@ -6,7 +6,7 @@
  */
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { BIN_BOTTOM, BIN_HEIGHT, LIGHT_CHANNEL_Z } from "../../domain/geometry.ts";
+import { BIN_DRAWN_INNER_Z, BIN_DRAWN_TOP, LIGHT_CHANNEL_Z } from "../../domain/geometry.ts";
 
 type ProfilePoint = { y: number; z: number };
 
@@ -300,10 +300,10 @@ function bulkheads(profile: ProfilePoint[], length: number): THREE.BufferGeometr
 
 /**
  * The shell for a cabin of this length, with a window at each of `windowXs`. The profile is split where the ceiling
- * begins: the first point inboard of the bins and above them.
+ * begins: the first point inboard of the drawn bins and above them.
  */
-export function buildShellGeometries(profile: ProfilePoint[], length: number, windowXs: readonly number[], binInnerZ: number): ShellGeometries {
-  const split = profile.findIndex((p) => p.y > BIN_BOTTOM + BIN_HEIGHT && p.z < binInnerZ);
+export function buildShellGeometries(profile: ProfilePoint[], length: number, windowXs: readonly number[]): ShellGeometries {
+  const split = profile.findIndex((p) => p.y > BIN_DRAWN_TOP && p.z < BIN_DRAWN_INNER_Z);
   if (split <= 0) throw new Error("invariant: the shell profile passes inboard over the bins");
   const wall = new ProfileRun(profile.slice(0, split + 1));
   const roof = new ProfileRun(profile.slice(split));

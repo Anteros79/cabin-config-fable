@@ -1,13 +1,23 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { AFT_MARGIN, BIN_DEPTH, CABIN_HALF_WIDTH, cabinLength, FORWARD_MARGIN, LIGHT_CHANNEL_Z, ROW_PITCH, shellProfile } from "../../src/domain/geometry.ts";
+import {
+  AFT_MARGIN,
+  BIN_DRAWN_INNER_Z,
+  BIN_DRAWN_TOP,
+  cabinLength,
+  FORWARD_MARGIN,
+  LIGHT_CHANNEL_Z,
+  ROW_PITCH,
+  shellProfile,
+} from "../../src/domain/geometry.ts";
+import { buildBinGeometry } from "../../src/web/scene/seatParts.ts";
 import { buildShellGeometries, WINDOW } from "../../src/web/scene/shell.ts";
 
 // the 176-seat layout: 30 physical rows, 26 m
 const rows = 30;
 const length = cabinLength(rows);
 const windowXs = Array.from({ length: Math.round((length - FORWARD_MARGIN - AFT_MARGIN) / ROW_PITCH) }, (_, i) => FORWARD_MARGIN + (i + 0.5) * ROW_PITCH);
-const shell = buildShellGeometries(shellProfile(), length, windowXs, CABIN_HALF_WIDTH - 0.08 - BIN_DEPTH);
+const shell = buildShellGeometries(shellProfile(), length, windowXs);
 const triangles = (g: THREE.BufferGeometry) => (g.index ? g.index.count : g.getAttribute("position").count) / 3;
 
 describe("cabin shell geometry (WEB-21)", () => {
@@ -32,11 +42,28 @@ describe("cabin shell geometry (WEB-21)", () => {
     }
   });
 
-  it("every triangle is wound the way its normals face (outward), so back faces are the inside of the shell", () => {
+  it("BIN_DRAWN_TOP and BIN_DRAWN_INNER_Z bound the drawn bin, and the shell profile stays outside it", () => {
+    const { door, body } = buildBinGeometry(1);
+    const box = new THREE.Box3();
+    for (const g of [door, body]) {
+      g.computeBoundingBox();
+      box.union(g.boundingBox as THREE.Box3);
+    }
+    // float32 positions
+    expect(box.max.y).toBeCloseTo(BIN_DRAWN_TOP, 6);
+    expect(box.min.z).toBeGreaterThanOrEqual(BIN_DRAWN_INNER_Z);
+    for (const p of shellProfile()) {
+      const inside = p.y >= box.min.y && p.y <= box.max.y && p.z >= box.min.z && p.z <= box.max.z;
+      expect(inside, `y ${p.y.toFixed(3)}, z ${p.z.toFixed(3)}`).toBe(false);
+    }
+  });
+
+  it("every triangle is wound the way its normals face, so back faces are the inside of the shell", () => {
     const a = new THREE.Vector3();
     const b = new THREE.Vector3();
     const c = new THREE.Vector3();
-    for (const g of [shell.left, shell.right, shell.ceiling]) {
+    for (const indexed of [shell.left, shell.right, shell.ceiling, shell.bulkheads]) {
+      const g = indexed.index ? indexed.toNonIndexed() : indexed;
       const p = g.getAttribute("position");
       const n = g.getAttribute("normal");
       for (let i = 0; i < p.count; i += 3) {

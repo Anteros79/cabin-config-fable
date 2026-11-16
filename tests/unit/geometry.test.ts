@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, test } from "vitest";
 import {
+  BIN_BOTTOM,
+  BIN_DRAWN_INNER_Z,
+  BIN_DRAWN_TOP,
   binPlacement,
   CABIN_HALF_WIDTH,
   CEILING_HEIGHT,
@@ -99,7 +102,8 @@ describe("seat letter and side findings", () => {
 
 describe("cabin shell (WEB-21)", () => {
   it("adds illustrative constants and keeps the geometry version", () => {
-    expect(CEILING_HEIGHT).toBe(2.15);
+    // raised from the brief's 2.15 by controller ruling (Task 5.6 fix 1): the ceiling clears the drawn bins (top 2.30)
+    expect(CEILING_HEIGHT).toBe(2.45);
     expect(SIDEWALL_CURVE_RADIUS).toBe(1.9);
     expect(GEOMETRY_VERSION).toBe("cabin-kit.geometry/1");
   });
@@ -162,6 +166,29 @@ describe("cabin shell (WEB-21)", () => {
         expect(inside(y, z), `point ${i} + ${t.toFixed(1)}: y ${y.toFixed(3)}, z ${z.toFixed(3)}`).toBe(false);
       }
     }
+  });
+
+  it("clears the drawn bins: no point, and no point between two, lies in the drawn bin envelope", () => {
+    // the drawn bin (buildBinGeometry) is larger than its placement box; tests/web/shell.test.ts holds these two
+    // constants to the drawn geometry's bounding box
+    const inside = (y: number, z: number) => y >= BIN_BOTTOM - 0.01 && y <= BIN_DRAWN_TOP && z >= BIN_DRAWN_INNER_Z && z <= CABIN_HALF_WIDTH - 0.02;
+    for (let i = 0; i < profile.length; i++) {
+      const a = profile[i];
+      const b = profile[i + 1] ?? a;
+      if (!a || !b) throw new Error("invariant");
+      for (let t = 0; t <= 1; t += 0.1) {
+        const y = a.y + (b.y - a.y) * t;
+        const z = a.z + (b.z - a.z) * t;
+        expect(inside(y, z), `point ${i} + ${t.toFixed(1)}: y ${y.toFixed(3)}, z ${z.toFixed(3)}`).toBe(false);
+      }
+    }
+  });
+
+  it("the ceiling arches: it is lowest beside the bins and rises at least 9 cm to the centreline", () => {
+    const ceiling = profile.filter((p) => p.z < BIN_DRAWN_INNER_Z);
+    const edge = ceiling[0];
+    expect(edge?.y).toBeGreaterThan(BIN_DRAWN_TOP);
+    expect(CEILING_HEIGHT - (edge?.y ?? 0)).toBeGreaterThanOrEqual(0.09);
   });
 
   it("is pure: every call returns the same new array", () => {

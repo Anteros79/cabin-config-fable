@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { AFT_MARGIN, BIN_DEPTH, CEILING_HEIGHT, FORWARD_MARGIN, shellProfile } from "../../domain/geometry.ts";
+import { AFT_MARGIN, CEILING_HEIGHT, FORWARD_MARGIN, shellProfile } from "../../domain/geometry.ts";
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.ts";
 import { boundPose, type CabinBounds, type CameraPose, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
@@ -799,7 +799,7 @@ export class CabinScene {
     const pitch = layout.geometry.rowPitch;
     const windowCount = Math.max(0, Math.round((length - FORWARD_MARGIN - AFT_MARGIN) / pitch));
     const windowXs = Array.from({ length: windowCount }, (_, i) => FORWARD_MARGIN + (i + 0.5) * pitch);
-    const shell = buildShellGeometries(shellProfile(), length, windowXs, halfW - 0.08 - BIN_DEPTH);
+    const shell = buildShellGeometries(shellProfile(), length, windowXs);
     for (const g of Object.values(shell)) own(g);
     // Transparent from the start, so ghosting changes only opacity and depth writes, never the shader program.
     const shellMaterial = (extra: THREE.MeshStandardMaterialParameters) => std("#ffffff", 0.85, 0, { side: THREE.BackSide, transparent: true, ...extra });
@@ -999,7 +999,8 @@ export class CabinScene {
    */
   private updateGhosting(instant = false): void {
     const cam = this.camera.position;
-    const inside = Math.abs(cam.z) < 0.7 && cam.y < 2.2;
+    // inside the cabin: over the aisle and below the ceiling (one test for the bins and the shell)
+    const inside = Math.abs(cam.z) < 0.7 && cam.y < CEILING_HEIGHT;
     const offset = cam.clone().sub(this.controls.target);
     const above = offset.y / Math.max(offset.length(), 0.001) > 0.9 && cam.y > 4;
     for (const b of this.binSides) {
@@ -1009,10 +1010,9 @@ export class CabinScene {
     for (const m of [this.selectionMarks, this.hoverMarks]) this.ghostOutline(m);
     // The shell: from outside it (above the ceiling, or beside the aisle) the ceiling ghosts, and so does each sidewall
     // between the camera and the centreline; from above, both. From inside, as in the aisle view, all of it is solid.
-    const insideShell = Math.abs(cam.z) < 0.7 && cam.y < CEILING_HEIGHT;
     for (const c of this.shellParts) {
       const near = c.part === "ceiling" || above || (c.part === "L" ? cam.z > 0.7 : cam.z < -0.7);
-      c.ghost = !insideShell && near;
+      c.ghost = !inside && near;
     }
     if (instant || this.reducedMotion) {
       for (const g of [...this.binSides, ...this.shellParts]) g.level = g.ghost ? 1 : 0;
