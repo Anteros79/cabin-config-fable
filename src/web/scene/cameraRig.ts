@@ -67,6 +67,20 @@ export function clampTarget(target: THREE.Vector3, bounds: CabinBounds): THREE.V
   );
 }
 
+/** The lowest the camera may go: just above the floor. */
+export const MIN_CAMERA_HEIGHT = 0.1;
+
+/**
+ * A pose kept in bounds: the target clamped into the cabin box (the camera moves by as much, so the view does not turn)
+ * and the camera no lower than just above the floor, which a target under the floor could otherwise take it to. New vectors.
+ */
+export function boundPose(pose: CameraPose, bounds: CabinBounds): CameraPose {
+  const target = clampTarget(pose.target, bounds);
+  const position = pose.position.clone().add(target.clone().sub(pose.target));
+  if (position.y < MIN_CAMERA_HEIGHT) position.y = MIN_CAMERA_HEIGHT;
+  return { position, target };
+}
+
 /** 0 with reduced motion: the camera cuts. Otherwise 250 ms, plus a little per metre travelled, up to 700 ms. */
 export function transitionMs(from: CameraPose, to: CameraPose, reducedMotion: boolean): number {
   if (reducedMotion) return 0;

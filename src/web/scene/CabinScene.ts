@@ -3,7 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FORWARD_MARGIN } from "../../domain/geometry.ts";
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.ts";
-import { type CabinBounds, type CameraPose, clampTarget, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
+import { boundPose, type CabinBounds, type CameraPose, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
 import { createEnvironment, ENVIRONMENT_INTENSITY, type LightMode } from "./environment.ts";
 import { createOverlayMaterial, createSeatMaterials, type SeatMaps, STATUS_COLOUR, setGhosted, TIER_COLOUR, upholsteryVariant } from "./materials.ts";
 import { createBadges, createFrame, createOutline, frameGeometry, HOVER_OUTLINE, hullGeometry, SELECTION_OUTLINE, type ViewportUniform } from "./outline.ts";
@@ -303,6 +303,8 @@ export class CabinScene {
   private userGesture = false;
   /** true while the scene itself moves the camera through the controls */
   private placing = false;
+  /** the distance of the last preset placed: the user may always zoom out that far (see limitZoomOut) */
+  private presetDistance = 0;
   private reducedMotion = false;
   private motionQuery: MediaQueryList | null = null;
   /** the location a focus view was framed on, so a resize re-frames the same one */
@@ -347,13 +349,16 @@ export class CabinScene {
     // change, and keeps the preset.
     this.controls.addEventListener("start", () => {
       this.userGesture = true;
-      this.transition = null;
+      this.interruptTransition();
     });
     this.controls.addEventListener("end", () => {
       this.userGesture = false;
     });
     this.controls.addEventListener("change", () => {
-      if (this.userGesture && !this.placing) this.currentView = "free";
+      if (this.userGesture && !this.placing) {
+        this.interruptTransition();
+        this.currentView = "free";
+      }
       this.keepTargetInBounds();
       this.updateGhosting();
       this.invalidate();
@@ -575,7 +580,7 @@ export class CabinScene {
     const length = layout.geometry.cabinLength;
     const halfW = layout.geometry.cabinHalfWidth;
     const rows = layout.rows.filter((r) => r.exists).length;
-    this.controls.maxDistance = length * 1.4;
+    this.limitZoomOut();
 
     // seats ------------------------------------------------------------------------------------
     this.seats = layout.locations
@@ -1247,7 +1252,10 @@ export class CabinScene {
 
   private cabinBox(): THREE.Box3 {
     const g = this.layout!.geometry;
-    return new THREE.Box3(new THREE.Vector3(0, 0, -g.cabinHalfWidth), new THREE.Vector3(g.cabinLength, this.layers.bins ? 2.3 : 1.25, g.cabinHalfWidth));
+    return new THREE.Box3(
+      new THREE.Vector3(0, 0, -g.cabinHalfWidth),
+      new THREE.Vector3(g.cabinLength, this.layers.bins ? CABIN_HEIGHT : 1.25, g.cabinHalfWidth),
+    );
   }
 
   /** The cabin box for the camera rig: the target stays inside it plus half a metre. */
@@ -1260,14 +1268,35 @@ export class CabinScene {
     return { position: this.camera.position.clone(), target: this.controls.target.clone() };
   }
 
-  /** On every change the target is kept in the cabin box: the camera moves with it, so a pan stops at the edge instead of turning the view. */
+  /**
+   * On every change the target is kept in the cabin box (the camera moves with it, so a pan stops at the edge instead of
+   * turning the view) and the camera above the floor.
+   */
   private keepTargetInBounds(): void {
     const bounds = this.bounds();
     if (!bounds) return;
-    const clamped = clampTarget(this.controls.target, bounds);
-    if (clamped.equals(this.controls.target)) return;
-    this.camera.position.add(clamped.clone().sub(this.controls.target));
-    this.controls.target.copy(clamped);
+    const bounded = boundPose(this.pose(), bounds);
+    this.camera.position.copy(bounded.position);
+    this.controls.target.copy(bounded.target);
+  }
+
+  /**
+   * How far out the camera may go: 1.4 cabin lengths, or the distance of the last preset if that is further (a whole
+   * cabin from above on a phone needs more), so every preset is reachable and the user cannot zoom out past either.
+   * `atLeast` keeps a camera further out than both where it is, during or after a transition from there.
+   */
+  private limitZoomOut(atLeast = 0): void {
+    const length = this.layout?.geometry.cabinLength;
+    if (length === undefined) return;
+    this.controls.maxDistance = Math.max(length * 1.4, this.presetDistance, atLeast);
+  }
+
+  /** User input during a transition stops it where it is: the camera is no longer on the preset, so the view is free. */
+  private interruptTransition(): void {
+    if (!this.transition) return;
+    this.transition = null;
+    this.currentView = "free";
+    this.limitZoomOut(this.camera.position.distanceTo(this.controls.target));
   }
 
   /** Move the camera through the controls without that counting as the user's own move. */
@@ -1336,15 +1365,19 @@ export class CabinScene {
     this.stopGlide();
     const from = this.pose();
     const fromFov = this.camera.fov;
+    // the preset is placed without a zoom limit; the limit then follows the preset's distance
+    this.controls.maxDistance = Number.POSITIVE_INFINITY;
     this.place(() => this.placePreset(view, locationId ?? this.selection));
     const to = this.pose();
     const toFov = this.camera.fov;
+    this.presetDistance = to.position.distanceTo(to.target);
     const duration = animate ? transitionMs(from, to, this.reducedMotion) : 0;
     if (duration > 0) {
       this.transition = { from, to, fromFov, toFov, start: performance.now(), duration };
       // back to where it starts; the frames move it
       this.applyPose(from, fromFov);
-    }
+      this.limitZoomOut(from.position.distanceTo(from.target));
+    } else this.limitZoomOut();
     this.updateGhosting();
     this.invalidate();
   }
@@ -1364,7 +1397,10 @@ export class CabinScene {
     const progress = Math.min((now - t.start) / t.duration, 1);
     const eased = easeInOutCubic(progress);
     this.applyPose(interpolatePose(t.from, t.to, eased), THREE.MathUtils.lerp(t.fromFov, t.toFov, eased));
-    if (progress >= 1) this.transition = null;
+    if (progress >= 1) {
+      this.transition = null;
+      this.limitZoomOut();
+    }
     this.needsRender = true;
   }
 
@@ -1379,6 +1415,7 @@ export class CabinScene {
       // a transition under way finishes at once
       this.applyPose(this.transition.to, this.transition.toFov);
       this.transition = null;
+      this.limitZoomOut();
       this.place(() => this.controls.update());
     }
     if (reduced) this.updateGhosting(true);
@@ -1439,7 +1476,7 @@ export class CabinScene {
   /** Keyboard and button camera control: orbit, tilt and zoom around the current target. */
   nudge(action: "left" | "right" | "up" | "down" | "in" | "out"): void {
     // user input: a running transition stops where it is
-    this.transition = null;
+    this.interruptTransition();
     const offset = this.camera.position.clone().sub(this.controls.target);
     const s = new THREE.Spherical().setFromVector3(offset);
     if (action === "left") s.theta -= 0.2;
@@ -1654,13 +1691,19 @@ export class CabinScene {
       this.measureStep?.();
       this.processHover();
       const now = performance.now();
+      // a transition's own moves are the scene's, even while the user holds a pointer down
+      const animating = this.transition !== null;
       this.stepTransition(now);
       // the step that ends a fade changes the look too
       if (this.ghostClock !== null) {
         this.stepGhostFade(now);
         this.needsRender = true;
       }
-      settling = this.controls.update();
+      if (animating)
+        this.place(() => {
+          settling = this.controls.update();
+        });
+      else settling = this.controls.update();
       if (settling) this.needsRender = true;
       if (this.needsRender) {
         this.needsRender = false;

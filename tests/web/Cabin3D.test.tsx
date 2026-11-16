@@ -85,6 +85,8 @@ test("a layout with a different id is set on the scene", async () => {
 test("switching to Map and back keeps one scene instance", async () => {
   render(<Viewer workspace={workspace} selection={null} onSelect={vi.fn()} visualProfiles={[]} />);
   await ready();
+  // the first layout is set in an effect after the canvas reports ready; wait for it before counting
+  await waitFor(() => expect(calls("setLayout")).toHaveLength(1));
   scenes.calls = [];
   await act(async () => fireEvent.click(screen.getByRole("tab", { name: "Map and list" })));
   await act(async () => fireEvent.click(screen.getByRole("tab", { name: "3D cutaway" })));
@@ -164,15 +166,19 @@ test("a selection made while the 3D view is hidden, or already there when it sta
 test("the wheel hint shows for 2 s the first time the wheel scrolls past the view, and not again in the session", async () => {
   renderCabin(workspace);
   await ready();
+  // the live region is there before the hint, so its text is announced when set
+  const region = screen.getByRole("status");
+  expect(region).toBeEmptyDOMElement();
   vi.useFakeTimers();
   try {
     act(() => callbacks().onWheelPassedThrough?.());
-    expect(screen.getByRole("status", { name: "" })).toHaveTextContent(WHEEL_HINT);
+    expect(screen.getByRole("status")).toBe(region);
+    expect(region).toHaveTextContent(WHEEL_HINT);
     expect(WHEEL_HINT).toBe("Click the view, then scroll to zoom");
     act(() => vi.advanceTimersByTime(WHEEL_HINT_MS - 1));
     expect(screen.queryByText(WHEEL_HINT)).not.toBeNull();
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.queryByText(WHEEL_HINT)).toBeNull();
+    expect(region).toBeEmptyDOMElement();
     act(() => callbacks().onWheelPassedThrough?.());
     expect(screen.queryByText(WHEEL_HINT)).toBeNull();
   } finally {

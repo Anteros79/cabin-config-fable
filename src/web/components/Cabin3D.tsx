@@ -338,11 +338,10 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           <li>Use the Map and list tab to select locations by keyboard.</li>
         </ul>
         {!ready && <p className="canvas-note">Starting 3D…</p>}
-        {wheelHint && (
-          <p className="canvas-hint" role="status">
-            {WHEEL_HINT}
-          </p>
-        )}
+        {/* always present, so setting its text is announced */}
+        <p className="canvas-hint" role="status">
+          {wheelHint ? WHEEL_HINT : ""}
+        </p>
         {/* The live region announces selection; this label only follows the pointer. */}
         {hover && (
           <p className="hover-label" aria-hidden="true" ref={hoverRef}>

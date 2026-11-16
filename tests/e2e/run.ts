@@ -637,15 +637,16 @@ try {
     await overCanvas();
     await page.mouse.wheel(0, 240);
     await page.waitForFunction(() => window.scrollY > 0);
-    equal(await page.textContent(".canvas-hint"), "Click the view, then scroll to zoom", "the hint");
+    await page.waitForFunction(() => document.querySelector(".canvas-hint")?.textContent === "Click the view, then scroll to zoom");
     await settle(page, 200);
     sameCamera(await cameraOf(page), home, "by an unfocused wheel");
     equal((await sceneInfo(page)).view, "cutaway", "an unfocused wheel keeps the preset");
-    await page.waitForSelector(".canvas-hint", { state: "detached", timeout: 3000 });
+    await page.waitForFunction(() => document.querySelector(".canvas-hint")?.textContent === "", undefined, { timeout: 3000 });
+    equal(await page.getAttribute(".canvas-hint", "role"), "status", "the hint is a live region that stays in place");
     await page.mouse.wheel(0, -240);
     await page.waitForFunction(() => window.scrollY === 0);
     await page.waitForTimeout(150);
-    equal(await page.locator(".canvas-hint").count(), 0, "the hint shows at most once per session");
+    equal(await page.textContent(".canvas-hint"), "", "the hint shows at most once per session");
     // Ctrl and the wheel zoom without focus
     await overCanvas();
     await page.keyboard.down("Control");
@@ -1479,6 +1480,42 @@ try {
     await m.touchscreen.tap(point!.x, point!.y);
     await m.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 6D");
   });
+  await check("mobile: Overhead and Cutaway show the whole cabin, also in a tall view", async () => {
+    // the seats whose pan projects outside the canvas: none, when the preset frames the whole cabin
+    const seatsOutside = () =>
+      m.evaluate(() => {
+        const scene = window.__cabinKit!.scene as unknown as {
+          layout: { locations: { id: string; kind: string }[] };
+          screenPointOf(id: string, part?: "head" | "pan"): { x: number; y: number };
+        };
+        const rect = document.querySelector("canvas")!.getBoundingClientRect();
+        return scene.layout.locations
+          .filter((l) => l.kind === "SEAT")
+          .filter((l) => {
+            const p = scene.screenPointOf(l.id, "pan");
+            return !(p.x >= rect.left && p.x <= rect.right && p.y >= rect.top && p.y <= rect.bottom);
+          })
+          .map((l) => l.id);
+      });
+    try {
+      for (const [width, height] of [
+        [390, 844],
+        [390, 1120],
+      ] as const) {
+        await m.setViewportSize({ width, height });
+        await settle(m, 300);
+        for (const view of ["overhead", "cutaway"]) {
+          await m.evaluate((v) => window.__cabinKit!.scene!.setCamera(v as never), view);
+          await settle(m);
+          const outside = await seatsOutside();
+          equal(outside.length, 0, `${view} at ${width}x${height}: seats outside the view (${outside.slice(0, 4).join(", ")})`);
+        }
+      }
+    } finally {
+      await m.setViewportSize({ width: 390, height: 844 });
+      await settle(m, 300);
+    }
+  });
   await check("mobile: the end of a two-finger gesture selects nothing and a URL-bar resize keeps a moved camera", async () => {
     // From above, every seat pan is a separate target: each finger lands on a seat other than the selected 6D, so a
     // gesture that picked would change the selection.
@@ -1557,6 +1594,16 @@ try {
     equal((await sceneInfo(m)).view, "free", "a sideways drag leaves the preset");
     expect(Math.abs((await m.evaluate(() => window.scrollY)) - scrollSide) <= 2, "a sideways drag does not scroll the page");
     equal(await m.textContent("#inspector-heading"), heading, "a sideways drag selects nothing");
+    // a camera moved by touch stays where it is when the URL bar changes the viewport height; measured once the
+    // orbit's glide has stopped (no frame pending)
+    await m.waitForFunction(() => window.__cabinKit!.scene!.describeScene().framePending === false);
+    const orbited = await cameraOf(m);
+    await m.setViewportSize({ width: 390, height: 760 });
+    await settle(m, 400);
+    await m.setViewportSize({ width: 390, height: 844 });
+    await settle(m, 400);
+    sameCamera(await cameraOf(m), orbited, "after a touch orbit and a viewport resize");
+    equal((await sceneInfo(m)).view, "free", "still free after the resize");
     await cdp.detach();
     await m.tap(".toolbar button:has-text('Reset')");
     await settle(m);

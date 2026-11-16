@@ -1,11 +1,13 @@
 import * as THREE from "three";
 import { expect, test } from "vitest";
 import {
+  boundPose,
   type CabinBounds,
   type CameraPose,
   clampTarget,
   easeInOutCubic,
   interpolatePose,
+  MIN_CAMERA_HEIGHT,
   poseToFrame,
   TRANSITION_MAX_MS,
   TRANSITION_MIN_MS,
@@ -127,4 +129,23 @@ test("poseToFrame looks at the location from the aisle side", () => {
   for (const p of [bin, floor, poseToFrame({ x: 40, y: 0, z: 0 }, "SEAT", bounds)]) {
     expect(clampTarget(p.target, bounds).distanceTo(p.target)).toBe(0);
   }
+});
+
+test("boundPose moves the camera with a clamped target and keeps it above the floor", () => {
+  // in bounds: unchanged
+  const inside = boundPose(aisle, bounds);
+  expect(inside.position.toArray()).toEqual(aisle.position.toArray());
+  expect(inside.target.toArray()).toEqual(aisle.target.toArray());
+  // a target past the aft end comes back, and the camera with it: the view does not turn
+  const panned = pose([35, 3, 0], [33, 1, 0]);
+  const back = boundPose(panned, bounds);
+  expect(back.target.toArray()).toEqual([26.5, 1, 0]);
+  expect(back.position.toArray()).toEqual([28.5, 3, 0]);
+  // a camera that a target half a metre under the floor would put below it is lifted to just above the floor
+  const low = boundPose(pose([5, -0.45, 2], [6, -0.5, 0]), bounds);
+  expect(MIN_CAMERA_HEIGHT).toBe(0.1);
+  expect(low.position.y).toBe(MIN_CAMERA_HEIGHT);
+  expect(low.target.y).toBe(-0.5);
+  // new vectors: the pose passed in is not changed
+  expect(panned.target.x).toBe(33);
 });
