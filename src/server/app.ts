@@ -501,9 +501,16 @@ export function createApp(config: ServerConfig): AppHandle {
 
     app.post<{ Params: { id: string } }>("/api/visits/:id/events", async (request, reply) => {
       const b = body(request);
-      const visit = visits.addLinkedEvent(visitId(request.params.id), b.type, b.note, b.author);
-      reply.code(201);
-      return { visit };
+      for (const k of Object.keys(b)) {
+        if (!["type", "note", "author", "idempotencyKey"].includes(k)) {
+          throw new DomainError("UNSUPPORTED_FIELD", `Field "${k}" is not accepted. Events take only type, note, author and idempotencyKey.`, 422);
+        }
+      }
+      const { visit, replayed } = visits.addLinkedEvent(visitId(request.params.id), b.type, b.note, b.author, {
+        idempotencyKey: optionalKey(b.idempotencyKey),
+      });
+      reply.code(replayed ? 200 : 201);
+      return { visit, replayed };
     });
 
     app.get<{ Params: { id: string }; Querystring: { download?: string } }>("/api/visits/:id/report", async (request, reply) => {

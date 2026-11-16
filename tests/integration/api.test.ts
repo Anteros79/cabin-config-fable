@@ -59,6 +59,24 @@ describe("mutation responses", () => {
   });
 });
 
+describe("linked events API", () => {
+  it("answers 201 then 200 on replay, and refuses a bad type or an unknown field", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    const url = `/api/visits/${visit.id}/events`;
+    const body = { type: "ADVISORY", note: "Check seam", author: "JM", idempotencyKey: "evt-key-api1" };
+    const first = await post(app, url, body);
+    const again = await post(app, url, body);
+    expect([first.statusCode, again.statusCode]).toEqual([201, 200]);
+    expect(json(again).visit.events.filter((e: { type: string }) => e.type === "ADVISORY")).toHaveLength(1);
+    const bad = await post(app, url, { ...body, type: "EDIT", idempotencyKey: undefined });
+    expect([bad.statusCode, json(bad).error.code]).toEqual([422, "INVALID_EVENT"]);
+    const extra = await post(app, url, { ...body, extra: 1 });
+    expect([extra.statusCode, json(extra).error.code]).toEqual([422, "UNSUPPORTED_FIELD"]);
+    await app.close();
+  });
+});
+
 describe("lookup API", () => {
   it("returns each state with an explicit reason and never a guessed configuration", async () => {
     const app = makeApp();

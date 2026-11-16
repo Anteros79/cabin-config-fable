@@ -4,6 +4,7 @@ import type { Report } from "../../src/domain/types.ts";
 import { DomainError } from "../../src/domain/visitLogic.ts";
 import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
+import { IDEMPOTENCY_RETENTION_DAYS } from "../../src/server/visitStore.ts";
 import { CUSHION_3A, cleanupTempDirs, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, makeStores, openVisits, SIX_LINE_TOTALS, snapshotFor } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
@@ -327,6 +328,64 @@ describe("reference updates do not rebase visits", () => {
     expect(codeOf(() => store.upsertRecord(visit.id, { locationId: "SEAT:14B", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 }, undefined))).toBe(
       "UNKNOWN_LOCATION",
     );
+    store.close();
+  });
+});
+
+describe("idempotent linked events and key retention", () => {
+  const fresh = () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo tech");
+    return { store, id: visit.id };
+  };
+  const day = 86_400_000;
+
+  it("a repeated event key appends once", () => {
+    const { store, id } = fresh();
+    const a = store.addLinkedEvent(id, "ADVISORY", "Check seam", "JM", { idempotencyKey: "evt-key-0001" });
+    const b = store.addLinkedEvent(id, "ADVISORY", "Check seam", "JM", { idempotencyKey: "evt-key-0001" });
+    expect(a.replayed).toBe(false);
+    expect(b.replayed).toBe(true);
+    expect(b.visit.events.filter((e) => e.type === "ADVISORY")).toHaveLength(1);
+    store.close();
+  });
+
+  it("the same event key with a different note is refused", () => {
+    const { store, id } = fresh();
+    store.addLinkedEvent(id, "ADVISORY", "Check seam", "JM", { idempotencyKey: "evt-key-0002" });
+    expect(codeOf(() => store.addLinkedEvent(id, "ADVISORY", "Other note", "JM", { idempotencyKey: "evt-key-0002" }))).toBe("IDEMPOTENCY_KEY_REUSED");
+    store.close();
+  });
+
+  it("note is trimmed before the length check; author over 80 is refused", () => {
+    const { store, id } = fresh();
+    const ok = store.addLinkedEvent(id, "ADVISORY", "  x  ", "  JM  ");
+    expect(ok.visit.events.at(-1)?.payload).toMatchObject({ note: "x", author: "JM" });
+    expect(codeOf(() => store.addLinkedEvent(id, "ADVISORY", " ".repeat(5), "JM"))).toBe("INVALID_EVENT");
+    expect(codeOf(() => store.addLinkedEvent(id, "ADVISORY", "x", "a".repeat(81)))).toBe("INVALID_EVENT");
+    store.close();
+  });
+
+  it("pruneIdempotency removes only rows older than the cutoff", () => {
+    const { store, id } = fresh();
+    const now = Date.now();
+    store.addLinkedEvent(id, "ADVISORY", "old", "JM", { idempotencyKey: "evt-key-old1", now: new Date(now - 40 * day).toISOString() });
+    store.addLinkedEvent(id, "ADVISORY", "new", "JM", { idempotencyKey: "evt-key-new1", now: new Date(now - 5 * day).toISOString() });
+    expect(store.pruneIdempotency(new Date(now - IDEMPOTENCY_RETENTION_DAYS * day).toISOString())).toBe(1);
+    expect(store.addLinkedEvent(id, "ADVISORY", "new", "JM", { idempotencyKey: "evt-key-new1" }).replayed).toBe(true);
+    expect(store.addLinkedEvent(id, "ADVISORY", "old", "JM", { idempotencyKey: "evt-key-old1" }).replayed).toBe(false);
+    store.close();
+  });
+
+  it("completion replayed flag reflects a real key match", () => {
+    const { store, id } = fresh();
+    store.upsertRecord(id, { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", quantity: 1 }, undefined);
+    const first = store.completeVisit(id, undefined, { idempotencyKey: "complete-key-1" });
+    expect([first.alreadyCompleted, first.replayed]).toEqual([false, false]);
+    const again = store.completeVisit(id, undefined, { idempotencyKey: "complete-key-1" });
+    expect([again.alreadyCompleted, again.replayed]).toEqual([true, true]);
+    const none = store.completeVisit(id, undefined);
+    expect([none.alreadyCompleted, none.replayed]).toEqual([true, false]);
     store.close();
   });
 });

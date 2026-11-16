@@ -174,6 +174,6 @@ export const api = {
       idempotencyKey,
     }),
   report: (id: string) => request<ReportEnvelope>("GET", `/api/visits/${id}/report`),
-  addEvent: (id: string, type: string, note: string, author: string) =>
-    request<{ visit: VisitState }>("POST", `/api/visits/${id}/events`, { type, note, author }),
+  addEvent: (id: string, type: string, note: string, author: string, idempotencyKey: string) =>
+    request<{ visit: VisitState }>("POST", `/api/visits/${id}/events`, { type, note, author, idempotencyKey }),
 };

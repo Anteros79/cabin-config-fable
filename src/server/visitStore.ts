@@ -117,6 +117,9 @@ CREATE TRIGGER events_immutable_delete BEFORE DELETE ON visit_events
 BEGIN SELECT RAISE(ABORT, 'EVENT_IMMUTABLE'); END;
 `;
 
+/** Retry keys older than this are pruned when the store opens. */
+export const IDEMPOTENCY_RETENTION_DAYS = 30;
+
 export interface MutationOptions {
   idempotencyKey?: string;
   now?: string;
@@ -208,7 +211,14 @@ export class VisitStore {
         throw new DomainError("VISIT_SCHEMA_MISMATCH", `Visit store schema version ${version ?? "unknown"} is not supported.`, 500);
       }
     }
-    return new VisitStore(path, db);
+    const store = new VisitStore(path, db);
+    store.pruneIdempotency(new Date(Date.now() - IDEMPOTENCY_RETENTION_DAYS * 86_400_000).toISOString());
+    return store;
+  }
+
+  /** Deletes retry keys created before the cutoff (ISO time) and returns how many were removed. Events are never touched. */
+  pruneIdempotency(before: string): number {
+    return this.write(() => Number(this.db.prepare("DELETE FROM idempotency WHERE created_at < ?").run(before).changes));
   }
 
   close(): void {
@@ -539,10 +549,13 @@ export class VisitStore {
    */
   completeVisit(visitId: string, expectedVisitVersion: number | undefined, options: MutationOptions = {}): CompletionResult {
     const now = options.now ?? new Date().toISOString();
+    const scope = `complete:${visitId}`;
+    const requestHash = sha256Hex(canonicalJson({ op: "complete", visitId, expectedVisitVersion: expectedVisitVersion ?? null }));
     return this.write(() => {
+      const replayed = this.replay(options.idempotencyKey, scope, requestHash) !== undefined;
       const visit = this.loadVisitState(visitId);
       if (visit.status === "COMPLETED") {
-        return { visit, report: this.storedReport(visitId), alreadyCompleted: true, replayed: Boolean(options.idempotencyKey) };
+        return { visit, report: this.storedReport(visitId), alreadyCompleted: true, replayed };
       }
       if (expectedVisitVersion !== undefined && expectedVisitVersion !== visit.version) {
         throw new DomainError("STALE_VISIT", "This visit changed elsewhere since you loaded it. Review the current work, then complete again.", 409, {
@@ -577,6 +590,7 @@ export class VisitStore {
       this.db
         .prepare("INSERT INTO reports(visit_id, schema, generated_at, basis_sha256, report_json) VALUES (?, ?, ?, ?, ?)")
         .run(visitId, report.schema, now, sha256Hex(reportJson), reportJson);
+      this.remember(options.idempotencyKey, scope, requestHash, { ok: true }, now);
       return { visit: completed, report, alreadyCompleted: false, replayed: false };
     });
   }
@@ -607,16 +621,22 @@ export class VisitStore {
   }
 
   /** Later advisories and corrections are appended as linked events; visit content is not edited. */
-  addLinkedEvent(visitId: string, type: unknown, note: unknown, author: unknown, options: MutationOptions = {}): VisitState {
-    if (type !== "ADVISORY" && type !== "CORRECTION_NOTE") throw new DomainError("INVALID_EVENT", "Event type must be ADVISORY or CORRECTION_NOTE.");
-    if (typeof note !== "string" || note.trim().length === 0 || note.length > 2000)
-      throw new DomainError("INVALID_EVENT", "A note of 1-2000 characters is required.");
-    const by = typeof author === "string" ? author.trim().slice(0, 80) : "";
+  addLinkedEvent(visitId: string, type: unknown, note: unknown, author: unknown, options: MutationOptions = {}): VisitMutationResult {
+    if (type !== "ADVISORY" && type !== "CORRECTION_NOTE") throw new DomainError("INVALID_EVENT", "Event type must be ADVISORY or CORRECTION_NOTE.", 422);
+    const text = typeof note === "string" ? note.trim() : "";
+    if (text.length === 0 || text.length > 2000) throw new DomainError("INVALID_EVENT", "A note of 1-2000 characters is required.", 422);
+    const by = typeof author === "string" ? author.trim() : "";
+    if (by.length > 80) throw new DomainError("INVALID_EVENT", "Author must be at most 80 characters.", 422);
     const now = options.now ?? new Date().toISOString();
+    const scope = `event:${visitId}`;
+    const requestHash = sha256Hex(canonicalJson({ op: "event", visitId, type, note: text, author: by }));
     return this.write(() => {
+      const prior = this.replay(options.idempotencyKey, scope, requestHash);
       this.loadVisitState(visitId);
-      this.event(visitId, type, { note: note.trim(), author: by }, now);
-      return this.loadVisitState(visitId);
+      if (prior) return { visit: this.loadVisitState(visitId), replayed: true };
+      this.event(visitId, type, { note: text, author: by }, now);
+      this.remember(options.idempotencyKey, scope, requestHash, { ok: true }, now);
+      return { visit: this.loadVisitState(visitId), replayed: false };
     });
   }
 

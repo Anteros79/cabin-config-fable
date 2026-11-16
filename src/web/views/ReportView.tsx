@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { ApiError, api, type ReportEnvelope } from "../api.ts";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ApiError, api, newKey, type ReportEnvelope } from "../api.ts";
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
@@ -11,6 +11,8 @@ export function ReportView({ visitId }: { visitId: string }) {
   const [noteType, setNoteType] = useState("ADVISORY");
   const [author, setAuthor] = useState("");
   const [noteState, setNoteState] = useState("");
+  // One key per note: a retry after a dropped answer reuses it, so the note is appended once.
+  const noteKey = useRef(newKey());
 
   const load = useCallback(async () => {
     setError(null);
@@ -32,7 +34,8 @@ export function ReportView({ visitId }: { visitId: string }) {
     e.preventDefault();
     setNoteState("Saving…");
     try {
-      await api.addEvent(visitId, noteType, note, author);
+      await api.addEvent(visitId, noteType, note, author, noteKey.current);
+      noteKey.current = newKey();
       setNote("");
       setNoteState("Linked note added. The locked report content is unchanged.");
       await load();

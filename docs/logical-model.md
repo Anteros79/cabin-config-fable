@@ -86,7 +86,7 @@ At creation the whole context is copied into the visit: assignment, variant, lay
 | Add / update | One record per visit, location and component. `expectedRecordVersion` mismatch → 409 `STALE_RECORD` |
 | Remove | Same version check; no orphan child lines exist because lines live on the record |
 | Complete | One transaction: version check, non-empty check, re-derivation of every record from the snapshot, lock, report stored. Repeating it returns the stored report |
-| Retry | A repeated idempotency key returns the first outcome; the same key with a different request is refused |
+| Retry | A repeated idempotency key returns the first outcome, for record writes, completion and linked events; the same key with a different request is refused. Keys are pruned after 30 days when the store opens; events and reports are never pruned |
 | After completion | Edits refused by the application and by triggers on records, visit, report and events. Advisories and corrections are appended as linked events |
 
 Writers use `BEGIN IMMEDIATE`, so an edit racing a completion either commits first and is in the report, or is refused afterwards.
