@@ -6,9 +6,15 @@ import { Inspector } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
 import type { Workspace } from "../model.ts";
+import { formatRoute } from "../routes.ts";
 
 interface Props {
   visitId: string | null;
+  /** The lookup the route asks for (check view only). A change runs the lookup. */
+  tail?: string | null;
+  date?: string | null;
+  /** Called when a visit has loaded, so the page title can name it. */
+  onVisit?: (meta: { id: string; number: number; tail: string }) => void;
   navigate(hash: string): void;
   visualProfiles: VisualProfile[];
 }
@@ -51,6 +57,21 @@ function remember(id: string | null): void {
     /* storage may be blocked; history is on the server anyway */
   }
 }
+const TECHNICIAN_KEY = "cabin-kit.technician";
+function savedTechnician(): string {
+  try {
+    return sessionStorage.getItem(TECHNICIAN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+function saveTechnician(name: string): void {
+  try {
+    sessionStorage.setItem(TECHNICIAN_KEY, name);
+  } catch {
+    /* the name is only a convenience between lookups */
+  }
+}
 function recall(): string | null {
   try {
     return localStorage.getItem("cabin-kit:last-visit");
@@ -59,11 +80,11 @@ function recall(): string | null {
   }
 }
 
-export function CheckView({ visitId, navigate, visualProfiles }: Props) {
+export function CheckView({ visitId, tail: routeTail = null, date: routeDate = null, onVisit, navigate, visualProfiles }: Props) {
   const [tails, setTails] = useState<{ tail: string; note: string }[]>([]);
   const [tail, setTail] = useState("");
   const [date, setDate] = useState(today());
-  const [technician, setTechnician] = useState("");
+  const [technician, setTechnician] = useState(savedTechnician);
   const [lookup, setLookup] = useState<LookupResult | null>(null);
   const [lookupBusy, setLookupBusy] = useState(false);
   const [lookupSeq, setLookupSeq] = useState(0);
@@ -76,8 +97,30 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
   const [focusComponent, setFocusComponent] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const confirmRef = useRef<HTMLHeadingElement | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.5
-  const lastDraft = useMemo(recall, [visitId]);
+  const [lastDraft, setLastDraft] = useState<string | null>(recall);
+  const lookupToken = useRef(0);
+
+  // The pointer to the last draft is only offered while that draft still exists and is still a draft.
+  useEffect(() => {
+    const id = recall();
+    if (!id || visitId) return;
+    let stopped = false;
+    api
+      .visit(id)
+      .then((res) => {
+        if (stopped || res.visit.status === "DRAFT") return;
+        remember(null);
+        setLastDraft(null);
+      })
+      .catch((e) => {
+        if (stopped || !(e instanceof ApiError) || e.status !== 404) return;
+        remember(null);
+        setLastDraft(null);
+      });
+    return () => {
+      stopped = true;
+    };
+  }, [visitId]);
 
   useEffect(() => {
     api
@@ -86,25 +129,31 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
       .catch(() => setTails([]));
   }, []);
 
-  const loadVisit = useCallback(async (id: string) => {
-    setVisitLoading(true);
-    setVisitError(null);
-    try {
-      const res = await api.visit(id);
-      // A write answer that arrived while this read was in flight may already be newer; keep the newer copy.
-      setVisit((cur) => (cur && cur.id === res.visit.id && cur.version > res.visit.version ? cur : res.visit));
-      setReferenceChanged(res.referenceNow?.changedSinceVisit ?? false);
-      if (res.visit.status === "DRAFT") remember(id);
-    } catch (e) {
-      setVisitError(
-        e instanceof ApiError && e.kind === "network"
-          ? "The server could not be reached. Your saved work is still on the server; retry when the connection is back."
-          : (e as Error).message,
-      );
-    } finally {
-      setVisitLoading(false);
-    }
-  }, []);
+  const loadVisit = useCallback(
+    async (id: string) => {
+      setVisitLoading(true);
+      setVisitError(null);
+      try {
+        const res = await api.visit(id);
+        // A write answer that arrived while this read was in flight may already be newer; keep the newer copy.
+        setVisit((cur) => (cur && cur.id === res.visit.id && cur.version > res.visit.version ? cur : res.visit));
+        setReferenceChanged(res.referenceNow?.changedSinceVisit ?? false);
+        if (res.visit.status === "DRAFT") remember(id);
+        else if (recall() === id) remember(null);
+        onVisit?.({ id, number: res.visit.number, tail: res.visit.tail });
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404 && recall() === id) remember(null);
+        setVisitError(
+          e instanceof ApiError && e.kind === "network"
+            ? "The server could not be reached. Your saved work is still on the server; retry when the connection is back."
+            : (e as Error).message,
+        );
+      } finally {
+        setVisitLoading(false);
+      }
+    },
+    [onVisit],
+  );
 
   // Creating a visit has no visit on screen yet, so its answer navigates instead of merging (PF-18).
   const creation = useMutations<VisitEnvelope>((res) => {
@@ -164,16 +213,18 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
     setFocusComponent(componentId);
   }, []);
 
-  const doLookup = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const runLookup = useCallback(async (forTail: string, forDate: string) => {
+    const token = ++lookupToken.current;
     setLookupBusy(true);
     setLookupError(null);
     try {
-      const result = await api.lookup(tail, date);
+      const result = await api.lookup(forTail, forDate);
+      if (token !== lookupToken.current) return;
       setLookup(result);
       setLookupSeq((n) => n + 1);
       setSelection(null);
     } catch (err) {
+      if (token !== lookupToken.current) return;
       setLookup(null);
       setLookupError(
         err instanceof ApiError && err.kind === "network"
@@ -181,8 +232,33 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
           : (err as Error).message,
       );
     } finally {
-      setLookupBusy(false);
+      if (token === lookupToken.current) setLookupBusy(false);
     }
+  }, []);
+
+  // The route holds the lookup: Back, Forward and reload bring it back. A route without a tail clears the result.
+  useEffect(() => {
+    if (visitId) return;
+    if (!routeTail) {
+      lookupToken.current += 1;
+      setLookup(null);
+      setLookupError(null);
+      setLookupBusy(false);
+      return;
+    }
+    const forDate = routeDate ?? today();
+    setTail(routeTail);
+    setDate(forDate);
+    void runLookup(routeTail, forDate);
+  }, [visitId, routeTail, routeDate, runLookup]);
+
+  /** Submitting writes the lookup into the URL; the route effect runs it. The same lookup again runs directly, as the URL does not change. */
+  const doLookup = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const wanted = tail.trim() ? formatRoute({ name: "check", tail: tail.trim(), date: date || null }) : null;
+    const current = formatRoute({ name: "check", tail: routeTail, date: routeDate });
+    if (wanted && wanted !== current) navigate(wanted);
+    else void runLookup(tail, date);
   };
 
   /** After a conflict the saved state changed elsewhere: reload it so the person sees what is stored now. */
@@ -279,7 +355,16 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
             </label>
             <label className="field">
               <span>Technician (optional)</span>
-              <input name="technician" value={technician} maxLength={80} onChange={(e) => setTechnician(e.target.value)} autoComplete="off" />
+              <input
+                name="technician"
+                value={technician}
+                maxLength={80}
+                onChange={(e) => {
+                  setTechnician(e.target.value);
+                  saveTechnician(e.target.value);
+                }}
+                autoComplete="off"
+              />
             </label>
             <button type="submit" className="primary" disabled={lookupBusy}>
               {lookupBusy ? "Looking up…" : "Look up configuration"}
@@ -339,7 +424,7 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                     <button type="button" className="primary" onClick={startVisit} disabled={creation.isBusy("create")}>
                       Start visit (saves a draft)
                     </button>
-                    <a className="button" href={`#/prep?tail=${encodeURIComponent(lookup.tail)}&date=${lookup.checkDate}`}>
+                    <a className="button" href={formatRoute({ name: "prep", visitId: null, tail: lookup.tail, date: lookup.checkDate })}>
                       Preparation parts list
                     </a>
                   </div>

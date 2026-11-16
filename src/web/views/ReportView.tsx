@@ -7,7 +7,7 @@ import { canRetry, describeSaveStatus, useMutations } from "../hooks/useMutation
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
 /** After-action report. Printable (browser print / save as PDF), server PDF, and structured JSON. */
-export function ReportView({ visitId }: { visitId: string }) {
+export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (meta: { id: string; number: number; tail: string }) => void }) {
   const [data, setData] = useState<ReportEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -17,7 +17,9 @@ export function ReportView({ visitId }: { visitId: string }) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      setData(await api.report(visitId));
+      const res = await api.report(visitId);
+      setData(res);
+      onVisit?.({ id: visitId, number: res.report.visit.number, tail: res.report.visit.tail });
     } catch (e) {
       setError(
         e instanceof ApiError && e.kind === "network"
@@ -25,7 +27,7 @@ export function ReportView({ visitId }: { visitId: string }) {
           : (e as Error).message,
       );
     }
-  }, [visitId]);
+  }, [visitId, onVisit]);
   useEffect(() => {
     void load();
   }, [load]);

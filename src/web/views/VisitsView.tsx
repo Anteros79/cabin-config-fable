@@ -1,24 +1,40 @@
 import { useCallback, useEffect, useState } from "react";
 import type { VisitSummary } from "../../domain/types.ts";
 import { ApiError, api } from "../api.ts";
+import { formatRoute, type Route } from "../routes.ts";
 
 const PAGE = 25;
 
 /** Saved history: every draft and completed visit is reachable by paging, filtering or search. */
-export function VisitsView() {
-  const [status, setStatus] = useState("");
-  const [query, setQuery] = useState("");
-  const [applied, setApplied] = useState({ status: "", q: "" });
-  const [offset, setOffset] = useState(0);
+export function VisitsView({
+  status: routeStatus,
+  q: routeQ,
+  page,
+  navigate,
+}: {
+  status: "DRAFT" | "COMPLETED" | null;
+  q: string;
+  page: number;
+  navigate(hash: string): void;
+}) {
+  // The filter, search and page live in the URL; the form fields only hold what is being typed.
+  const [status, setStatus] = useState(routeStatus ?? "");
+  const [query, setQuery] = useState(routeQ);
+  useEffect(() => {
+    setStatus(routeStatus ?? "");
+    setQuery(routeQ);
+  }, [routeStatus, routeQ]);
+  const offset = (page - 1) * PAGE;
   const [data, setData] = useState<{ items: VisitSummary[]; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const go = (next: Partial<Extract<Route, { name: "visits" }>>) => navigate(formatRoute({ name: "visits", status: routeStatus, q: routeQ, page, ...next }));
 
   const load = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
-      setData(await api.visits({ status: applied.status || undefined, q: applied.q || undefined, limit: PAGE, offset }));
+      setData(await api.visits({ status: routeStatus ?? undefined, q: routeQ || undefined, limit: PAGE, offset }));
     } catch (e) {
       setError(
         e instanceof ApiError && e.kind === "network"
@@ -28,13 +44,12 @@ export function VisitsView() {
     } finally {
       setBusy(false);
     }
-  }, [applied, offset]);
+  }, [routeStatus, routeQ, offset]);
   useEffect(() => {
     void load();
   }, [load]);
 
   const total = data?.total ?? 0;
-  const page = Math.floor(offset / PAGE) + 1;
   const pages = Math.max(1, Math.ceil(total / PAGE));
 
   return (
@@ -44,8 +59,7 @@ export function VisitsView() {
         className="filters"
         onSubmit={(e) => {
           e.preventDefault();
-          setOffset(0);
-          setApplied({ status, q: query });
+          go({ status: status === "DRAFT" || status === "COMPLETED" ? status : null, q: query.trim(), page: 1 });
         }}
       >
         <label className="field">
@@ -114,16 +128,16 @@ export function VisitsView() {
       )}
       {data && data.items.length === 0 && !busy && <p>No visits match.</p>}
       <nav className="pager" aria-label="Visit pages">
-        <button type="button" disabled={offset === 0 || busy} onClick={() => setOffset(0)}>
+        <button type="button" disabled={page === 1 || busy} onClick={() => go({ page: 1 })}>
           First
         </button>
-        <button type="button" disabled={offset === 0 || busy} onClick={() => setOffset(Math.max(0, offset - PAGE))}>
+        <button type="button" disabled={page === 1 || busy} onClick={() => go({ page: Math.max(1, page - 1) })}>
           Previous
         </button>
-        <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => setOffset(offset + PAGE)}>
+        <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => go({ page: page + 1 })}>
           Next
         </button>
-        <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => setOffset((pages - 1) * PAGE)}>
+        <button type="button" disabled={offset + PAGE >= total || busy} onClick={() => go({ page: pages })}>
           Last
         </button>
       </nav>

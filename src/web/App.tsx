@@ -1,37 +1,13 @@
 import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../domain/types.ts";
 import { api, type Health } from "./api.ts";
+import { isInPageAnchor, parseRoute, type Route } from "./routes.ts";
 import { CheckView } from "./views/CheckView.tsx";
 import { LayoutsView } from "./views/LayoutsView.tsx";
 import { PrepView } from "./views/PrepView.tsx";
 import { ReferenceView } from "./views/ReferenceView.tsx";
 import { ReportView } from "./views/ReportView.tsx";
 import { VisitsView } from "./views/VisitsView.tsx";
-
-type Route =
-  | { name: "check" }
-  | { name: "visit"; id: string }
-  | { name: "report"; id: string }
-  | { name: "prep"; visitId: string | null; tail: string | null; date: string | null }
-  | { name: "visits" }
-  | { name: "layouts"; id: string | null }
-  | { name: "reference" };
-
-function parseRoute(hash: string): Route {
-  const [path = "", query = ""] = hash.replace(/^#\/?/, "").split("?");
-  const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
-  const params = new URLSearchParams(query);
-  if (parts[0] === "visit" && parts[1]) {
-    if (parts[2] === "report") return { name: "report", id: parts[1] };
-    if (parts[2] === "prep") return { name: "prep", visitId: parts[1], tail: null, date: null };
-    return { name: "visit", id: parts[1] };
-  }
-  if (parts[0] === "prep") return { name: "prep", visitId: null, tail: params.get("tail"), date: params.get("date") };
-  if (parts[0] === "visits") return { name: "visits" };
-  if (parts[0] === "layouts") return { name: "layouts", id: parts[1] ?? null };
-  if (parts[0] === "reference") return { name: "reference" };
-  return { name: "check" };
-}
 
 const TITLES: Record<Route["name"], string> = {
   check: "Appearance check",
@@ -41,6 +17,7 @@ const TITLES: Record<Route["name"], string> = {
   visits: "Saved visits",
   layouts: "Layouts",
   reference: "Reference data",
+  notFound: "Page not found",
 };
 
 const FALLBACK_PROFILES: VisualProfile[] = [
@@ -75,8 +52,17 @@ class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string },
   }
 }
 
+/** What the page title needs to name an open visit. */
+interface VisitMeta {
+  id: string;
+  number: number;
+  tail: string;
+}
+
 export function App() {
-  const [hash, setHash] = useState(window.location.hash);
+  // A hash that points at an element ("#main") is not a route: the route on screen stays.
+  const [hash, setHash] = useState(() => (isInPageAnchor(window.location.hash) ? "" : window.location.hash));
+  const [visitMeta, setVisitMeta] = useState<VisitMeta | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
   const [offline, setOffline] = useState(false);
   const [profiles, setProfiles] = useState<VisualProfile[]>(FALLBACK_PROFILES);
@@ -84,7 +70,10 @@ export function App() {
   const route = parseRoute(hash);
 
   useEffect(() => {
-    const onHash = () => setHash(window.location.hash);
+    const onHash = () => {
+      const next = window.location.hash;
+      if (!isInPageAnchor(next)) setHash(next);
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -122,23 +111,33 @@ export function App() {
       .catch(() => undefined);
   }, [health?.reference.releaseId]);
 
+  const routeId = route.name === "visit" || route.name === "report" ? route.id : null;
+  const meta = routeId && visitMeta?.id === routeId ? visitMeta : null;
   useEffect(() => {
-    document.title = `${TITLES[route.name]} - Cabin Kit (fictional demonstration)`;
-  }, [route.name]);
+    const label = meta ? `${route.name === "report" ? "Report" : "Visit"} #${meta.number} · ${meta.tail}` : TITLES[route.name];
+    document.title = `${label} · Cabin Kit`;
+  }, [route.name, meta]);
 
   const navigate = (next: string) => {
     window.location.hash = next;
   };
   const nav: [string, string, boolean][] = [
-    ["#/check", "Check", route.name === "check" || route.name === "visit"],
-    ["#/visits", "Saved visits", route.name === "visits" || route.name === "report"],
+    ["#/check", "Check", route.name === "check" || route.name === "visit" || (route.name === "prep" && !route.visitId)],
+    ["#/visits", "Saved visits", route.name === "visits" || route.name === "report" || (route.name === "prep" && !!route.visitId)],
     ["#/layouts", "Layouts", route.name === "layouts"],
     ["#/reference", "Reference", route.name === "reference"],
   ];
 
   return (
     <>
-      <a className="skip" href="#main" onClick={() => mainRef.current?.focus()}>
+      <a
+        className="skip"
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          mainRef.current?.focus();
+        }}
+      >
         Skip to content
       </a>
       <header className="app-header no-print">
@@ -179,12 +178,19 @@ export function App() {
       </div>
       <main id="main" ref={mainRef} tabIndex={-1}>
         <ErrorBoundary resetKey={hash}>
-          {route.name === "check" && <CheckView visitId={null} navigate={navigate} visualProfiles={profiles} />}
+          {route.name === "notFound" && (
+            <section className="panel" aria-labelledby="notfound-h">
+              <h2 id="notfound-h">Page not found</h2>
+              <p>This page does not exist.</p>
+              <a href="#/">Go to the appearance check</a>
+            </section>
+          )}
+          {route.name === "check" && <CheckView visitId={null} tail={route.tail} date={route.date} navigate={navigate} visualProfiles={profiles} />}
           {/* keyed by visit (here and for the report): each visit gets its own write queue, so no status or key carries over */}
-          {route.name === "visit" && <CheckView key={route.id} visitId={route.id} navigate={navigate} visualProfiles={profiles} />}
-          {route.name === "report" && <ReportView key={route.id} visitId={route.id} />}
+          {route.name === "visit" && <CheckView key={route.id} visitId={route.id} onVisit={setVisitMeta} navigate={navigate} visualProfiles={profiles} />}
+          {route.name === "report" && <ReportView key={route.id} visitId={route.id} onVisit={setVisitMeta} />}
           {route.name === "prep" && <PrepView visitId={route.visitId} tail={route.tail} date={route.date} />}
-          {route.name === "visits" && <VisitsView />}
+          {route.name === "visits" && <VisitsView status={route.status} q={route.q} page={route.page} navigate={navigate} />}
           {route.name === "layouts" && <LayoutsView layoutId={route.id} visualProfiles={profiles} />}
           {route.name === "reference" && <ReferenceView />}
         </ErrorBoundary>
