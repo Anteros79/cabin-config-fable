@@ -61,9 +61,9 @@ describe("readDocxParagraphs on synthetic documents (IMP-05, IMP-06)", () => {
   });
 
   test("a tiny archive of many empty paragraphs is refused before it is parsed", () => {
-    const bytes = docx("<w:p/>".repeat(1_200_000));
+    const bytes = docx("<w:p/>".repeat(300_000));
     expect(bytes.length).toBeLessThan(100_000);
-    expect(() => readDocxParagraphs(bytes)).toThrow(new OoxmlError("XML part has more than 1000000 elements"));
+    expect(() => readDocxParagraphs(bytes)).toThrow(new OoxmlError("XML part has more than 250000 elements"));
   });
 
   test("missing word/document.xml → OoxmlError", () => {

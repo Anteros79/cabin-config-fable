@@ -12,7 +12,7 @@ export const OOXML_LIMITS = {
   xmlEntryBytes: 8 * 1024 * 1024,
   totalBytes: 64 * 1024 * 1024,
   /** Element starts in one XML part, counted before it is parsed. */
-  maxXmlElements: 1_000_000,
+  maxXmlElements: 250_000,
   rows: 1_048_576,
   columns: 16_384,
   cells: 2_000_000,

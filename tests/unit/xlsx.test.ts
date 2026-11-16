@@ -97,9 +97,9 @@ describe("readXlsx on synthetic workbooks (IMP-05, IMP-06)", () => {
   });
 
   test("a tiny archive of many empty rows is refused before it is parsed", () => {
-    const bytes = xlsx(sheetXml("<row/>".repeat(1_200_000)));
+    const bytes = xlsx(sheetXml("<row/>".repeat(300_000)));
     expect(bytes.length).toBeLessThan(100_000);
-    expect(() => readXlsx(bytes)).toThrow(new OoxmlError("XML part has more than 1000000 elements"));
+    expect(() => readXlsx(bytes)).toThrow(new OoxmlError("XML part has more than 250000 elements"));
   });
 
   test("an XML part above 8 MiB is refused before inflation", () => {
