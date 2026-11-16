@@ -126,10 +126,15 @@ export interface SeatGeometries {
 /** Most triangles one seat may draw, summed over every part geometry (WEB-20). */
 export const SEAT_TRIANGLE_BUDGET = 3_200;
 
-/** Triangles in one seat: the sum over its part geometries, indexed or not. */
+/** Triangles in one geometry, indexed or not. */
+export function geometryTriangles(g: THREE.BufferGeometry): number {
+  return (g.index ? g.index.count : g.getAttribute("position").count) / 3;
+}
+
+/** Triangles in one seat: the sum over its part geometries. */
 export function seatTriangleCount(g: SeatGeometries): number {
   let total = 0;
-  for (const part of Object.values(g)) total += (part.index ? part.index.count : part.getAttribute("position").count) / 3;
+  for (const part of Object.values(g)) total += geometryTriangles(part);
   return total;
 }
 

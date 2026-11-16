@@ -157,6 +157,8 @@ export class CabinScene {
   private frameRequests = 0;
   /** advances the test hooks' measure() by one frame while it runs */
   private measureStep: (() => void) | null = null;
+  /** rejects a running measure() when the scene is paused or the page hidden, so it never waits for frames that will not come */
+  private measureAbort: (() => void) | null = null;
   private needsRender = true;
   private disposed = false;
   private readonly gesture = new PickGesture();
@@ -250,9 +252,22 @@ export class CabinScene {
         markInteraction: () => {
           this.pickStamp = performance.now();
         },
-        /** Orbit continuously for a while and report the measured frame rate. Each scheduled frame draws one step. */
+        /**
+         * Orbit continuously for a while and report the measured frame rate. Each scheduled frame draws one step. A paused
+         * scene or a hidden page draws no frames, so measure() rejects at once then, or as soon as either happens.
+         */
         measure: (durationMs) =>
-          new Promise((resolve) => {
+          new Promise((resolve, reject) => {
+            const stopped = () => new Error("measure() needs a running scene: it is paused, hidden or disposed");
+            if (this.paused || this.disposed || document.visibilityState === "hidden" || this.measureStep) {
+              reject(this.measureStep ? new Error("measure() is already running") : stopped());
+              return;
+            }
+            this.measureAbort = () => {
+              this.measureStep = null;
+              this.measureAbort = null;
+              reject(stopped());
+            };
             const start = performance.now();
             let frames = 0;
             let last = start;
@@ -261,6 +276,7 @@ export class CabinScene {
               const now = performance.now();
               if (now - start >= durationMs || this.disposed) {
                 this.measureStep = null;
+                this.measureAbort = null;
                 resolve({ fps: (frames * 1000) / (now - start), frames, durationMs: now - start, worstFrameMs: worst });
                 return;
               }
@@ -997,6 +1013,7 @@ export class CabinScene {
     this.hoverPending = null;
     if (paused) {
       this.cancelFrame();
+      this.measureAbort?.();
       if (this.hoverMark.visible) this.hoverMark.visible = false;
       this.callbacks.onHover(null);
     } else {
@@ -1027,8 +1044,10 @@ export class CabinScene {
 
   /** A hidden page draws nothing; whatever changed meanwhile is drawn when it shows again. */
   private onVisibilityChange = () => {
-    if (document.visibilityState === "hidden") this.cancelFrame();
-    else this.invalidate();
+    if (document.visibilityState === "hidden") {
+      this.cancelFrame();
+      this.measureAbort?.();
+    } else this.invalidate();
   };
 
   /** One frame. It requests the next only while the orbit damping is settling or measure() is running. */

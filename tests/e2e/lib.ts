@@ -100,15 +100,18 @@ export async function launchBrowser(extraArgs: string[] = []): Promise<Browser> 
 }
 
 /**
- * Wait until the scene is ready and has drawn everything asked of it. Frames are drawn on demand (WEB-20), so the layout
- * may arrive before the first frame and be drawn in it: count a drawn frame with none pending, not two frames.
+ * Wait until the scene has a layout and has drawn everything asked of it. Frames are drawn on demand (WEB-20): the empty
+ * scene may draw a frame before the layout arrives, and the layout may be drawn in the first frame. So require a built
+ * layout, at least one drawn frame and none pending (the frame after the rebuild has been drawn), not two frames.
  */
 export async function waitFor3D(page: Page, timeout = 20000): Promise<void> {
   await page.waitForFunction(
     () => {
       const scene = window.__cabinKit?.scene;
       if (document.querySelector("canvas[data-ready='true']") === null || !scene) return false;
-      return scene.frameCount >= 1 && scene.describeScene().framePending === false;
+      const info = scene.describeScene() as { seats?: number; floorAreas?: number; binModules?: number; framePending?: boolean };
+      const built = (info.seats ?? 0) + (info.floorAreas ?? 0) + (info.binModules ?? 0) > 0;
+      return built && scene.frameCount >= 1 && info.framePending === false;
     },
     undefined,
     { timeout },
