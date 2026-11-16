@@ -70,6 +70,20 @@ textarea {
   width: 100%;
   resize: vertical;
 }
+/* a checkbox with its label */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.35rem;
+  padding: 0 var(--space-3);
+}
+.check input {
+  min-height: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -103,20 +117,6 @@ textarea {
   flex-wrap: wrap;
   gap: var(--space-5) 0.9rem;
   align-items: flex-end;
-}
-
-/* a checkbox with its label */
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  min-height: 2.35rem;
-  padding: 0 var(--space-3);
-}
-.check input {
-  min-height: 0;
-  width: 1.05rem;
-  height: 1.05rem;
 }
 
 @media (max-width: 720px) {

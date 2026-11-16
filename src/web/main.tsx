@@ -1,3 +1,5 @@
+// first: the chosen theme is on <html> before anything is drawn
+import "./theme.ts";
 import { Component, type ReactNode, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";

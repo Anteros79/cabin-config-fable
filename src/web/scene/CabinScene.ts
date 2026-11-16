@@ -5,7 +5,18 @@ import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.ts";
 import { boundPose, type CabinBounds, type CameraPose, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
 import { createEnvironment, ENVIRONMENT_INTENSITY, type LightMode } from "./environment.ts";
-import { createOverlayMaterial, createSeatMaterials, type SeatMaps, STATUS_COLOUR, setGhosted, TIER_COLOUR, upholsteryVariant } from "./materials.ts";
+import {
+  createOverlayMaterial,
+  createSeatMaterials,
+  LIGHT_SCENE_THEME,
+  type SceneTheme,
+  SELECT_COLOUR,
+  type SeatMaps,
+  STATUS_COLOUR,
+  setGhosted,
+  TIER_COLOUR,
+  upholsteryVariant,
+} from "./materials.ts";
 import { createBadges, createFrame, createOutline, frameGeometry, HOVER_OUTLINE, hullGeometry, SELECTION_OUTLINE, type ViewportUniform } from "./outline.ts";
 import { PickGesture, type PointerSample, TouchAxisLock } from "./pickGesture.ts";
 import { buildBinGeometry, buildSeatGeometries, SEAT, type SeatGeometries } from "./seatParts.ts";
@@ -72,14 +83,13 @@ const BIN_STATUS_COLOUR = {
   unresolved: STATUS_COLOUR.unresolved.clone().lerp(new THREE.Color("#ffffff"), 0.5),
   alternate: STATUS_COLOUR.alternate.clone().lerp(new THREE.Color("#ffffff"), 0.5),
 };
-/** The `--select` token in styles.css. */
-const SELECT_COLOUR = "#ffc531";
-/** Floor frames: selection 10 cm in the select colour; hover 6 cm of white with 2 cm of ink inside it. */
+/** Floor frames: selection 10 cm in the select colour; hover 6 cm in the theme's outline colour with 2 cm of ink inside it. */
 const SELECTION_FRAME = [{ width: 0.1, colour: SELECT_COLOUR }] as const;
-const HOVER_FRAME = [
-  { width: 0.06, colour: HOVER_OUTLINE.colour },
-  { width: 0.02, colour: HOVER_OUTLINE.inner.colour },
-] as const;
+const hoverFrame = (outline: string) =>
+  [
+    { width: 0.06, colour: outline },
+    { width: 0.02, colour: HOVER_OUTLINE.inner.colour },
+  ] as const;
 /** A ghosted bin hides nothing behind it, so its outline would show as a solid shape: it is drawn see-through instead. */
 const GHOSTED_OUTLINE_OPACITY = 0.45;
 /** Where a seat's badge sits: above the top of the headrest, in seat coordinates. */
@@ -210,6 +220,8 @@ export class CabinScene {
   private layers: Layers = { seats: true, floor: true, bins: true, context: false };
   private palette: ProfilePalette = PALETTES["photo-navy-band"];
   private light: LightMode = "neutral";
+  /** what the page theme gives the scene: set by setTheme() */
+  private theme: SceneTheme = { ...LIGHT_SCENE_THEME };
   private colourMode: ColourMode = "status";
   private layout: LayoutRevision | null = null;
   private seats: SeatEntry[] = [];
@@ -394,12 +406,12 @@ export class CabinScene {
       SELECTION_FRAME,
     );
     this.hoverMarks = marks(
-      createOutline(this.seatHull, HOVER_OUTLINE.colour, HOVER_OUTLINE.widthMetres, {
+      createOutline(this.seatHull, this.theme.outline, HOVER_OUTLINE.widthMetres, {
         minPixels: HOVER_OUTLINE.minPixels,
         inner: HOVER_OUTLINE.inner,
         viewport: this.viewport,
       }),
-      HOVER_FRAME,
+      hoverFrame(this.theme.outline),
     );
 
     canvas.addEventListener("pointerdown", this.onPointerDown);
@@ -484,6 +496,7 @@ export class CabinScene {
           binModules: this.binSides.reduce((n, b) => n + b.locations.length, 0),
           profile: this.palette.id,
           light: this.light,
+          background: `#${(this.scene.background as THREE.Color).getHexString()}`,
           view: this.currentView,
           transitioning: this.transition !== null,
           ghostFading: this.ghostClock !== null,
@@ -960,7 +973,7 @@ export class CabinScene {
   private applyLight(): void {
     const blue = this.light === "blue";
     // Blue cabin light is a wash over pale surfaces, not a blue-only scene: whites stay pale, as in the photographs.
-    this.scene.background = new THREE.Color(blue ? "#2a3566" : "#eef0f4");
+    this.scene.background = new THREE.Color(blue ? "#2a3566" : this.theme.background);
     this.scene.environment = this.environmentFor(this.light);
     this.scene.environmentIntensity = ENVIRONMENT_INTENSITY[this.light];
     this.lights.key.color.set(blue ? "#b9c5ff" : "#fff8ee");
@@ -968,8 +981,22 @@ export class CabinScene {
     this.lights.fill.intensity = blue ? 0.8 : 0;
     this.renderer.toneMappingExposure = blue ? 1.05 : 1.0;
     this.groups.context.traverse((o) => {
-      if (o.userData.wash) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.set(blue ? "#6f8dff" : "#ffffff");
+      if (o.userData.wash) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.set(blue ? "#6f8dff" : this.theme.outline);
     });
+  }
+
+  /**
+   * Follow the page theme (WEB-16): the background in neutral light, the hover outline, and the ceiling wash, which
+   * takes the outline colour (white on the light page, a softer white on the dark one). Status and select colours stay.
+   */
+  setTheme(theme: SceneTheme): void {
+    if (theme.background === this.theme.background && theme.outline === this.theme.outline) return;
+    this.theme = { ...theme };
+    (this.hoverMarks.hull.material as THREE.MeshBasicMaterial).color.set(theme.outline);
+    this.hoverMarks.rings = hoverFrame(theme.outline);
+    if (this.hoverMarks.location) this.placeMarks(this.hoverMarks, this.hoverMarks.location, "hover");
+    this.applyLight();
+    this.invalidate();
   }
 
   setColourMode(mode: ColourMode): void {
@@ -1179,7 +1206,8 @@ export class CabinScene {
     if (!location) return;
     const p = location.placement;
     if (location.kind === "FLOOR") {
-      const key = `${location.id}|${kind}`;
+      // the hover frame's colour follows the theme, so a frame is kept per colour
+      const key = `${location.id}|${kind}|${marks.rings[0]?.colour ?? ""}`;
       let geometry = this.frames.get(key);
       if (!geometry) {
         geometry = this.layoutResources.track(frameGeometry(p.lx, p.lz, marks.rings));

@@ -2,8 +2,15 @@
  * Design tokens (WEB-16). Every colour the stylesheets use is named here, and only here and in print.css may a colour
  * be written as a literal (tests/web/tokens.test.ts). Spacing, radii, type families, the selection shadow and durations
  * live here too.
+ *
+ * Themes: the light values below; the dark values under prefers-color-scheme (unless the light theme is chosen) and
+ * under [data-theme="dark"] (the header's theme control, src/web/theme.ts). The two dark blocks are the same, and
+ * print.css puts the light values back for paper. Status, tier and select colours are the same in every theme: the 3D
+ * view draws them as constants (src/web/scene/materials.ts).
  */
 :root {
+  color-scheme: light dark;
+
   /* surfaces, from the page up */
   --surface-0: #f3f4f7;
   --surface-1: #ffffff;
@@ -29,7 +36,7 @@
   --accent-hover: #24398a;
   --accent-contrast: #ffffff;
   --focus: #0b57d0;
-  --select: #ffc531;
+  --select: #b97c00;
 
   /* the header */
   --header-bg: #1b2d6b;
@@ -37,6 +44,7 @@
   --header-focus: #ffffff;
   --header-current-bg: #ffffff;
   --header-current-text: #1b2d6b;
+  --header-border: rgba(255, 255, 255, 0.55);
   --badge-bg: #ffe9a8;
   --badge-text: #3d2a00;
 
@@ -117,4 +125,118 @@
   /* durations */
   --dur-fast: 150ms;
   --dur-base: 250ms;
+}
+
+/* dark: by the system setting, unless the light theme is chosen */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-0: #10131c;
+    --surface-1: #181c28;
+    --surface-2: #252c3e;
+    --surface-hover: #2a3246;
+    --surface-muted: #1e2331;
+    --surface-control: #20263a;
+    --text-strong: #f3f5fa;
+    --text-body: #e2e6ef;
+    --text-muted: #a9b0c3;
+    --border-subtle: #353d52;
+    --border-strong: #7a84a0;
+    --border-head: #4b5470;
+    --border-seat: #66708c;
+    --border-empty: #3b4358;
+    --accent: #a9bfff;
+    --accent-hover: #c3d2ff;
+    --accent-contrast: #0d1430;
+    --focus: #8ab4ff;
+    --header-bg: #0b1122;
+    --header-text: #e8ecf5;
+    --header-current-bg: #e8ecf5;
+    --header-current-text: #0b1122;
+    --header-border: rgba(232, 236, 245, 0.55);
+    --success: #6fd89a;
+    --success-bg: #12301f;
+    --success-border: #2e6b47;
+    --success-text: #b4f0cc;
+    --warning: #f2c45a;
+    --warning-bg: #33280b;
+    --warning-border: #7a6224;
+    --warning-text: #ffe5a6;
+    --danger: #ff8f86;
+    --danger-bg: #3a1614;
+    --danger-border: #82322d;
+    --danger-text: #ffc9c4;
+    --danger-contrast: #1f0705;
+    --info-bg: #221c40;
+    --info-border: #5b4ba0;
+    --info-text: #d9cfff;
+    --scene-bg: #1b2030;
+    --scene-outline: #e3e7f0;
+    --legend-bg: rgba(24, 28, 40, 0.9);
+    --overlay-bg: rgba(6, 8, 14, 0.85);
+    --hint-bg: #e8ecf5;
+    --hint-text: #10131c;
+    --backdrop: rgba(0, 0, 0, 0.6);
+    --swatch-border: rgba(255, 255, 255, 0.45);
+    --empty-cell-a: #1a1f2c;
+    --empty-cell-b: #20263a;
+  }
+}
+
+/* dark: chosen in the header; the same values as above */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #10131c;
+  --surface-1: #181c28;
+  --surface-2: #252c3e;
+  --surface-hover: #2a3246;
+  --surface-muted: #1e2331;
+  --surface-control: #20263a;
+  --text-strong: #f3f5fa;
+  --text-body: #e2e6ef;
+  --text-muted: #a9b0c3;
+  --border-subtle: #353d52;
+  --border-strong: #7a84a0;
+  --border-head: #4b5470;
+  --border-seat: #66708c;
+  --border-empty: #3b4358;
+  --accent: #a9bfff;
+  --accent-hover: #c3d2ff;
+  --accent-contrast: #0d1430;
+  --focus: #8ab4ff;
+  --header-bg: #0b1122;
+  --header-text: #e8ecf5;
+  --header-current-bg: #e8ecf5;
+  --header-current-text: #0b1122;
+  --header-border: rgba(232, 236, 245, 0.55);
+  --success: #6fd89a;
+  --success-bg: #12301f;
+  --success-border: #2e6b47;
+  --success-text: #b4f0cc;
+  --warning: #f2c45a;
+  --warning-bg: #33280b;
+  --warning-border: #7a6224;
+  --warning-text: #ffe5a6;
+  --danger: #ff8f86;
+  --danger-bg: #3a1614;
+  --danger-border: #82322d;
+  --danger-text: #ffc9c4;
+  --danger-contrast: #1f0705;
+  --info-bg: #221c40;
+  --info-border: #5b4ba0;
+  --info-text: #d9cfff;
+  --scene-bg: #1b2030;
+  --scene-outline: #e3e7f0;
+  --legend-bg: rgba(24, 28, 40, 0.9);
+  --overlay-bg: rgba(6, 8, 14, 0.85);
+  --hint-bg: #e8ecf5;
+  --hint-text: #10131c;
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --swatch-border: rgba(255, 255, 255, 0.45);
+  --empty-cell-a: #1a1f2c;
+  --empty-cell-b: #20263a;
+}
+
+/* light: chosen in the header, whatever the system says */
+:root[data-theme="light"] {
+  color-scheme: light;
 }

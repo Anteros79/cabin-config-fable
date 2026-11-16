@@ -1442,6 +1442,83 @@ try {
   });
 
   // ---------------------------------------------------------------------------------------
+  group = "dark theme";
+  console.log(`\n${group}`);
+  // WEB-16: the system dark setting, axe on every screen; the header's choice; the 3D view follows; print stays light
+  const darkContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: "dark" });
+  const d = await darkContext.newPage();
+  const darkErrors: string[] = [];
+  d.on("pageerror", (e) => darkErrors.push(`pageerror: ${e.message}`));
+  /** A token's value on <html>, a short hex (the build minifies #ffffff to #fff) written out in full. */
+  const rootToken = async (p: Page, name: string) => {
+    const value = await p.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
+    return /^#[0-9a-f]{3}$/i.test(value) ? `#${[...value.slice(1)].map((c) => c + c).join("")}` : value;
+  };
+  for (const [label, hash, ready] of screens) {
+    await check(`axe in the dark theme: no serious or critical WCAG A/AA violations on ${label}`, async () => {
+      await d.goto(`${server.url}/${hash}`);
+      await d.waitForSelector(ready);
+      if (label === "check") equal(await rootToken(d, "--surface-0"), "#10131c", "the system dark setting applies the dark tokens");
+      if (label === "visit-3d") await waitFor3D(d);
+      await axe(d, `dark-${label}`);
+    });
+  }
+  await check("axe in the dark theme: map and list with a selected location and record form", async () => {
+    await d.goto(`${server.url}/#/visit/${draftId}`);
+    await d.waitForSelector("#work-h");
+    await openMap(d);
+    await selectViaGoTo(d, "FULL-CABIN");
+    await axe(d, "dark-visit-map");
+  });
+  await check("the 3D view takes the dark background from the theme", async () => {
+    await d.goto(`${server.url}/#/visit/${draftId}`);
+    await d.waitForSelector("#work-h");
+    await waitFor3D(d);
+    equal((await sceneInfo(d)).background, await rootToken(d, "--scene-bg"), "scene background is --scene-bg");
+    equal(await rootToken(d, "--scene-bg"), "#1b2030", "dark --scene-bg");
+  });
+  await check("print uses the light tokens under a dark system setting", async () => {
+    await d.emulateMedia({ media: "print" });
+    try {
+      equal([await rootToken(d, "--surface-1"), await rootToken(d, "--text-body")], ["#ffffff", "#141a2e"], "light tokens in print");
+    } finally {
+      await d.emulateMedia({ media: null });
+    }
+  });
+  await check("the header's theme control chooses dark over a light system, keeps it, and the 3D view follows", async () => {
+    await page.goto(`${server.url}/#/visit/${draftId}`);
+    await page.waitForSelector("#work-h");
+    await waitFor3D(page);
+    equal((await sceneInfo(page)).background, "#eef0f4", "light scene background");
+    await page.getByRole("group", { name: "Colour theme" }).getByRole("button", { name: "Dark" }).click();
+    equal(await page.evaluate(() => [document.documentElement.dataset.theme, localStorage.getItem("cabin-kit.theme")]), ["dark", "dark"], "chosen and kept");
+    equal(await rootToken(page, "--surface-0"), "#10131c", "dark tokens");
+    await page.waitForFunction(() => window.__cabinKit?.scene?.describeScene().background === "#1b2030");
+    await page.reload();
+    await page.waitForSelector("#work-h");
+    equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark", "the choice survives a reload");
+    expect((await page.getByRole("button", { name: "Dark" }).getAttribute("aria-pressed")) === "true", "Dark shows as pressed after a reload");
+    await page.getByRole("button", { name: "System" }).click();
+    equal(
+      await page.evaluate(() => [document.documentElement.hasAttribute("data-theme"), localStorage.getItem("cabin-kit.theme")]),
+      [false, null],
+      "System forgets the choice",
+    );
+    equal(await rootToken(page, "--surface-0"), "#f3f4f7", "back to light under a light system setting");
+  });
+  await check("the header's theme control chooses light over a dark system", async () => {
+    await d.goto(`${server.url}/#/check`);
+    await d.waitForSelector("input[name=tail]");
+    await d.getByRole("button", { name: "Light" }).click();
+    equal(await rootToken(d, "--surface-0"), "#f3f4f7", "light tokens");
+    await axe(d, "dark-system-light-choice-check");
+    await d.getByRole("button", { name: "System" }).click();
+    equal(await rootToken(d, "--surface-0"), "#10131c", "dark again");
+    equal(darkErrors, [], "no page errors in the dark theme");
+  });
+  await darkContext.close();
+
+  // ---------------------------------------------------------------------------------------
   group = "mobile viewport";
   console.log(`\n${group}`);
   const mobile = await browser.newContext({

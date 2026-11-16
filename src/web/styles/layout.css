@@ -53,6 +53,31 @@
 .app-header nav a:hover {
   text-decoration: underline;
 }
+/* the theme control: System, Light, Dark; the chosen one looks like the current nav item */
+.theme-switch {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.theme-switch button,
+.theme-switch button:hover:not(:disabled, [aria-disabled="true"]) {
+  min-height: 2.05rem;
+  padding: 0.2rem var(--space-5);
+  font-size: 0.9rem;
+  background: none;
+  border-color: var(--header-border);
+  color: var(--header-text);
+}
+.theme-switch button:hover:not(:disabled, [aria-disabled="true"]) {
+  text-decoration: underline;
+}
+.theme-switch button[aria-pressed="true"],
+.theme-switch button[aria-pressed="true"]:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--header-current-bg);
+  border-color: var(--header-current-bg);
+  color: var(--header-current-text);
+  font-weight: 600;
+}
 .system-banner {
   margin: 0;
   padding: var(--space-5) var(--space-7);
@@ -147,6 +172,9 @@ main:focus {
 
 @media (forced-colors: active) {
   .app-header nav a[aria-current="page"] {
+    border-bottom: 3px solid Highlight;
+  }
+  .theme-switch button[aria-pressed="true"] {
     border-bottom: 3px solid Highlight;
   }
 }

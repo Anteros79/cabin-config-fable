@@ -15,8 +15,11 @@ export type ViewportUniform = { value: number };
 
 /** Selection: 18 mm in the select colour, at least 3 px. */
 export const SELECTION_OUTLINE = { widthMetres: 0.018, minPixels: 3 } as const;
-/** Hover: 9 mm of white, at least 3 px, with a dark 3 mm hull inside it so it reads on pale shells and the pale background. */
-export const HOVER_OUTLINE = { colour: "#ffffff", widthMetres: 0.009, minPixels: 3, inner: { colour: "#141a2e", widthMetres: 0.003, minPixels: 1.5 } } as const;
+/**
+ * Hover: 9 mm in the theme's outline colour (white on the light page), at least 3 px, with a dark 3 mm hull inside it so
+ * it reads on pale shells and the pale background.
+ */
+export const HOVER_OUTLINE = { widthMetres: 0.009, minPixels: 3, inner: { colour: "#141a2e", widthMetres: 0.003, minPixels: 1.5 } } as const;
 
 export interface OutlineOptions {
   /** the rim is never narrower than this many CSS pixels (needs `viewport`) */

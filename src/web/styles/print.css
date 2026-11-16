@@ -1,5 +1,58 @@
-/* Print: paper layout. Colour literals are allowed here (with tokens.css) for the table head and page. */
+/* Print: paper layout, always in the light theme. Colour literals are allowed here, as in tokens.css. */
 @media print {
+  /* the light values of every token the dark theme changes; as specific as the dark blocks in tokens.css, and later */
+  :root:not([data-theme="light"]) {
+    color-scheme: light;
+    --surface-0: #f3f4f7;
+    --surface-1: #ffffff;
+    --surface-2: #e8ecf5;
+    --surface-hover: #eef1f7;
+    --surface-muted: #f2f3f7;
+    --surface-control: #f7f8fb;
+    --text-strong: #141a2e;
+    --text-body: #141a2e;
+    --text-muted: #545b70;
+    --border-subtle: #cfd4df;
+    --border-strong: #8791a8;
+    --border-head: #aab3c7;
+    --border-seat: #9aa3b8;
+    --border-empty: #c8cdd9;
+    --accent: #1b2d6b;
+    --accent-hover: #24398a;
+    --accent-contrast: #ffffff;
+    --focus: #0b57d0;
+    --header-bg: #1b2d6b;
+    --header-text: #ffffff;
+    --header-current-bg: #ffffff;
+    --header-current-text: #1b2d6b;
+    --header-border: rgba(255, 255, 255, 0.55);
+    --success: #17693c;
+    --success-bg: #e3f4ea;
+    --success-border: #a9d8ba;
+    --success-text: #0d3f23;
+    --warning: #7a4d00;
+    --warning-bg: #fff3d1;
+    --warning-border: #e6c877;
+    --warning-text: #4a3200;
+    --danger: #a3201a;
+    --danger-bg: #fde7e5;
+    --danger-border: #e3a5a0;
+    --danger-text: #5c120e;
+    --danger-contrast: #ffffff;
+    --info-bg: #f7f3ff;
+    --info-border: #c9b8f5;
+    --info-text: #3b2a80;
+    --scene-bg: #eef0f4;
+    --scene-outline: #ffffff;
+    --legend-bg: rgba(255, 255, 255, 0.9);
+    --overlay-bg: rgba(20, 26, 46, 0.82);
+    --hint-bg: #141a2e;
+    --hint-text: #ffffff;
+    --backdrop: rgba(20, 26, 46, 0.45);
+    --swatch-border: rgba(0, 0, 0, 0.35);
+    --empty-cell-a: #f4f5f8;
+    --empty-cell-b: #eceef3;
+  }
   :root {
     font-size: 10.5pt;
     background: #fff;

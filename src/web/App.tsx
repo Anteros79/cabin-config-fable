@@ -1,6 +1,7 @@
 import { Component, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../domain/types.ts";
 import { ApiError, api, type Health } from "./api.ts";
+import { ThemeControl } from "./components/ThemeControl.tsx";
 import { useResource } from "./hooks/useResource.ts";
 import { isInPageAnchor, type NavigateOptions, parseRoute, type Route } from "./routes.ts";
 import { CheckView } from "./views/CheckView.tsx";
@@ -224,6 +225,7 @@ export function App() {
             ))}
           </ul>
         </nav>
+        <ThemeControl />
       </header>
       <div aria-live="assertive" className="no-print">
         {offline && (

@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../../domain/types.ts";
 import { STATUS_ENCODING, type Workspace } from "../model.ts";
 import type { CabinScene, ColourMode, Layers, LightMode, LocationState, PresetView, SceneTestHooks } from "../scene/CabinScene.ts";
+import { onThemeChange, sceneThemeTokens } from "../theme.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
 
 /** Only the e2e build (`npm run build:e2e`) exposes the scene on window; the shipped bundle never contains the hook. */
@@ -175,6 +176,16 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   useEffect(() => {
     if (ready) sceneRef.current?.setProfile(profile);
   }, [ready, profile]);
+  // the background and hover outline follow the page theme (WEB-16)
+  useEffect(() => {
+    if (!ready) return;
+    const apply = () => {
+      const tokens = sceneThemeTokens();
+      if (tokens) sceneRef.current?.setTheme(tokens);
+    };
+    apply();
+    return onThemeChange(apply);
+  }, [ready]);
   useEffect(() => {
     if (ready) sceneRef.current?.setColourMode(colourMode);
   }, [ready, colourMode]);
