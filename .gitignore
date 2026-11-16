@@ -1,6 +1,7 @@
 node_modules/
 dist/
 data/*.sqlite*
+backups/
 inspection/baseline-copy/.venv/
 inspection/disposable/
 *.tmp

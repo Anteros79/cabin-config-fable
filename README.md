@@ -51,6 +51,7 @@ Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Reco
 | `npm run reference:status` / `reference:findings` | Releases, active release, import findings |
 | `npm run reference:reset -- --yes` | Rebuild the reference store only (stop the server first) |
 | `npm run sample:seed` | Add one completed and one draft sample visit, only if the visit store is empty |
+| `npm run visits:backup -- [--out <file>]` | Verified copy of the visit store (default `backups/visits-<UTC stamp>Z.sqlite`); safe while the server runs |
 | `npm test` | 132 unit, integration and separate-process race tests (disposable stores) |
 | `npm run test:e2e` | 62 browser checks with the installed Google Chrome (disposable stores, free port) |
 | `npm run verify` | Typecheck, all tests, comparison sheets, original-hash recheck |

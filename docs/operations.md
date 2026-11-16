@@ -18,12 +18,18 @@ npm start                # http://127.0.0.1:4310
 | `CABIN_KIT_DATA_DIR` | `./data` | Folder for both stores |
 | `CABIN_KIT_REFERENCE_DB` | `<data>/reference.sqlite` | Reference store file |
 | `CABIN_KIT_VISITS_DB` | `<data>/visits.sqlite` | Visit store file |
-| `CABIN_KIT_HOST` | `127.0.0.1` | Listen address |
-| `CABIN_KIT_PORT` | `4310` | Listen port |
+| `CABIN_KIT_HOST` | `127.0.0.1` | Listen address. Anything other than `127.0.0.1`, `::1` or `localhost` is refused unless `CABIN_KIT_ALLOW_REMOTE=1` |
+| `CABIN_KIT_ALLOW_REMOTE` | unset | `1` accepts a non-loopback `CABIN_KIT_HOST`. The server has no authentication; only set it on a network you trust |
+| `CABIN_KIT_PORT` | `4310` | Listen port, a whole number from 0 to 65535 |
 | `CABIN_KIT_ALLOWED_HOSTS` | unset | Comma-separated extra host names accepted in the `Host` header, besides `localhost`, `127.0.0.1`, `::1` and `CABIN_KIT_HOST`. Empty or blank means none. Requests with any other `Host` get 403 `HOST_NOT_ALLOWED` |
 | `CABIN_KIT_TEST_FAULTS` | unset | `1` enables the fault-injection route used by the E2E run. Never set it in normal use |
+| `CABIN_KIT_LOG_LEVEL` | `info` | One of `silent`, `error`, `warn`, `info`, `debug` |
 
-The server, the import commands and the tests all read these through `src/server/config.ts`, so an import and a start with the same environment always use the same files.
+The server, the import commands and the tests all read these through `src/server/config.ts`, so an import and a start with the same environment always use the same files. An empty or blank value means the variable is unset. Relative paths are resolved against the working directory.
+
+The server checks every setting before it opens any store. An unusable value (a port that is not a number, an unknown log level, an allowed host with a path or port in it, a non-loopback host without `CABIN_KIT_ALLOW_REMOTE=1`) stops it with a message on stderr and exit code 2.
+
+`SIGINT` or `SIGTERM` closes the server and both stores, then exits 0. If closing takes longer than 5 seconds, or a second signal arrives while it is closing, the process exits 1.
 
 The server has no login. It listens on the loopback address by default and refuses cross-origin writes. Do not expose it on a network as it stands.
 
@@ -52,15 +58,22 @@ The reset builds a new file beside the old one and renames it into place, so a f
 
 The visit store is the only file that holds work that cannot be regenerated.
 
-Back up, with the server stopped:
+Back up, with the server running or stopped:
+
+```
+npm run visits:backup                        # writes backups/visits-<YYYYMMDD-HHMMSS>Z.sqlite (UTC)
+npm run visits:backup -- --out /path/to/visits-copy.sqlite
+```
+
+The command takes a consistent copy with SQLite `VACUUM INTO`, opens the copy read-only, runs `PRAGMA quick_check`, and prints the path, the size in bytes and the number of visits. It refuses to overwrite an existing file. It reads the store named by `CABIN_KIT_VISITS_DB` / `CABIN_KIT_DATA_DIR` and never writes to it or beside it: the store is opened read-only, without migration or pruning. If the store is in write-ahead-log mode and its `-shm` file is missing (no server has it open), the store and any `-wal` file are first copied to a private temporary folder and the backup is taken from there. The `backups/` folder is git-ignored.
+
+Fallback, with the server stopped:
 
 ```
 cp data/visits.sqlite  /path/to/backup/visits-YYYY-MM-DD.sqlite
 ```
 
 The store uses SQLite write-ahead logging. If `visits.sqlite-wal` or `visits.sqlite-shm` exist beside it after the server has stopped, copy all three files together.
-
-A consistent copy can also be taken while the store is open, from code, with `VisitStore.backupTo(path)` (SQLite `VACUUM INTO`). There is no command-line wrapper or HTTP route for it.
 
 Restore: stop the server, replace `data/visits.sqlite` with the backup (remove any `-wal`/`-shm` files), start the server. A visit store does not need the reference store it was created with; reports for existing visits are produced from the visit's own snapshot.
 
@@ -90,4 +103,5 @@ The E2E run starts its own server on a spare port with temporary stores. It does
 | `409 STALE_RECORD` on save | Another session changed the same record. The page says the save was not made and reloads the saved state; re-enter the change if it still applies |
 | Blank page at `/` | The client is not built. Run `npm run build` |
 | 3D view shows a notice and a seat map | WebGL is unavailable. The map and list provide the same functions |
-| `EADDRINUSE` | Port in use. Set `CABIN_KIT_PORT` |
+| `Port <n> is in use. Set CABIN_KIT_PORT.` (exit 1) | Another program listens on that port. Set `CABIN_KIT_PORT` |
+| Start stops with a `CABIN_KIT_…` message (exit 2) | A setting is unusable; the message names it and the accepted values |

@@ -1,12 +1,22 @@
 import { existsSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hostnameOf } from "./http/hostGuard.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const PROJECT_ROOT = resolve(here, "..", "..");
 
 export type LogLevel = "silent" | "error" | "warn" | "info" | "debug";
-const LOG_LEVELS: readonly string[] = ["silent", "error", "warn", "info", "debug"];
+const LOG_LEVELS: readonly LogLevel[] = ["silent", "error", "warn", "info", "debug"];
+const LOOPBACK_HOSTS: readonly string[] = ["127.0.0.1", "::1", "localhost"];
+
+/** A setting that cannot be used. The server prints the message and exits with code 2 before touching any store. */
+export class ConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigError";
+  }
+}
 
 export interface StoreConfig {
   dataDir: string;
@@ -23,17 +33,23 @@ export interface ServerConfig extends StoreConfig {
   logLevel: LogLevel;
 }
 
+/** The trimmed value of an environment variable. Empty or whitespace-only means unset. */
+function setting(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  const value = env[name]?.trim();
+  return value ? value : undefined;
+}
+
 /**
  * One place decides where the stores live, used by the server, the import CLI and the tests,
- * so "seed" and "start" can never disagree about paths.
+ * so "seed" and "start" can never disagree about paths. Relative paths resolve against the working directory.
  * Precedence: explicit argument > environment variable > default under ./data.
  */
 export function resolveStoreConfig(overrides: Partial<StoreConfig> = {}, env: NodeJS.ProcessEnv = process.env): StoreConfig {
-  const dataDir = resolve(overrides.dataDir ?? env.CABIN_KIT_DATA_DIR ?? join(PROJECT_ROOT, "data"));
+  const dataDir = resolve(overrides.dataDir ?? setting(env, "CABIN_KIT_DATA_DIR") ?? join(PROJECT_ROOT, "data"));
   return {
     dataDir,
-    referencePath: resolve(overrides.referencePath ?? env.CABIN_KIT_REFERENCE_DB ?? join(dataDir, "reference.sqlite")),
-    visitsPath: resolve(overrides.visitsPath ?? env.CABIN_KIT_VISITS_DB ?? join(dataDir, "visits.sqlite")),
+    referencePath: resolve(overrides.referencePath ?? setting(env, "CABIN_KIT_REFERENCE_DB") ?? join(dataDir, "reference.sqlite")),
+    visitsPath: resolve(overrides.visitsPath ?? setting(env, "CABIN_KIT_VISITS_DB") ?? join(dataDir, "visits.sqlite")),
   };
 }
 
@@ -45,16 +61,56 @@ function parseHostList(value: string | undefined): string[] {
     .filter((item) => item !== "");
 }
 
+function checkPort(port: number | string): number {
+  const text = String(port).trim();
+  const value = /^\d{1,5}$/.test(text) ? Number(text) : Number.NaN;
+  if (!(value >= 0 && value <= 65535)) throw new ConfigError(`CABIN_KIT_PORT must be a whole number from 0 to 65535 (got "${text}").`);
+  return value;
+}
+
+function checkHost(host: string, env: NodeJS.ProcessEnv): string {
+  if (!LOOPBACK_HOSTS.includes(host) && setting(env, "CABIN_KIT_ALLOW_REMOTE") !== "1") {
+    throw new ConfigError(
+      `CABIN_KIT_HOST "${host}" is not a loopback address. This server has no authentication. Set CABIN_KIT_ALLOW_REMOTE=1 to accept the risk.`,
+    );
+  }
+  return host;
+}
+
+/** Each entry must be a bare host name (or a bracketed IPv6 address): no scheme, path, port, space or wildcard. */
+function checkAllowedHosts(hosts: string[]): string[] {
+  for (const entry of hosts) {
+    const bare = entry.startsWith("[") && entry.endsWith("]") ? entry.slice(1, -1) : entry;
+    if (hostnameOf(entry) !== bare.toLowerCase()) {
+      throw new ConfigError(
+        `CABIN_KIT_ALLOWED_HOSTS entry "${entry}" is not a host name. List host names only, separated by commas, without scheme, path or port.`,
+      );
+    }
+  }
+  return hosts;
+}
+
+function checkLogLevel(value: string | undefined): LogLevel {
+  if (value === undefined) return "info";
+  const level = LOG_LEVELS.find((l) => l === value);
+  if (!level) throw new ConfigError(`CABIN_KIT_LOG_LEVEL must be one of ${LOG_LEVELS.join(", ")} (got "${value}").`);
+  return level;
+}
+
+/** Resolves and validates every server setting; throws ConfigError on the first unusable one. */
 export function resolveServerConfig(overrides: Partial<ServerConfig> = {}, env: NodeJS.ProcessEnv = process.env): ServerConfig {
-  const stores = resolveStoreConfig(overrides, env);
+  const host = checkHost(overrides.host ?? setting(env, "CABIN_KIT_HOST") ?? "127.0.0.1", env);
+  const port = checkPort(overrides.port ?? setting(env, "CABIN_KIT_PORT") ?? 4310);
+  const allowedHosts = checkAllowedHosts(overrides.allowedHosts ?? parseHostList(env.CABIN_KIT_ALLOWED_HOSTS));
+  const logLevel = overrides.logLevel ?? checkLogLevel(setting(env, "CABIN_KIT_LOG_LEVEL"));
   return {
-    ...stores,
-    host: overrides.host ?? env.CABIN_KIT_HOST ?? "127.0.0.1",
-    allowedHosts: overrides.allowedHosts ?? parseHostList(env.CABIN_KIT_ALLOWED_HOSTS),
-    port: overrides.port ?? Number(env.CABIN_KIT_PORT ?? 4310),
+    ...resolveStoreConfig(overrides, env),
+    host,
+    allowedHosts,
+    port,
     webRoot: overrides.webRoot ?? join(PROJECT_ROOT, "dist", "web"),
-    testFaults: overrides.testFaults ?? env.CABIN_KIT_TEST_FAULTS === "1",
-    logLevel: overrides.logLevel ?? (LOG_LEVELS.includes(env.CABIN_KIT_LOG_LEVEL ?? "") ? (env.CABIN_KIT_LOG_LEVEL as LogLevel) : "info"),
+    testFaults: overrides.testFaults ?? setting(env, "CABIN_KIT_TEST_FAULTS") === "1",
+    logLevel,
   };
 }
 

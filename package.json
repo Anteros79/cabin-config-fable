@@ -17,6 +17,7 @@
     "reference:findings": "node src/importer/cli.ts findings",
     "reference:reset": "node src/importer/cli.ts reset",
     "sample:seed": "node tools/seed-sample-visits.ts",
+    "visits:backup": "node tools/backup-visits.ts",
     "originals:verify": "node tools/verify-originals.ts",
     "evidence:build": "node tools/evidence/build-all.mjs",
     "images:previews": "node tools/make-image-previews.mjs",
