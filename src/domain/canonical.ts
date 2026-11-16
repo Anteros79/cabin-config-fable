@@ -16,3 +16,16 @@ function canonical(value: unknown, path: string): string {
 export function canonicalJson(value: unknown): string {
   return canonical(value, "$");
 }
+
+/** Freezes a value and everything reachable from it, in place, and returns it. Pure. */
+export function deepFreeze<T>(value: T): T {
+  const seen = new WeakSet<object>();
+  const visit = (node: unknown): void => {
+    if (node === null || typeof node !== "object" || seen.has(node)) return;
+    seen.add(node);
+    for (const key of Reflect.ownKeys(node)) visit((node as Record<PropertyKey, unknown>)[key]);
+    Object.freeze(node);
+  };
+  visit(value);
+  return value;
+}

@@ -8,7 +8,11 @@ import { buildReport } from "../domain/report.ts";
 import type { Report, Visit, VisitEvent, VisitRecord, VisitSnapshot, VisitState, VisitSummary } from "../domain/types.ts";
 import { DomainError, deriveRecord } from "../domain/visitLogic.ts";
 import { isSameFile } from "./config.ts";
+import { migrate, VISIT_MIGRATIONS } from "./migrations.ts";
 import { inspectStore } from "./referenceStore.ts";
+import { asStorageError, isBusy, isStorageFailure, StorageError } from "./storageError.ts";
+
+export { StorageError };
 
 /**
  * Visit store: drafts, frozen snapshots, replacement records, audit events, final reports and
@@ -17,7 +21,9 @@ import { inspectStore } from "./referenceStore.ts";
  * by the application and by triggers in the database itself.
  */
 export const VISIT_STORE_KIND = "cabin-kit-visits";
-export const VISIT_SCHEMA_VERSION = "1";
+/** The newest schema this code knows: the base schema (1) plus every entry of VISIT_MIGRATIONS. */
+export const VISIT_SCHEMA_VERSION = "2";
+const BASE_SCHEMA_VERSION = 1;
 
 const SCHEMA = `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -146,23 +152,57 @@ export interface CompletionResult {
 
 type Row = Record<string, string | number | null>;
 
-/** A failure of the SQLite store itself, as opposed to a domain refusal or a programming error. */
-export class StorageError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "StorageError";
+/**
+ * Reads meta.schema_version through a read-only connection (no pragma, no write) and returns it
+ * when this code can open it. Newer → VISIT_SCHEMA_NEWER; missing or non-numeric → VISIT_SCHEMA_MISMATCH.
+ */
+function supportedVersion(path: string): number {
+  let raw: string | undefined;
+  let db: DatabaseSync | undefined;
+  try {
+    db = new DatabaseSync(path, { readOnly: true });
+    raw = (db.prepare("SELECT value FROM meta WHERE key='schema_version'").get() as { value: string } | undefined)?.value;
+  } catch (e) {
+    throw asStorageError(e);
+  } finally {
+    db?.close();
+  }
+  const version = raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
+  if (!(version >= BASE_SCHEMA_VERSION)) {
+    throw new DomainError("VISIT_SCHEMA_MISMATCH", `Visit store schema version ${raw ?? "unknown"} is not supported.`, 500);
+  }
+  if (version > Number(VISIT_SCHEMA_VERSION)) {
+    throw new DomainError("VISIT_SCHEMA_NEWER", "This visit store was written by a newer version of Cabin Kit.", 500);
+  }
+  return version;
+}
+
+function assertIntact(db: DatabaseSync): void {
+  const rows = db.prepare("PRAGMA quick_check").all() as { quick_check: string }[];
+  if (rows.length !== 1 || rows[0]?.quick_check !== "ok") {
+    throw new DomainError("VISIT_STORE_CORRUPT", "The visit store file is damaged. It will not be used; restore it from a backup.", 500, {
+      problems: rows.slice(0, 5).map((r) => r.quick_check),
+    });
   }
 }
 
-function isStorageFailure(e: unknown): boolean {
-  if (e instanceof DomainError || e instanceof StorageError) return false;
-  const code = (e as { code?: unknown })?.code;
-  return (typeof code === "string" && code.startsWith("ERR_SQLITE")) || isBusy(e);
-}
-
-function isBusy(e: unknown): boolean {
-  const err = e as { code?: string; errcode?: number; message?: string };
-  return err?.errcode === 5 || err?.errcode === 6 || /database is locked|SQLITE_BUSY/i.test(err?.message ?? "");
+/** Base schema (version 1, identical to 5d6679d). Migrations bring it to the newest version. */
+function createSchema(db: DatabaseSync): void {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='visits'").get();
+    if (!exists) {
+      db.exec(SCHEMA);
+      const put = db.prepare("INSERT INTO meta(key, value) VALUES (?, ?)");
+      put.run("store_kind", VISIT_STORE_KIND);
+      put.run("schema_version", String(BASE_SCHEMA_VERSION));
+      put.run("created_at", new Date().toISOString());
+    }
+    db.exec("COMMIT");
+  } catch (e) {
+    if (db.isTransaction) db.exec("ROLLBACK");
+    throw e;
+  }
 }
 
 export class VisitStore {
@@ -174,8 +214,14 @@ export class VisitStore {
     this.db = db;
   }
 
-  /** Open the visit store, creating it only when the file does not exist. Never resets anything. */
-  static open(path: string, referencePath: string): VisitStore {
+  /**
+   * Open the visit store, creating it only when the file does not exist. Never resets anything.
+   * The schema version is read through a read-only connection before anything is written, so a
+   * store from a newer Cabin Kit is refused byte-for-byte untouched. Then the store is checked
+   * (PRAGMA quick_check), migrated to the newest schema and old retry keys are pruned.
+   * `readOnly` opens an existing store without migrating or pruning (for backups).
+   */
+  static open(path: string, referencePath: string, options: { readOnly?: boolean } = {}): VisitStore {
     if (isSameFile(path, referencePath)) {
       throw new DomainError("SAME_STORE", "The visit store and the reference store resolve to the same file.", 500);
     }
@@ -183,33 +229,29 @@ export class VisitStore {
     if (inspection.kind !== "absent" && inspection.kind !== "empty" && inspection.kind !== "visits") {
       throw new DomainError("NOT_A_VISIT_STORE", `The visit store path holds a ${inspection.kind} database. It will not be used or modified.`, 500);
     }
-    mkdirSync(dirname(path), { recursive: true });
-    const fresh = !existsSync(path) || inspection.kind === "empty";
-    const db = new DatabaseSync(path, { timeout: 15000 });
-    db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON;");
-    if (fresh) {
-      db.exec("BEGIN IMMEDIATE");
-      try {
-        const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='visits'").get();
-        if (!exists) {
-          db.exec(SCHEMA);
-          const put = db.prepare("INSERT INTO meta(key, value) VALUES (?, ?)");
-          put.run("store_kind", VISIT_STORE_KIND);
-          put.run("schema_version", VISIT_SCHEMA_VERSION);
-          put.run("created_at", new Date().toISOString());
-        }
-        db.exec("COMMIT");
-      } catch (e) {
-        db.exec("ROLLBACK");
-        db.close();
-        throw e;
+    const fresh = inspection.kind === "absent" || inspection.kind === "empty";
+    if (options.readOnly && fresh) throw new DomainError("VISIT_STORE_MISSING", "No visit store exists at that path.", 500);
+    const current = fresh ? null : supportedVersion(path);
+    if (!options.readOnly) mkdirSync(dirname(path), { recursive: true });
+    let db: DatabaseSync;
+    try {
+      db = new DatabaseSync(path, { timeout: 15000, readOnly: options.readOnly ?? false });
+    } catch (e) {
+      throw asStorageError(e);
+    }
+    try {
+      if (options.readOnly) {
+        db.exec("PRAGMA foreign_keys=ON;");
+        assertIntact(db);
+        return new VisitStore(path, db);
       }
-    } else {
-      const version = (db.prepare("SELECT value FROM meta WHERE key='schema_version'").get() as { value: string } | undefined)?.value;
-      if (version !== VISIT_SCHEMA_VERSION) {
-        db.close();
-        throw new DomainError("VISIT_SCHEMA_MISMATCH", `Visit store schema version ${version ?? "unknown"} is not supported.`, 500);
-      }
+      db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON;");
+      assertIntact(db);
+      if (current === null) createSchema(db);
+      migrate(db, current ?? BASE_SCHEMA_VERSION, VISIT_MIGRATIONS);
+    } catch (e) {
+      db.close();
+      throw asStorageError(e);
     }
     const store = new VisitStore(path, db);
     store.pruneIdempotency(new Date(Date.now() - IDEMPOTENCY_RETENTION_DAYS * 86_400_000).toISOString());
@@ -357,8 +399,13 @@ export class VisitStore {
 
   /** Must be called inside a transaction. */
   private loadSnapshot(id: string): VisitSnapshot {
-    const row = this.db.prepare("SELECT snapshot_json FROM visits WHERE id = ?").get(id) as { snapshot_json: string } | undefined;
+    const row = this.db.prepare("SELECT snapshot_json, snapshot_sha256 FROM visits WHERE id = ?").get(id) as
+      | { snapshot_json: string; snapshot_sha256: string }
+      | undefined;
     if (!row) throw new DomainError("VISIT_NOT_FOUND", "Visit not found.", 404);
+    if (sha256Hex(row.snapshot_json) !== row.snapshot_sha256) {
+      throw new DomainError("SNAPSHOT_CORRUPT", "The stored configuration for this visit does not match its recorded hash.", 500, { visitId: id });
+    }
     return JSON.parse(row.snapshot_json) as VisitSnapshot;
   }
 
@@ -555,7 +602,7 @@ export class VisitStore {
       const replayed = this.replay(options.idempotencyKey, scope, requestHash) !== undefined;
       const visit = this.loadVisitState(visitId);
       if (visit.status === "COMPLETED") {
-        return { visit, report: this.storedReport(visitId), alreadyCompleted: true, replayed };
+        return { visit, report: this.storedReport(visitId).report, alreadyCompleted: true, replayed };
       }
       if (expectedVisitVersion !== undefined && expectedVisitVersion !== visit.version) {
         throw new DomainError("STALE_VISIT", "This visit changed elsewhere since you loaded it. Review the current work, then complete again.", 409, {
@@ -595,10 +642,16 @@ export class VisitStore {
     });
   }
 
-  private storedReport(visitId: string): Report {
-    const row = this.db.prepare("SELECT report_json FROM reports WHERE visit_id = ?").get(visitId) as { report_json: string } | undefined;
+  /** The report stored at completion, after checking it against its recorded hash. Must be called inside a transaction. */
+  private storedReport(visitId: string): { report: Report; basisSha256: string } {
+    const row = this.db.prepare("SELECT report_json, basis_sha256 FROM reports WHERE visit_id = ?").get(visitId) as
+      | { report_json: string; basis_sha256: string }
+      | undefined;
     if (!row) throw new DomainError("REPORT_MISSING", "The completed visit has no stored report.", 500);
-    return JSON.parse(row.report_json) as Report;
+    if (sha256Hex(row.report_json) !== row.basis_sha256) {
+      throw new DomainError("REPORT_CORRUPT", "The stored report for this visit does not match its recorded hash.", 500, { visitId });
+    }
+    return { report: JSON.parse(row.report_json) as Report, basisSha256: row.basis_sha256 };
   }
 
   /**
@@ -609,13 +662,7 @@ export class VisitStore {
     return this.read(() => {
       const visit = this.loadVisit(visitId);
       const linkedEvents = visit.events.filter((e) => e.type === "ADVISORY" || e.type === "CORRECTION_NOTE");
-      if (visit.status === "COMPLETED") {
-        const row = this.db.prepare("SELECT report_json, basis_sha256 FROM reports WHERE visit_id = ?").get(visitId) as
-          | { report_json: string; basis_sha256: string }
-          | undefined;
-        if (!row) throw new DomainError("REPORT_MISSING", "The completed visit has no stored report.", 500);
-        return { report: JSON.parse(row.report_json) as Report, basisSha256: row.basis_sha256, linkedEvents };
-      }
+      if (visit.status === "COMPLETED") return { ...this.storedReport(visitId), linkedEvents };
       return { report: buildReport(visit, "DRAFT_PREVIEW", now), basisSha256: null, linkedEvents };
     });
   }

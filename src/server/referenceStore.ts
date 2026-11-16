@@ -1,10 +1,12 @@
 import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { deepFreeze } from "../domain/canonical.ts";
 import { contentHash } from "../domain/hash.ts";
 import type { Finding, ReferenceRelease, ReleaseContent } from "../domain/types.ts";
 import { hasBlockingFindings } from "../domain/validate.ts";
 import { isSameFile } from "./config.ts";
+import { asStorageError } from "./storageError.ts";
 
 /**
  * Reference store: append-only, versioned releases.
@@ -271,10 +273,16 @@ export class ReferenceStore {
     const inspection = assertSafeReferenceTarget(path, visitsPath);
     if (inspection.kind !== "reference")
       throw new ReferenceStoreError("STORE_MISSING", "No reference store exists at that path. Run the reference import first.");
-    const db = new DatabaseSync(path, { timeout: 8000, readOnly: options.readOnly ?? false });
-    db.exec("PRAGMA foreign_keys=ON;");
-    if (!options.readOnly) db.exec("PRAGMA journal_mode=WAL;");
-    return new ReferenceStore(path, db);
+    let db: DatabaseSync | undefined;
+    try {
+      db = new DatabaseSync(path, { timeout: 8000, readOnly: options.readOnly ?? false });
+      db.exec("PRAGMA foreign_keys=ON;");
+      if (!options.readOnly) db.exec("PRAGMA journal_mode=WAL;");
+      return new ReferenceStore(path, db);
+    } catch (e) {
+      db?.close();
+      throw asStorageError(e);
+    }
   }
 
   static openOrCreate(path: string, visitsPath: string): ReferenceStore {
@@ -412,59 +420,103 @@ export class ReferenceStore {
     }));
   }
 
-  /** Load one release in a single read transaction. Releases are immutable, so results are cached. */
+  /** Load one release in a single read transaction. Releases are immutable, so results are cached (deep-frozen). */
   loadRelease(releaseId: string): ReferenceRelease {
     const cached = this.cache.get(releaseId);
     if (cached) return cached;
-    this.db.exec("BEGIN");
+    const stored = this.inReadTransaction(() => this.readRelease(releaseId));
+    return this.admit(stored);
+  }
+
+  /** The active release, read consistently: pointer and content come from the same read transaction. */
+  loadActive(): ReferenceRelease {
+    const result = this.inReadTransaction(() => {
+      const id = (this.db.prepare("SELECT release_id FROM active_release WHERE singleton = 1").get() as { release_id: string } | undefined)?.release_id;
+      if (!id) throw new ReferenceStoreError("NO_ACTIVE_RELEASE", "No reference release is active. Run the reference import.");
+      return this.cache.get(id) ?? this.readRelease(id);
+    });
+    return "storedHash" in result ? this.admit(result) : result;
+  }
+
+  private inReadTransaction<T>(fn: () => T): T {
     try {
-      const head = this.db.prepare("SELECT id, content_hash, activated_at, status FROM release WHERE id = ?").get(releaseId) as
-        | { id: string; content_hash: string; activated_at: string | null; status: string }
-        | undefined;
-      if (!head) throw new ReferenceStoreError("RELEASE_NOT_FOUND", `Release ${releaseId} does not exist.`);
-      const rows = this.db.prepare("SELECT entity_type, data_json FROM release_entity WHERE release_id = ? ORDER BY position").all(releaseId) as {
-        entity_type: EntityType;
-        data_json: string;
-      }[];
-      const by = (type: EntityType) => rows.filter((r) => r.entity_type === type).map((r) => JSON.parse(r.data_json));
-      const vocab = by("vocabulary")[0] ?? { carpets: [], seams: [], upholsteries: [], units: [], schema: "cabin-kit.reference/1", label: "" };
-      const release: ReferenceRelease = {
-        id: head.id,
-        contentHash: head.content_hash,
-        activatedAt: head.activated_at,
-        schema: vocab.schema,
-        label: vocab.label,
-        vocabulary: { carpets: vocab.carpets, seams: vocab.seams, upholsteries: vocab.upholsteries, units: vocab.units },
-        sources: by("source"),
-        subtypes: by("subtype"),
-        aircraft: by("aircraft"),
-        variants: by("variant"),
-        layouts: by("layout"),
-        layoutRevisions: by("layoutRevision"),
-        assignments: by("assignment"),
-        components: by("component"),
-        parts: by("part"),
-        rules: by("rule"),
-        substitutes: by("substitute"),
-        kitChildren: by("kitChild"),
-        pendingChanges: by("pendingChange"),
-        layoutCategories: by("layoutCategory"),
-        visualProfiles: by("visualProfile"),
-      };
+      this.db.exec("BEGIN");
+      const result = fn();
       this.db.exec("COMMIT");
-      this.cache.set(releaseId, release);
-      return release;
+      return result;
     } catch (e) {
-      this.db.exec("ROLLBACK");
-      throw e;
+      this.rollbackQuietly();
+      throw asStorageError(e);
     }
   }
 
-  /** The active release, read consistently: pointer and content come from the same transaction scope. */
-  loadActive(): ReferenceRelease {
-    const id = this.activeReleaseId();
-    if (!id) throw new ReferenceStoreError("NO_ACTIVE_RELEASE", "No reference release is active. Run the reference import.");
-    return this.loadRelease(id);
+  private rollbackQuietly(): void {
+    try {
+      if (this.db.isTransaction) this.db.exec("ROLLBACK");
+    } catch {
+      /* the transaction already ended */
+    }
+  }
+
+  /** Verifies a release read from storage against its recorded hash, then freezes and caches it. Runs after COMMIT. */
+  private admit(stored: StoredRelease): ReferenceRelease {
+    const { content, storedHash, id, activatedAt } = stored;
+    assertReleaseHash(id, content, storedHash);
+    const release = deepFreeze<ReferenceRelease>({ ...content, id, contentHash: storedHash, activatedAt });
+    this.cache.set(id, release);
+    return release;
+  }
+
+  /** Reassembles one release from its entity rows. No transaction of its own: callers provide it. */
+  private readRelease(releaseId: string): StoredRelease {
+    const head = this.db.prepare("SELECT id, content_hash, activated_at FROM release WHERE id = ?").get(releaseId) as
+      | { id: string; content_hash: string; activated_at: string | null }
+      | undefined;
+    if (!head) throw new ReferenceStoreError("RELEASE_NOT_FOUND", `Release ${releaseId} does not exist.`);
+    const rows = this.db.prepare("SELECT entity_type, data_json FROM release_entity WHERE release_id = ? ORDER BY position").all(releaseId) as {
+      entity_type: EntityType;
+      data_json: string;
+    }[];
+    const by = (type: EntityType) => rows.filter((r) => r.entity_type === type).map((r) => JSON.parse(r.data_json));
+    const vocab = by("vocabulary")[0] ?? { carpets: [], seams: [], upholsteries: [], units: [], schema: "cabin-kit.reference/1", label: "" };
+    const content: ReleaseContent = {
+      schema: vocab.schema,
+      label: vocab.label,
+      vocabulary: { carpets: vocab.carpets, seams: vocab.seams, upholsteries: vocab.upholsteries, units: vocab.units },
+      sources: by("source"),
+      subtypes: by("subtype"),
+      aircraft: by("aircraft"),
+      variants: by("variant"),
+      layouts: by("layout"),
+      layoutRevisions: by("layoutRevision"),
+      assignments: by("assignment"),
+      components: by("component"),
+      parts: by("part"),
+      rules: by("rule"),
+      substitutes: by("substitute"),
+      kitChildren: by("kitChild"),
+      pendingChanges: by("pendingChange"),
+      layoutCategories: by("layoutCategory"),
+      visualProfiles: by("visualProfile"),
+    };
+    return { id: head.id, storedHash: head.content_hash, activatedAt: head.activated_at, content };
+  }
+}
+
+interface StoredRelease {
+  id: string;
+  storedHash: string;
+  activatedAt: string | null;
+  content: ReleaseContent;
+}
+
+/**
+ * The one place a stored release is checked against its recorded content hash. A release whose
+ * reassembled content hashes differently was changed after staging and is never served.
+ */
+function assertReleaseHash(releaseId: string, content: ReleaseContent, storedHash: string): void {
+  if (contentHash(content) !== storedHash) {
+    throw new ReferenceStoreError("RELEASE_CORRUPT", `Release ${releaseId} does not match its recorded content hash. It will not be used.`);
   }
 }
 

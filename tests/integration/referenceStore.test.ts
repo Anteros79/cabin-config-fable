@@ -7,8 +7,8 @@ import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { importReference } from "../../src/importer/cli.ts";
 import { canonicalPath, isSameFile, resolveServerConfig, resolveStoreConfig } from "../../src/server/config.ts";
 import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStoreError, resetReferenceStore } from "../../src/server/referenceStore.ts";
-import { VisitStore } from "../../src/server/visitStore.ts";
-import { at, CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
+import { StorageError, VisitStore } from "../../src/server/visitStore.ts";
+import { at, CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeApp, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -294,5 +294,52 @@ describe("path configuration is shared by seed and start", () => {
     expect(outcome).toMatchObject({ status: "validated", activated: true, visitsUnchanged: null });
     expect(inspectStore(join(dir, "reference.sqlite")).kind).toBe("reference");
     expect(existsSync(join(dir, "visits.sqlite"))).toBe(false); // importing never creates a visit store
+  });
+});
+
+describe("release integrity", () => {
+  it("a tampered release entity is detected on load", () => {
+    const stores = makeStores();
+    const db = new DatabaseSync(stores.referencePath);
+    db.exec(
+      "DROP TRIGGER release_entity_frozen_update; UPDATE release_entity SET data_json = json_set(data_json, '$.partNo', 'FAKE-TAMPERED') WHERE rowid = (SELECT min(rowid) FROM release_entity WHERE entity_type = 'rule')",
+    );
+    db.close();
+    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    expect(refCode(() => store.loadActive())).toBe("RELEASE_CORRUPT");
+    expect(refCode(() => store.loadRelease(String(store.activeReleaseId())))).toBe("RELEASE_CORRUPT");
+    store.close();
+  });
+
+  it("the cached release cannot be mutated", () => {
+    const stores = makeStores();
+    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    const release = store.loadActive();
+    expect(Object.isFrozen(release)).toBe(true);
+    expect(() => {
+      store.loadActive().rules.length = 0;
+    }).toThrow(TypeError);
+    expect(() => {
+      at(release.rules, 0).partNo = "NOPE";
+    }).toThrow(TypeError);
+    expect(store.loadActive()).toBe(release);
+    expect(store.loadRelease(release.id)).toBe(release);
+    expect(release.rules.length).toBeGreaterThan(0);
+    store.close();
+  });
+
+  it("an SQLite fault in the reference store is a storage failure (503), not an internal error", async () => {
+    const stores = makeStores();
+    const db = new DatabaseSync(stores.referencePath);
+    db.exec("ALTER TABLE release_entity RENAME COLUMN data_json TO data_text");
+    db.close();
+    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath, { readOnly: true });
+    expect(() => store.loadActive()).toThrow(StorageError);
+    store.close();
+    const app = makeApp({ stores });
+    const res = await app.app.inject("/api/tails");
+    expect(res.statusCode).toBe(503);
+    expect(res.json().error).toMatchObject({ code: "STORAGE_UNAVAILABLE" });
+    await app.close();
   });
 });
