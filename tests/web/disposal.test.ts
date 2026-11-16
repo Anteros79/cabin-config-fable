@@ -49,6 +49,20 @@ describe("ResourceTracker", () => {
     expect(a.calls()).toBe(1);
   });
 
+  test("disposeEach releases every tracker even when one throws", () => {
+    const bad = new ResourceTracker();
+    bad.track({
+      dispose: () => {
+        throw new Error("boom");
+      },
+    });
+    const good = new ResourceTracker();
+    const a = probe();
+    good.track(a);
+    expect(() => ResourceTracker.disposeEach(bad, good)).toThrow("boom");
+    expect(a.calls()).toBe(1);
+  });
+
   test("one failing dispose does not stop the others", () => {
     const tracker = new ResourceTracker();
     const after = probe();
@@ -81,32 +95,26 @@ async function bundleText(hooks: boolean): Promise<string> {
   } finally {
     if (saved === undefined) delete process.env.VITE_TEST_HOOKS;
     else process.env.VITE_TEST_HOOKS = saved;
-    process.env.NODE_ENV = savedEnv;
+    if (savedEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = savedEnv;
     rmSync(outDir, { recursive: true, force: true });
   }
 }
 
-const NAMES = ["__cabinKit", "screenPointOf", "pickLatencies", "markInteraction"];
-
-/** Whether the scene's renderer is created with preserveDrawingBuffer on. The minifier names the flag, so follow it to its value. */
-function preservesDrawingBuffer(text: string): boolean {
-  if (text.includes("preserveDrawingBuffer:!0")) return true;
-  const flag = /preserveDrawingBuffer:(\w+)\}\),this\.renderer/.exec(text)?.[1];
-  if (!flag) throw new Error("the scene's renderer options were not found in the bundle");
-  return new RegExp(`[,;]${flag}=!0[,;]`).test(text);
-}
+const NAMES = ["__cabinKit", "screenPointOf", "describeScene", "pickLatencies", "markInteraction"];
 
 describe("test hooks in the bundle", () => {
   test("the production bundle contains no test hooks", { timeout: 120_000 }, async () => {
     const text = await bundleText(false);
     expect(text.length).toBeGreaterThan(100_000); // a real bundle was read
     for (const name of NAMES) expect(text.includes(name), name).toBe(false);
-    expect(preservesDrawingBuffer(text)).toBe(false);
+    expect(text.includes("preserveDrawingBuffer:!0")).toBe(false);
+    expect(text.includes("preserveDrawingBuffer:!1")).toBe(true); // the renderer option is the visible literal false
   });
 
   test("the e2e bundle does contain them (so the check above is not vacuous)", { timeout: 120_000 }, async () => {
     const text = await bundleText(true);
     for (const name of NAMES) expect(text.includes(name), name).toBe(true);
-    expect(preservesDrawingBuffer(text)).toBe(true);
+    expect(text.includes("preserveDrawingBuffer:!0")).toBe(true);
   });
 });

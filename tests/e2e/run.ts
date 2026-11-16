@@ -636,7 +636,7 @@ try {
     await settle(page, 300);
     equal((await sceneInfo(page)).frames, hidden.frames, "a paused scene draws nothing");
     await page.click("#tab-3d");
-    await page.waitForFunction(() => (window.__cabinKit?.scene?.describe().paused as boolean | undefined) === false);
+    await page.waitForFunction(() => (window.__cabinKit?.scene?.describeScene().paused as boolean | undefined) === false);
     await settle(page, 300);
     const shown = await sceneInfo(page);
     expect((shown.frames as number) > (hidden.frames as number), "the scene draws again when shown");

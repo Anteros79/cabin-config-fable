@@ -60,7 +60,7 @@ const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
 export interface SceneTestHooks {
   measure(durationMs: number): Promise<{ fps: number; frames: number; durationMs: number; worstFrameMs: number }>;
   screenPointOf(locationId: string, part?: "head" | "pan"): { x: number; y: number } | null;
-  describe(): Record<string, unknown>;
+  describeScene(): Record<string, unknown>;
   /** Times the next frame from now, for a selection made outside the canvas. */
   markInteraction(): void;
   /** time from a pick to the frame that shows it, most recent first */
@@ -76,6 +76,21 @@ export class ResourceTracker {
   track<T extends Disposable>(resource: T): T {
     this.items.add(resource);
     return resource;
+  }
+
+  /** disposeAll() on each tracker, even if an earlier one throws; the first error is rethrown after. */
+  static disposeEach(...trackers: ResourceTracker[]): void {
+    let failure: unknown;
+    let failed = false;
+    for (const tracker of trackers) {
+      try {
+        tracker.disposeAll();
+      } catch (e) {
+        if (!failed) failure = e;
+        failed = true;
+      }
+    }
+    if (failed) throw failure;
   }
 
   /** Disposes every tracked resource once and forgets them. A resource that throws does not stop the rest; the first error is rethrown after. */
@@ -152,7 +167,13 @@ export class CabinScene {
   constructor(canvas: HTMLCanvasElement, callbacks: SceneCallbacks) {
     this.canvas = canvas;
     this.callbacks = callbacks;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: TEST_HOOKS });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance",
+      preserveDrawingBuffer: import.meta.env.VITE_TEST_HOOKS === "1",
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -254,7 +275,7 @@ export class CabinScene {
           const rect = this.canvas.getBoundingClientRect();
           return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
         },
-        describe: () => ({
+        describeScene: () => ({
           seats: this.seats.length,
           floorAreas: this.floorMeshes.filter((f) => f.locationId).length,
           binModules: this.binSides.reduce((n, b) => n + b.locations.length, 0),
@@ -308,11 +329,11 @@ export class CabinScene {
   private rebuild(): void {
     const layout = this.layout;
     if (!layout) return;
-    this.layoutResources.disposeAll();
     this.clearGroup(this.groups.seats);
     this.clearGroup(this.groups.floor);
     this.clearGroup(this.groups.bins);
     this.clearGroup(this.groups.context);
+    this.layoutResources.disposeAll();
     this.seatMeshes = [];
     this.floorMeshes = [];
     this.binSides = [];
@@ -984,8 +1005,7 @@ export class CabinScene {
     this.controls.dispose();
     for (const g of [this.groups.seats, this.groups.floor, this.groups.bins, this.groups.context]) this.clearGroup(g);
     try {
-      this.layoutResources.disposeAll();
-      this.sceneResources.disposeAll();
+      ResourceTracker.disposeEach(this.layoutResources, this.sceneResources);
     } finally {
       this.renderer.dispose();
       this.renderer.forceContextLoss();

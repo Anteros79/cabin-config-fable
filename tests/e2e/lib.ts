@@ -111,5 +111,5 @@ export async function settle(page: Page, ms = 450): Promise<void> {
 }
 
 export async function sceneInfo(page: Page): Promise<Record<string, unknown>> {
-  return page.evaluate(() => window.__cabinKit?.scene?.describe() ?? {});
+  return page.evaluate(() => window.__cabinKit?.scene?.describeScene() ?? {});
 }
