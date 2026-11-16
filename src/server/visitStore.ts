@@ -143,6 +143,20 @@ export interface CompletionResult {
 
 type Row = Record<string, string | number | null>;
 
+/** A failure of the SQLite store itself, as opposed to a domain refusal or a programming error. */
+export class StorageError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "StorageError";
+  }
+}
+
+function isStorageFailure(e: unknown): boolean {
+  if (e instanceof DomainError || e instanceof StorageError) return false;
+  const code = (e as { code?: unknown })?.code;
+  return (typeof code === "string" && code.startsWith("ERR_SQLITE")) || isBusy(e);
+}
+
 function isBusy(e: unknown): boolean {
   const err = e as { code?: string; errcode?: number; message?: string };
   return err?.errcode === 5 || err?.errcode === 6 || /database is locked|SQLITE_BUSY/i.test(err?.message ?? "");
@@ -222,6 +236,7 @@ export class VisitStore {
       const message = (e as Error).message ?? "";
       if (/VISIT_LOCKED/.test(message)) throw new DomainError("VISIT_LOCKED", "This visit is completed and locked.", 409);
       if (/EMPTY_VISIT/.test(message)) throw new DomainError("EMPTY_VISIT", "Record at least one replacement before completing the visit.", 409);
+      if (isStorageFailure(e)) throw new StorageError(message, { cause: e });
       throw e;
     }
   }
@@ -238,6 +253,7 @@ export class VisitStore {
       } catch {
         /* ignore */
       }
+      if (isStorageFailure(e)) throw new StorageError((e as Error).message ?? "", { cause: e });
       throw e;
     }
   }

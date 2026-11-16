@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 export const PROJECT_ROOT = resolve(here, "..", "..");
 
+export type LogLevel = "silent" | "error" | "warn" | "info" | "debug";
+const LOG_LEVELS: readonly string[] = ["silent", "error", "warn", "info", "debug"];
+
 export interface StoreConfig {
   dataDir: string;
   referencePath: string;
@@ -17,6 +20,7 @@ export interface ServerConfig extends StoreConfig {
   port: number;
   webRoot: string;
   testFaults: boolean;
+  logLevel: LogLevel;
 }
 
 /**
@@ -50,6 +54,7 @@ export function resolveServerConfig(overrides: Partial<ServerConfig> = {}, env: 
     port: overrides.port ?? Number(env.CABIN_KIT_PORT ?? 4310),
     webRoot: overrides.webRoot ?? join(PROJECT_ROOT, "dist", "web"),
     testFaults: overrides.testFaults ?? env.CABIN_KIT_TEST_FAULTS === "1",
+    logLevel: overrides.logLevel ?? (LOG_LEVELS.includes(env.CABIN_KIT_LOG_LEVEL ?? "") ? (env.CABIN_KIT_LOG_LEVEL as LogLevel) : "info"),
   };
 }
 

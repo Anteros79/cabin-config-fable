@@ -232,7 +232,9 @@ describe("visit API with the browser bypassed", () => {
     const failed = await put(app, `/api/visits/${visit.id}/records`, { record: CUSHION_3A, expectedRecordVersion: 0, idempotencyKey: "key-storage-1" });
     expect(failed.statusCode).toBe(503);
     expect(json(failed).error).toMatchObject({ code: "STORAGE_UNAVAILABLE" });
-    expect(json(failed).error.message).toMatch(/nothing was saved/);
+    expect(json(failed).error.message).toMatch(/Nothing was saved/);
+    expect(failed.body).not.toContain("Simulated");
+    expect(json(failed).error.details.requestId).toBe(failed.headers["x-request-id"]);
     expect(json(await app.app.inject(`/api/visits/${visit.id}`)).visit.recordCount).toBe(0);
     const retry = await put(app, `/api/visits/${visit.id}/records`, { record: CUSHION_3A, expectedRecordVersion: 0, idempotencyKey: "key-storage-1" });
     expect(retry.statusCode).toBe(200);
@@ -383,6 +385,60 @@ describe("preparation and reference endpoints", () => {
     expect(one.layoutRevision.locations).toHaveLength(137);
     expect(one.categories.map((c: { id: string }) => c.id)).toEqual(["DOCX-CAT-700-137"]);
     expect(json(await app.app.inject("/api/tails")).tails.every((t: { namespace: string }) => t.namespace === "fixture")).toBe(true);
+    await app.close();
+  });
+
+  it("an unexpected exception is 500 INTERNAL_ERROR and does not leak its message", async () => {
+    const app = makeApp();
+    app.app.get("/api/__boom", async () => {
+      throw new TypeError("secret detail");
+    });
+    const r = await app.app.inject({ url: "/api/__boom" });
+    expect(r.statusCode).toBe(500);
+    expect(json(r).error.code).toBe("INTERNAL_ERROR");
+    expect(r.body).not.toContain("secret detail");
+    expect(json(r).error.details.requestId).toBe(r.headers["x-request-id"]);
+    await app.close();
+  });
+
+  it("malformed JSON keeps the error envelope", async () => {
+    const app = makeApp();
+    const r = await app.app.inject({ method: "POST", url: "/api/visits", headers: { "content-type": "application/json" }, payload: "{nope" });
+    expect(r.statusCode).toBe(400);
+    expect(json(r).error.code).toBe("BAD_REQUEST");
+    expect(json(r).error.details).toBeNull();
+    await app.close();
+  });
+
+  it("a body over 256 KB is 413 with the envelope", async () => {
+    const app = makeApp();
+    const r = await app.app.inject({
+      method: "POST",
+      url: "/api/visits",
+      headers: { "content-type": "application/json" },
+      payload: JSON.stringify({ pad: "x".repeat(300 * 1024) }),
+    });
+    expect(r.statusCode).toBe(413);
+    expect(json(r).error.code).toBe("BAD_REQUEST");
+    await app.close();
+  });
+
+  it("an array or scalar JSON body is 400 INVALID_BODY", async () => {
+    const app = makeApp();
+    for (const payload of ["[]", "5", '"text"']) {
+      const r = await app.app.inject({ method: "POST", url: "/api/visits", headers: { "content-type": "application/json" }, payload });
+      expect([r.statusCode, json(r).error.code]).toEqual([400, "INVALID_BODY"]);
+    }
+    await app.close();
+  });
+
+  it("an idempotencyKey of length 7, 101, or not a string is 400 INVALID_IDEMPOTENCY_KEY", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    for (const key of ["a".repeat(7), "a".repeat(101), 12345678]) {
+      const r = await put(app, `/api/visits/${visit.id}/records`, { record: CUSHION_3A, expectedRecordVersion: 0, idempotencyKey: key });
+      expect([r.statusCode, json(r).error.code]).toEqual([400, "INVALID_IDEMPOTENCY_KEY"]);
+    }
     await app.close();
   });
 });

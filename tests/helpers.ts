@@ -107,7 +107,7 @@ export interface MakeAppOptions {
   testFaults?: boolean;
   allowedHosts?: string[];
   webRoot?: string;
-  logLevel?: string;
+  logLevel?: "silent" | "error" | "warn" | "info" | "debug";
 }
 
 export function makeApp(options: MakeAppOptions = {}): AppHandle & { stores: TestStores } {
@@ -119,6 +119,7 @@ export function makeApp(options: MakeAppOptions = {}): AppHandle & { stores: Tes
       visitsPath: stores.visitsPath,
       port: 0,
       testFaults: options.testFaults ?? false,
+      logLevel: options.logLevel ?? "silent",
       webRoot: options.webRoot ?? join(stores.dir, "no-web"),
       ...(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {}),
     },

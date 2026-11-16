@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, statSync } from "node:fs";
 import fastifyCompress from "@fastify/compress";
 import fastifyStatic from "@fastify/static";
@@ -9,12 +10,13 @@ import type { LookupResult, ReferenceRelease } from "../domain/types.ts";
 import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS } from "../domain/types.ts";
 import { buildSnapshot, DomainError } from "../domain/visitLogic.ts";
 import type { ServerConfig } from "./config.ts";
+import { installErrorHandler } from "./http/errors.ts";
 import { applyHeaders } from "./http/headers.ts";
 import { allowedHostnames, hostnameOf, isWriteAllowed } from "./http/hostGuard.ts";
 import { ListVisitsQuery, LookupQuery, parseOr400, VisitIdParam } from "./http/schemas.ts";
 import { renderReportPdf } from "./pdf.ts";
 import { ReferenceStore, ReferenceStoreError } from "./referenceStore.ts";
-import { VisitStore } from "./visitStore.ts";
+import { StorageError, VisitStore } from "./visitStore.ts";
 
 interface Faults {
   /** fail: refuse before writing. commitThenDrop: write, then drop the connection (uncertain outcome). */
@@ -136,7 +138,12 @@ export function preparationCsv(prep: PrepOverview): string {
 }
 
 export function createApp(config: ServerConfig): AppHandle {
-  const app = Fastify({ logger: false, bodyLimit: 256 * 1024 });
+  const app = Fastify({
+    logger: { level: config.logLevel },
+    genReqId: () => randomUUID(),
+    requestIdHeader: false,
+    bodyLimit: 256 * 1024,
+  });
   app.register(fastifyCompress, { threshold: 1024, encodings: ["br", "gzip"] });
   const visits = VisitStore.open(config.visitsPath, config.referencePath);
   const faults: Faults = { visitWrites: null, remaining: 0, reference: null };
@@ -172,17 +179,10 @@ export function createApp(config: ServerConfig): AppHandle {
   const fail = (reply: FastifyReply, status: number, code: string, message: string, details?: unknown) =>
     reply.code(status).send({ error: { code, message, details: details ?? null } });
 
-  app.setErrorHandler((error: Error & { statusCode?: number; code?: string }, _request, reply) => {
-    if (error instanceof DomainError) return fail(reply, error.status, error.code, error.message, error.details);
-    if (error instanceof ReferenceStoreError) {
-      return fail(reply, 503, "REFERENCE_UNAVAILABLE", `Reference data is unavailable: ${error.message}`);
-    }
-    if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
-      return fail(reply, error.statusCode, "BAD_REQUEST", error.message);
-    }
-    return fail(reply, 503, "STORAGE_UNAVAILABLE", "The store could not complete the request. The transaction was rolled back; nothing was saved.", {
-      cause: error.message,
-    });
+  installErrorHandler(app);
+  app.addHook("onSend", async (request, reply, payload) => {
+    reply.header("X-Request-Id", request.id);
+    return payload;
   });
 
   const allowedHosts = allowedHostnames(config);
@@ -236,7 +236,7 @@ export function createApp(config: ServerConfig): AppHandle {
       faults.remaining -= 1;
       const mode = faults.visitWrites;
       if (faults.remaining === 0) faults.visitWrites = null;
-      if (mode === "fail") throw new Error("Simulated visit store failure");
+      if (mode === "fail") throw new StorageError("Simulated visit store failure");
       return true;
     };
     const drop = (reply: FastifyReply) => {
