@@ -107,7 +107,7 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
               workspace={workspace}
               location={location}
               focusComponent={null}
-              saveState={{ status: "idle", message: "" }}
+              statusOf={() => ({ phase: "idle" })}
               onRecord={() => undefined}
               onRemove={() => undefined}
               onRetry={() => undefined}

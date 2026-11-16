@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { canonicalJson } from "../../domain/canonical.ts";
 import type { LookupResult, RecordInput, Visit, VisitRecord, VisualProfile } from "../../domain/types.ts";
-import { ApiError, api, newKey, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
-import { Inspector, type SaveState } from "../components/Inspector.tsx";
+import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
+import { Inspector } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
+import { describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
 import type { Workspace } from "../model.ts";
 
 interface Props {
@@ -22,6 +24,19 @@ const STATE_TEXT: Record<string, { title: string; tone: "ok" | "warn" | "bad" }>
   SOURCE_INVALID: { title: "Configuration source not valid", tone: "bad" },
   SERVICE_UNAVAILABLE: { title: "Reference data unavailable", tone: "bad" },
 };
+
+/** What a write on an open visit answers: the visit without its snapshot, plus write-specific fields. */
+type WriteResult = VisitStateEnvelope | Awaited<ReturnType<typeof api.complete>>;
+
+/** The banner line for the visit-level writes (create, complete). */
+function bannerText(target: "create" | "complete", status: SaveStatus): string {
+  if (status.phase === "saving") return target === "create" ? "Creating visit…" : "Completing visit…";
+  if (target === "complete" && status.phase === "unknown")
+    return "Outcome unknown: the server did not answer, so the visit may or may not be completed. Retrying is safe: completing twice returns the same report.";
+  const refused = target === "complete" && (status.phase === "failed" || status.phase === "conflict") ? `Not completed: ${status.message}` : null;
+  if (status.phase === "conflict") return `${refused ?? describeSaveStatus(status)} The current saved work has been reloaded.`;
+  return refused ?? describeSaveStatus(status);
+}
 
 function today(): string {
   const d = new Date();
@@ -59,9 +74,7 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
   const [visitLoading, setVisitLoading] = useState(false);
   const [selection, setSelection] = useState<string | null>(null);
   const [focusComponent, setFocusComponent] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
   const [confirming, setConfirming] = useState(false);
-  const pending = useRef<(() => void) | null>(null);
   const confirmRef = useRef<HTMLHeadingElement | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.5
   const lastDraft = useMemo(recall, [visitId]);
@@ -92,10 +105,18 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
     }
   }, []);
 
+  // Creating a visit has no visit on screen yet, so its answer navigates instead of merging (PF-18).
+  const creation = useMutations<VisitEnvelope>((res) => {
+    remember(res.visit.id);
+    navigate(`#/visit/${res.visit.id}`);
+  });
+  // Answers apply in call order; one older than the copy on screen (another tab wrote since) is not applied.
+  const writes = useMutations<WriteResult>((res) =>
+    setVisit((cur) => (cur && cur.id === res.visit.id && res.visit.version >= cur.version ? { ...res.visit, snapshot: cur.snapshot } : cur)),
+  );
+
   useEffect(() => {
-    setSaveState({ status: "idle", message: "" });
     setConfirming(false);
-    pending.current = null;
     if (visitId) {
       // Keep an already loaded copy of the same visit on screen while refreshing it.
       setVisit((v) => (v && v.id === visitId ? v : null));
@@ -164,105 +185,53 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
     }
   };
 
-  /** Runs a write with one idempotency key that is reused on retry, and reports the outcome honestly. */
-  const mutate = (
-    target: string,
-    label: string,
-    op: (key: string) => Promise<VisitEnvelope | VisitStateEnvelope>,
-    after?: (res: VisitEnvelope | VisitStateEnvelope) => void,
-  ) => {
-    const key = newKey();
-    const attempt = async () => {
-      setSaveState({ status: "saving", message: `${label}…`, target });
-      try {
-        const res = await op(key);
-        pending.current = null;
-        // Writes return the visit without its snapshot; keep the one loaded by the initial GET.
-        const next = res.visit;
-        setVisit((current) => ("snapshot" in next ? next : current && current.id === next.id ? { ...next, snapshot: current.snapshot } : current));
-        setSaveState({
-          status: "saved",
-          message: res.replayed ? "Saved. The earlier attempt had already been stored; nothing was duplicated." : "Saved.",
-          target,
-        });
-        after?.(res);
-      } catch (e) {
-        if (e instanceof ApiError && e.kind === "network") {
-          pending.current = attempt;
-          setSaveState({
-            status: "unknown",
-            message: "Outcome unknown: the server did not answer, so this may or may not have been saved. Retrying is safe and cannot duplicate it.",
-            target,
-          });
-        } else if (
-          e instanceof ApiError &&
-          (e.code === "STALE_RECORD" || e.code === "STALE_VISIT" || e.code === "VISIT_LOCKED" || e.code === "RECORD_NOT_FOUND")
-        ) {
-          pending.current = null;
-          setSaveState({ status: "conflict", message: `Not saved: ${e.message} The current saved state has been reloaded.`, target });
-          if (visitId) void loadVisit(visitId);
-        } else if (e instanceof ApiError && e.status >= 500) {
-          pending.current = attempt;
-          setSaveState({ status: "error", message: `Not saved: ${e.message}`, target });
-        } else {
-          pending.current = null;
-          setSaveState({ status: "error", message: `Not saved: ${(e as Error).message}`, target });
-        }
-      }
-    };
-    void attempt();
+  /** After a conflict the saved state changed elsewhere: reload it so the person sees what is stored now. */
+  const reloadOnConflict = (target: string) => {
+    if (visitId && writes.statusOf(target).phase === "conflict") void loadVisit(visitId);
   };
-
   const startVisit = () => {
     if (!lookup) return;
-    mutate(
-      "visit",
-      "Creating visit",
-      (key) => api.createVisit(lookup.tail, lookup.checkDate, technician, key),
-      (res) => {
-        remember(res.visit.id);
-        navigate(`#/visit/${res.visit.id}`);
-      },
+    const request = { tail: lookup.tail, date: lookup.checkDate, technician };
+    void creation.run("create", (key) => api.createVisit(request.tail, request.date, request.technician, key), canonicalJson(request));
+  };
+  const record = async (input: RecordInput, expectedRecordVersion: number) => {
+    if (!visit) return;
+    const id = visit.id;
+    const target = recordTarget(input.locationId, input.componentId);
+    await writes.run(target, (key) => api.upsertRecord(id, input, expectedRecordVersion, key), canonicalJson({ record: input, expectedRecordVersion }));
+    reloadOnConflict(target);
+  };
+  const remove = async (r: VisitRecord) => {
+    if (!visit) return;
+    const id = visit.id;
+    const target = recordTarget(r.locationId, r.componentId);
+    const request = { locationId: r.locationId, componentId: r.componentId, expectedRecordVersion: r.version };
+    await writes.run(
+      target,
+      (key) => api.removeRecord(id, request.locationId, request.componentId, request.expectedRecordVersion, key),
+      canonicalJson(request),
     );
+    reloadOnConflict(target);
   };
-  const record = (input: RecordInput, expectedRecordVersion: number) => {
-    if (!visit) return;
-    mutate(`${input.locationId}|${input.componentId}`, "Saving", (key) => api.upsertRecord(visit.id, input, expectedRecordVersion, key));
+  const finishCompletion = (res: WriteResult) => {
+    remember(null);
+    navigate(`#/visit/${res.visit.id}/report`);
   };
-  const remove = (r: VisitRecord) => {
-    if (!visit) return;
-    mutate(`${r.locationId}|${r.componentId}`, "Removing", (key) => api.removeRecord(visit.id, r.locationId, r.componentId, r.version, key));
+  const retry = async (target: string) => {
+    const res = await writes.retry(target);
+    if (target === "complete" && res) finishCompletion(res);
+    reloadOnConflict(target);
   };
-  const complete = () => {
+  const complete = async () => {
     if (!visit) return;
-    const key = newKey();
-    const attempt = async () => {
-      setSaveState({ status: "saving", message: "Completing visit…", target: "complete" });
-      try {
-        await api.complete(visit.id, visit.version, key);
-        pending.current = null;
-        remember(null);
-        navigate(`#/visit/${visit.id}/report`);
-      } catch (e) {
-        setConfirming(false);
-        if (e instanceof ApiError && e.kind === "network") {
-          pending.current = attempt;
-          setSaveState({
-            status: "unknown",
-            message:
-              "Outcome unknown: the server did not answer, so the visit may or may not be completed. Retrying is safe: completing twice returns the same report.",
-            target: "complete",
-          });
-        } else if (e instanceof ApiError && e.code === "STALE_VISIT") {
-          setSaveState({ status: "conflict", message: `Not completed: ${e.message} The current saved work has been reloaded.`, target: "complete" });
-          void loadVisit(visit.id);
-        } else {
-          pending.current = e instanceof ApiError && e.status >= 500 ? attempt : null;
-          setSaveState({ status: "error", message: `Not completed: ${(e as Error).message}`, target: "complete" });
-        }
-      }
-    };
-    void attempt();
+    const id = visit.id;
+    const expectedVisitVersion = visit.version;
+    const res = await writes.run("complete", (key) => api.complete(id, expectedVisitVersion, key), canonicalJson({ confirm: true, expectedVisitVersion }));
+    if (res) finishCompletion(res);
+    else {
+      setConfirming(false);
+      reloadOnConflict("complete");
+    }
   };
 
   useEffect(() => {
@@ -273,7 +242,9 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
   const info = lookup ? (STATE_TEXT[lookup.state] ?? { title: lookup.state, tone: "bad" as const }) : null;
   const ctx = visitId ? visit?.snapshot.context : lookup?.context;
   const counts = (visitId ? visit?.snapshot.resolution : lookup?.resolution)?.counts;
-  const visitSave = saveState.target === "visit" || saveState.target === "complete" ? saveState : null;
+  const bannerTarget = visitId ? "complete" : "create";
+  const bannerWrites = visitId ? writes : creation;
+  const bannerStatus = bannerWrites.statusOf(bannerTarget);
   const unresolvedCount = counts ? counts.noMatch + counts.ambiguous : 0;
 
   return (
@@ -365,7 +336,7 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                 )}
                 {lookup.context && (
                   <div className="actions">
-                    <button type="button" className="primary" onClick={startVisit} disabled={saveState.status === "saving"}>
+                    <button type="button" className="primary" onClick={startVisit} disabled={creation.isBusy("create")}>
                       Start visit (saves a draft)
                     </button>
                     <a className="button" href={`#/prep?tail=${encodeURIComponent(lookup.tail)}&date=${lookup.checkDate}`}>
@@ -427,11 +398,14 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
         </section>
       )}
 
-      {visitSave && visitSave.status !== "idle" && (
-        <div className={`save-banner ${visitSave.status}`} role={visitSave.status === "saving" || visitSave.status === "saved" ? "status" : "alert"}>
-          <p>{visitSave.message}</p>
-          {pending.current && visitSave.status !== "saving" && (
-            <button type="button" onClick={() => pending.current?.()}>
+      {bannerStatus.phase !== "idle" && (
+        <div
+          className={`save-banner ${saveStatusClass(bannerStatus)}`}
+          role={bannerStatus.phase === "saving" || bannerStatus.phase === "saved" ? "status" : "alert"}
+        >
+          <p>{bannerText(bannerTarget, bannerStatus)}</p>
+          {(bannerStatus.phase === "unknown" || bannerStatus.phase === "failed") && (
+            <button type="button" onClick={() => (visitId ? void retry("complete") : void creation.retry("create"))}>
               Retry safely
             </button>
           )}
@@ -478,10 +452,10 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                 workspace={workspace}
                 location={location}
                 focusComponent={focusComponent}
-                saveState={saveState}
+                statusOf={writes.statusOf}
                 onRecord={record}
                 onRemove={remove}
-                onRetry={() => pending.current?.()}
+                onRetry={retry}
                 onSelect={(id) => select(id, null)}
               />
               {visit && visitId && (
@@ -508,7 +482,13 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                               Show
                             </button>
                             {visit.status === "DRAFT" && (
-                              <button type="button" className="danger" onClick={() => remove(r)} aria-label={`Remove ${r.locationLabel} ${r.componentName}`}>
+                              <button
+                                type="button"
+                                className="danger"
+                                disabled={writes.isBusy(recordTarget(r.locationId, r.componentId))}
+                                onClick={() => void remove(r)}
+                                aria-label={`Remove ${r.locationLabel} ${r.componentName}`}
+                              >
                                 Remove
                               </button>
                             )}
@@ -533,7 +513,7 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                         {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
                       </p>
                       <div className="actions">
-                        <button type="button" className="primary" onClick={complete} disabled={saveState.status === "saving"}>
+                        <button type="button" className="primary" onClick={() => void complete()} disabled={writes.isBusy("complete")}>
                           Confirm completion
                         </button>
                         <button type="button" onClick={() => setConfirming(false)}>

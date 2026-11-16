@@ -1,22 +1,19 @@
 import { useEffect, useId, useState } from "react";
 import { excludedOf, rulesNotUsedLine } from "../../domain/report.ts";
 import type { CabinLocation, RecordInput, SourceArtifact, VisitRecord } from "../../domain/types.ts";
+import { describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
-
-export interface SaveState {
-  status: "idle" | "saving" | "saved" | "error" | "unknown" | "conflict";
-  message: string;
-  target?: string;
-}
 
 interface Props {
   workspace: Workspace;
   location: CabinLocation | null;
   focusComponent: string | null;
-  saveState: SaveState;
+  /** The save status of one record target (`record:<locationId>|<componentId>`). */
+  statusOf(target: string): SaveStatus;
   onRecord(input: RecordInput, expectedRecordVersion: number): void;
   onRemove(record: VisitRecord): void;
-  onRetry(): void;
+  /** Re-sends the last write of a target with its idempotency key. */
+  onRetry(target: string): void;
   onSelect(locationId: string): void;
 }
 
@@ -26,7 +23,7 @@ function ComponentCard({
   location,
   sources,
   highlighted,
-  saveState,
+  statusOf,
   onRecord,
   onRemove,
   onRetry,
@@ -36,7 +33,7 @@ function ComponentCard({
   location: CabinLocation;
   sources: Record<string, SourceArtifact> | undefined;
   highlighted: boolean;
-  saveState: SaveState;
+  statusOf: Props["statusOf"];
   onRecord: Props["onRecord"];
   onRemove: Props["onRemove"];
   onRetry: Props["onRetry"];
@@ -55,9 +52,10 @@ function ComponentCard({
     setNote(record?.note ?? "");
   }, [record?.version, record?.substituteId, record?.quantity, record?.note, location.id]);
 
-  const target = `${location.id}|${view.componentId}`;
-  const mine = saveState.target === target ? saveState : null;
-  const busy = mine?.status === "saving";
+  const target = recordTarget(location.id, view.componentId);
+  const status = statusOf(target);
+  const busy = status.phase === "saving";
+  const message = status.phase === "conflict" ? `${describeSaveStatus(status)} The current saved state has been reloaded.` : describeSaveStatus(status);
   const dirty = record ? (record.substituteId ?? "PRIMARY") !== choice || record.quantity !== quantity || record.note !== note.trim() : true;
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,11 +231,11 @@ function ComponentCard({
                   )}
                 </div>
               </fieldset>
-              <p role="status" aria-live="polite" className={`save-state ${mine?.status ?? "idle"}`}>
-                {mine?.message ?? (record ? `Saved. Record version ${record.version}, last changed ${record.updatedAt}.` : "")}
+              <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
+                {message || (record ? `Saved. Record version ${record.version}, last changed ${record.updatedAt}.` : "")}
               </p>
-              {mine && (mine.status === "unknown" || mine.status === "error") && (
-                <button type="button" onClick={onRetry}>
+              {(status.phase === "unknown" || status.phase === "failed") && (
+                <button type="button" onClick={() => onRetry(target)}>
                   Retry safely
                 </button>
               )}
@@ -257,7 +255,7 @@ function ComponentCard({
 }
 
 /** Component-level parts for the selected location: primary part, separate alternates, record form. */
-export function Inspector({ workspace, location, focusComponent, saveState, onRecord, onRemove, onRetry, onSelect }: Props) {
+export function Inspector({ workspace, location, focusComponent, statusOf, onRecord, onRemove, onRetry, onSelect }: Props) {
   if (!location) {
     return (
       <div className="inspector empty">
@@ -300,7 +298,7 @@ export function Inspector({ workspace, location, focusComponent, saveState, onRe
           location={location}
           sources={sources}
           highlighted={focusComponent === view.componentId}
-          saveState={saveState}
+          statusOf={statusOf}
           onRecord={onRecord}
           onRemove={onRemove}
           onRetry={onRetry}

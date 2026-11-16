@@ -180,7 +180,8 @@ export function App() {
       <main id="main" ref={mainRef} tabIndex={-1}>
         <ErrorBoundary resetKey={hash}>
           {route.name === "check" && <CheckView visitId={null} navigate={navigate} visualProfiles={profiles} />}
-          {route.name === "visit" && <CheckView visitId={route.id} navigate={navigate} visualProfiles={profiles} />}
+          {/* keyed by visit: each visit gets its own write queue, so no status or key carries over to another visit */}
+          {route.name === "visit" && <CheckView key={route.id} visitId={route.id} navigate={navigate} visualProfiles={profiles} />}
           {route.name === "report" && <ReportView visitId={route.id} />}
           {route.name === "prep" && <PrepView visitId={route.visitId} tail={route.tail} date={route.date} />}
           {route.name === "visits" && <VisitsView />}

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { canonicalJson } from "../../domain/canonical.ts";
 import { rulesNotUsedLine } from "../../domain/report.ts";
-import { ApiError, api, newKey, type ReportEnvelope } from "../api.ts";
+import { ApiError, api, type ReportEnvelope } from "../api.ts";
+import { describeSaveStatus, useMutations } from "../hooks/useMutations.ts";
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
@@ -11,13 +13,6 @@ export function ReportView({ visitId }: { visitId: string }) {
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("ADVISORY");
   const [author, setAuthor] = useState("");
-  const [noteState, setNoteState] = useState("");
-  // One key per note: a retry after a dropped answer reuses it, so the note is appended once.
-  const noteKey = useRef<string | null>(null);
-  const keyForNote = () => {
-    noteKey.current ??= newKey();
-    return noteKey.current;
-  };
 
   const load = useCallback(async () => {
     setError(null);
@@ -35,26 +30,20 @@ export function ReportView({ visitId }: { visitId: string }) {
     void load();
   }, [load]);
 
-  const addNote = async (e: React.FormEvent) => {
+  // One write at a time; after a dropped answer the same note is re-sent with the same key, so it is appended once.
+  const notes = useMutations<Awaited<ReturnType<typeof api.addEvent>>>(() => {
+    setNote("");
+    void load();
+  });
+  const noteStatus = notes.statusOf("note");
+  const noteState =
+    noteStatus.phase === "saved"
+      ? `Linked note added.${noteStatus.replayed ? " The earlier attempt had already been stored; nothing was duplicated." : ""} The locked report content is unchanged.`
+      : describeSaveStatus(noteStatus);
+  const addNote = (e: React.FormEvent) => {
     e.preventDefault();
-    setNoteState("Saving…");
-    try {
-      await api.addEvent(visitId, noteType, note, author, keyForNote());
-      noteKey.current = null;
-      setNote("");
-      setNoteState("Linked note added. The locked report content is unchanged.");
-      await load();
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "IDEMPOTENCY_KEY_REUSED") {
-        noteKey.current = null;
-        setNoteState(
-          "An earlier note was already saved, so this one was not added. The report now shows the saved notes; add this note again if it is still needed.",
-        );
-        await load();
-        return;
-      }
-      setNoteState(`Not saved: ${(err as Error).message}`);
-    }
+    const request = { type: noteType, note, author };
+    void notes.run("note", (key) => api.addEvent(visitId, request.type, request.note, request.author, key), canonicalJson(request));
   };
 
   if (error) {
@@ -382,10 +371,17 @@ export function ReportView({ visitId }: { visitId: string }) {
             <span>Note</span>
             <input value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} required />
           </label>
-          <button type="submit">Add linked note</button>
+          <button type="submit" disabled={notes.isBusy("note")}>
+            Add linked note
+          </button>
           <span role="status" className="fine">
             {noteState}
           </span>
+          {(noteStatus.phase === "unknown" || noteStatus.phase === "failed") && (
+            <button type="button" onClick={() => void notes.retry("note")}>
+              Retry safely
+            </button>
+          )}
         </form>
       </section>
     </article>
