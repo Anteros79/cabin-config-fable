@@ -33,6 +33,9 @@ describe("headers, caching, compression and static serving", () => {
   it("hashed assets are immutable, everything else is no-store", async () => {
     expect((await handle.app.inject({ url: "/assets/app-abc123.js" })).headers["cache-control"]).toBe("public, max-age=31536000, immutable");
     expect((await handle.app.inject({ url: "/" })).headers["cache-control"]).toBe("no-store");
+    const missing = await handle.app.inject({ url: "/assets/missing.js" });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.headers["cache-control"]).toBe("no-store");
     expect((await handle.app.inject({ url: "/api/health" })).headers["cache-control"]).toBe("no-store");
   });
 

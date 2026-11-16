@@ -197,6 +197,8 @@ export function createApp(config: ServerConfig): AppHandle {
 
   // @fastify/compress attaches to routes through an onRoute hook, and register() loads it asynchronously.
   // Routes are therefore declared inside a plugin that runs after it, or they would not be compressed.
+  // The outer root `app` is used on purpose inside it, so hooks and handlers stay on the root instance;
+  // switching to the plugin's own instance parameter would encapsulate them and they would stop applying.
   app.register(async () => {
     // Error answers under /assets/ (missing files) must never be cached as immutable.
     app.addHook("onSend", async (_request, reply, payload) => {
