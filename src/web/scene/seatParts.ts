@@ -80,8 +80,15 @@ function surface(t: number, faceForward: boolean, segU: number, segV: number, v0
   return g;
 }
 
-function box(lx: number, ly: number, lz: number, x: number, y: number, z: number, r = 0.012, rotZ = 0, rotY = 0): THREE.BufferGeometry {
-  const g = new RoundedBoxGeometry(lx, ly, lz, 2, Math.min(r, lx / 2.01, ly / 2.01, lz / 2.01));
+/**
+ * Edge detail per part (WEB-20): 2 rounded segments only where the silhouette is seen (headrest, back cushion, pan),
+ * 1 for the sculpted arm structures and pads, a plain box for legs, ledges and the tray. Surface relief belongs in the
+ * texture, not in geometry.
+ */
+type Detail = 0 | 1 | 2;
+
+function box(lx: number, ly: number, lz: number, x: number, y: number, z: number, detail: Detail, r = 0.012, rotZ = 0, rotY = 0): THREE.BufferGeometry {
+  const g = detail === 0 ? new THREE.BoxGeometry(lx, ly, lz) : new RoundedBoxGeometry(lx, ly, lz, detail, Math.min(r, lx / 2.01, ly / 2.01, lz / 2.01));
   if (rotZ) g.rotateZ(rotZ);
   if (rotY) g.rotateY(rotY);
   g.translate(x, y, z);
@@ -116,9 +123,19 @@ export interface SeatGeometries {
   backOverlay: THREE.BufferGeometry;
 }
 
+/** Most triangles one seat may draw, summed over every part geometry (WEB-20). */
+export const SEAT_TRIANGLE_BUDGET = 3_200;
+
+/** Triangles in one seat: the sum over its part geometries, indexed or not. */
+export function seatTriangleCount(g: SeatGeometries): number {
+  let total = 0;
+  for (const part of Object.values(g)) total += (part.index ? part.index.count : part.getAttribute("position").count) / 3;
+  return total;
+}
+
 export function buildSeatGeometries(): SeatGeometries {
   // Seat pan: a separate smooth cushion, front edge slightly raised.
-  const pan = new RoundedBoxGeometry(0.47, 0.115, SEAT.width - 0.03, 3, 0.04);
+  const pan = new RoundedBoxGeometry(0.47, 0.115, SEAT.width - 0.03, 2, 0.04);
   pan.rotateZ(0.06);
   pan.translate(-0.045, SEAT.panY, 0);
 
@@ -131,7 +148,7 @@ export function buildSeatGeometries(): SeatGeometries {
   const relief: THREE.BufferGeometry[] = [];
   const ledge = (v: number, wFrac: number, depth: number, height: number) => {
     const p = backPoint(0, v, half + depth / 2 + 0.004);
-    relief.push(box(depth, height, backWidth(v) * wFrac, p.x, p.y, 0, 0.004, -SEAT.backLean));
+    relief.push(box(depth, height, backWidth(v) * wFrac, p.x, p.y, 0, 0, 0.004, -SEAT.backLean));
   };
   ledge(0.875, 0.78, 0.022, 0.016); // literature slot lip
   ledge(0.665, 0.66, 0.03, 0.014); // device-holder ledge
@@ -146,29 +163,29 @@ export function buildSeatGeometries(): SeatGeometries {
   const hy = top.y;
   const wingAngle = 0.5;
   // The headrest is narrower than the back, so the upper back shows on both sides of it.
-  const wing = (sign: number) => box(0.074, 0.205, 0.085, hx - 0.014, hy, sign * 0.132, 0.032, 0, -sign * wingAngle);
-  const headrest = merged([box(0.086, 0.215, 0.2, hx, hy, 0, 0.04, -SEAT.backLean), wing(1), wing(-1)]);
-  const wingFace = box(0.054, 0.16, 0.01, hx - 0.036, hy, 0.173, 0.004, 0, -wingAngle);
+  const wing = (sign: number) => box(0.074, 0.205, 0.085, hx - 0.014, hy, sign * 0.132, 2, 0.032, 0, -sign * wingAngle);
+  const headrest = merged([box(0.086, 0.215, 0.2, hx, hy, 0, 2, 0.04, -SEAT.backLean), wing(1), wing(-1)]);
+  const wingFace = box(0.054, 0.16, 0.01, hx - 0.036, hy, 0.173, 1, 0.004, 0, -wingAngle);
 
   // Arms: pale sculpted arm with a dark pad, on both sides of the seat.
   const armParts: THREE.BufferGeometry[] = [];
   const padParts: THREE.BufferGeometry[] = [];
   for (const sign of [1, -1]) {
     const z = sign * (SEAT.width / 2 + 0.012);
-    armParts.push(box(0.38, 0.055, 0.042, -0.045, 0.655, z, 0.02));
-    armParts.push(box(0.07, 0.2, 0.036, 0.17, 0.56, z, 0.014, -0.2));
-    padParts.push(box(0.3, 0.016, 0.036, -0.03, 0.688, z, 0.006));
+    armParts.push(box(0.38, 0.055, 0.042, -0.045, 0.655, z, 1, 0.02));
+    armParts.push(box(0.07, 0.2, 0.036, 0.17, 0.56, z, 1, 0.014, -0.2));
+    padParts.push(box(0.3, 0.016, 0.036, -0.03, 0.688, z, 1, 0.006));
   }
 
   // Legs: silver braces and feet.
   const legParts: THREE.BufferGeometry[] = [];
   for (const sign of [1, -1]) {
     const z = sign * 0.165;
-    legParts.push(box(0.024, 0.42, 0.024, -0.14, 0.2, z, 0.006, -0.38));
-    legParts.push(box(0.024, 0.42, 0.024, 0.11, 0.2, z, 0.006, 0.34));
-    legParts.push(box(0.34, 0.022, 0.03, -0.01, 0.014, z, 0.006));
+    legParts.push(box(0.024, 0.42, 0.024, -0.14, 0.2, z, 0, 0.006, -0.38));
+    legParts.push(box(0.024, 0.42, 0.024, 0.11, 0.2, z, 0, 0.006, 0.34));
+    legParts.push(box(0.34, 0.022, 0.03, -0.01, 0.014, z, 0, 0.006));
   }
-  legParts.push(box(0.03, 0.03, 0.36, -0.02, 0.39, 0, 0.006));
+  legParts.push(box(0.03, 0.03, 0.36, -0.02, 0.39, 0, 0, 0.006));
 
   const panOverlay = new RoundedBoxGeometry(0.49, 0.13, SEAT.width - 0.015, 2, 0.04);
   panOverlay.rotateZ(0.06);

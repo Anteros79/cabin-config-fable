@@ -99,10 +99,20 @@ export async function launchBrowser(extraArgs: string[] = []): Promise<Browser> 
   });
 }
 
+/**
+ * Wait until the scene is ready and has drawn everything asked of it. Frames are drawn on demand (WEB-20), so the layout
+ * may arrive before the first frame and be drawn in it: count a drawn frame with none pending, not two frames.
+ */
 export async function waitFor3D(page: Page, timeout = 20000): Promise<void> {
-  await page.waitForFunction(() => document.querySelector("canvas[data-ready='true']") !== null && (window.__cabinKit?.scene?.frameCount ?? 0) > 1, undefined, {
-    timeout,
-  });
+  await page.waitForFunction(
+    () => {
+      const scene = window.__cabinKit?.scene;
+      if (document.querySelector("canvas[data-ready='true']") === null || !scene) return false;
+      return scene.frameCount >= 1 && scene.describeScene().framePending === false;
+    },
+    undefined,
+    { timeout },
+  );
 }
 
 /** Let the scene settle (damping, texture upload) before a capture. */

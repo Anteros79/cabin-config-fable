@@ -149,7 +149,14 @@ export class CabinScene {
   private sceneResources = new ResourceTracker();
   /** set by the test hooks to record the frame that follows a pick */
   private onFrameRendered: (() => void) | null = null;
+  /** the pending animation frame, 0 when none is requested */
   private frame = 0;
+  /** true while a frame is being drawn: requests made during it are settled at its end */
+  private inFrame = false;
+  /** animation frames this scene has requested, for the idle check in the e2e build */
+  private frameRequests = 0;
+  /** advances the test hooks' measure() by one frame while it runs */
+  private measureStep: (() => void) | null = null;
   private needsRender = true;
   private disposed = false;
   private readonly gesture = new PickGesture();
@@ -194,7 +201,7 @@ export class CabinScene {
     });
     this.controls.addEventListener("change", () => {
       this.updateGhosting();
-      this.needsRender = true;
+      this.invalidate();
     });
 
     const hemi = new THREE.HemisphereLight("#ffffff", "#8b8f9c", 1.15);
@@ -227,6 +234,7 @@ export class CabinScene {
     canvas.addEventListener("pointercancel", this.onPointerCancel);
     canvas.addEventListener("pointerleave", this.onPointerLeave);
     canvas.addEventListener("webglcontextlost", this.onContextLost);
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.applyLight();
     this.resize();
     if (TEST_HOOKS) {
@@ -242,24 +250,26 @@ export class CabinScene {
         markInteraction: () => {
           this.pickStamp = performance.now();
         },
-        /** Orbit continuously for a while and report the measured frame rate. */
+        /** Orbit continuously for a while and report the measured frame rate. Each scheduled frame draws one step. */
         measure: (durationMs) =>
           new Promise((resolve) => {
             const start = performance.now();
             let frames = 0;
             let last = start;
             let worst = 0;
-            const step = () => {
+            this.measureStep = () => {
               const now = performance.now();
+              if (now - start >= durationMs || this.disposed) {
+                this.measureStep = null;
+                resolve({ fps: (frames * 1000) / (now - start), frames, durationMs: now - start, worstFrameMs: worst });
+                return;
+              }
               worst = Math.max(worst, now - last);
               last = now;
               frames += 1;
               this.nudge(frames % 240 < 120 ? "left" : "right");
-              this.renderer.render(this.scene, this.camera);
-              if (now - start < durationMs && !this.disposed) requestAnimationFrame(step);
-              else resolve({ fps: (frames * 1000) / (now - start), frames, durationMs: now - start, worstFrameMs: worst });
             };
-            requestAnimationFrame(step);
+            this.invalidate();
           }),
         /** Screen position of a location, used by tests to pick it with a real pointer event. */
         screenPointOf: (locationId, part = "head") => {
@@ -299,11 +309,13 @@ export class CabinScene {
             textures: this.renderer.info.memory.textures,
           },
           frames: this.frameCount,
+          frameRequests: this.frameRequests,
+          framePending: this.frame !== 0,
         }),
       };
       Object.assign(this, hooks);
     }
-    this.loop();
+    this.invalidate();
   }
 
   // ---- construction ---------------------------------------------------------------------------
@@ -470,10 +482,13 @@ export class CabinScene {
               return { x: (x0 + x1) / 2, lx: x1 - x0 };
             });
       const count = Math.max(spans.length, 1);
+      // Double-sided surfaces that turn transparent when ghosted draw in one pass, not two (WEB-20); at ghost opacity
+      // the back-then-front ordering a second pass buys is not visible.
+      const singlePass = { side: THREE.DoubleSide, forceSinglePass: true };
       const doorMesh = own(
-        new THREE.InstancedMesh(door, own(new THREE.MeshStandardMaterial({ map: own(binDoorTexture()), roughness: 0.42, side: THREE.DoubleSide })), count),
+        new THREE.InstancedMesh(door, own(new THREE.MeshStandardMaterial({ map: own(binDoorTexture()), roughness: 0.42, ...singlePass })), count),
       );
-      const bodyMesh = own(new THREE.InstancedMesh(body, std("#d5d8df", 0.6, 0, { side: THREE.DoubleSide }), count));
+      const bodyMesh = own(new THREE.InstancedMesh(body, std("#d5d8df", 0.6, 0, singlePass), count));
       spans.forEach((s, i) => {
         const m = new THREE.Matrix4().makeScale(s.lx, 1, 1).setPosition(s.x, 0, 0);
         doorMesh.setMatrixAt(i, m);
@@ -492,7 +507,7 @@ export class CabinScene {
       map.repeat.set(rows, 1);
       const psu = new THREE.Mesh(
         own(new THREE.PlaneGeometry(rows * layout.geometry.rowPitch, 0.4)),
-        own(new THREE.MeshStandardMaterial({ map, roughness: 0.6, side: THREE.DoubleSide })),
+        own(new THREE.MeshStandardMaterial({ map, roughness: 0.6, ...singlePass })),
       );
       psu.rotation.x = Math.PI / 2;
       psu.rotation.z = sign > 0 ? 0 : Math.PI;
@@ -508,7 +523,7 @@ export class CabinScene {
       const map = own(wallTexture.clone());
       map.needsUpdate = true;
       map.repeat.set(Math.max(rows, 1), 1);
-      const wallMaterial = own(new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, transparent: true }));
+      const wallMaterial = own(new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, forceSinglePass: true, transparent: true }));
       const wall = new THREE.Mesh(own(new THREE.PlaneGeometry(length, 1.66)), wallMaterial);
       wall.position.set(length / 2, 0.83, sign * (halfW + 0.005));
       wall.rotation.y = sign > 0 ? Math.PI : 0;
@@ -535,7 +550,7 @@ export class CabinScene {
     this.applyStates();
     this.applySelection();
     this.updateGhosting();
-    this.needsRender = true;
+    this.invalidate();
   }
 
   // ---- appearance -----------------------------------------------------------------------------
@@ -571,7 +586,7 @@ export class CabinScene {
     this.groups.context.traverse((o) => {
       if (o.userData.wash) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).color.set(blue ? "#6f8dff" : "#ffffff");
     });
-    this.needsRender = true;
+    this.invalidate();
   }
 
   setColourMode(mode: ColourMode): void {
@@ -589,7 +604,7 @@ export class CabinScene {
     this.groups.floor.visible = this.layers.floor;
     this.groups.bins.visible = this.layers.bins;
     this.groups.context.visible = this.layers.context;
-    this.needsRender = true;
+    this.invalidate();
   }
 
   /**
@@ -640,6 +655,8 @@ export class CabinScene {
   private applyStates(): void {
     const colourFor = (status: LocationStatus) => (status === "none" ? null : STATUS_COLOUR[status]);
     if (this.panOverlay && this.backOverlay) {
+      let anyPan = false;
+      let anyBack = false;
       this.seats.forEach((s, i) => {
         let pan: THREE.Color | null = null;
         let back: THREE.Color | null = null;
@@ -650,11 +667,16 @@ export class CabinScene {
           const key = s.location.seat?.commercialTier ?? s.location.seat?.maintenanceZone ?? "";
           pan = TIER_COLOURS[key] ?? null;
         }
+        anyPan ||= Boolean(pan);
+        anyBack ||= Boolean(back);
         this.panOverlay!.setMatrixAt(i, pan ? s.matrix : ZERO);
         this.backOverlay!.setMatrixAt(i, back ? s.matrix : ZERO);
         this.panOverlay!.setColorAt(i, pan ?? WHITE);
         this.backOverlay!.setColorAt(i, back ?? WHITE);
       });
+      // an overlay with nothing to show costs no draw call (WEB-20)
+      this.panOverlay.visible = anyPan;
+      this.backOverlay.visible = anyBack;
       for (const o of [this.panOverlay, this.backOverlay]) {
         o.instanceMatrix.needsUpdate = true;
         if (o.instanceColor) o.instanceColor.needsUpdate = true;
@@ -678,7 +700,7 @@ export class CabinScene {
       });
       if (b.door.instanceColor) b.door.instanceColor.needsUpdate = true;
     }
-    this.needsRender = true;
+    this.invalidate();
   }
 
   setSelection(locationId: string | null): void {
@@ -704,7 +726,7 @@ export class CabinScene {
         m.scale.copy(size);
       }
     }
-    this.needsRender = true;
+    this.invalidate();
   }
 
   // ---- camera ---------------------------------------------------------------------------------
@@ -821,7 +843,7 @@ export class CabinScene {
       return;
     }
     this.updateGhosting();
-    this.needsRender = true;
+    this.invalidate();
   }
 
   /** Keyboard and button camera control: orbit, tilt and zoom around the current target. */
@@ -838,7 +860,7 @@ export class CabinScene {
     this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(s));
     this.controls.update();
     this.updateGhosting();
-    this.needsRender = true;
+    this.invalidate();
   }
 
   // ---- picking --------------------------------------------------------------------------------
@@ -904,6 +926,8 @@ export class CabinScene {
     this.gesture.move(CabinScene.sample(e));
     if (this.paused || e.pointerType === "touch" || e.buttons !== 0) return;
     this.hoverPending = e;
+    // hover is resolved in the next frame, which draws only if the hover mark changed
+    this.requestFrame();
   };
 
   private onPointerCancel = () => {
@@ -914,7 +938,7 @@ export class CabinScene {
     this.hoverPending = null;
     this.hoverMark.visible = false;
     this.callbacks.onHover(null);
-    this.needsRender = true;
+    this.invalidate();
   };
 
   private onContextLost = (e: Event) => {
@@ -958,7 +982,7 @@ export class CabinScene {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (changed && this.layout && this.currentView !== "free") this.setCamera(this.currentView, this.viewLocation);
-    this.needsRender = true;
+    this.invalidate();
   }
 
   /**
@@ -972,30 +996,69 @@ export class CabinScene {
     this.gesture.cancel();
     this.hoverPending = null;
     if (paused) {
-      cancelAnimationFrame(this.frame);
+      this.cancelFrame();
       if (this.hoverMark.visible) this.hoverMark.visible = false;
       this.callbacks.onHover(null);
     } else {
-      this.needsRender = true;
-      this.loop();
+      this.invalidate();
     }
   }
 
-  private loop = () => {
+  /**
+   * Draw the scene once more (WEB-20). Frames are drawn on demand: something that changes what is seen calls this, and
+   * nothing is drawn while the scene is unchanged, paused or the page is hidden.
+   */
+  invalidate(): void {
+    this.needsRender = true;
+    this.requestFrame();
+  }
+
+  /** Request one animation frame if none is pending. A paused scene or a hidden page requests none. */
+  private requestFrame(): void {
+    if (this.frame !== 0 || this.inFrame || this.disposed || this.paused || document.visibilityState === "hidden") return;
+    this.frameRequests += 1;
+    this.frame = requestAnimationFrame(this.renderFrame);
+  }
+
+  private cancelFrame(): void {
+    if (this.frame !== 0) cancelAnimationFrame(this.frame);
+    this.frame = 0;
+  }
+
+  /** A hidden page draws nothing; whatever changed meanwhile is drawn when it shows again. */
+  private onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") this.cancelFrame();
+    else this.invalidate();
+  };
+
+  /** One frame. It requests the next only while the orbit damping is settling or measure() is running. */
+  private renderFrame = () => {
+    this.frame = 0;
     if (this.disposed || this.paused) return;
-    this.frame = requestAnimationFrame(this.loop);
-    this.processHover();
-    if (this.controls.update()) this.needsRender = true;
-    if (!this.needsRender) return;
-    this.needsRender = false;
-    this.renderer.render(this.scene, this.camera);
-    this.frameCount += 1;
-    this.onFrameRendered?.();
+    this.inFrame = true;
+    let settling = false;
+    try {
+      this.measureStep?.();
+      this.processHover();
+      settling = this.controls.update();
+      if (settling) this.needsRender = true;
+      if (this.needsRender) {
+        this.needsRender = false;
+        this.renderer.render(this.scene, this.camera);
+        this.frameCount += 1;
+        this.onFrameRendered?.();
+      }
+    } finally {
+      this.inFrame = false;
+    }
+    if (settling || this.measureStep || this.needsRender) this.requestFrame();
   };
 
   dispose(): void {
     this.disposed = true;
-    cancelAnimationFrame(this.frame);
+    this.cancelFrame();
+    this.measureStep?.();
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.canvas.removeEventListener("pointerup", this.onPointerUp);
     this.canvas.removeEventListener("pointermove", this.onPointerMove);
