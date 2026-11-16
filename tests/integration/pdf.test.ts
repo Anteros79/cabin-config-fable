@@ -1,4 +1,4 @@
-import { inflateSync } from "node:zlib";
+import { deflateSync, inflateSync } from "node:zlib";
 import { afterAll, describe, expect, it } from "vitest";
 import type { Report, VisitEvent } from "../../src/domain/types.ts";
 import { renderReportPdf } from "../../src/server/pdf.ts";
@@ -30,6 +30,29 @@ async function pdfText(bytes: Buffer): Promise<{ pages: number; text: string }> 
     parts.push(content.items.map((item) => ("str" in item ? item.str : "")).join(" "));
   }
   return { pages: doc.numPages, text: parts.join("\n").replace(/\s+/g, " ") };
+}
+
+/**
+ * The decoded bytes of every stream, each read by its /Length and inflated when it is FlateDecode; a malformed stream throws.
+ * Searching from "stream" to the next "\nendstream" instead would drop the last byte of a compressed stream that ends in \r
+ * (about 1 render in 1,000, as the ids and times in the page change), and the inflate would then fail.
+ */
+function pdfStreams(bytes: Buffer): string[] {
+  const raw = bytes.toString("latin1");
+  const streams: string[] = [];
+  const head = />>\s*stream(\r\n|\n)/g;
+  for (let m = head.exec(raw); m; m = head.exec(raw)) {
+    const start = m.index + m[0].length;
+    const dict = raw.slice(raw.lastIndexOf(" obj", m.index), m.index);
+    const length = Number(/\/Length (\d+)\b/.exec(dict)?.[1]);
+    if (!Number.isInteger(length)) throw new Error(`stream at byte ${m.index} has no direct /Length`);
+    if (!/^\r?\nendstream/.test(raw.slice(start + length, start + length + 12)))
+      throw new Error(`stream at byte ${m.index}: /Length does not end at endstream`);
+    const data = bytes.subarray(start, start + length);
+    streams.push((/\/Filter \/FlateDecode/.test(dict) ? inflateSync(data) : data).toString("latin1"));
+    head.lastIndex = start + length;
+  }
+  return streams;
 }
 
 /** Every text run with its page and position (PDF user space: y is the baseline, measured up from the bottom edge). */
@@ -259,21 +282,23 @@ describe("PDF robustness and accessibility", () => {
     expect(raw).toContain("/DisplayDocTitle true");
     for (const tag of ["/H1", "/H2", "/P", "/Table", "/TR", "/TH", "/TD"]) expect(raw).toContain(tag);
     // Page content is compressed, so inflate the streams to see the Artifact marks on header and footer.
-    const inflated = [...raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)]
-      .map((m) => {
-        try {
-          return inflateSync(Buffer.from(m[1] ?? "", "latin1")).toString("latin1");
-        } catch {
-          return "";
-        }
-      })
-      .join("\n");
-    expect(inflated).toContain("/Artifact");
+    expect(pdfStreams(bytes).join("\n")).toContain("/Artifact");
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: true, verbosity: 0 }).promise;
     const meta = await doc.getMetadata();
     expect((meta.info as { Title: string }).Title).toMatch(/^Cabin Kit report/);
     await app.close();
+  });
+
+  it("stream extraction keeps the last byte of a compressed stream that ends in \\r", () => {
+    // The old search ("stream" up to "\\nendstream") took this byte for part of the line ending: the inflate failed and
+    // the /Artifact check above saw no page content, about once in 1,000 runs.
+    const content = "BT /Artifact <</Type /Pagination>> BDC 10199 EMC ET";
+    const data = deflateSync(content);
+    expect(data.at(-1)).toBe(0x0d);
+    const head = Buffer.from(`1 0 obj\n<<\n/Length ${data.length}\n/Filter /FlateDecode\n>>\nstream\n`, "latin1");
+    const pdf = Buffer.concat([head, data, Buffer.from("\nendstream\nendobj\n", "latin1")]);
+    expect(pdfStreams(pdf)).toEqual([content]);
   });
 
   it("CreationDate equals report.generatedAt", async () => {

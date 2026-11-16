@@ -1,16 +1,22 @@
-import { spawn } from "node:child_process";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { dirname, join } from "node:path";
+import { createInterface } from "node:readline";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import type { Report } from "../../src/domain/types.ts";
+import type { Report, Visit } from "../../src/domain/types.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
+import { STORE_BUSY_TIMEOUT_MS } from "../../src/server/storageError.ts";
 import type { VisitStore } from "../../src/server/visitStore.ts";
 import { at, CUSHION_3A, cleanupTempDirs, makeStores, openVisits, snapshotFor, type TestStores } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
-const worker = join(dirname(fileURLToPath(import.meta.url)), "worker.ts");
+const workerPath = join(dirname(fileURLToPath(import.meta.url)), "worker.ts");
 const BACKREST_3A = { ...CUSHION_3A, componentId: "BACKREST" };
+const PANEL = { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", substituteId: null, note: "" };
+/** Fresh visits per simultaneous-release test. Which worker wins is up to SQLite; the invariants must hold every time. */
+const ROUNDS = 3;
 
 interface Outcome {
   op: string;
@@ -19,25 +25,109 @@ interface Outcome {
   message?: string;
   alreadyCompleted?: boolean;
   report?: Report;
+  version?: number;
   records?: number;
 }
 
-/** Run one operation in a separate OS process with its own database connection. */
-function run(stores: TestStores, visitId: string, op: string, startAt: number, payload: unknown): Promise<Outcome> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [worker, stores.visitsPath, stores.referencePath, visitId, op, String(startAt), JSON.stringify(payload)], {
-      stdio: ["ignore", "pipe", "pipe"],
+/** One operation in a separate OS process with its own database connection, driven line by line (see worker.ts). */
+class Worker {
+  private readonly child: ChildProcessWithoutNullStreams;
+  private readonly lines: string[] = [];
+  private readonly waiting: { resolve: (line: string) => void; reject: (e: Error) => void }[] = [];
+  private stderr = "";
+  private exit: number | null | undefined;
+  private readonly exited: Promise<number | null>;
+  readonly op: string;
+
+  constructor(stores: TestStores, visitId: string, op: string, payload: unknown) {
+    this.op = op;
+    this.child = spawn(process.execPath, [workerPath, stores.visitsPath, stores.referencePath, visitId, op, JSON.stringify(payload)]);
+    this.child.stderr.on("data", (d) => (this.stderr += d));
+    createInterface({ input: this.child.stdout }).on("line", (line) => {
+      const waiter = this.waiting.shift();
+      if (waiter) waiter.resolve(line);
+      else this.lines.push(line);
     });
-    let out = "";
-    let err = "";
-    child.stdout.on("data", (d) => (out += d));
-    child.stderr.on("data", (d) => (err += d));
-    child.on("error", reject);
-    child.on("close", (exit) => {
-      if (exit !== 0 || !out) reject(new Error(`worker ${op} failed (${exit}): ${err}`));
-      else resolve(JSON.parse(out) as Outcome);
+    this.exited = new Promise((resolve, reject) => {
+      this.child.on("error", reject);
+      this.child.on("close", (code) => {
+        this.exit = code;
+        for (const waiter of this.waiting.splice(0)) waiter.reject(this.failure());
+        resolve(code);
+      });
     });
-  });
+  }
+
+  private failure(): Error {
+    return new Error(`worker ${this.op} exited (${this.exit}) before its next line: ${this.stderr}`);
+  }
+
+  private next(): Promise<string> {
+    const line = this.lines.shift();
+    if (line !== undefined) return Promise.resolve(line);
+    if (this.exit !== undefined) return Promise.reject(this.failure());
+    return new Promise((resolve, reject) => this.waiting.push({ resolve, reject }));
+  }
+
+  async ready(): Promise<void> {
+    expect(await this.next()).toBe("ready");
+  }
+
+  go(): void {
+    this.child.stdin.end("go\n");
+  }
+
+  async started(): Promise<void> {
+    expect(await this.next()).toBe("started");
+  }
+
+  async result(): Promise<Outcome> {
+    // "started" may still be unread when the release did not wait for it (inOrder).
+    let line = await this.next();
+    if (line === "started") line = await this.next();
+    const outcome = JSON.parse(line) as Outcome;
+    expect(await this.exited, this.stderr).toBe(0);
+    return outcome;
+  }
+}
+
+/** Spawn every worker, then wait until each one has its store open: from here on nothing runs until a "go". */
+async function spawnReady(stores: TestStores, visitId: string, specs: [op: string, payload: unknown][]): Promise<Worker[]> {
+  const workers = specs.map(([op, payload]) => new Worker(stores, visitId, op, payload));
+  await Promise.all(workers.map((w) => w.ready()));
+  return workers;
+}
+
+/** Release the workers one at a time, each only after the previous one has printed its result. */
+async function inOrder(workers: Worker[]): Promise<Outcome[]> {
+  const outcomes: Outcome[] = [];
+  for (const w of workers) {
+    w.go();
+    outcomes.push(await w.result());
+  }
+  return outcomes;
+}
+
+/**
+ * Release every worker in one tick while this test holds the store's write lock, and keep holding it until each worker
+ * has printed "started" (written synchronously just before it calls the store). So every operation is in flight before
+ * any of them can take the write lock: the race window is open for all of them at once, proven rather than hoped for.
+ * Which one SQLite lets in first is not asserted.
+ */
+async function together(stores: TestStores, visitId: string, workers: Worker[]): Promise<Outcome[]> {
+  const gate = new DatabaseSync(stores.visitsPath, { timeout: STORE_BUSY_TIMEOUT_MS });
+  const versionOf = () => (gate.prepare("SELECT version FROM visits WHERE id = ?").get(visitId) as { version: number }).version;
+  gate.exec("BEGIN IMMEDIATE");
+  try {
+    const before = versionOf();
+    for (const w of workers) w.go();
+    await Promise.all(workers.map((w) => w.started()));
+    expect(versionOf(), "no worker may commit while the gate holds the write lock").toBe(before);
+  } finally {
+    gate.exec("COMMIT");
+    gate.close();
+  }
+  return Promise.all(workers.map((w) => w.result()));
 }
 
 function setup(): { stores: TestStores; store: VisitStore; newVisit: (records: unknown[]) => string } {
@@ -58,125 +148,310 @@ function setup(): { stores: TestStores; store: VisitStore; newVisit: (records: u
   };
 }
 
-const workKeys = (report: Report) => report.work.map((w) => `${w.locationId}/${w.componentId}`).sort();
-const START_DELAY = 450;
+const keyOf = (r: { locationId: string; componentId: string }) => `${r.locationId}/${r.componentId}`;
+const workKeys = (report: Report) => report.work.map(keyOf).sort();
+const recordKeys = (visit: Visit) => visit.records.map(keyOf).sort();
+const eventTypes = (visit: Visit) => visit.events.map((e) => e.type);
 
-describe("separate-process races", () => {
+/** Every record's part lines carry its own quantity: no half-written row. */
+function expectWholeRecords(visit: Visit): void {
+  for (const record of visit.records) expect(record.lines.every((line) => line.qty === record.quantity)).toBe(true);
+}
+
+/**
+ * The invariants of a completion racing one edit (an upsert or a removal of `key`), for any order: completion succeeds;
+ * the edit commits or gets VISIT_LOCKED; the stored report is the one returned, equals the persisted records and has
+ * the edit exactly when the edit's event comes before COMPLETED. Returns which order the store took.
+ */
+function expectEditVersusComplete(store: VisitStore, id: string, edit: Outcome, complete: Outcome, editEvent: string): "edit-first" | "complete-first" {
+  expect(complete.ok).toBe(true);
+  expect(complete.alreadyCompleted).toBe(false);
+  const visit = store.getVisit(id);
+  const stored = store.getReport(id).report;
+  expect(visit.status).toBe("COMPLETED");
+  expect(stored).toEqual(complete.report);
+  expect(workKeys(stored)).toEqual(recordKeys(visit));
+  expectWholeRecords(visit);
+  const types = eventTypes(visit);
+  expect(types.filter((t) => t === "COMPLETED")).toHaveLength(1);
+  if (edit.ok) {
+    expect(types.lastIndexOf(editEvent)).toBeLessThan(types.indexOf("COMPLETED"));
+    return "edit-first";
+  }
+  expect(edit.code).toBe("VISIT_LOCKED");
+  expect(types.at(-1)).toBe("COMPLETED");
+  return "complete-first";
+}
+
+/** One editor of a record that does not exist yet wins; the other gets STALE_RECORD; the record is the winner's. */
+function expectOneEditorWins(store: VisitStore, id: string, a: Outcome, b: Outcome): "a" | "b" {
+  expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+  expect((a.ok ? b : a).code).toBe("STALE_RECORD");
+  const visit = store.getVisit(id);
+  expect(visit.records).toHaveLength(1);
+  const record = at(visit.records, 0);
+  expect(record.version).toBe(1);
+  expect(record.quantity).toBe(a.ok ? 2 : 4);
+  expectWholeRecords(visit);
+  expect(visit.version).toBe(2);
+  expect(eventTypes(visit).filter((t) => t === "RECORD_ADDED")).toHaveLength(1);
+  return a.ok ? "a" : "b";
+}
+
+/** Removing the last record versus completing: either a draft with nothing in it, or a completed visit with the record. */
+function expectNoEmptyCompletion(store: VisitStore, id: string, remove: Outcome, complete: Outcome): "remove-first" | "complete-first" {
+  const visit = store.getVisit(id);
+  if (remove.ok) {
+    expect(complete).toMatchObject({ ok: false, code: "EMPTY_VISIT" });
+    expect(visit).toMatchObject({ status: "DRAFT", recordCount: 0 });
+    return "remove-first";
+  }
+  expect(remove.code).toBe("VISIT_LOCKED");
+  expect(complete).toMatchObject({ ok: true, alreadyCompleted: false });
+  expect(visit).toMatchObject({ status: "COMPLETED", recordCount: 1 });
+  expect(workKeys(store.getReport(id).report)).toEqual(["SEAT:3A/CUSHION"]);
+  return "complete-first";
+}
+
+/** Completions of one visit: exactly one completes, every one returns the same stored report, one COMPLETED event. */
+function expectOneCompletion(store: VisitStore, id: string, outcomes: Outcome[]): void {
+  expect(outcomes.every((r) => r.ok)).toBe(true);
+  expect(outcomes.filter((r) => r.alreadyCompleted === false)).toHaveLength(1);
+  const stored = store.getReport(id).report;
+  for (const r of outcomes) expect(r.report).toEqual(stored);
+  expect(workKeys(stored)).toEqual(["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
+  expect(eventTypes(store.getVisit(id)).filter((t) => t === "COMPLETED")).toHaveLength(1);
+}
+
+const SEATS = ["1A", "2A", "3A", "4A", "5A", "6A", "7A", "8A"];
+const seatWriters = (): [string, unknown][] => SEATS.map((s) => ["upsert", { record: { ...CUSHION_3A, locationId: `SEAT:${s}` }, expectedRecordVersion: 0 }]);
+
+/** Writers of different records: every one commits, and the visit version counts every change. */
+function expectAllWritersCommitted(store: VisitStore, id: string, outcomes: Outcome[]): void {
+  expect(outcomes.every((r) => r.ok)).toBe(true);
+  const visit = store.getVisit(id);
+  expect(recordKeys(visit)).toEqual(SEATS.map((s) => `SEAT:${s}/CUSHION`).sort());
+  expectWholeRecords(visit);
+  expect(visit.version).toBe(1 + SEATS.length);
+  expect(eventTypes(visit).filter((t) => t === "RECORD_ADDED")).toHaveLength(SEATS.length);
+  expect(outcomes.map((r) => r.version).sort((x, y) => (x ?? 0) - (y ?? 0))).toEqual(SEATS.map((_, i) => 2 + i));
+}
+
+describe("separate-process races, released in a fixed order", () => {
+  it("two editors of one record, A then B: A's edit stands and B gets STALE_RECORD", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([]);
+    const [a, b] = await inOrder(
+      await spawnReady(stores, id, [
+        ["upsert", { record: { ...PANEL, quantity: 2 }, expectedRecordVersion: 0 }],
+        ["upsert", { record: { ...PANEL, quantity: 4 }, expectedRecordVersion: 0 }],
+      ]),
+    );
+    expect(expectOneEditorWins(store, id, a as Outcome, b as Outcome)).toBe("a");
+    store.close();
+  });
+
+  it("two editors of one record, B then A: B's edit stands and A gets STALE_RECORD", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([]);
+    const [a, b] = await spawnReady(stores, id, [
+      ["upsert", { record: { ...PANEL, quantity: 2 }, expectedRecordVersion: 0 }],
+      ["upsert", { record: { ...PANEL, quantity: 4 }, expectedRecordVersion: 0 }],
+    ]);
+    const [bOut, aOut] = await inOrder([b as Worker, a as Worker]);
+    expect(expectOneEditorWins(store, id, aOut as Outcome, bOut as Outcome)).toBe("b");
+    store.close();
+  });
+
+  it("edit then complete: the edit is in the completed report", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([CUSHION_3A]);
+    const [edit, complete] = await inOrder(
+      await spawnReady(stores, id, [
+        ["upsert", { record: BACKREST_3A }],
+        ["complete", {}],
+      ]),
+    );
+    expect(expectEditVersusComplete(store, id, edit as Outcome, complete as Outcome, "RECORD_ADDED")).toBe("edit-first");
+    const stored = store.getReport(id).report;
+    expect(workKeys(stored)).toEqual(["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
+    expect(stored.totals.map((x) => x.partNo)).toEqual(["FAKE-SC-1001", "FAKE-V01-ELR-A-BACKREST"]);
+    store.close();
+  });
+
+  it("complete then edit: the edit is rejected with VISIT_LOCKED and the report holds only the earlier work", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([CUSHION_3A]);
+    const [edit, complete] = await spawnReady(stores, id, [
+      ["upsert", { record: BACKREST_3A }],
+      ["complete", {}],
+    ]);
+    const [completeOut, editOut] = await inOrder([complete as Worker, edit as Worker]);
+    expect(expectEditVersusComplete(store, id, editOut as Outcome, completeOut as Outcome, "RECORD_ADDED")).toBe("complete-first");
+    expect(workKeys(store.getReport(id).report)).toEqual(["SEAT:3A/CUSHION"]);
+    store.close();
+  });
+
+  it("remove then complete: the removed work is absent from the report", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([CUSHION_3A, BACKREST_3A]);
+    const [remove, complete] = await inOrder(
+      await spawnReady(stores, id, [
+        ["remove", { locationId: "SEAT:3A", componentId: "BACKREST" }],
+        ["complete", {}],
+      ]),
+    );
+    expect(expectEditVersusComplete(store, id, remove as Outcome, complete as Outcome, "RECORD_REMOVED")).toBe("edit-first");
+    expect(workKeys(store.getReport(id).report)).toEqual(["SEAT:3A/CUSHION"]);
+    store.close();
+  });
+
+  it("complete then remove: the removal is rejected with VISIT_LOCKED and the report keeps the work", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([CUSHION_3A, BACKREST_3A]);
+    const [remove, complete] = await spawnReady(stores, id, [
+      ["remove", { locationId: "SEAT:3A", componentId: "BACKREST" }],
+      ["complete", {}],
+    ]);
+    const [completeOut, removeOut] = await inOrder([complete as Worker, remove as Worker]);
+    expect(expectEditVersusComplete(store, id, removeOut as Outcome, completeOut as Outcome, "RECORD_REMOVED")).toBe("complete-first");
+    expect(workKeys(store.getReport(id).report)).toEqual(["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
+    store.close();
+  });
+
+  it("removing the last record, then completing: completion is refused with EMPTY_VISIT", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([CUSHION_3A]);
+    const [remove, complete] = await inOrder(
+      await spawnReady(stores, id, [
+        ["remove", { locationId: "SEAT:3A", componentId: "CUSHION" }],
+        ["complete", {}],
+      ]),
+    );
+    expect(expectNoEmptyCompletion(store, id, remove as Outcome, complete as Outcome)).toBe("remove-first");
+    store.close();
+  });
+
+  it("completing, then removing the last record: the removal is refused with VISIT_LOCKED", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([CUSHION_3A]);
+    const [remove, complete] = await spawnReady(stores, id, [
+      ["remove", { locationId: "SEAT:3A", componentId: "CUSHION" }],
+      ["complete", {}],
+    ]);
+    const [completeOut, removeOut] = await inOrder([complete as Worker, remove as Worker]);
+    expect(expectNoEmptyCompletion(store, id, removeOut as Outcome, completeOut as Outcome)).toBe("complete-first");
+    store.close();
+  });
+
+  it("repeated completion: the first process completes, the later ones get the same report", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([CUSHION_3A, BACKREST_3A]);
+    const outcomes = await inOrder(
+      await spawnReady(stores, id, [
+        ["complete", {}],
+        ["complete", {}],
+        ["complete", {}],
+      ]),
+    );
+    expectOneCompletion(store, id, outcomes);
+    expect(outcomes.map((r) => r.alreadyCompleted)).toEqual([false, true, true]);
+    store.close();
+  });
+
+  it("writers of different records one after another: each sees the version after the previous change", async () => {
+    const { stores, store, newVisit } = setup();
+    const id = newVisit([]);
+    const outcomes = await inOrder(await spawnReady(stores, id, seatWriters()));
+    expectAllWritersCommitted(store, id, outcomes);
+    expect(outcomes.map((r) => r.version)).toEqual(SEATS.map((_, i) => 2 + i));
+    expect(outcomes.map((r) => r.records)).toEqual(SEATS.map((_, i) => 1 + i));
+    store.close();
+  });
+});
+
+describe("separate-process races, released together (invariants that hold for every interleaving)", () => {
+  it("two editors of one record: exactly one wins, the other gets a conflict (no silent overwrite)", async () => {
+    const { stores, store, newVisit } = setup();
+    for (let round = 0; round < ROUNDS; round++) {
+      const id = newVisit([]);
+      const workers = await spawnReady(stores, id, [
+        ["upsert", { record: { ...PANEL, quantity: 2 }, expectedRecordVersion: 0 }],
+        ["upsert", { record: { ...PANEL, quantity: 4 }, expectedRecordVersion: 0 }],
+      ]);
+      const [a, b] = await together(stores, id, workers);
+      expectOneEditorWins(store, id, a as Outcome, b as Outcome);
+    }
+    store.close();
+  });
+
   it("edit versus complete: the edit is in the completed report, or it is rejected", async () => {
     const { stores, store, newVisit } = setup();
-    const seen = new Set<string>();
-    for (let i = 0; i < 14; i++) {
+    for (let round = 0; round < ROUNDS; round++) {
       const id = newVisit([CUSHION_3A]);
-      const t = Date.now() + START_DELAY;
-      // stagger alternately so both orders are exercised
-      const skew = (i % 3) - 1; // -1, 0, +1
-      const [edit, complete] = await Promise.all([
-        run(stores, id, "upsert", t + Math.max(0, skew) * 25, { record: BACKREST_3A }),
-        run(stores, id, "complete", t + Math.max(0, -skew) * 25, {}),
-      ]);
-      expect(complete.ok).toBe(true);
-      const visit = store.getVisit(id);
-      const stored = store.getReport(id).report;
-      expect(visit.status).toBe("COMPLETED");
-      expect(stored).toEqual(complete.report);
-      // the locked report always equals the persisted records
-      expect(workKeys(stored)).toEqual(visit.records.map((r) => `${r.locationId}/${r.componentId}`).sort());
-      if (edit.ok) {
-        seen.add("edit-first");
-        expect(workKeys(stored)).toEqual(["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
-        expect(stored.totals.map((x) => x.partNo)).toEqual(["FAKE-SC-1001", "FAKE-V01-ELR-A-BACKREST"]);
-      } else {
-        seen.add("complete-first");
-        expect(edit.code).toBe("VISIT_LOCKED");
-        expect(workKeys(stored)).toEqual(["SEAT:3A/CUSHION"]);
-      }
+      const [edit, complete] = await together(
+        stores,
+        id,
+        await spawnReady(stores, id, [
+          ["upsert", { record: BACKREST_3A }],
+          ["complete", {}],
+        ]),
+      );
+      const order = expectEditVersusComplete(store, id, edit as Outcome, complete as Outcome, "RECORD_ADDED");
+      expect(workKeys(store.getReport(id).report)).toEqual(order === "edit-first" ? ["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"] : ["SEAT:3A/CUSHION"]);
     }
-    expect([...seen].sort()).toEqual(["complete-first", "edit-first"]);
     store.close();
   });
 
   it("remove versus complete: removed work is absent from the report, or the removal is rejected", async () => {
     const { stores, store, newVisit } = setup();
-    const seen = new Set<string>();
-    for (let i = 0; i < 12; i++) {
+    for (let round = 0; round < ROUNDS; round++) {
       const id = newVisit([CUSHION_3A, BACKREST_3A]);
-      const t = Date.now() + START_DELAY;
-      const skew = (i % 3) - 1;
-      const [remove, complete] = await Promise.all([
-        run(stores, id, "remove", t + Math.max(0, skew) * 25, { locationId: "SEAT:3A", componentId: "BACKREST" }),
-        run(stores, id, "complete", t + Math.max(0, -skew) * 25, {}),
-      ]);
-      expect(complete.ok).toBe(true);
-      const stored = store.getReport(id).report;
-      expect(stored).toEqual(complete.report);
-      if (remove.ok) {
-        seen.add("remove-first");
-        expect(workKeys(stored)).toEqual(["SEAT:3A/CUSHION"]);
-      } else {
-        seen.add("complete-first");
-        expect(remove.code).toBe("VISIT_LOCKED");
-        expect(workKeys(stored)).toEqual(["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
-      }
-      expect(store.getVisit(id).records).toHaveLength(stored.work.length);
+      const [remove, complete] = await together(
+        stores,
+        id,
+        await spawnReady(stores, id, [
+          ["remove", { locationId: "SEAT:3A", componentId: "BACKREST" }],
+          ["complete", {}],
+        ]),
+      );
+      const order = expectEditVersusComplete(store, id, remove as Outcome, complete as Outcome, "RECORD_REMOVED");
+      expect(workKeys(store.getReport(id).report)).toEqual(order === "edit-first" ? ["SEAT:3A/CUSHION"] : ["SEAT:3A/BACKREST", "SEAT:3A/CUSHION"]);
     }
-    expect([...seen].sort()).toEqual(["complete-first", "remove-first"]);
     store.close();
   });
 
   it("removing the last record versus completing never yields a completed empty visit", async () => {
     const { stores, store, newVisit } = setup();
-    for (let i = 0; i < 8; i++) {
+    for (let round = 0; round < ROUNDS; round++) {
       const id = newVisit([CUSHION_3A]);
-      const t = Date.now() + START_DELAY;
-      const skew = (i % 3) - 1;
-      const [remove, complete] = await Promise.all([
-        run(stores, id, "remove", t + Math.max(0, skew) * 25, { locationId: "SEAT:3A", componentId: "CUSHION" }),
-        run(stores, id, "complete", t + Math.max(0, -skew) * 25, {}),
-      ]);
-      const visit = store.getVisit(id);
-      if (remove.ok) {
-        expect(complete).toMatchObject({ ok: false, code: "EMPTY_VISIT" });
-        expect(visit).toMatchObject({ status: "DRAFT", recordCount: 0 });
-      } else {
-        expect(remove.code).toBe("VISIT_LOCKED");
-        expect(complete.ok).toBe(true);
-        expect(visit).toMatchObject({ status: "COMPLETED", recordCount: 1 });
-      }
+      const [remove, complete] = await together(
+        stores,
+        id,
+        await spawnReady(stores, id, [
+          ["remove", { locationId: "SEAT:3A", componentId: "CUSHION" }],
+          ["complete", {}],
+        ]),
+      );
+      expectNoEmptyCompletion(store, id, remove as Outcome, complete as Outcome);
     }
     store.close();
   });
 
   it("concurrent completion is idempotent: one process completes, the others get the same report", async () => {
     const { stores, store, newVisit } = setup();
-    for (let i = 0; i < 5; i++) {
+    for (let round = 0; round < ROUNDS; round++) {
       const id = newVisit([CUSHION_3A, BACKREST_3A]);
-      const t = Date.now() + START_DELAY;
-      const results = await Promise.all([0, 1, 2, 3].map(() => run(stores, id, "complete", t, {})));
-      expect(results.every((r) => r.ok)).toBe(true);
-      expect(results.filter((r) => r.alreadyCompleted === false)).toHaveLength(1);
-      for (const r of results) expect(r.report).toEqual(results[0]?.report);
-      expect(store.getVisit(id).events.filter((e) => e.type === "COMPLETED")).toHaveLength(1);
-    }
-    store.close();
-  });
-
-  it("two editors of one record: exactly one wins, the other gets a conflict (no silent overwrite)", async () => {
-    const { stores, store, newVisit } = setup();
-    const panel = { locationId: "FLOOR:FWD", componentId: "CARPET_PANEL", selection: "PRIMARY", substituteId: null, note: "" };
-    for (let i = 0; i < 6; i++) {
-      const id = newVisit([]);
-      const t = Date.now() + START_DELAY;
-      const [a, b] = await Promise.all([
-        run(stores, id, "upsert", t, { record: { ...panel, quantity: 2 }, expectedRecordVersion: 0 }),
-        run(stores, id, "upsert", t, { record: { ...panel, quantity: 4 }, expectedRecordVersion: 0 }),
-      ]);
-      expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
-      const loser = a.ok ? b : a;
-      expect(loser.code).toBe("STALE_RECORD");
-      const record = at(store.getVisit(id).records, 0);
-      expect(record.version).toBe(1);
-      expect(record.quantity).toBe(a.ok ? 2 : 4);
-      expect(record.lines[0]?.qty).toBe(record.quantity);
+      const outcomes = await together(
+        stores,
+        id,
+        await spawnReady(
+          stores,
+          id,
+          [0, 1, 2, 3].map((): [string, unknown] => ["complete", {}]),
+        ),
+      );
+      expectOneCompletion(store, id, outcomes);
     }
     store.close();
   });
@@ -184,16 +459,7 @@ describe("separate-process races", () => {
   it("many processes adding different records all commit and the visit version counts every change", async () => {
     const { stores, store, newVisit } = setup();
     const id = newVisit([]);
-    const seats = ["1A", "2A", "3A", "4A", "5A", "6A", "7A", "8A"];
-    const t = Date.now() + START_DELAY;
-    const results = await Promise.all(
-      seats.map((s) => run(stores, id, "upsert", t, { record: { ...CUSHION_3A, locationId: `SEAT:${s}` }, expectedRecordVersion: 0 })),
-    );
-    expect(results.every((r) => r.ok)).toBe(true);
-    const visit = store.getVisit(id);
-    expect(visit.records.map((r) => r.locationId).sort()).toEqual(seats.map((s) => `SEAT:${s}`).sort());
-    expect(visit.version).toBe(1 + seats.length);
-    expect(visit.events.filter((e) => e.type === "RECORD_ADDED")).toHaveLength(seats.length);
+    expectAllWritersCommitted(store, id, await together(stores, id, await spawnReady(stores, id, seatWriters())));
     store.close();
   });
 });
