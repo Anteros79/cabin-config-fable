@@ -4,13 +4,21 @@
 //   node tools/seed-sample-visits.ts [--data-dir DIR]
 import { lookup } from "../src/domain/resolve.ts";
 import { buildSnapshot } from "../src/domain/visitLogic.ts";
+import { parseCliArgs, UsageError } from "../src/importer/args.ts";
 import { importReference } from "../src/importer/cli.ts";
 import { resolveStoreConfig } from "../src/server/config.ts";
 import { inspectStore, ReferenceStore } from "../src/server/referenceStore.ts";
 import { VisitStore } from "../src/server/visitStore.ts";
 
-const dirFlag = process.argv.indexOf("--data-dir");
-const stores = resolveStoreConfig({ dataDir: dirFlag > 0 ? process.argv[dirFlag + 1] : undefined });
+let dataDir: string | undefined;
+try {
+  dataDir = parseCliArgs(process.argv.slice(2), { "data-dir": { type: "string" } })["data-dir"];
+} catch (e) {
+  if (!(e instanceof UsageError)) throw e;
+  console.error(`${e.message}\nUsage: node tools/seed-sample-visits.ts [--data-dir DIR]`);
+  process.exit(64);
+}
+const stores = resolveStoreConfig({ dataDir });
 
 if (inspectStore(stores.referencePath).kind !== "reference") {
   const outcome = importReference({ referencePath: stores.referencePath, visitsPath: stores.visitsPath });

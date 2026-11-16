@@ -12,7 +12,7 @@ import { closeSync, copyFileSync, existsSync, mkdtempSync, openSync, readSync, r
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { parseArgs } from "node:util";
+import { parseCliArgs } from "../src/importer/args.ts";
 import { PROJECT_ROOT, resolveStoreConfig } from "../src/server/config.ts";
 import { VisitStore } from "../src/server/visitStore.ts";
 
@@ -67,7 +67,7 @@ function verify(path: string): number {
 function run(argv: string[]): number {
   let out: string | undefined;
   try {
-    out = parseArgs({ args: argv, options: { out: { type: "string" } }, strict: true, allowPositionals: false }).values.out;
+    out = parseCliArgs(argv, { out: { type: "string" } }).out;
   } catch (e) {
     console.error(`${(e as Error).message}\nUsage: npm run visits:backup -- [--out <file>]`);
     return 2;

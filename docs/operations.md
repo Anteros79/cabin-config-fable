@@ -42,6 +42,18 @@ The server has no login. It listens on the loopback address by default and refus
 | `npm run reference:findings` | List validation findings for the active release |
 | `npm run reference:reset` | Rebuild the reference store from scratch |
 
+Every command checks its options strictly: an unknown or misspelled option, a stray argument, or a path option with no value stops the command before it touches any store. Options: `--data-dir`, `--reference-db`, `--visits-db` (path options; `--name value` and `--name=value` both work), `--source-root`, `--fixtures`, `--label`, `--no-activate`, `--no-candidate`, `--accept-changed` (import and reset), `--release` (findings) and `--yes` (reset). Run `node src/importer/cli.ts help` for the list.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Done |
+| 1 | The command failed, or `reset` was run without `--yes` |
+| 2 | The import produced a release with blocking findings. They are printed (at most 20) and the previous release stays active |
+| 3 | Visit history changed during the command. Investigate before using the stores |
+| 64 | Usage error: unknown command, no command, unknown option or missing value. One line names the problem, then the usage text, on stderr |
+
+`reference:findings` shows the newest release when it was rejected, otherwise the active one; `-- --release <id>` shows any release. `sample:seed` and `originals:verify` also reject unknown options (exit 64).
+
 Releases are immutable once active. An import that fails validation leaves the previous release active. Existing visits are unaffected by any import or reset because each visit carries its own frozen copy of the configuration it was opened against.
 
 ### Reset safety

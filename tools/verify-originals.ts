@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseCliArgs, UsageError } from "../src/importer/args.ts";
 import { DATA_ORIGINALS, IMAGE_ORIGINALS, resolveImageRoot } from "../src/importer/originals.ts";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -34,7 +35,16 @@ function current(root: string): (Entry | { path: string; missing: true })[] {
   return ORIGINALS.map((path) => hashFile(root, path));
 }
 
-if (process.argv.includes("--write")) {
+let writeManifest: boolean;
+try {
+  writeManifest = parseCliArgs(process.argv.slice(2), { write: { type: "boolean" } }).write === true;
+} catch (e) {
+  if (!(e instanceof UsageError)) throw e;
+  console.error(`${e.message}\nUsage: node tools/verify-originals.ts [--write]`);
+  process.exit(64);
+}
+
+if (writeManifest) {
   if (!sourceRootPresent) {
     console.error(`Cannot write the manifest: source root not present: ${sourceRoot}`);
     process.exit(1);
