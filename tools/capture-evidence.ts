@@ -1,18 +1,22 @@
 // Captures the verification evidence on purpose, never as a side effect of a test run (TST-05, decision D7).
 //   npm run evidence:capture                    build the e2e client, then capture into verification/out/ (git-ignored)
 //   npm run evidence:capture -- --promote       capture, then copy the curated subset into verification/
-//   npm run evidence:capture -- --promote-only  copy what an earlier capture left in verification/out/ (look first, then promote)
+//   npm run evidence:capture -- --promote-only  copy what an earlier capture left in verification/out/ (look first, then promote);
+//                                               add --force when that capture was made at another commit than HEAD
 //   npm run evidence:capture -- --assert-perf   also fail when the frame rate is under 30 fps or a pick takes over 250 ms
 //
 // It starts a disposable server on the e2e build (e2e/server.ts: temp stores, port 0, never ./data), drives the bundled
-// Chromium with Playwright's library API and writes to verification/out/: 19 captures and captures.json, sample visits,
+// Chromium with Playwright's library API and writes to verification/out/: 18 captures (17 desktop, 1 mobile) and captures.json, sample visits,
 // reports, PDFs and CSV, performance.json, webgl.json, framing.json, axe JSON (light, dark, mobile), the comparison sheets
 // (tools/make-comparisons.mjs) and vitest-output.txt. Timestamps go into PROVENANCE.json only. The sample visits are
 // written with fixed idempotency keys and a fixed clock, so their ids differ between runs but their content, totals and
 // report body do not. PNG and PDF bytes still differ between machines and runs: promotion is a human decision.
+// PROVENANCE.json names the exact commit the renders were built from. A capture made with changes outside verification/
+// records them (`git diff HEAD --stat` and the sha256 of `git diff HEAD`) and can never be promoted: commit first.
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { cpus, release as osRelease, platform, totalmem } from "node:os";
 import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
@@ -23,6 +27,7 @@ import { lookup } from "../src/domain/resolve.ts";
 import type { ReferenceRelease } from "../src/domain/types.ts";
 import { buildSnapshot } from "../src/domain/visitLogic.ts";
 import { isEntryPoint, parseCliArgs, UsageError } from "../src/importer/args.ts";
+import { renderReportPdf } from "../src/server/pdf.ts";
 import { ReferenceStore } from "../src/server/referenceStore.ts";
 import { VisitStore } from "../src/server/visitStore.ts";
 
@@ -102,7 +107,12 @@ async function openVisit3D(page: Page, server: TestServer, visitId: string): Pro
  * Two sample visits on N100TL, written straight into the server's temp visit store with fixed idempotency keys and a
  * fixed clock: a completed one and a draft with the same two records. Returns their ids.
  */
-function createSampleVisits(server: TestServer): { completedId: string; draftId: string; draftPreview: unknown; releaseId: string } {
+function createSampleVisits(server: TestServer): {
+  completedId: string;
+  draftId: string;
+  draftPreview: ReturnType<VisitStore["getReport"]>;
+  releaseId: string;
+} {
   const referencePath = join(server.dataDir, "reference.sqlite");
   const visitsPath = join(server.dataDir, "visits.sqlite");
   const reference = ReferenceStore.open(referencePath, visitsPath, { readOnly: true });
@@ -149,7 +159,11 @@ async function writeSamples(server: TestServer, browser: Browser): Promise<{ com
   writeFileSync(join(SAMPLES, "sample-completed-report.pdf"), await getBytes(server, `/api/visits/${completedId}/report.pdf`));
   writeJson(join(SAMPLES, "sample-draft-visit.json"), await getJson(server, `/api/visits/${draftId}`));
   writeJson(join(SAMPLES, "sample-draft-report-preview.json"), draftPreview);
-  writeFileSync(join(SAMPLES, "sample-draft-report-preview.pdf"), await getBytes(server, `/api/visits/${draftId}/report.pdf`));
+  // the same renderer the server uses, on the fixed-clock preview, so the PDF and the JSON carry the same generation time
+  writeFileSync(
+    join(SAMPLES, "sample-draft-report-preview.pdf"),
+    await renderReportPdf(draftPreview.report, draftPreview.linkedEvents, draftPreview.basisSha256),
+  );
   const prep = `/api/preparation?tail=${SAMPLE_TAIL}&date=${SAMPLE_DATE}`;
   writeFileSync(join(SAMPLES, `sample-preparation-${SAMPLE_TAIL}-${SAMPLE_DATE}.csv`), await getBytes(server, `${prep}&format=csv`));
 
@@ -182,7 +196,7 @@ interface CaptureMeta {
   viewport: { width: number; height: number; deviceScaleFactor: number };
 }
 
-/** webgl.json, framing.json, the 18 desktop captures and performance.json, from one desktop page on an empty visit. */
+/** webgl.json, framing.json, the 17 desktop captures and performance.json, from one desktop page on an empty visit. */
 async function captureDesktop(server: TestServer, browser: Browser, releaseId: string): Promise<{ captures: CaptureMeta[]; performance: PerfRecord }> {
   const context = await browser.newContext({ viewport: DESKTOP, deviceScaleFactor: 1, locale: "en-GB", timezoneId: "UTC" });
   await context.addInitScript(() => localStorage.setItem("cabin-kit.hint.3d", "dismissed"));
@@ -329,7 +343,7 @@ interface PerfRecord {
   selectionFeedback: { method: string; samplesMs: number[]; maxMs: number; medianMs: number; target: string };
 }
 
-/** The 19th capture: the default cutaway at phone size, as a 390 × 844 touch viewport shows it. */
+/** The 18th capture, the only mobile one: the default cutaway at phone size, as a 390 × 844 touch viewport shows it. */
 async function captureMobile(server: TestServer, browser: Browser, releaseId: string): Promise<CaptureMeta> {
   const context = await browser.newContext({ viewport: MOBILE, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: "en-GB", timezoneId: "UTC" });
   await context.addInitScript(() => localStorage.setItem("cabin-kit.hint.3d", "dismissed"));
@@ -409,11 +423,37 @@ async function writeAxe(server: TestServer, browser: Browser, visits: { complete
   return violations;
 }
 
-function gitCommit(): string {
-  const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: PROJECT_ROOT, encoding: "utf8" }).trim();
-  const dirty = execFileSync("git", ["status", "--porcelain"], { cwd: PROJECT_ROOT, encoding: "utf8" }).trim() !== "";
-  return dirty ? `${sha} plus uncommitted changes` : sha;
+interface SourceState {
+  /** the full SHA of HEAD: the commit the renders were built from */
+  commit: string;
+  /** present only when files outside verification/ differ from HEAD; such a capture is never promoted */
+  uncommitted?: { diffStat: string; diffSha256: string; untracked: string[] };
 }
+
+const git = (...args: string[]) => execFileSync("git", args, { cwd: PROJECT_ROOT, encoding: "utf8", maxBuffer: 256 * 2 ** 20 });
+
+/** HEAD, and what differs from it outside verification/ (tracked changes and untracked files). */
+function sourceState(): SourceState {
+  const commit = git("rev-parse", "HEAD").trim();
+  const outside = ["--", ".", ":(exclude)verification"];
+  const diffStat = git("diff", "HEAD", "--stat", ...outside).trim();
+  const untracked = git("ls-files", "--others", "--exclude-standard", ...outside)
+    .split("\n")
+    .filter((line) => line !== "");
+  if (diffStat === "" && untracked.length === 0) return { commit };
+  return {
+    commit,
+    uncommitted: {
+      diffStat,
+      diffSha256: createHash("sha256")
+        .update(git("diff", "HEAD", ...outside))
+        .digest("hex"),
+      untracked,
+    },
+  };
+}
+
+const DIRTY_MESSAGE = "files outside verification/ differ from HEAD; commit them first so PROVENANCE.json names the commit the renders come from";
 
 /** Runs a command in the project, its output to the console; true when it exits 0. */
 function run(command: string, args: string[]): boolean {
@@ -421,6 +461,8 @@ function run(command: string, args: string[]): boolean {
 }
 
 async function capture(assertPerf: boolean): Promise<number> {
+  const source = sourceState();
+  if (source.uncommitted) console.warn(`Warning: ${DIRTY_MESSAGE}. This capture cannot be promoted.`);
   if (!existsSync(join(PROJECT_ROOT, "dist", "web-e2e", "index.html"))) throw new CaptureError('No e2e build in dist/web-e2e. Run "npm run build:e2e" first.');
   rmSync(OUT, { recursive: true, force: true });
   for (const dir of [CAPTURES, SAMPLES, AXE]) mkdirSync(dir, { recursive: true });
@@ -452,10 +494,11 @@ async function capture(assertPerf: boolean): Promise<number> {
   const cpu = cpus()[0]?.model ?? "unknown CPU";
   writeJson(join(OUT, "PROVENANCE.json"), {
     capturedAt,
-    commit: gitCommit(),
+    commit: source.commit,
     machine: `${cpu}, ${cpus().length} cores, ${Math.round(totalmem() / 2 ** 30)} GB, ${platform()} ${osRelease()}`,
     node: process.version,
     browser: browserVersion,
+    ...(source.uncommitted ? { uncommitted: source.uncommitted } : {}),
   });
 
   let failed = 0;
@@ -481,42 +524,96 @@ async function capture(assertPerf: boolean): Promise<number> {
   return failed;
 }
 
-/** Copies the curated subset from verification/out/ into verification/, replacing what was there. */
-function promote(): void {
+/**
+ * Copies the curated subset from verification/out/ into verification/, replacing captures/, comparisons/ and samples/
+ * wholesale. Everything is first copied into a staging folder; only then is each target swapped in by rename, and the
+ * previous version is removed last, so a failed copy leaves verification/ as it was.
+ */
+function promote(force: boolean): void {
   const missing = [...CURATED_DIRS, ...CURATED_FILES].filter((name) => !existsSync(join(OUT, name)));
   if (missing.length > 0)
     throw new CaptureError(
       `Nothing promoted: ${missing.join(", ")} missing from ${OUT}. Capture first (the comparison sheets need the image originals in ../../ or CABIN_KIT_SOURCE_ROOT).`,
     );
-  for (const dir of CURATED_DIRS) {
-    rmSync(join(VERIFICATION, dir), { recursive: true, force: true });
-    cpSync(join(OUT, dir), join(VERIFICATION, dir), { recursive: true });
+  const provenance = JSON.parse(readFileSync(join(OUT, "PROVENANCE.json"), "utf8")) as SourceState & { capturedAt: string };
+  if (provenance.uncommitted) throw new CaptureError(`Nothing promoted: when this capture was made, ${DIRTY_MESSAGE}.`);
+  const now = sourceState();
+  if (now.uncommitted) throw new CaptureError(`Nothing promoted: ${DIRTY_MESSAGE}.`);
+  if (provenance.commit !== now.commit) {
+    if (!force)
+      throw new CaptureError(
+        `Nothing promoted: the capture in ${OUT} was made at ${provenance.commit}, but HEAD is ${now.commit}. Capture again, or add --force to promote it as made at ${provenance.commit}.`,
+      );
+    console.warn(`Warning: promoting a capture made at ${provenance.commit}, not at HEAD (${now.commit}).`);
   }
-  for (const file of CURATED_FILES) cpSync(join(OUT, file), join(VERIFICATION, file));
-  const provenance = JSON.parse(readFileSync(join(VERIFICATION, "PROVENANCE.json"), "utf8")) as { capturedAt: string; commit: string };
+
+  const names = [...CURATED_DIRS, ...CURATED_FILES];
+  const staging = join(VERIFICATION, `.promote-${process.pid}`);
+  const previous = join(VERIFICATION, `.previous-${process.pid}`);
+  rmSync(staging, { recursive: true, force: true });
+  rmSync(previous, { recursive: true, force: true });
+  try {
+    for (const name of names) cpSync(join(OUT, name), join(staging, name), { recursive: true });
+  } catch (e) {
+    rmSync(staging, { recursive: true, force: true });
+    throw e;
+  }
+  mkdirSync(previous);
+  const moved: string[] = [];
+  try {
+    for (const name of names) {
+      if (existsSync(join(VERIFICATION, name))) {
+        renameSync(join(VERIFICATION, name), join(previous, name));
+        moved.push(name);
+      }
+      renameSync(join(staging, name), join(VERIFICATION, name));
+    }
+  } catch (e) {
+    // put back what was there; whatever of the new copy was swapped in is replaced by it
+    for (const name of moved) {
+      rmSync(join(VERIFICATION, name), { recursive: true, force: true });
+      renameSync(join(previous, name), join(VERIFICATION, name));
+    }
+    rmSync(staging, { recursive: true, force: true });
+    rmSync(previous, { recursive: true, force: true });
+    throw e;
+  }
+  rmSync(staging, { recursive: true, force: true });
+  rmSync(previous, { recursive: true, force: true });
   console.log(`Promoted ${[...CURATED_DIRS.map((d) => `${d}/`), ...CURATED_FILES].join(", ")} (captured ${provenance.capturedAt} at ${provenance.commit}).`);
   console.log("Look at every promoted image, update the judgments in verification/README.md, then commit by hand.");
 }
 
 async function main(argv: string[]): Promise<number> {
-  let flags: { promote?: boolean; "promote-only"?: boolean; "assert-perf"?: boolean };
+  let flags: { promote?: boolean; "promote-only"?: boolean; "assert-perf"?: boolean; force?: boolean };
   try {
-    flags = parseCliArgs(argv, { promote: { type: "boolean" }, "promote-only": { type: "boolean" }, "assert-perf": { type: "boolean" } });
+    flags = parseCliArgs(argv, {
+      promote: { type: "boolean" },
+      "promote-only": { type: "boolean" },
+      "assert-perf": { type: "boolean" },
+      force: { type: "boolean" },
+    });
   } catch (e) {
     if (!(e instanceof UsageError)) throw e;
-    console.error(`${e.message}\nUsage: node tools/capture-evidence.ts [--promote | --promote-only] [--assert-perf]`);
+    console.error(`${e.message}\nUsage: node tools/capture-evidence.ts [--promote | --promote-only [--force]] [--assert-perf]`);
+    return 64;
+  }
+  if (flags.force && !flags["promote-only"]) {
+    console.error("--force applies only to --promote-only\nUsage: node tools/capture-evidence.ts [--promote | --promote-only [--force]] [--assert-perf]");
     return 64;
   }
   if (flags["promote-only"]) {
-    promote();
+    promote(flags.force === true);
     return 0;
   }
+  // refuse before a capture that could never be promoted
+  if (flags.promote && sourceState().uncommitted) throw new CaptureError(`Nothing captured: --promote needs a clean tree, but ${DIRTY_MESSAGE}.`);
   const failed = await capture(flags["assert-perf"] === true);
   if (failed !== 0) {
     if (flags.promote) console.error("Nothing promoted: the capture did not complete cleanly.");
     return failed;
   }
-  if (flags.promote) promote();
+  if (flags.promote) promote(false);
   return 0;
 }
 

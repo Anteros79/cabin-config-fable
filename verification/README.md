@@ -4,7 +4,7 @@ This folder holds curated evidence: renders of the 3D view, sheets comparing the
 
 ## What is committed and when it was captured
 
-`PROVENANCE.json` records the capture: 2026-11-16 21:46 UTC, from commit `1b40503` plus the uncommitted changes of Task 6.2 (the capture tool, scripts and documents; no application source), on an Apple M4 Pro (14 cores, 24 GB, macOS darwin 27.3.0), Node v24.16.0, Chromium 159.0.8154.6 headless (the browser bundled with Playwright), WebGL 2 through ANGLE Metal.
+`PROVENANCE.json` says when the files below were captured, the exact commit the renders were built from, and the machine, Node and browser (Chromium bundled with Playwright, headless). It is the only record of these; this page does not copy them. A capture made with changes outside `verification/` is never promoted, so the commit named there is the source of every render. The renderer is in `performance.json`.
 
 | Path | What it is |
 | --- | --- |
@@ -12,7 +12,7 @@ This folder holds curated evidence: renders of the 3D view, sheets comparing the
 | `captures/` | 18 renders of this build and `captures.json` (release, layout, visual family, light, camera, layers and viewport of each) |
 | `comparisons/` | 12 sheets placing a supplied original beside a render, and `index.json` |
 | `samples/` | Sample visits, their reports as JSON and PDF, and a preparation export |
-| `performance.json` | Frame rate and selection feedback on the machine above |
+| `performance.json` | Frame rate and selection feedback on the machine named in `PROVENANCE.json` |
 
 PNG and PDF bytes differ between machines, so the files change only when someone promotes a new capture. Promoting is a decision: look at every image first.
 
@@ -33,13 +33,13 @@ Browser test reports go to the ignored `playwright-report/` and `test-results/` 
 npm run evidence:capture                     # everything below into verification/out/ (git-ignored)
 npm run evidence:capture -- --assert-perf    # also fails under 30 fps or over 250 ms per pick
 npm run evidence:capture -- --promote        # capture, then copy the curated subset here
-npm run evidence:capture -- --promote-only   # copy what the last capture left in verification/out/
+npm run evidence:capture -- --promote-only   # copy what the last capture left in verification/out/ (--force if made at another commit)
 npm run comparisons                          # only the comparison sheets, from verification/out/captures
 ```
 
 `evidence:capture` builds the client with test hooks (`dist/web-e2e`), starts its own server with temporary stores (never `./data`) and drives Chromium. It writes to `verification/out/`: the 18 captures and `captures.json`, the samples, `performance.json`, `webgl.json` (renderer and scene description), `framing.json`, axe results for eight views in the light and dark themes and two at phone width (`axe/`), the comparison sheets, `vitest-output.txt` (every vitest test by name) and `PROVENANCE.json`. The sheets need the 14 image originals (`CABIN_KIT_SOURCE_ROOT`, else `../../`); without them they are skipped and nothing can be promoted. A capture with a failed step promotes nothing.
 
-`--promote` copies `captures/`, `comparisons/`, `samples/`, `performance.json` and `PROVENANCE.json`, replacing what is here. The rest stays in `verification/out/`. The axe results are not curated, in either theme: the browser tests assert zero violations on every view in the light, dark and mobile projects on each run, so a stored copy would only go stale. The capture above recorded 0 violations on all 18 page states.
+`--promote` replaces `captures/`, `comparisons/` and `samples/` wholesale (files no longer captured disappear) and replaces `performance.json` and `PROVENANCE.json`. It copies everything into a staging folder first and swaps it in only when the copy succeeded. It refuses when files outside `verification/` differ from HEAD, at capture time or now; `--promote-only` also refuses, unless given `--force`, when the capture was made at another commit than HEAD. The rest stays in `verification/out/`. The axe results are not curated, in either theme: the browser tests assert zero violations on every view in the light, dark and mobile projects on each run, so a stored copy would only go stale. The capture above recorded 0 violations on all 18 page states.
 
 The sample visits are written with fixed idempotency keys and a fixed clock (2026-11-12T09:00:00Z), so a new capture gives them new ids but the same content, totals and report body.
 
@@ -53,7 +53,7 @@ The sample visits are written with fixed idempotency keys and a fixed clock (202
 | Selection feedback, pick to next rendered frame, 10 picks | median 8.7 ms, max 16.9 ms | within 250 ms |
 | Scene size | about 489,000 triangles, 23 draw calls | — |
 
-60 fps is the display cap in headless Chromium, so the true headroom is not measured. These figures apply to this machine only. The targets are checked only by `evidence:capture -- --assert-perf`, never by the tests; the browser tests check the scene's draw-call and triangle budgets instead.
+60 fps is the display cap in headless Chromium, so the true headroom is not measured. These figures apply only to the machine named in `PROVENANCE.json`. The targets are checked only by `evidence:capture -- --assert-perf`, never by the tests; the browser tests check the scene's draw-call and triangle budgets instead.
 
 Framing (`framing.json` of the same capture, not committed): in the default cutaway view the cabin spans 74% of the canvas width and 64% of its height and lies wholly inside it. `e2e/scene.spec.ts` asserts this framing on every run.
 
@@ -81,7 +81,7 @@ Both visits are on N100TL, 2026-11-12, technician "Sample Technician (fictional)
 | `sample-completed-visit.json`, `sample-completed-report.json` | A completed visit and its stored report (schema `cabin-kit.report/2`) |
 | `sample-completed-report.pdf` | The same report rendered by the server |
 | `sample-completed-report-browser-print.pdf` | The report page printed by Chromium |
-| `sample-draft-visit.json`, `sample-draft-report-preview.json`, `.pdf` | A draft and its preview (marked as not final). The JSON preview is built at the fixed clock; the PDF is rendered by the server at capture time |
+| `sample-draft-visit.json`, `sample-draft-report-preview.json`, `.pdf` | A draft and its preview (marked as not final). The JSON preview and its PDF (the server's renderer) are both built at the fixed clock |
 | `sample-preparation-N100TL-2026-11-12.csv`, `.pdf` | Preparation overview export and the printed page |
 
 The capture refuses to finish unless the sample report carries exactly the six expected totals. `e2e/workflow.spec.ts` checks on every run that the JSON download, the server PDF and the printed PDF carry the same six totals as the stored records. The earlier samples, with `cabin-kit.report/1` reports from before Phase 2, were replaced; stored `/1` reports are still served unchanged (decision D6) and are covered by `tests/integration/visitStoreCompat.test.ts`, not by samples here.
@@ -135,7 +135,7 @@ Summary (re-judged in Task 6.2 against the committed sheets): 8 PASS, 13 PARTIAL
 ## Not verified
 
 - A real screen reader. The checks are axe-core plus structural assertions (landmarks, headings, labels, live regions) and a keyboard-only run.
-- Any browser other than Chromium 159, and any device other than this one. The mobile project is Chromium emulating a 390×844 touch viewport, not a phone.
+- Any browser other than the Chromium named in `PROVENANCE.json`, and any device other than that machine. The mobile project is Chromium emulating a 390×844 touch viewport, not a phone.
 - Frame rate on weaker hardware or integrated graphics.
 - The PDFs in viewers other than the text extraction used by the tests. I did not open them in Preview or Acrobat.
 - The baseline in a browser. Its tests and linter were run in an isolated copy; its pages were not exercised.

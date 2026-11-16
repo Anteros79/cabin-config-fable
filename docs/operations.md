@@ -120,10 +120,10 @@ Evidence (renders, comparison sheets, sample visits and reports, performance) is
 npm run evidence:capture                     # writes verification/out/ (git-ignored)
 npm run evidence:capture -- --assert-perf    # also fails under 30 fps or over 250 ms per pick
 npm run evidence:capture -- --promote        # capture, then copy the curated subset into verification/
-npm run evidence:capture -- --promote-only   # copy what the last capture left in verification/out/
+npm run evidence:capture -- --promote-only   # copy what the last capture left in verification/out/ (--force if made at another commit)
 ```
 
-The capture uses its own server on the e2e build with temporary stores, and the bundled Chromium. The comparison sheets need the 14 image originals (`CABIN_KIT_SOURCE_ROOT`, else `../../`); without them they are skipped and nothing can be promoted. Promotion replaces `verification/captures/`, `comparisons/`, `samples/`, `performance.json` and `PROVENANCE.json`. Look at every promoted image, update the judgments in `verification/README.md`, then commit by hand.
+The capture uses its own server on the e2e build with temporary stores, and the bundled Chromium. The comparison sheets need the 14 image originals (`CABIN_KIT_SOURCE_ROOT`, else `../../`); without them they are skipped and nothing can be promoted. Promotion replaces `verification/captures/`, `comparisons/` and `samples/` wholesale, and `performance.json` and `PROVENANCE.json`, through a staging folder. It needs the tree clean outside `verification/`, so `PROVENANCE.json` names the exact commit the renders were built from. Look at every promoted image, update the judgments in `verification/README.md`, then commit by hand.
 
 ## Problems
 
