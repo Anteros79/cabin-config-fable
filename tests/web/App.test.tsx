@@ -168,6 +168,16 @@ describe("App routing", () => {
     }
   });
 
+  it("an out-of-range visits page is replaced in history, so Back does not return to it", async () => {
+    stubApp((_m, url) => (url.startsWith("/api/visits?") ? { body: { items: [], total: 60 } } : undefined));
+    go("#/visits?page=9999");
+    const entries = window.history.length;
+    render(<App />);
+    await waitFor(() => expect(window.location.hash).toBe("#/visits?page=3"));
+    expect(window.history.length).toBe(entries);
+    await screen.findByText(/page 3 of 3/);
+  });
+
   it("VisitsView filter and page come from and go to the URL", async () => {
     const items = Array.from({ length: 3 }, (_, i) => ({
       id: ID,

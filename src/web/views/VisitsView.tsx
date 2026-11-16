@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.ts";
 import { useResource } from "../hooks/useResource.ts";
-import { formatRoute, type Route } from "../routes.ts";
+import { formatRoute, type NavigateOptions, type Route } from "../routes.ts";
 
 const PAGE = 25;
 
@@ -15,7 +15,7 @@ export function VisitsView({
   status: "DRAFT" | "COMPLETED" | null;
   q: string;
   page: number;
-  navigate(hash: string): void;
+  navigate(hash: string, options?: NavigateOptions): void;
 }) {
   // The filter, search and page live in the URL; the form fields only hold what is being typed.
   const [status, setStatus] = useState(routeStatus ?? "");
@@ -43,7 +43,8 @@ export function VisitsView({
   // A page past the end (an old link, or visits removed since) is replaced by the last page.
   const outOfRange = list.state === "ready" && page > pages;
   useEffect(() => {
-    if (outOfRange) navigate(formatRoute({ name: "visits", status: routeStatus, q: routeQ, page: pages }));
+    // A redirect, not a step: replacing the entry keeps Back from returning to the out-of-range page.
+    if (outOfRange) navigate(formatRoute({ name: "visits", status: routeStatus, q: routeQ, page: pages }), { replace: true });
   }, [outOfRange, navigate, routeStatus, routeQ, pages]);
 
   return (

@@ -81,6 +81,24 @@ describe("CheckView writes", () => {
     expect(sent.filter((s) => s.url.startsWith("/api/lookup")).map((s) => s.url.includes("tail=N100TL"))).toEqual([true, false, true]);
   });
 
+  it("a late lookup answer for a previous tail never shows under the next one", async () => {
+    const first = lookup(release, "N100TL", "2026-11-12");
+    const second = lookup(release, "N200TL", "2026-06-30");
+    const slow = deferred<{ body: unknown }>();
+    stubFetch((_method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      return url.includes("tail=N100TL") ? slow.promise : { body: second };
+    });
+    const view = render(<CheckView visitId={null} tail="N100TL" date="2026-11-12" navigate={vi.fn()} visualProfiles={[]} />);
+    view.rerender(<CheckView visitId={null} tail="N200TL" date="2026-06-30" navigate={vi.fn()} visualProfiles={[]} />);
+    const prepLink = () => screen.getByRole("link", { name: "Preparation parts list" }).getAttribute("href");
+    await waitFor(() => expect(prepLink()).toContain("tail=N200TL"));
+    slow.resolve({ body: first });
+    await act(async () => {});
+    expect(prepLink()).toContain("tail=N200TL");
+    expect(screen.getAllByRole("link", { name: "Preparation parts list" })).toHaveLength(1);
+  });
+
   it("Start visit is disabled while the visit is being created", async () => {
     const result = lookup(release, "N100TL", "2026-11-12");
     const answer = deferred<{ status: number; body: unknown }>();

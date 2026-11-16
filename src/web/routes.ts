@@ -9,6 +9,11 @@ export type Route =
   | { name: "reference" }
   | { name: "notFound"; hash: string };
 
+/** How a view asks App to change route. `replace` rewrites the current history entry instead of adding one. */
+export interface NavigateOptions {
+  replace?: boolean;
+}
+
 /** The highest page a route may ask for: keeps the list offset a small safe integer. */
 export const MAX_PAGE = 1_000_000;
 

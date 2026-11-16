@@ -34,7 +34,7 @@ describe("VisitsView", () => {
     stubFetch((): Answer => ({ body: { items: [], total: 60 } }));
     const navigate = vi.fn();
     render(<VisitsView status="DRAFT" q="N100" page={9999} navigate={navigate} />);
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("#/visits?status=DRAFT&q=N100&page=3"));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("#/visits?status=DRAFT&q=N100&page=3", { replace: true }));
     expect(screen.queryByText("No visits match.")).toBeNull();
   });
 
@@ -42,6 +42,6 @@ describe("VisitsView", () => {
     stubFetch((): Answer => ({ body: { items: [], total: 0 } }));
     const navigate = vi.fn();
     render(<VisitsView status={null} q="" page={4} navigate={navigate} />);
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("#/visits"));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("#/visits", { replace: true }));
   });
 });

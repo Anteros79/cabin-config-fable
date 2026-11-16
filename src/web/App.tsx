@@ -2,7 +2,7 @@ import { Component, type ReactNode, useCallback, useEffect, useRef, useState } f
 import type { VisualProfile } from "../domain/types.ts";
 import { ApiError, api, type Health } from "./api.ts";
 import { useResource } from "./hooks/useResource.ts";
-import { isInPageAnchor, parseRoute, type Route } from "./routes.ts";
+import { isInPageAnchor, type NavigateOptions, parseRoute, type Route } from "./routes.ts";
 import { CheckView } from "./views/CheckView.tsx";
 import { LayoutsView } from "./views/LayoutsView.tsx";
 import { PrepView } from "./views/PrepView.tsx";
@@ -137,8 +137,10 @@ export function App() {
     document.title = `${label} · Cabin Kit`;
   }, [route.name, meta]);
 
-  const navigate = useCallback((next: string) => {
-    window.location.hash = next;
+  // `replace` swaps the current history entry (a redirect), so Back does not land on the URL that was replaced.
+  const navigate = useCallback((next: string, options?: NavigateOptions) => {
+    if (options?.replace) window.location.replace(next);
+    else window.location.hash = next;
   }, []);
   const nav: [string, string, boolean][] = [
     ["#/check", "Check", route.name === "check" || route.name === "visit" || (route.name === "prep" && !route.visitId)],

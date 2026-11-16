@@ -52,8 +52,17 @@ export function useResource<T>(key: string | null, fetcher: (signal: AbortSignal
   const keyRef = useRef(key);
   const sequence = useRef(0);
   const inFlight = useRef<AbortController | null>(null);
+  // After unmount nothing may start: a reload() from a late callback would send a request no cleanup can abort.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const start = useCallback((keepData: boolean) => {
+    if (!mounted.current) return;
     const forKey = keyRef.current;
     inFlight.current?.abort();
     inFlight.current = null;

@@ -105,6 +105,16 @@ describe("useResource", () => {
     expect(seen).toHaveLength(renders);
   });
 
+  it("reload after unmount sends nothing", async () => {
+    const { calls, fetcherFor } = controlled<string>();
+    const hook = renderHook(() => useResource("A", fetcherFor("A")));
+    await act(async () => calls[0]?.answer.resolve("first"));
+    const { reload } = hook.result.current;
+    hook.unmount();
+    reload();
+    expect(calls).toHaveLength(1);
+  });
+
   it("a null key is idle and sends nothing", () => {
     const { calls, fetcherFor } = controlled<string>();
     const hook = renderHook(() => useResource(null, fetcherFor("none")));
@@ -131,6 +141,8 @@ describe("useResource", () => {
     act(() => hook.result.current.set((cur) => cur && `${cur}!`));
     expect(hook.result.current).toMatchObject({ state: "loading", data: undefined });
     await act(async () => calls[0]?.answer.resolve("first"));
+    act(() => hook.result.current.set(() => undefined));
+    expect(hook.result.current).toMatchObject({ state: "ready", data: "first" });
     act(() => hook.result.current.set("written"));
     expect(hook.result.current).toMatchObject({ state: "ready", data: "written" });
     await settle();

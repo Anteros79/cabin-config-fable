@@ -6,6 +6,7 @@ export interface Sent {
   method: string;
   url: string;
   body: Record<string, unknown> | null;
+  signal: AbortSignal | null;
 }
 
 /**
@@ -19,7 +20,7 @@ export function stubFetch(handler: (method: string, url: string, body: Record<st
     vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
       const body = typeof init?.body === "string" ? (JSON.parse(init.body) as Record<string, unknown>) : null;
-      sent.push({ method, url, body });
+      sent.push({ method, url, body, signal: init?.signal ?? null });
       const answer = await handler(method, url, body);
       if (answer === "reject") throw new TypeError("failed to fetch");
       const status = answer.status ?? 200;
