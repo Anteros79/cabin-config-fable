@@ -1,7 +1,7 @@
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalJson } from "../domain/canonical.ts";
-import { sha256Hex } from "../domain/hash.ts";
+import { contentHash } from "../domain/hash.ts";
 import type { Finding, ReleaseContent, VisualProfile } from "../domain/types.ts";
 import { validateRelease } from "../domain/validate.ts";
 import { buildCandidateContent } from "./candidate.ts";
@@ -44,11 +44,7 @@ export const VISUAL_PROFILES: VisualProfile[] = [
   },
 ];
 
-export { canonicalJson };
-
-export function contentHash(content: ReleaseContent): string {
-  return sha256Hex(canonicalJson(content));
-}
+export { canonicalJson, contentHash };
 
 export interface StagedBuild {
   content: ReleaseContent;

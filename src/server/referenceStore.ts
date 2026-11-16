@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { contentHash } from "../domain/hash.ts";
 import type { Finding, ReferenceRelease, ReleaseContent } from "../domain/types.ts";
 import { hasBlockingFindings } from "../domain/validate.ts";
-import { contentHash } from "../importer/assemble.ts";
 import { isSameFile } from "./config.ts";
 
 /**

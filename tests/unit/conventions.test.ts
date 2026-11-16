@@ -36,3 +36,8 @@ test("the scan covers a non-empty file set in every tree", () => {
 test("localeCompare is not used outside src/web", () => {
   expect(findMatches(/\.localeCompare\(/)).toEqual([]);
 });
+
+test("src/server does not import the importer's assemble module", () => {
+  const offenders = findMatches(/from\s+["']\.\.\/importer\/assemble(\.ts)?["']/).filter((hit) => hit.startsWith("src/server/"));
+  expect(offenders).toEqual([]);
+});
