@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { HEADREST_TINT_OPACITY, STATUS_COLOUR } from "../src/web/scene/materials.ts";
 import { expect, test } from "./fixtures.ts";
 import {
   cameraOf,
@@ -190,6 +191,47 @@ test("the 176-seat layout stays within the budgets when every location carries a
     const marks = (await scene(page)).marks as { badges: number };
     expect(marks.badges, `${where}: a badge on every location`).toBe(200);
   });
+});
+
+test("the headrest tint attribute carries each seat's status colour at 0.6, and nothing in the other colour modes (WEB-20)", async ({ page, visit }) => {
+  await openScene(page, visit.id);
+  const statuses = { "SEAT:7C": "recorded", "SEAT:12A": "unresolved", "SEAT:15D": "alternate" } as const;
+  await injectStates(page, Object.fromEntries(Object.entries(statuses).map(([id, s]) => [id, { STATUS: s }])));
+  // the scene's own per-seat attribute, read through the e2e build's hook, in the order of its seats
+  const tints = () =>
+    page.evaluate(() => {
+      const s = window.__cabinKit?.scene as unknown as { seats: { location: { id: string } }[]; headrestTint: { array: Float32Array } | null };
+      if (!s.headrestTint) throw new Error("no headrest tint attribute");
+      const a = s.headrestTint.array;
+      return Object.fromEntries(s.seats.map((seat, i) => [seat.location.id, [a[i * 4], a[i * 4 + 1], a[i * 4 + 2], a[i * 4 + 3]] as number[]]));
+    });
+  const inStatusMode = await tints();
+  expect(Object.keys(inStatusMode)).toHaveLength(176);
+  for (const [id, status] of Object.entries(statuses)) {
+    const [r, g, b, w] = inStatusMode[id] ?? [];
+    const colour = STATUS_COLOUR[status];
+    expect(
+      [r, g, b, w].map((v) => Number(v?.toFixed(5))),
+      `${id} ${status}`,
+    ).toEqual([colour.r, colour.g, colour.b, HEADREST_TINT_OPACITY].map((v) => Number(Math.fround(v).toFixed(5))));
+  }
+  const untinted = Object.entries(inStatusMode).filter(([id]) => !(id in statuses));
+  expect(untinted.length).toBe(173);
+  expect(
+    untinted.filter(([, t]) => t[3] !== 0).map(([id]) => id),
+    "a seat with no status has no tint",
+  ).toEqual([]);
+  for (const mode of ["tier", "none"]) {
+    await sceneCall(page, "setColourMode", mode);
+    await settle(page);
+    const tinted = Object.entries(await tints())
+      .filter(([, t]) => t[3] !== 0)
+      .map(([id]) => id);
+    expect(tinted, `no headrest is tinted in the ${mode} colour mode`).toEqual([]);
+  }
+  await sceneCall(page, "setColourMode", "status");
+  await settle(page);
+  expect((await tints())["SEAT:12A"]?.[3], "the tint comes back in the status mode").toBeCloseTo(HEADREST_TINT_OPACITY, 5);
 });
 
 test("spatial picking selects the exact seat and its component", async ({ page, visit }) => {

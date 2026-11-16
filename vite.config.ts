@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import budgets from "./budgets.json" with { type: "json" };
 
 const apiPort = process.env.CABIN_KIT_PORT ?? "4310";
 
@@ -11,6 +12,8 @@ export default defineConfig({
     outDir: "../../dist/web",
     emptyOutDir: true,
     sourcemap: false,
+    // the scene chunk's raw-size budget (budgets.json, which tools/check-budgets.ts asserts): a larger chunk warns here too
+    chunkSizeWarningLimit: budgets.bundle.sceneJsRawKb,
   },
   server: {
     port: 5173,

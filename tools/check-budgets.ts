@@ -2,8 +2,9 @@
 // compares it with budgets.json. Prints a table; exits 1 when any asset is over its budget, when an asset matches no
 // budget (a new chunk must get a budget of its own), or when a budgeted class is missing from the build.
 //   npm run budgets      build, then check
-// Sizes are gzip level 9, in kB of 1000 bytes. The API, scene and coverage numbers in budgets.json are asserted by the
-// tests that measure them (tests/integration, e2e/scene.spec.ts, tests/web/seatBudget.test.ts, vitest.config.ts).
+// Sizes are gzip level 9, in kB of 1000 bytes; the scene chunk also has a raw (uncompressed) budget, which vite.config.ts
+// uses as its chunkSizeWarningLimit. The API, scene and coverage numbers in budgets.json are asserted by the tests that
+// measure them (tests/integration, e2e/scene.spec.ts, tests/web/seatBudget.test.ts, vitest.config.ts).
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -15,18 +16,29 @@ import { isEntryPoint } from "../src/importer/args.ts";
 export type BundleBudgets = typeof budgets.bundle;
 type BudgetName = keyof BundleBudgets;
 
-/** Which budget an asset counts against, by its file name: Vite names each chunk after its entry module. */
-const CLASSES: { budget: BudgetName; matches: (name: string) => boolean }[] = [
-  { budget: "indexJsGzipKb", matches: (n) => n.startsWith("index-") && n.endsWith(".js") },
-  { budget: "sceneJsGzipKb", matches: (n) => n.startsWith("CabinScene-") && n.endsWith(".js") },
-  { budget: "cssGzipKb", matches: (n) => n.endsWith(".css") },
+/** Which budgets an asset counts against, by its file name (Vite names each chunk after its entry module), and how it is measured. */
+const CLASSES: { budget: BudgetName; size: "gzip" | "raw"; matches: (name: string) => boolean }[] = [
+  { budget: "indexJsGzipKb", size: "gzip", matches: (n) => n.startsWith("index-") && n.endsWith(".js") },
+  { budget: "sceneJsGzipKb", size: "gzip", matches: (n) => n.startsWith("CabinScene-") && n.endsWith(".js") },
+  // also Vite's chunkSizeWarningLimit (vite.config.ts), so a build over it warns as well
+  { budget: "sceneJsRawKb", size: "raw", matches: (n) => n.startsWith("CabinScene-") && n.endsWith(".js") },
+  { budget: "cssGzipKb", size: "gzip", matches: (n) => n.endsWith(".css") },
 ];
+
+export interface Asset {
+  name: string;
+  /** gzip level 9, kB of 1000 bytes */
+  gzipKb: number;
+  /** uncompressed, kB of 1000 bytes */
+  rawKb: number;
+}
 
 export interface BudgetRow {
   /** the asset, or "(missing)" for a budgeted class the build did not produce */
   name: string;
   budget: BudgetName | null;
-  gzipKb: number | null;
+  size: "gzip" | "raw" | null;
+  sizeKb: number | null;
   limitKb: number | null;
   ok: boolean;
 }
@@ -36,15 +48,19 @@ export function gzipKb(bytes: Buffer): number {
   return gzipSync(bytes, { level: constants.Z_BEST_COMPRESSION }).length / 1000;
 }
 
-/** One row per asset, then one per budgeted class with no asset. */
-export function checkBundle(assets: { name: string; gzipKb: number }[], limits: BundleBudgets): BudgetRow[] {
-  const rows: BudgetRow[] = assets.map(({ name, gzipKb: size }) => {
-    const budget = CLASSES.find((c) => c.matches(name))?.budget ?? null;
-    const limitKb = budget ? limits[budget] : null;
-    return { name, budget, gzipKb: size, limitKb, ok: limitKb !== null && size <= limitKb };
-  });
-  for (const { budget } of CLASSES) {
-    if (!rows.some((r) => r.budget === budget)) rows.push({ name: "(missing)", budget, gzipKb: null, limitKb: limits[budget], ok: false });
+/** One row per asset and budget it counts against (an asset no budget names gets a failing row), then one per budgeted class with no asset. */
+export function checkBundle(assets: Asset[], limits: BundleBudgets): BudgetRow[] {
+  const rows: BudgetRow[] = [];
+  for (const asset of assets) {
+    const classes = CLASSES.filter((c) => c.matches(asset.name));
+    if (classes.length === 0) rows.push({ name: asset.name, budget: null, size: null, sizeKb: asset.gzipKb, limitKb: null, ok: false });
+    for (const c of classes) {
+      const sizeKb = c.size === "gzip" ? asset.gzipKb : asset.rawKb;
+      rows.push({ name: asset.name, budget: c.budget, size: c.size, sizeKb, limitKb: limits[c.budget], ok: sizeKb <= limits[c.budget] });
+    }
+  }
+  for (const { budget, size } of CLASSES) {
+    if (!rows.some((r) => r.budget === budget)) rows.push({ name: "(missing)", budget, size, sizeKb: null, limitKb: limits[budget], ok: false });
   }
   return rows;
 }
@@ -53,11 +69,12 @@ function table(rows: BudgetRow[]): string[] {
   const cells = rows.map((r) => [
     r.name,
     r.budget ?? "(no budget)",
-    r.gzipKb === null ? "-" : r.gzipKb.toFixed(1),
+    r.size ?? "-",
+    r.sizeKb === null ? "-" : r.sizeKb.toFixed(1),
     r.limitKb === null ? "-" : r.limitKb.toFixed(1),
     r.ok ? "ok" : "OVER",
   ]);
-  const head = ["asset", "budget", "gzip kB", "limit kB", ""];
+  const head = ["asset", "budget", "size", "kB", "limit kB", ""];
   const widths = head.map((h, i) => Math.max(h.length, ...cells.map((c) => (c[i] ?? "").length)));
   return [head, ...cells].map((c) =>
     c
@@ -75,7 +92,10 @@ export function main(assetsDir: string, limits: BundleBudgets, log: (line: strin
   const assets = readdirSync(assetsDir)
     .filter((name) => name.endsWith(".js") || name.endsWith(".css"))
     .sort()
-    .map((name) => ({ name, gzipKb: gzipKb(readFileSync(join(assetsDir, name))) }));
+    .map((name) => {
+      const bytes = readFileSync(join(assetsDir, name));
+      return { name, gzipKb: gzipKb(bytes), rawKb: bytes.length / 1000 };
+    });
   const rows = checkBundle(assets, limits);
   for (const line of table(rows)) log(line);
   const failed = rows.filter((r) => !r.ok);

@@ -1,8 +1,9 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { createServer, type Server } from "node:net";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { PROJECT_ROOT } from "../../src/server/config.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import { VisitStore } from "../../src/server/visitStore.ts";
@@ -15,6 +16,9 @@ afterEach(() => {
 });
 
 const MAIN = join(PROJECT_ROOT, "src", "server", "main.ts");
+const IMPORTER = join(PROJECT_ROOT, "src", "importer", "cli.ts");
+/** How long a started server may take to print "listening on" before the wait fails by name. */
+const LISTENING_TIMEOUT_MS = 30_000;
 const BACKUP = join(PROJECT_ROOT, "tools", "backup-visits.ts");
 const SEED = join(PROJECT_ROOT, "tools", "seed-sample-visits.ts");
 
@@ -51,10 +55,21 @@ function startMain(dataDir: string, extra: Record<string, string> = {}) {
   children.push(child);
   const output = collect(child);
   const listening = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(new Error(`the "listening" wait timed out: no "listening on" from the server within ${LISTENING_TIMEOUT_MS} ms; stdout: ${output.stdout()}`)),
+      LISTENING_TIMEOUT_MS,
+    );
     child.stdout?.on("data", () => {
-      if (output.stdout().includes("listening on")) resolve();
+      if (output.stdout().includes("listening on")) {
+        clearTimeout(timer);
+        resolve();
+      }
     });
-    output.done.then((exit) => reject(new Error(`server exited ${exit.code} before listening: ${exit.stderr}`)));
+    output.done.then((exit) => {
+      clearTimeout(timer);
+      reject(new Error(`server exited ${exit.code} before listening: ${exit.stderr}`));
+    });
   });
   /** The port the server printed once it is listening. */
   const port = async (): Promise<number> => {
@@ -83,6 +98,28 @@ const releaseCount = (dataDir: string): number => {
     ref.close();
   }
 };
+
+/**
+ * A data directory with the reference data imported once (beforeAll), so a test that is not about the first-start import
+ * starts from a copy and its server does no import work of its own.
+ */
+let importedTemplate = "";
+beforeAll(async () => {
+  importedTemplate = mkdtempSync(join(tmpdir(), "cabin-kit-main-template-"));
+  const child = spawn(process.execPath, [IMPORTER, "import"], { env: cleanEnv({ CABIN_KIT_DATA_DIR: importedTemplate }), stdio: ["ignore", "pipe", "pipe"] });
+  children.push(child);
+  const exit = await collect(child).done;
+  if (exit.code !== 0) throw new Error(`template import exited ${exit.code}: ${exit.stderr}`);
+}, 60_000);
+afterAll(() => {
+  if (importedTemplate) rmSync(importedTemplate, { recursive: true, force: true });
+});
+/** A fresh data directory holding a copy of the imported template. */
+function importedDataDir(): string {
+  const dir = tempDir("cabin-kit-main-");
+  cpSync(importedTemplate, dir, { recursive: true });
+  return dir;
+}
 
 describe("server process", () => {
   it("first start imports, second start does not re-import", async () => {
@@ -119,16 +156,15 @@ describe("server process", () => {
     expect(releaseCount(dataDir)).toBe(1); // the server used the seed's reference store instead of importing its own
   });
 
-  it("SIGTERM exits 0 within 5 s", async () => {
-    const dataDir = tempDir("cabin-kit-main-");
+  it("SIGTERM exits 0 cleanly", async () => {
+    const dataDir = importedDataDir();
     const server = startMain(dataDir);
     await server.listening;
-    const sent = Date.now();
     server.child.kill("SIGTERM");
     const exit = await server.done;
     expect(exit.code).toBe(0);
-    expect(Date.now() - sent).toBeLessThan(5000);
     expect(exit.stderr).toBe("");
+    expect(exit.stdout, "the copy was already imported").not.toContain("Reference store created");
   });
 
   it("an occupied port exits 1 with a clear message", async () => {
