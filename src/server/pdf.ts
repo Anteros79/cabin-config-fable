@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { rulesNotUsedLine } from "../domain/report.ts";
 import type { Report, VisitEvent } from "../domain/types.ts";
+import { formatDate, formatDateTime } from "../web/format.ts";
 
 interface Column {
   header: string;
@@ -275,12 +276,12 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       ["Visit number", `#${report.visit.number}`],
       ["Status", report.visit.status],
       ["Tail", report.visit.tail],
-      ["Appearance-check date", report.visit.checkDate],
+      ["Appearance-check date", formatDate(report.visit.checkDate)],
       ["Technician", report.visit.technician || "(not entered)"],
       ["Report schema", report.schema],
-      ["Created (UTC)", report.visit.createdAt],
-      ["Completed (UTC)", report.visit.completedAt ?? "not completed"],
-      ["Report generated (UTC)", report.generatedAt],
+      ["Created", formatDateTime(report.visit.createdAt)],
+      ["Completed", report.visit.completedAt ? formatDateTime(report.visit.completedAt) : "not completed"],
+      ["Report generated", formatDateTime(report.generatedAt)],
     ]);
     para(`Visit id: ${report.visit.id}`, 8);
 
@@ -296,11 +297,14 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       ["Layout", `${c.layoutName} (${c.seatCount} seats)`],
       ["Carpet / seam", `${c.carpet ?? "not stated"} / ${c.seam ?? "not stated"}`],
       ["Upholstery profile", c.upholstery ?? "not stated"],
-      ["Assignment effective", `${c.assignmentEffectiveFrom} to ${c.assignmentEffectiveTo ?? "open"} (inclusive)`],
+      [
+        "Assignment effective",
+        `${formatDate(c.assignmentEffectiveFrom)} to ${c.assignmentEffectiveTo ? formatDate(c.assignmentEffectiveTo) : "open"} (inclusive)`,
+      ],
       ["Configuration source", sourceLabel(report, c.configurationSourceId)],
       ["Reference release", c.referenceReleaseId],
       ["Geometry reference", c.geometryVersion],
-      ["Snapshot captured (UTC)", c.capturedAt],
+      ["Snapshot captured", formatDateTime(c.capturedAt)],
     ]);
     para(`Snapshot SHA-256: ${c.snapshotSha256}`, 7);
     if (basisSha256) para(`Report basis SHA-256: ${basisSha256}`, 7);
@@ -407,7 +411,7 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
         s.kind,
         s.title,
         s.released ? "yes" : "NO",
-        `${s.effectiveFrom ?? "not stated"} / ${s.expiresOn ?? "no expiry"}`,
+        `${s.effectiveFrom ? formatDate(s.effectiveFrom) : "not stated"} / ${s.expiresOn ? formatDate(s.expiresOn) : "no expiry"}`,
       ]),
     );
     para(report.dateRule, 7);
@@ -417,12 +421,17 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       table(
         "linked advisories and corrections",
         [
-          { header: "When (UTC)", width: 120 },
+          { header: "When", width: 120 },
           { header: "Type", width: 90 },
           { header: "By", width: 80 },
           { header: "Note", width: width - 290 },
         ],
-        linkedEvents.map((e) => [e.at, e.type, String(e.payload.author ?? ""), noteCell("E", `${e.at} / ${e.type}`, String(e.payload.note ?? ""))]),
+        linkedEvents.map((e) => [
+          formatDateTime(e.at),
+          e.type,
+          String(e.payload.author ?? ""),
+          noteCell("E", `${formatDateTime(e.at)} / ${e.type}`, String(e.payload.note ?? "")),
+        ]),
       );
       printNotes("Notes on linked advisories and corrections");
       para("Linked events do not alter the locked report content above.", 7);
@@ -439,7 +448,9 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       artifact("Pagination", () => {
         doc.font("Helvetica").fontSize(7.5).fillColor("#555555");
         doc.text(
-          safe(`Cabin Kit report | Visit #${report.visit.number} | ${report.visit.tail} | ${report.visit.checkDate} | ${final ? "FINAL" : "DRAFT PREVIEW"}`),
+          safe(
+            `Cabin Kit report | Visit #${report.visit.number} | ${report.visit.tail} | ${formatDate(report.visit.checkDate)} | ${final ? "FINAL" : "DRAFT PREVIEW"}`,
+          ),
           MARGIN,
           MARGIN - 6,
           { width, lineBreak: false },

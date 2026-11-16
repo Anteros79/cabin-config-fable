@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
 import type { RecordInput, VisitRecord, VisualProfile } from "../../domain/types.ts";
 import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
 import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { Inspector } from "../components/Inspector.tsx";
 import { Skeleton } from "../components/Skeleton.tsx";
-import { useToast } from "../components/Toasts.tsx";
+import { type ToastOptions, useToast } from "../components/Toasts.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { formatDate, formatDateTime } from "../format.ts";
 import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
@@ -107,7 +107,31 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   const [lastDraft, setLastDraft] = useState<string | null>(recall);
   // A lookup the route cannot hold (an empty tail, which the server reports as invalid input), tied to the route it was made on.
   const [unrouted, setUnrouted] = useState<{ tail: string; date: string; route: string } | null>(null);
-  const toast = useToast();
+  const { show } = useToast();
+  // This view's toasts (Undo above all) belong to it: they are withdrawn when the view goes, so an Undo can never act
+  // on a visit that is no longer on screen.
+  const ownToasts = useRef(new Set<() => void>());
+  useEffect(() => {
+    const owned = ownToasts.current;
+    return () => {
+      for (const withdraw of owned) withdraw();
+      owned.clear();
+    };
+  }, []);
+  const toast = useMemo(
+    () => ({
+      show: (message: string, options?: ToastOptions) => {
+        const withdraw = show(message, options);
+        ownToasts.current.add(withdraw);
+      },
+    }),
+    [show],
+  );
+  // After Undo, focus goes to the parts of the restored location (WEB-21).
+  const [focusInspector, setFocusInspector] = useState(0);
+  useEffect(() => {
+    if (focusInspector > 0) document.getElementById("inspector-heading")?.focus();
+  }, [focusInspector]);
 
   // The pointer to the last draft is only offered while that draft still exists and is still a draft.
   useEffect(() => {
@@ -273,6 +297,10 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       },
     });
   };
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  const dirtyRef = useRef(dirtyTargets);
+  dirtyRef.current = dirtyTargets;
   const select = (locationId: string, componentId: string | null) => {
     const apply = () => {
       if (TEST_HOOKS) window.__cabinKit?.scene?.markInteraction();
@@ -367,8 +395,15 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     const restored = await writes.run(target, (key) => api.upsertRecord(id, input, 0, key), canonicalJson({ record: input, expectedRecordVersion: 0 }));
     const status = writes.statusOf(target);
     reloadOnConflict(target);
-    if (restored) toast.show(`Restored ${recordName(r)}.`);
-    else if (status.phase === "conflict") toast.show(`${describeSaveStatus(status)} The current saved work has been reloaded.`);
+    if (restored) {
+      toast.show(`Restored ${recordName(r)}.`);
+      // Shown at once unless leaving the selected location would drop unrecorded input elsewhere.
+      if (r.locationId === selectionRef.current || dirtyRef.current.size === 0) {
+        setSelection(r.locationId);
+        setFocusComponent(r.componentId);
+        setFocusInspector((n) => n + 1);
+      }
+    } else if (status.phase === "conflict") toast.show(`${describeSaveStatus(status)} The current saved work has been reloaded.`);
     else if (canRetry(status)) toast.show(describeSaveStatus(status), { action: { label: "Retry safely", run: () => void retry(target) } });
     else if (status.phase !== "idle") toast.show(describeSaveStatus(status));
   };

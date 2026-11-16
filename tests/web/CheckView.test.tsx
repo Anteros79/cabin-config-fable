@@ -353,4 +353,42 @@ describe("CheckView undo after Remove", () => {
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
     expect(screen.queryByText(/^Removed /)).toBeNull();
   });
+
+  it("leaving the visit withdraws its Undo", async () => {
+    stubFetch((method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (method === "GET") return { body: { visit: base } };
+      return { body: { visit: stateOf(base, { version: base.version + 1, records: [kit] }), replayed: false } };
+    });
+    const view = render(
+      <ToastProvider>
+        <CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />
+      </ToastProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: removeLabel(cushion) }));
+    await screen.findByRole("button", { name: "Undo" });
+    view.rerender(
+      <ToastProvider>
+        <p>another screen</p>
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByText(/^Removed /)).toBeNull();
+  });
+
+  it("after Undo, focus goes to the inspector heading of the restored location", async () => {
+    stubFetch((method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (method === "GET") return { body: { visit: base } };
+      if (url.endsWith("/records/remove")) return { body: { visit: stateOf(base, { version: base.version + 1, records: [kit] }), replayed: false } };
+      return { body: { visit: stateOf(base, { version: base.version + 2, records: [kit, { ...cushion, version: 1 }] }), replayed: false } };
+    });
+    renderWithToasts();
+    fireEvent.click(await screen.findByRole("button", { name: removeLabel(cushion) }));
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    undo.focus();
+    fireEvent.click(undo);
+    await waitFor(() => expect(document.getElementById("inspector-heading")).toHaveFocus());
+    expect(document.getElementById("inspector-heading")).toHaveTextContent(cushion.locationLabel);
+  });
 });

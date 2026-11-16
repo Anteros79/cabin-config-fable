@@ -65,7 +65,8 @@ async function ready() {
 test("a save that returns a new layout object with the same id does not call setLayout again", async () => {
   const { rerenderWith } = renderCabin(workspace);
   await ready();
-  expect(calls("setLayout")).toHaveLength(1);
+  // the first layout is set in an effect after the canvas reports ready; under load it can trail the attribute
+  await waitFor(() => expect(calls("setLayout")).toHaveLength(1));
   const statesBefore = calls("setStates").length;
   rerenderWith(structuredClone(workspace));
   rerenderWith(structuredClone(workspace));

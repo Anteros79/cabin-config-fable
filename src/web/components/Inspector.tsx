@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { excludedOf, rulesNotUsedLine } from "../../domain/report.ts";
 import type { CabinLocation, RecordInput, SourceArtifact, VisitRecord } from "../../domain/types.ts";
+import { formatDateTime } from "../format.ts";
 import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
 
@@ -328,7 +329,18 @@ function ComponentCard({
                 </div>
               </fieldset>
               <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
-                {message || (record && !dirty ? `Saved. Record version ${record.version}, last changed ${record.updatedAt}.` : "")}
+                {message ||
+                  (record && !dirty ? (
+                    <>
+                      Saved. Record version {record.version}, last changed{" "}
+                      <time dateTime={record.updatedAt} title={record.updatedAt}>
+                        {formatDateTime(record.updatedAt)}
+                      </time>
+                      .
+                    </>
+                  ) : (
+                    ""
+                  ))}
               </p>
               {canRetry(status) && (
                 <button type="button" onClick={() => onRetry(target)}>

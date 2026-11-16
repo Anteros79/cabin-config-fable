@@ -396,9 +396,8 @@ try {
       for (const t of json.report.totals)
         expect(f.includes(flat(`${t.partNo}${t.description}${t.quantity}${t.unit}`)), `${label} carries total ${t.partNo} ${t.quantity} ${t.unit}`);
       expect(!f.includes("FAKE-CK-20011KIT"), `${label} does not total the primary kit`);
-      // the page writes the check date in words (Task 5.8); the server PDF still writes it as stored
-      const checkDate = label === "server PDF" ? "2026-11-12" : "12Nov2026";
-      for (const s of ["N100TL", checkDate, "KeyboardTech", "Seat3A", json.report.visit.id]) expect(f.includes(s), `${label} contains ${s}`);
+      // both write the check date in words, the same way (Task 5.8)
+      for (const s of ["N100TL", "12Nov2026", "KeyboardTech", "Seat3A", json.report.visit.id]) expect(f.includes(s), `${label} contains ${s}`);
       expect(/FINAL/.test(text), `${label} is marked final`);
     }
   });

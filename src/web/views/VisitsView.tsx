@@ -93,8 +93,8 @@ export function VisitsView({
       <p role="status" className="fine">
         {busy ? "" : `${total} visit${total === 1 ? "" : "s"}${pages > 1 ? ` · page ${page} of ${pages}` : ""}`}
       </p>
-      {busy && <Skeleton thing="saved visits" shape="table" />}
-      {!busy && data && data.items.length > 0 && (
+      {busy && !data && <Skeleton thing="saved visits" shape="table" />}
+      {data && data.items.length > 0 && (
         <ScrollRegion label="Saved visits table">
           <table>
             <caption className="sr-only">Saved visits, newest first</caption>

@@ -92,7 +92,7 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     expect(flat).not.toContain("FAKE-CK-20011KIT");
     for (const expected of [
       "N100TL",
-      "2026-11-12",
+      "12Nov2026", // dates are written as on the web report (Task 5.8)
       "Demo tech",
       report.visit.id,
       "V01",
@@ -233,7 +233,7 @@ describe("PDF robustness and accessibility", () => {
     const { text } = await pdfText(await renderReportPdf(report, [event({ note: "Check seam again" })], basisSha256));
     expect(text).toContain("Linked advisories and corrections");
     expect(text).toContain("Check seam again");
-    expect(text).toContain("2026-11-13T09:00:00.000Z");
+    expect(text).toContain("13 Nov 2026, 09:00 UTC");
     expect(text.replace(/\s+/g, "")).toContain(basisSha256);
     await app.close();
   });

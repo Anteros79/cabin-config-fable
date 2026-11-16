@@ -37,7 +37,7 @@ describe("Toasts", () => {
     expect(elsewhere).toHaveFocus();
   });
 
-  it("goes after 5 s, or 8 s when it has an action", () => {
+  it("a plain notice goes after 5 s; one with an action stays until it is used or dismissed (WCAG 2.2.1)", () => {
     setup();
     act(() => show("Plain"));
     act(() => show("With action", { action: { label: "Undo", run: () => undefined } }));
@@ -45,7 +45,38 @@ describe("Toasts", () => {
     expect(messages()).toEqual(["Plain", "With action"]);
     act(() => vi.advanceTimersByTime(1));
     expect(messages()).toEqual(["With action"]);
-    act(() => vi.advanceTimersByTime(3000));
+    act(() => vi.advanceTimersByTime(10 * 60_000));
+    expect(messages()).toEqual(["With action"]);
+  });
+
+  it("show returns a handle that withdraws that toast", () => {
+    setup();
+    let withdraw = () => undefined as void;
+    act(() => {
+      withdraw = show("Removed", { action: { label: "Undo", run: () => undefined } });
+      show("Other");
+    });
+    act(() => withdraw());
+    expect(messages()).toEqual(["Other"]);
+  });
+
+  it("Escape inside the region dismisses the most recent toast", () => {
+    setup();
+    act(() => {
+      show("first", { action: { label: "Undo", run: () => undefined } });
+      show("second", { action: { label: "Open", run: () => undefined } });
+    });
+    const open = screen.getByRole("button", { name: "Open" });
+    open.focus();
+    fireEvent.keyDown(open, { key: "Escape" });
+    expect(messages()).toEqual(["first"]);
+  });
+
+  it("a touch on the region does not leave the timers paused", () => {
+    setup();
+    act(() => show("Saved"));
+    fireEvent.pointerEnter(region(), { pointerType: "touch" });
+    act(() => vi.advanceTimersByTime(5000));
     expect(messages()).toEqual([]);
   });
 
@@ -57,7 +88,7 @@ describe("Toasts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(run).toHaveBeenCalledTimes(1);
     expect(messages()).toEqual(["Other"]);
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss: Other" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss notification" }));
     expect(messages()).toEqual([]);
   });
 
@@ -74,9 +105,9 @@ describe("Toasts", () => {
 
   it("pauses while focus is inside, and resumes with the time that was left", () => {
     setup();
-    act(() => show("Removed", { action: { label: "Undo", run: () => undefined } }));
+    act(() => show("Removed", { durationMs: 8000 }));
     act(() => vi.advanceTimersByTime(6000));
-    act(() => screen.getByRole("button", { name: "Undo" }).focus());
+    act(() => screen.getByRole("button", { name: "Dismiss notification" }).focus());
     act(() => vi.advanceTimersByTime(60_000));
     expect(messages()).toEqual(["Removed"]);
     act(() => screen.getByTestId("elsewhere").focus());
@@ -89,10 +120,10 @@ describe("Toasts", () => {
   it("pauses while the pointer is over it", () => {
     setup();
     act(() => show("Saved"));
-    fireEvent.mouseEnter(region());
+    fireEvent.pointerEnter(region(), { pointerType: "mouse" });
     act(() => vi.advanceTimersByTime(60_000));
     expect(messages()).toEqual(["Saved"]);
-    fireEvent.mouseLeave(region());
+    fireEvent.pointerLeave(region(), { pointerType: "mouse" });
     act(() => vi.advanceTimersByTime(5000));
     expect(messages()).toEqual([]);
   });

@@ -215,6 +215,18 @@ main:focus {
 .toast .toast-action {
   font-weight: 600;
 }
+@media (max-width: 699px) {
+  /* one toast at a time, full width, above the home indicator; main keeps a tall bottom padding so nothing is lost under it */
+  .toasts {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    max-width: none;
+  }
+  .toast:not(:last-child) {
+    display: none;
+  }
+}
 
 /* loading placeholders: blocks the size of what they stand for; hidden from assistive technology */
 .skeleton {

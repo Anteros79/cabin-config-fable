@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildPreparation } from "../../src/domain/prep.ts";
@@ -129,6 +129,19 @@ describe("views show people words, not machine values", () => {
       }
     });
   }
+
+  it("visit workspace with a recorded location selected: the saved record card names its time in words", async () => {
+    stubFetch(answer);
+    const { container } = render(<CheckView visitId={visit.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const [recorded] = visit.records;
+    if (!recorded) throw new Error("fixture visit has no record");
+    fireEvent.click(await screen.findByRole("button", { name: `Show ${recorded.locationLabel} ${recorded.componentName}` }));
+    await screen.findByText(/^Saved\. Record version/);
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
+    const saved = screen.getByText(/^Saved\. Record version/);
+    expect(saved.querySelector("time")).toHaveAttribute("dateTime", recorded.updatedAt);
+  });
 
   it("the report and the reference name states, severities and counts in words", async () => {
     stubFetch(answer);

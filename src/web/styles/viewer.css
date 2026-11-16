@@ -59,6 +59,12 @@
   font-weight: 600;
   color: var(--text-muted);
 }
+/* the group's name is set off from the fields it names */
+.tool-group > .group-label {
+  padding-right: var(--space-3);
+  margin-right: var(--space-2);
+  border-right: 1px solid var(--border-subtle);
+}
 .tool-field {
   display: inline-flex;
   align-items: center;

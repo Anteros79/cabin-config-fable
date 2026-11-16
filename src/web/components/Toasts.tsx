@@ -8,35 +8,37 @@ interface Toast {
   id: number;
   message: string;
   action: ToastOptions["action"];
-  durationMs: number;
+  /** null: stays until used or dismissed */
+  durationMs: number | null;
 }
 interface ToastApi {
-  show(message: string, options?: ToastOptions): void;
+  /** Shows a toast and returns a handle that withdraws it (a view withdraws its own toasts when it goes). */
+  show(message: string, options?: ToastOptions): () => void;
 }
 
 /** At most this many show at once; a new one replaces the oldest. */
 export const MAX_TOASTS = 3;
+/** How long a plain notice shows. A toast with an action (Undo) has no time limit (WCAG 2.2.1). */
 export const TOAST_MS = 5000;
-/** Longer when there is something to do, such as Undo. */
-export const TOAST_ACTION_MS = 8000;
 
 /** Without a provider (a view rendered on its own) a toast goes nowhere. */
-const ToastContext = createContext<ToastApi>({ show: () => undefined });
+const ToastContext = createContext<ToastApi>({ show: () => () => undefined });
 
 export const useToast = (): ToastApi => useContext(ToastContext);
 
 /** One toast. Its time runs only while the region is not paused, and what was left carries over a pause. */
 function ToastItem({ toast, paused, dismiss }: { toast: Toast; paused: boolean; dismiss(id: number): void }) {
-  const remaining = useRef(toast.durationMs);
+  const remaining = useRef(toast.durationMs ?? 0);
+  const timed = toast.durationMs !== null;
   useEffect(() => {
-    if (paused) return;
+    if (paused || !timed) return;
     const started = Date.now();
     const timer = setTimeout(() => dismiss(toast.id), remaining.current);
     return () => {
       clearTimeout(timer);
       remaining.current -= Date.now() - started;
     };
-  }, [paused, toast.id, dismiss]);
+  }, [paused, timed, toast.id, dismiss]);
   return (
     <li className="toast" data-toast={toast.id}>
       <span className="toast-message">{toast.message}</span>
@@ -52,7 +54,7 @@ function ToastItem({ toast, paused, dismiss }: { toast: Toast; paused: boolean; 
           {toast.action.label}
         </button>
       )}
-      <button type="button" className="toast-close icon" aria-label={`Dismiss: ${toast.message}`} onClick={() => dismiss(toast.id)}>
+      <button type="button" className="toast-close icon" aria-label="Dismiss notification" onClick={() => dismiss(toast.id)}>
         <span aria-hidden="true">×</span>
       </button>
     </li>
@@ -61,8 +63,9 @@ function ToastItem({ toast, paused, dismiss }: { toast: Toast; paused: boolean; 
 
 /**
  * Short notes about something that just happened, with an optional action (Undo). They appear in a polite status
- * region, so a screen reader reads them without focus moving; they wait while the pointer or focus is on them.
- * No animation: they appear and go.
+ * region, so a screen reader reads them without focus moving. A plain notice goes after 5 s, waiting while a mouse
+ * pointer or focus is on the region; one with an action stays until it is used, dismissed (button or Escape) or
+ * withdrawn by the view that showed it. No animation: they appear and go.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -70,16 +73,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [focused, setFocused] = useState(false);
   const regionRef = useRef<HTMLDivElement | null>(null);
   const nextId = useRef(1);
-
-  const show = useCallback((message: string, options?: ToastOptions) => {
-    const toast: Toast = {
-      id: nextId.current++,
-      message,
-      action: options?.action,
-      durationMs: options?.durationMs ?? (options?.action ? TOAST_ACTION_MS : TOAST_MS),
-    };
-    setToasts((current) => [...current, toast].slice(-MAX_TOASTS));
-  }, []);
 
   const dismiss = useCallback((id: number) => {
     // A toast that goes while it holds focus hands focus on (to another toast, or to the main content), never to the page body.
@@ -93,6 +86,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((current) => current.filter((t) => t.id !== id));
   }, []);
 
+  const show = useCallback(
+    (message: string, options?: ToastOptions) => {
+      const toast: Toast = {
+        id: nextId.current++,
+        message,
+        action: options?.action,
+        durationMs: options?.action ? null : (options?.durationMs ?? TOAST_MS),
+      };
+      setToasts((current) => [...current, toast].slice(-MAX_TOASTS));
+      return () => dismiss(toast.id);
+    },
+    [dismiss],
+  );
+
   const api = useMemo(() => ({ show }), [show]);
   const paused = hovered || focused;
   return (
@@ -104,8 +111,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         role="status"
         aria-live="polite"
         aria-label="Notifications"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        // a mouse pointer pauses the timers; a touch never sends the leave, so it would leave them paused
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse") setHovered(true);
+        }}
+        onPointerLeave={() => setHovered(false)}
+        onKeyDown={(e) => {
+          const last = toasts.at(-1);
+          if (e.key !== "Escape" || !last) return;
+          e.stopPropagation();
+          dismiss(last.id);
+        }}
         onFocus={() => setFocused(true)}
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);

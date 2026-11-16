@@ -14,6 +14,8 @@
     "src/domain",
     "src/importer",
     "src/server",
+    // the one web module the server shares: how dates and times are written (DOM-free)
+    "src/web/format.ts",
     "tests/*.ts",
     "tests/helpers",
     "tests/unit",
