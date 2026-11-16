@@ -8,6 +8,7 @@ import type { LookupResult, ReferenceRelease } from "../domain/types.ts";
 import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS } from "../domain/types.ts";
 import { buildSnapshot, DomainError } from "../domain/visitLogic.ts";
 import type { ServerConfig } from "./config.ts";
+import { allowedHostnames, hostnameOf, isWriteAllowed } from "./http/hostGuard.ts";
 import { renderReportPdf } from "./pdf.ts";
 import { ReferenceStore, ReferenceStoreError } from "./referenceStore.ts";
 import { VisitStore } from "./visitStore.ts";
@@ -180,22 +181,15 @@ export function createApp(config: ServerConfig): AppHandle {
     });
   });
 
+  const allowedHosts = allowedHostnames(config);
   app.addHook("onRequest", async (request, reply) => {
     reply.header("Cache-Control", "no-store");
     reply.header("X-Content-Type-Options", "nosniff");
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      const origin = request.headers.origin;
-      if (origin) {
-        let originHost = "";
-        try {
-          originHost = new URL(origin).host;
-        } catch {
-          originHost = "";
-        }
-        if (originHost !== request.headers.host) {
-          return fail(reply, 403, "CROSS_ORIGIN_WRITE", "Cross-origin writes are not allowed.");
-        }
-      }
+    if (!allowedHosts.has(hostnameOf(request.headers.host) ?? "")) {
+      return fail(reply, 403, "HOST_NOT_ALLOWED", "This host name is not allowed.");
+    }
+    if (request.method !== "GET" && request.method !== "HEAD" && !isWriteAllowed(request.headers)) {
+      return fail(reply, 403, "CROSS_ORIGIN_WRITE", "Cross-origin writes are not allowed.");
     }
   });
 

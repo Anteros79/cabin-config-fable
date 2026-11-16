@@ -102,9 +102,26 @@ export function openVisits(stores: TestStores): VisitStore {
   return VisitStore.open(stores.visitsPath, stores.referencePath);
 }
 
-export function makeApp(stores: TestStores = makeStores(), testFaults = false): AppHandle & { stores: TestStores } {
+export interface MakeAppOptions {
+  stores?: TestStores;
+  testFaults?: boolean;
+  allowedHosts?: string[];
+  webRoot?: string;
+  logLevel?: string;
+}
+
+export function makeApp(options: MakeAppOptions = {}): AppHandle & { stores: TestStores } {
+  const stores = options.stores ?? makeStores();
   const config = resolveServerConfig(
-    { dataDir: stores.dir, referencePath: stores.referencePath, visitsPath: stores.visitsPath, port: 0, testFaults, webRoot: join(stores.dir, "no-web") },
+    {
+      dataDir: stores.dir,
+      referencePath: stores.referencePath,
+      visitsPath: stores.visitsPath,
+      port: 0,
+      testFaults: options.testFaults ?? false,
+      webRoot: options.webRoot ?? join(stores.dir, "no-web"),
+      ...(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {}),
+    },
     {},
   );
   return Object.assign(createApp(config), { stores });

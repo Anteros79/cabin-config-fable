@@ -50,7 +50,7 @@ describe("lookup API", () => {
   });
 
   it("reports a reference store failure as SERVICE_UNAVAILABLE and refuses to create visits", async () => {
-    const app = makeApp(makeStores(), true);
+    const app = makeApp({ testFaults: true });
     await post(app, "/api/__test/faults", { reference: "fail" });
     const res = await app.app.inject("/api/lookup?tail=N100TL&date=2026-11-12");
     expect(res.statusCode).toBe(503);
@@ -155,6 +155,63 @@ describe("visit API with the browser bypassed", () => {
     await app.close();
   });
 
+  it("a rebinding host is refused on reads and writes", async () => {
+    const app = makeApp();
+    const get = await app.app.inject({ method: "GET", url: "/api/health", headers: { host: "evil.example:4310" } });
+    expect(get.statusCode).toBe(403);
+    expect(json(get).error).toMatchObject({ code: "HOST_NOT_ALLOWED", details: null });
+    const bad = await post(app, "/api/visits", { tail: "N100TL", checkDate: "2026-11-12" }, { host: "evil.example:4310", origin: "http://evil.example:4310" });
+    expect(bad.statusCode).toBe(403);
+    expect(json(bad).error.code).toBe("HOST_NOT_ALLOWED");
+    expect(app.visits.counts().visits).toBe(0);
+    await app.close();
+  });
+
+  it.each([
+    [{ origin: "null" }, 403],
+    [{ origin: "http://localhost:81" }, 403],
+    [{ origin: "notaurl" }, 403],
+    [{ "sec-fetch-site": "cross-site" }, 403],
+    [{ "sec-fetch-site": "same-site" }, 403],
+    [{ origin: "http://localhost:80", "sec-fetch-site": "same-origin" }, 201],
+    [{ origin: "http://localhost", "sec-fetch-site": "same-origin" }, 201],
+    [{ "sec-fetch-site": "none" }, 201],
+    [{}, 201],
+  ])("write with %j gives %i", async (headers, status) => {
+    const app = makeApp();
+    const res = await post(app, "/api/visits", { tail: "N100TL", checkDate: "2026-11-12" }, headers);
+    expect(res.statusCode).toBe(status);
+    if (status === 403) expect(json(res).error.code).toBe("CROSS_ORIGIN_WRITE");
+    await app.close();
+  });
+
+  it("the origin rule covers every write route", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    const headers = { origin: "http://x.test" };
+    const base = `/api/visits/${visit.id}`;
+    const results = await Promise.all([
+      app.app.inject({ method: "PUT", url: `${base}/records`, payload: { record: CUSHION_3A }, headers }),
+      app.app.inject({ method: "POST", url: `${base}/records/remove`, payload: {}, headers }),
+      app.app.inject({ method: "POST", url: `${base}/complete`, payload: { confirm: true }, headers }),
+      app.app.inject({ method: "POST", url: `${base}/events`, payload: {}, headers }),
+    ]);
+    for (const res of results) {
+      expect(res.statusCode).toBe(403);
+      expect(json(res).error.code).toBe("CROSS_ORIGIN_WRITE");
+    }
+    await app.close();
+  });
+
+  it("a host named in CABIN_KIT_ALLOWED_HOSTS is accepted", async () => {
+    const app = makeApp({ allowedHosts: ["kit.internal"] });
+    const ok = await app.app.inject({ method: "GET", url: "/api/health", headers: { host: "kit.internal:4310" } });
+    expect(ok.statusCode).toBe(200);
+    const other = await app.app.inject({ method: "GET", url: "/api/health", headers: { host: "evil.example" } });
+    expect(other.statusCode).toBe(403);
+    await app.close();
+  });
+
   it("refuses cross-origin writes and unknown visits", async () => {
     const app = makeApp();
     const res = await post(app, "/api/visits", { tail: "N100TL", checkDate: "2026-11-12" }, { origin: "http://evil.example", host: "127.0.0.1:4310" });
@@ -169,7 +226,7 @@ describe("visit API with the browser bypassed", () => {
   });
 
   it("a storage failure is reported as not saved, and a retry after recovery succeeds once", async () => {
-    const app = makeApp(makeStores(), true);
+    const app = makeApp({ testFaults: true });
     const visit = await newVisit(app);
     await post(app, "/api/__test/faults", { visitWrites: "fail", remaining: 1 });
     const failed = await put(app, `/api/visits/${visit.id}/records`, { record: CUSHION_3A, expectedRecordVersion: 0, idempotencyKey: "key-storage-1" });
@@ -313,7 +370,7 @@ describe("preparation and reference endpoints", () => {
   });
 
   it("exposes namespaces, findings and candidate layouts with their status", async () => {
-    const app = makeApp(makeStores({ includeCandidate: true }));
+    const app = makeApp({ stores: makeStores({ includeCandidate: true }) });
     const reference = json(await app.app.inject("/api/reference"));
     expect(reference.counts).toMatchObject({ layoutRevisions: { fixture: 6, candidate: 5 }, accepted: 0 });
     expect(reference.findings.some((f: { code: string }) => f.code === "AIRLINE_DATA_NOT_SUPPLIED")).toBe(true);

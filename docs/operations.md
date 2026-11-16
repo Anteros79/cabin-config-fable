@@ -20,6 +20,7 @@ npm start                # http://127.0.0.1:4310
 | `CABIN_KIT_VISITS_DB` | `<data>/visits.sqlite` | Visit store file |
 | `CABIN_KIT_HOST` | `127.0.0.1` | Listen address |
 | `CABIN_KIT_PORT` | `4310` | Listen port |
+| `CABIN_KIT_ALLOWED_HOSTS` | unset | Comma-separated extra host names accepted in the `Host` header, besides `localhost`, `127.0.0.1`, `::1` and `CABIN_KIT_HOST`. Empty or blank means none. Requests with any other `Host` get 403 `HOST_NOT_ALLOWED` |
 | `CABIN_KIT_TEST_FAULTS` | unset | `1` enables the fault-injection route used by the E2E run. Never set it in normal use |
 
 The server, the import commands and the tests all read these through `src/server/config.ts`, so an import and a start with the same environment always use the same files.

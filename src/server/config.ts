@@ -13,6 +13,7 @@ export interface StoreConfig {
 
 export interface ServerConfig extends StoreConfig {
   host: string;
+  allowedHosts: string[];
   port: number;
   webRoot: string;
   testFaults: boolean;
@@ -32,11 +33,20 @@ export function resolveStoreConfig(overrides: Partial<StoreConfig> = {}, env: No
   };
 }
 
+/** Comma-separated host names, trimmed and lower-cased. Empty or whitespace-only means none. */
+function parseHostList(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item !== "");
+}
+
 export function resolveServerConfig(overrides: Partial<ServerConfig> = {}, env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const stores = resolveStoreConfig(overrides, env);
   return {
     ...stores,
     host: overrides.host ?? env.CABIN_KIT_HOST ?? "127.0.0.1",
+    allowedHosts: overrides.allowedHosts ?? parseHostList(env.CABIN_KIT_ALLOWED_HOSTS),
     port: overrides.port ?? Number(env.CABIN_KIT_PORT ?? 4310),
     webRoot: overrides.webRoot ?? join(PROJECT_ROOT, "dist", "web"),
     testFaults: overrides.testFaults ?? env.CABIN_KIT_TEST_FAULTS === "1",
