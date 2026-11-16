@@ -72,6 +72,11 @@ const SEAT_FIELDS = [
   "special_notes",
 ];
 
+/** Primary keys as the registry's schema_metadata declares them for each entity. */
+const CONFIG_KEY = ["lopa_id"] as const;
+const ROW_KEY = ["lopa_id", "row_number"] as const;
+const SEAT_KEY = ["lopa_id", "row_number", "seat_letter"] as const;
+
 export interface CandidateContent {
   sources: SourceArtifact[];
   subtypes: AircraftSubtype[];
@@ -88,36 +93,84 @@ function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function pitchClaim(raw: string, configLevelRaw: string): RangeClaim {
-  const m = /^(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?$/.exec(raw.trim());
-  const min = m ? Number(m[1]) : null;
-  const max = m ? Number(m[2] ?? m[1]) : null;
-  // The registry's configuration record qualifies some figures with "~"; the seat record drops it.
-  const approximate = min !== null && min === max && new RegExp(`~\\s*${min}\\b`).test(configLevelRaw);
-  return {
-    raw,
+type ClaimDefaults = Pick<RangeClaim, "unit" | "measurementKind">;
+
+/** One number as the registry writes it: digits with an optional decimal part, no sign or exponent. */
+const CLAIM_NUMBER = String.raw`\d+(?:\.\d+)?`;
+/** `N` or `N-M` (hyphen, en dash or em dash, optional spaces), once the qualifier and unit are stripped. */
+const CLAIM_RANGE = new RegExp(`^(${CLAIM_NUMBER})(?:\\s*[-\u2013\u2014]\\s*(${CLAIM_NUMBER}))?$`);
+
+/**
+ * Read a pitch or width value as a range claim. Blank values are no claim and no problem. A finite number is an
+ * exact claim. A string may carry a leading `~` or `≈` (approximate) and a trailing `"`, `in`, `in.` or `inches`.
+ * Anything else is no claim, with the problem named: "range reversed" or "unparsed".
+ */
+export function parseRangeClaim(raw: unknown, defaults: ClaimDefaults): { claim: RangeClaim | null; problem: string | null } {
+  if (raw === null || raw === undefined || raw === "") return { claim: null, problem: null };
+  const claim = (min: number, max: number, approximate: boolean): RangeClaim => ({
+    raw: String(raw),
     min,
     max,
-    unit: "in",
+    unit: defaults.unit,
     approximate,
-    measurementKind: "seat pitch (as claimed by the registry)",
-    note: approximate
-      ? `Seat record states "${raw}" as exact, but the configuration record qualifies it as approximate ("${configLevelRaw}"). Treated as approximate.`
+    measurementKind: defaults.measurementKind,
+  });
+  if (typeof raw === "number") return Number.isFinite(raw) ? { claim: claim(raw, raw, false), problem: null } : { claim: null, problem: "unparsed" };
+  if (typeof raw !== "string") return { claim: null, problem: "unparsed" };
+  let text = raw.trim();
+  const approximate = text.startsWith("~") || text.startsWith("\u2248");
+  if (approximate) text = text.slice(1).trimStart();
+  text = text.replace(/(?:"|inches|in\.|in)$/, "").trimEnd();
+  const m = CLAIM_RANGE.exec(text);
+  if (!m) return { claim: null, problem: "unparsed" };
+  const min = Number(m[1]);
+  const max = Number(m[2] ?? m[1]);
+  if (min > max) return { claim: null, problem: "range reversed" };
+  return { claim: claim(min, max, approximate), problem: null };
+}
+
+/** True only when `configText` has `~` or `≈` immediately followed by exactly `value` (not a longer number). */
+export function isApproximate(configText: string, value: number): boolean {
+  const escaped = String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`[~\u2248]${escaped}(?![\\d.])`).test(configText);
+}
+
+const PITCH_DEFAULTS: ClaimDefaults = { unit: "in", measurementKind: "seat pitch (as claimed by the registry)" };
+const WIDTH_DEFAULTS: ClaimDefaults = { unit: "in", measurementKind: "unspecified" };
+const WIDTH_NOTE =
+  'Source field "effective_width_inches". The sources mix seat width and shoulder/armrest clearance, so the measurement kind is not established.';
+
+/** Unreadable measurement values, counted per distinct raw value, so each raises one finding. */
+type ClaimProblems = Map<string, { raw: unknown; problem: string; seats: number }>;
+
+function readClaim(raw: unknown, defaults: ClaimDefaults, problems: ClaimProblems): RangeClaim | null {
+  const { claim, problem } = parseRangeClaim(raw, defaults);
+  if (problem !== null) {
+    const key = JSON.stringify(raw) ?? String(raw);
+    const seen = problems.get(key);
+    if (seen) seen.seats += 1;
+    else problems.set(key, { raw, problem, seats: 1 });
+  }
+  return claim;
+}
+
+function pitchClaim(raw: unknown, configLevelRaw: string, problems: ClaimProblems): RangeClaim | null {
+  const claim = readClaim(raw, PITCH_DEFAULTS, problems);
+  if (claim === null) return null;
+  // The registry's configuration record qualifies some figures with "~"; the seat record drops it.
+  const qualified = !claim.approximate && claim.min !== null && claim.min === claim.max && isApproximate(configLevelRaw, claim.min);
+  return {
+    ...claim,
+    approximate: claim.approximate || qualified,
+    note: qualified
+      ? `Seat record states "${claim.raw}" as exact, but the configuration record qualifies it as approximate ("${configLevelRaw}"). Treated as approximate.`
       : undefined,
   };
 }
 
-function widthClaim(value: unknown): RangeClaim {
-  const n = typeof value === "number" ? value : null;
-  return {
-    raw: String(value),
-    min: n,
-    max: n,
-    unit: "in",
-    approximate: false,
-    measurementKind: "unspecified",
-    note: 'Source field "effective_width_inches". The sources mix seat width and shoulder/armrest clearance, so the measurement kind is not established.',
-  };
+function widthClaim(raw: unknown, problems: ClaimProblems): RangeClaim | null {
+  const claim = readClaim(raw, WIDTH_DEFAULTS, problems);
+  return claim === null ? null : { ...claim, note: WIDTH_NOTE };
 }
 
 /** Plain decimal text: no sign other than a leading minus, no leading zeros, no exponent, hex or padding. */
@@ -128,8 +181,20 @@ function decimalTextEquals(text: string, value: number): boolean {
   return DECIMAL_TEXT.test(text) && Number(text) === value;
 }
 
-/** Compare a JSON value with its CSV/XLSX counterpart under declared, counted conversions. */
-export function sameValue(jsonValue: unknown, other: unknown, conversions: Record<string, number> = {}): boolean {
+/**
+ * Compare a JSON value with its CSV/XLSX counterpart under declared, counted conversions. A value field accepts
+ * numerically equal decimal text ("1.50" equals 1.5). An identifier field (a registry primary-key field) compares
+ * as exact strings: 16 equals "16", but "1.50" does not equal 1.5.
+ */
+export function sameValue(jsonValue: unknown, other: unknown, conversions: Record<string, number> = {}, kind: "value" | "identifier" = "value"): boolean {
+  if (kind === "identifier" && (typeof jsonValue === "string" || typeof jsonValue === "number") && (typeof other === "string" || typeof other === "number")) {
+    if (String(jsonValue) !== String(other)) return false;
+    if (typeof jsonValue !== typeof other) {
+      const counter = typeof jsonValue === "number" ? "numericText" : "numericIdentifierToString";
+      conversions[counter] = (conversions[counter] ?? 0) + 1;
+    }
+    return true;
+  }
   if (other === null || other === undefined) {
     if (jsonValue === "") {
       conversions.blankToEmptyString = (conversions.blankToEmptyString ?? 0) + 1;
@@ -193,13 +258,15 @@ function compareTable(args: {
   sourceId: string;
   label: string;
   expectedFields: readonly string[];
-  keyOf: (record: Json) => string;
+  /** The registry's primary-key fields for this table: records are matched on them and they compare as exact strings. */
+  keyFields: readonly string[];
   reference: Json[];
   other: { headers: string[]; records: Json[] };
   conversions: Record<string, number>;
   findings: Finding[];
 }): number {
-  const { sourceId, label, expectedFields, keyOf, reference, other, conversions, findings } = args;
+  const { sourceId, label, expectedFields, keyFields, reference, other, conversions, findings } = args;
+  const keyOf = (record: Json) => keyFields.map((f) => String(record[f])).join("|");
   const mismatch = (message: string, refs: string[] = [sourceId]) => findings.push({ severity: "error", code: "CROSS_FORMAT_MISMATCH", message, refs });
 
   const missingColumns = expectedFields.filter((f) => !other.headers.includes(f));
@@ -245,7 +312,7 @@ function compareTable(args: {
     for (const field of comparable) {
       compared += 1;
       const cell = counterpart[field] ?? null;
-      if (!sameValue(record[field], cell, conversions))
+      if (!sameValue(record[field], cell, conversions, keyFields.includes(field) ? "identifier" : "value"))
         mismatch(
           `${label} ${key} field "${field}" differs between exports (JSON ${JSON.stringify(record[field])} vs ${JSON.stringify(cell)}). No export is preferred; resolve the difference before import.`,
           [sourceId, key],
@@ -668,13 +735,13 @@ function stageCandidate(sourceRoot: string, options: CandidateOptions, out: Cand
   // Cross-format agreement (declared, counted conversions; any substantive difference is reported, not resolved)
   const conversions: Record<string, number> = {};
   let compared = 0;
-  for (const [sourceId, label, expectedFields, keyOf, reference, other] of [
-    ["CAND-SRC-CONFIG-CSV", "Configuration CSV", CONFIG_FIELDS, (r: Json) => String(r.lopa_id), configs, configTable],
-    ["CAND-SRC-SEATS-CSV", "Seat CSV", SEAT_FIELDS, (r: Json) => `${r.lopa_id}|${r.row_number}|${r.seat_letter}`, seats, seatTable],
-    ["CAND-SRC-ROWS-XLSX", "Rows workbook", ROW_FIELDS, (r: Json) => `${r.lopa_id}|${r.row_number}`, rows, rowTable],
+  for (const [sourceId, label, expectedFields, keyFields, reference, other] of [
+    ["CAND-SRC-CONFIG-CSV", "Configuration CSV", CONFIG_FIELDS, CONFIG_KEY, configs, configTable],
+    ["CAND-SRC-SEATS-CSV", "Seat CSV", SEAT_FIELDS, SEAT_KEY, seats, seatTable],
+    ["CAND-SRC-ROWS-XLSX", "Rows workbook", ROW_FIELDS, ROW_KEY, rows, rowTable],
   ] as const) {
     // an export that could not be read is reported above and leaves the count short
-    if (other) compared += compareTable({ sourceId, label, expectedFields, keyOf, reference, other, conversions, findings });
+    if (other) compared += compareTable({ sourceId, label, expectedFields, keyFields, reference, other, conversions, findings });
   }
   // The comparison must have covered every registry value; anything less is a bypass, not agreement.
   const expectedCompared = configs.length * CONFIG_FIELDS.length + seats.length * SEAT_FIELDS.length + rows.length * ROW_FIELDS.length;
@@ -706,6 +773,8 @@ function buildLayouts(configs: Json[], rows: Json[], seats: Json[], schemaVersio
   const subtypes = new Map<string, AircraftSubtype>();
   const layouts: Layout[] = [];
   const layoutRevisions: LayoutRevision[] = [];
+  const pitchProblems: ClaimProblems = new Map();
+  const widthProblems: ClaimProblems = new Map();
   configs.forEach((c, configIndex) => {
     const lopaId = String(c.lopa_id);
     const model = String(c.boeing_model);
@@ -752,8 +821,8 @@ function buildLayouts(configs: Json[], rows: Json[], seats: Json[], schemaVersio
           physicalRow,
           positionType: position === "WINDOW" || position === "MIDDLE" || position === "AISLE" ? position : null,
           commercialTier: typeof s.commercial_tier === "string" ? s.commercial_tier : null,
-          pitch: typeof s.pitch_range_inches === "string" ? pitchClaim(s.pitch_range_inches, elrRaw) : null,
-          width: widthClaim(s.effective_width_inches),
+          pitch: pitchClaim(s.pitch_range_inches, elrRaw, pitchProblems),
+          width: widthClaim(s.effective_width_inches, widthProblems),
           exitRow: typeof s.is_exit_seat === "boolean" ? s.is_exit_seat : null,
           bulkhead: typeof s.is_bulkhead_seat === "boolean" ? s.is_bulkhead_seat : null,
           maintenanceZone: null,
@@ -847,6 +916,20 @@ function buildLayouts(configs: Json[], rows: Json[], seats: Json[], schemaVersio
       notes,
     });
   });
+
+  for (const [code, field, what, problems] of [
+    ["PITCH_UNPARSED", "pitch_range_inches", "pitch", pitchProblems],
+    ["WIDTH_UNPARSED", "effective_width_inches", "width", widthProblems],
+  ] as const) {
+    for (const { raw, problem, seats } of problems.values()) {
+      findings.push({
+        severity: "warning",
+        code,
+        message: `Seat ${field} value ${JSON.stringify(raw) ?? String(raw)} could not be read (${problem}); ${seats} ${seats === 1 ? "seat carries" : "seats carry"} it. Their ${what} claim is left empty.`,
+        refs: ["CAND-SRC-REGISTRY-JSON"],
+      });
+    }
+  }
 
   return { subtypes: [...subtypes.values()], layouts, layoutRevisions };
 }

@@ -185,4 +185,21 @@ describe("sameValue", () => {
     expect(sameValue(text, number)).toBe(equal);
     expect(sameValue(number, text)).toBe(equal);
   });
+
+  test.each([
+    ["1.50", 1.5, false],
+    ["16.0", 16, false],
+    ["16", 16, true],
+    ["73G", "73G", true],
+  ] as const)("on a key field, sameValue(%j, %j) compares exact strings: %j", (text, other, equal) => {
+    expect(sameValue(text, other, {}, "identifier")).toBe(equal);
+    expect(sameValue(other, text, {}, "identifier")).toBe(equal);
+  });
+
+  test("a key-field match across types is still counted as a conversion", () => {
+    const conversions: Record<string, number> = {};
+    expect(sameValue(16, "16", conversions, "identifier")).toBe(true);
+    expect(sameValue("16", 16, conversions, "identifier")).toBe(true);
+    expect(conversions).toEqual({ numericText: 1, numericIdentifierToString: 1 });
+  });
 });
