@@ -121,7 +121,12 @@ export interface SeatGeometries {
   /** slightly oversized shells used for status and tier overlays */
   panOverlay: THREE.BufferGeometry;
   backOverlay: THREE.BufferGeometry;
+  /** flat quad lying on the carpet under the seat, for the contact shading (WEB-21) */
+  contact: THREE.BufferGeometry;
 }
+
+/** Height of the contact quad above the carpet: enough to stay clear of it in the depth buffer, too little to see. */
+export const CONTACT_LIFT = 0.004;
 
 /** Most triangles one seat may draw, summed over every part geometry (WEB-20). */
 export const SEAT_TRIANGLE_BUDGET = 3_200;
@@ -197,6 +202,11 @@ export function buildSeatGeometries(): SeatGeometries {
   panOverlay.translate(-0.045, SEAT.panY + 0.004, 0);
   const backOverlay = lofted(-half - 0.012, half + 0.012, 4, 4);
 
+  // Contact patch: a little larger than the footprint of the legs and the pan, centred under the pan.
+  const contact = new THREE.PlaneGeometry(0.72, SEAT.width + 0.1);
+  contact.rotateX(-Math.PI / 2);
+  contact.translate(0.0, CONTACT_LIFT, 0);
+
   return {
     pan,
     backCore,
@@ -210,6 +220,7 @@ export function buildSeatGeometries(): SeatGeometries {
     legs: merged(legParts),
     panOverlay,
     backOverlay,
+    contact,
   };
 }
 

@@ -85,9 +85,42 @@ export const PALETTES: { "photo-navy-band": ProfilePalette; [id: string]: Profil
   },
 };
 
-/** The cache key of a generated texture: what it shows, for which palette ("shared" when it has none), at what size. */
-export function textureKey(kind: string, paletteId: string, size: number): string {
-  return `${kind}|${paletteId}|${size}`;
+/** A texture's size in pixels. Every factory draws at one of the sizes below, and its cache key is built from the same constant. */
+export interface TextureSize {
+  width: number;
+  height: number;
+}
+
+/** Seat back (front face and rear shell) and seat pan: colour, normal and roughness maps. */
+export const SEAT_TEXTURE_SIZE: TextureSize = { width: 512, height: 1024 };
+export const CARPET_TEXTURE_SIZE: TextureSize = { width: 1024, height: 1024 };
+export const BIN_DOOR_TEXTURE_SIZE: TextureSize = { width: 512, height: 256 };
+export const SERVICE_UNIT_TEXTURE_SIZE: TextureSize = { width: 256, height: 128 };
+export const SIDEWALL_TEXTURE_SIZE: TextureSize = { width: 256, height: 256 };
+/** the soft dark patch drawn on the carpet under each seat */
+export const CONTACT_TEXTURE_SIZE: TextureSize = { width: 128, height: 128 };
+/** The rear shell shows the two-opening panel (appearance only; no availability claim). A factory parameter, so part of the key. */
+export const REAR_SHELL_POWER_PANEL = true;
+/** Strength of the Sobel pass that turns a seat height map into its normal map. A factory parameter, so part of the key. */
+export const SEAT_NORMAL_STRENGTH = 2.5;
+
+/** The seat textures are drawn in a 256 × 512 design space and scaled up to SEAT_TEXTURE_SIZE. */
+const SEAT_DESIGN = { width: 256, height: 512 };
+
+export type TextureParams = Record<string, string | number | boolean>;
+
+/**
+ * The cache key of a generated texture: what it shows, for which palette ("shared" when it has none), at what size, with
+ * which factory parameters. Build every key from the exported size constants and parameters, so a changed factory can
+ * never reuse a stale cached texture.
+ */
+export function textureKey(kind: string, paletteId: string, size: number | TextureSize, params: TextureParams = {}): string {
+  const dims = typeof size === "number" ? `${size}` : `${size.width}x${size.height}`;
+  const extra = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join(",");
+  return `${kind}|${paletteId}|${dims}|${extra}`;
 }
 
 const textureCache = new Map<string, THREE.Texture>();
@@ -112,6 +145,17 @@ export function disposeTextureCache(): void {
   for (const texture of textures) texture.dispose();
 }
 
+/** Estimated GPU bytes of the cached textures: width × height × 4, and a third more for a mipmap chain. */
+export function cachedTextureBytes(): number {
+  let bytes = 0;
+  for (const texture of textureCache.values()) {
+    const image = texture.image as { width?: number; height?: number } | null;
+    const base = (image?.width ?? 0) * (image?.height ?? 0) * 4;
+    bytes += texture.generateMipmaps ? base * 1.33 : base;
+  }
+  return Math.round(bytes);
+}
+
 function canvas(w: number, h: number): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
   const c = document.createElement("canvas");
   c.width = w;
@@ -121,9 +165,17 @@ function canvas(w: number, h: number): { c: HTMLCanvasElement; g: CanvasRenderin
   return { c, g };
 }
 
-function toTexture(c: HTMLCanvasElement, repeat = false): THREE.CanvasTexture {
+/** A seat-sized canvas whose drawing coordinates are the 256 × 512 design space. */
+function seatCanvas(): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
+  const { c, g } = canvas(SEAT_TEXTURE_SIZE.width, SEAT_TEXTURE_SIZE.height);
+  g.scale(SEAT_TEXTURE_SIZE.width / SEAT_DESIGN.width, SEAT_TEXTURE_SIZE.height / SEAT_DESIGN.height);
+  return { c, g };
+}
+
+/** A colour map (sRGB), or with `data` a normal or roughness map (linear values, not colours). */
+function toTexture(c: HTMLCanvasElement, repeat = false, data = false): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
+  t.colorSpace = data ? THREE.NoColorSpace : THREE.SRGBColorSpace;
   t.anisotropy = 8;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
@@ -146,15 +198,238 @@ function grain(g: CanvasRenderingContext2D, w: number, h: number, amount: number
   }
 }
 
+/** Pixels laid out as ImageData is (RGBA, rows top to bottom). A real ImageData satisfies it; so does a plain object in a test (PF-20). */
+export interface PixelGrid {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
+}
+
+/**
+ * A tangent-space normal map from a height map (the red channel; dark is low), by a Sobel pass. Pure: the input is not
+ * changed. Rows run down the image while texture v runs up (the canvas textures are flipped on upload), so a rise toward
+ * the top of the image tilts the normal toward +v (green above 128). Edges repeat their outermost pixels. `strength`
+ * scales the slopes; a flat map gives (128, 128, 255) everywhere.
+ */
+export function normalFromHeight(height: PixelGrid, strength: number): PixelGrid {
+  const { width, height: rows, data } = height;
+  const out = new Uint8ClampedArray(width * rows * 4);
+  const h = (x: number, y: number) => {
+    const cx = x < 0 ? 0 : x >= width ? width - 1 : x;
+    const cy = y < 0 ? 0 : y >= rows ? rows - 1 : y;
+    return (data[(cy * width + cx) * 4] ?? 0) / 255;
+  };
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < width; x++) {
+      // Sobel slopes along image x (right) and image y (down)
+      const gx = h(x + 1, y - 1) + 2 * h(x + 1, y) + h(x + 1, y + 1) - h(x - 1, y - 1) - 2 * h(x - 1, y) - h(x - 1, y + 1);
+      const gy = h(x - 1, y + 1) + 2 * h(x, y + 1) + h(x + 1, y + 1) - h(x - 1, y - 1) - 2 * h(x, y - 1) - h(x + 1, y - 1);
+      // n = normalize(-dh/du, -dh/dv, 1) with u = x and v = -y
+      const nx = -gx * strength;
+      const ny = gy * strength;
+      const len = Math.hypot(nx, ny, 1);
+      const i = (y * width + x) * 4;
+      out[i] = Math.round(((nx / len) * 0.5 + 0.5) * 255);
+      out[i + 1] = Math.round(((ny / len) * 0.5 + 0.5) * 255);
+      out[i + 2] = Math.round(((1 / len) * 0.5 + 0.5) * 255);
+      out[i + 3] = 255;
+    }
+  }
+  return { width, height: rows, data: out };
+}
+
+type Point = [number, number];
+
+/**
+ * Where the seams of an upholstered surface run, in the 256 × 512 design space: one source for the colour, height and
+ * roughness maps so the three always line up. Grooves are sewn seams and stitched channels (dark in the height map);
+ * piping is the raised rolled edge (light, and slightly glossier).
+ */
+interface SeatRelief {
+  /** the stitched channels are drawn inside this rectangle only */
+  clip: [number, number, number, number] | null;
+  channels: Point[][];
+  seams: Point[][];
+  piping: Point[][];
+}
+
+/** Seat back, front face: a stitched lower field of channels meeting in an off-centre chevron, seams under the headrest. */
+function backRelief(band: boolean): SeatRelief {
+  const { width: w, height: h } = SEAT_DESIGN;
+  const fieldTop = band ? 222 : 204;
+  const apex = w * 0.66;
+  const channels: Point[][] = [];
+  for (let i = -6; i < 14; i++) {
+    const y0 = fieldTop + i * 46;
+    channels.push([
+      [0, y0 - 150],
+      [apex, y0 + 70],
+      [w, y0 - 40],
+    ]);
+  }
+  const seams: Point[][] = band
+    ? [
+        [
+          [0, 226],
+          [w, 186],
+        ],
+      ]
+    : [148, 204].map((y) => [
+        [6, y],
+        [w - 6, y],
+      ]);
+  const piping: Point[][] = [
+    // rolled side edges
+    [
+      [5, 0],
+      [5, h],
+    ],
+    [
+      [w - 5, 0],
+      [w - 5, h],
+    ],
+    // a piped edge along the top of the stitched field
+    band
+      ? [
+          [0, 220],
+          [w, 180],
+        ]
+      : [
+          [6, 199],
+          [w - 6, 199],
+        ],
+  ];
+  return { clip: [10, fieldTop, w - 20, h - fieldTop - 6], channels, seams, piping };
+}
+
+/**
+ * Seat pan, top face. The pan's UVs run u from the back edge (0) to the front edge (1) and v across the seat: a piped
+ * perimeter, a seam behind the front roll and two seams dividing the sitting area into three channels.
+ */
+function panRelief(): SeatRelief {
+  const { width: w, height: h } = SEAT_DESIGN;
+  const roll = w - 62;
+  return {
+    clip: null,
+    channels: [],
+    seams: [
+      [
+        [roll, 14],
+        [roll, h - 14],
+      ],
+      [
+        [16, h / 3],
+        [roll, h / 3],
+      ],
+      [
+        [16, (2 * h) / 3],
+        [roll, (2 * h) / 3],
+      ],
+    ],
+    piping: [
+      [
+        [9, 9],
+        [w - 9, 9],
+        [w - 9, h - 9],
+        [9, h - 9],
+        [9, 9],
+      ],
+    ],
+  };
+}
+
+function strokePath(g: CanvasRenderingContext2D, points: Point[]): void {
+  const [first, ...rest] = points;
+  if (!first) return;
+  g.beginPath();
+  g.moveTo(first[0], first[1]);
+  for (const [x, y] of rest) g.lineTo(x, y);
+  g.stroke();
+}
+
+/** Stroke soft-edged lines: several passes from wide and faint to narrow and strong, so the Sobel pass sees a slope, not a step. */
+function softStroke(g: CanvasRenderingContext2D, paths: Point[][], colour: (alpha: number) => string, width: number): void {
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  for (const [scale, alpha] of [
+    [2.2, 0.18],
+    [1.5, 0.3],
+    [1, 0.5],
+    [0.5, 0.6],
+  ] as const) {
+    g.strokeStyle = colour(alpha);
+    g.lineWidth = width * scale;
+    for (const path of paths) strokePath(g, path);
+  }
+}
+
+function withClip(g: CanvasRenderingContext2D, clip: SeatRelief["clip"], draw: () => void): void {
+  g.save();
+  if (clip) {
+    g.beginPath();
+    g.rect(...clip);
+    g.clip();
+  }
+  draw();
+  g.restore();
+}
+
+export type SeatSurface = "back" | "pan";
+
+function reliefOf(surface: SeatSurface, band: boolean): SeatRelief {
+  return surface === "back" ? backRelief(band) : panRelief();
+}
+
+/** Height map of a seat surface: mid grey, seams and channels as dark grooves, piping as a light ridge. */
+function seatHeightCanvas(surface: SeatSurface, band: boolean): HTMLCanvasElement {
+  const { c, g } = seatCanvas();
+  const relief = reliefOf(surface, band);
+  g.fillStyle = "rgb(128,128,128)";
+  g.fillRect(0, 0, SEAT_DESIGN.width, SEAT_DESIGN.height);
+  const dark = (a: number) => `rgba(0,0,0,${a})`;
+  withClip(g, relief.clip, () => softStroke(g, relief.channels, dark, 4));
+  softStroke(g, relief.seams, dark, 4.5);
+  softStroke(g, relief.piping, (a) => `rgba(255,255,255,${a})`, 5);
+  return c;
+}
+
+/**
+ * Normal map of a seat surface (linear data), from its height map by normalFromHeight(). It depends only on where the
+ * seams run, so the families share it: the back has two layouts (with or without the pale band), the pan one.
+ */
+export function seatNormalTexture(surface: SeatSurface, band: boolean, strength: number): THREE.CanvasTexture {
+  const heightCanvas = seatHeightCanvas(surface, band);
+  const hg = heightCanvas.getContext("2d");
+  if (!hg) throw new Error("2D canvas is unavailable");
+  const { width, height } = SEAT_TEXTURE_SIZE;
+  const normals = normalFromHeight(hg.getImageData(0, 0, width, height), strength);
+  const { c, g } = canvas(width, height);
+  g.putImageData(new ImageData(new Uint8ClampedArray(normals.data), width, height), 0, 0);
+  return toTexture(c, false, true);
+}
+
+/** Roughness map of a seat surface (linear data, green channel): white everywhere, slightly lower along the piping. */
+export function seatRoughnessTexture(surface: SeatSurface, band: boolean): THREE.CanvasTexture {
+  const { c, g } = seatCanvas();
+  const relief = reliefOf(surface, band);
+  g.fillStyle = "rgb(255,255,255)";
+  g.fillRect(0, 0, SEAT_DESIGN.width, SEAT_DESIGN.height);
+  g.lineCap = "round";
+  g.strokeStyle = "rgb(200,200,200)";
+  g.lineWidth = 5;
+  for (const path of relief.piping) strokePath(g, path);
+  return toTexture(c, false, true);
+}
+
 /**
  * Seat back, front face. Evidence: tall back with a horizontal seam under the headrest, an
  * angled pale upper band in the banded family, and a lower field of parallel stitched channels
  * meeting in an off-centre chevron ("recarro 2.jpg", "seats 4.jpg", "seats 5.jpg", "seats 8.jpg").
  */
 export function backFrontTexture(p: ProfilePalette): THREE.CanvasTexture {
-  const w = 256;
-  const h = 512;
-  const { c, g } = canvas(w, h);
+  const { width: w, height: h } = SEAT_DESIGN;
+  const { c, g } = seatCanvas();
+  const relief = backRelief(Boolean(p.band));
   const grad = g.createLinearGradient(0, 0, w, 0);
   grad.addColorStop(0, p.upholsteryDark);
   grad.addColorStop(0.18, p.upholstery);
@@ -164,29 +439,15 @@ export function backFrontTexture(p: ProfilePalette): THREE.CanvasTexture {
   g.fillRect(0, 0, w, h);
   grain(g, w, h, 0.05, 7);
 
-  const fieldTop = p.band ? 222 : 204;
-  // lower stitched field: parallel channels converging on an off-centre chevron line
-  g.save();
-  g.beginPath();
-  g.rect(10, fieldTop, w - 20, h - fieldTop - 6);
-  g.clip();
-  const apex = w * 0.66;
-  g.lineWidth = 2.2;
-  for (let i = -6; i < 14; i++) {
-    const y0 = fieldTop + i * 46;
+  // lower stitched field: a shaded channel line, then the stitching along it
+  withClip(g, relief.clip, () => {
     for (const pass of [0, 1]) {
       g.strokeStyle = pass === 0 ? (p.id === "concept-gray" ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.42)") : p.stitch;
       g.lineWidth = pass === 0 ? 4.5 : 1.3;
-      if (pass === 1) g.setLineDash([5, 3]);
-      else g.setLineDash([]);
-      g.beginPath();
-      g.moveTo(0, y0 - 150);
-      g.lineTo(apex, y0 + 70);
-      g.lineTo(w, y0 - 40);
-      g.stroke();
+      g.setLineDash(pass === 1 ? [5, 3] : []);
+      for (const path of relief.channels) strokePath(g, path);
     }
-  }
-  g.restore();
+  });
   g.setLineDash([]);
 
   if (p.band) {
@@ -204,29 +465,53 @@ export function backFrontTexture(p: ProfilePalette): THREE.CanvasTexture {
     shade.addColorStop(1, "rgba(0,0,40,0.18)");
     g.fillStyle = shade;
     g.fill();
-    g.strokeStyle = "rgba(10,16,50,0.55)";
-    g.lineWidth = 2.5;
-    g.beginPath();
-    g.moveTo(0, 226);
-    g.lineTo(w, 186);
-    g.stroke();
   }
-  // horizontal seams below the headrest
-  g.strokeStyle = "rgba(0,0,0,0.5)";
+  // seams: a dark sewn line
+  g.strokeStyle = p.band ? "rgba(10,16,50,0.55)" : "rgba(0,0,0,0.5)";
   g.lineWidth = 2.5;
-  for (const y of p.band ? [] : [148, 204]) {
-    g.beginPath();
-    g.moveTo(6, y);
-    g.lineTo(w - 6, y);
-    g.stroke();
-  }
-  // soft vignette for leather sheen
-  const sheen = g.createLinearGradient(0, 0, 0, h);
-  sheen.addColorStop(0, "rgba(255,255,255,0.06)");
-  sheen.addColorStop(0.5, "rgba(255,255,255,0)");
-  sheen.addColorStop(1, "rgba(0,0,0,0.22)");
-  g.fillStyle = sheen;
+  for (const path of relief.seams) strokePath(g, path);
+  // piping catches a little light along its crest
+  g.strokeStyle = "rgba(255,255,255,0.10)";
+  g.lineWidth = 2;
+  for (const path of relief.piping) strokePath(g, path);
+  // soft vignette toward the base
+  const fade = g.createLinearGradient(0, 0, 0, h);
+  fade.addColorStop(0, "rgba(255,255,255,0.04)");
+  fade.addColorStop(0.5, "rgba(255,255,255,0)");
+  fade.addColorStop(1, "rgba(0,0,0,0.18)");
+  g.fillStyle = fade;
   g.fillRect(0, 0, w, h);
+  return toTexture(c);
+}
+
+/** Seat pan, top face: the family's upholstery, darker toward the edges, with seams and a piped perimeter. */
+export function panTexture(p: ProfilePalette): THREE.CanvasTexture {
+  const { width: w, height: h } = SEAT_DESIGN;
+  const { c, g } = seatCanvas();
+  const relief = panRelief();
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, p.upholsteryDark);
+  grad.addColorStop(0.12, p.upholstery);
+  grad.addColorStop(0.88, p.upholstery);
+  grad.addColorStop(1, p.upholsteryDark);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, w, h);
+  grain(g, w, h, 0.05, 11);
+  g.strokeStyle = "rgba(0,0,0,0.4)";
+  g.lineWidth = 2.5;
+  for (const path of relief.seams) strokePath(g, path);
+  g.strokeStyle = p.stitch;
+  g.lineWidth = 1.2;
+  g.setLineDash([5, 3]);
+  for (const path of relief.seams)
+    strokePath(
+      g,
+      path.map(([x, y]) => [x + 3, y + 3] as Point),
+    );
+  g.setLineDash([]);
+  g.strokeStyle = "rgba(255,255,255,0.10)";
+  g.lineWidth = 2;
+  for (const path of relief.piping) strokePath(g, path);
   return toTexture(c);
 }
 
@@ -238,9 +523,8 @@ export function backFrontTexture(p: ProfilePalette): THREE.CanvasTexture {
  * cabin-wide availability or built-in screen is implied.
  */
 export function rearShellTexture(p: ProfilePalette, showPowerPanel: boolean): THREE.CanvasTexture {
-  const w = 256;
-  const h = 512;
-  const { c, g } = canvas(w, h);
+  const { width: w, height: h } = SEAT_DESIGN;
+  const { c, g } = seatCanvas();
   g.fillStyle = p.shell;
   g.fillRect(0, 0, w, h);
   const side = g.createLinearGradient(0, 0, w, 0);
@@ -335,8 +619,9 @@ export function rearShellTexture(p: ProfilePalette, showPowerPanel: boolean): TH
  * dashes laid in curved, overlapping fan fields on dark navy. Tileable.
  */
 export function carpetTexture(p: ProfilePalette): THREE.CanvasTexture {
-  const size = 1024;
-  const { c, g } = canvas(size, size);
+  // the fan pattern is laid out for a square tile
+  const size = CARPET_TEXTURE_SIZE.width;
+  const { c, g } = canvas(size, CARPET_TEXTURE_SIZE.height);
   g.fillStyle = p.carpetBase;
   g.fillRect(0, 0, size, size);
   grain(g, size, size, 0.06, 21);
@@ -401,8 +686,7 @@ export function carpetTexture(p: ProfilePalette): THREE.CanvasTexture {
  * door, soft perimeter shading.
  */
 export function binDoorTexture(): THREE.CanvasTexture {
-  const w = 512;
-  const h = 256;
+  const { width: w, height: h } = BIN_DOOR_TEXTURE_SIZE;
   const { c, g } = canvas(w, h);
   const base = g.createLinearGradient(0, 0, 0, h);
   base.addColorStop(0, "#d7dae0");
@@ -449,8 +733,7 @@ export function binDoorTexture(): THREE.CanvasTexture {
  * vents, small lights and a grille per segment. Purely visual; no service fitting is modelled.
  */
 export function serviceUnitTexture(): THREE.CanvasTexture {
-  const w = 256;
-  const h = 128;
+  const { width: w, height: h } = SERVICE_UNIT_TEXTURE_SIZE;
   const { c, g } = canvas(w, h);
   g.fillStyle = "#dfe2e8";
   g.fillRect(0, 0, w, h);
@@ -484,8 +767,7 @@ export function serviceUnitTexture(): THREE.CanvasTexture {
 
 /** Sidewall context panel with a window reveal. Context only. */
 export function sidewallTexture(): THREE.CanvasTexture {
-  const w = 256;
-  const h = 256;
+  const { width: w, height: h } = SIDEWALL_TEXTURE_SIZE;
   const { c, g } = canvas(w, h);
   g.fillStyle = "#e3e5ea";
   g.fillRect(0, 0, w, h);
@@ -505,4 +787,18 @@ export function sidewallTexture(): THREE.CanvasTexture {
   g.lineWidth = 3;
   g.stroke();
   return toTexture(c, true);
+}
+
+/** A soft round dark patch, transparent at its rim: laid on the carpet under each seat, it grounds the seat without shadow maps. */
+export function contactTexture(): THREE.CanvasTexture {
+  const { width: w, height: h } = CONTACT_TEXTURE_SIZE;
+  const { c, g } = canvas(w, h);
+  const r = Math.min(w, h) / 2;
+  const grad = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, r);
+  grad.addColorStop(0, "rgba(0,0,0,0.6)");
+  grad.addColorStop(0.45, "rgba(0,0,0,0.4)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, w, h);
+  return toTexture(c);
 }

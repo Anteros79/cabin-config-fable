@@ -61,6 +61,8 @@ The E2E run checks that the JSON, the server PDF and the printed PDF carry the s
 
 Method: `captures/` holds 19 real renders from this build (`captures/captures.json` records release, layout, profile, light, camera and layers for each). `comparisons/` holds 12 sheets placing a supplied original on the left and a render on the right (`comparisons/index.json`). I looked at each sheet and judged each feature. The judgments are mine, by eye. Nothing was measured, because no dimensions were supplied.
 
+The six rows marked "(5.3)" were re-judged after Task 5.3 (environment light, physical upholstery with stitched normal maps, contact shading) against sheets regenerated from that commit's renders with `npm run test:e2e && npm run comparisons`; those regenerated captures and sheets are not committed, so the files in `captures/` and `comparisons/` may predate the judgment.
+
 PASS means the feature is present and reads as the same thing. PARTIAL means present but visibly different. FAIL means absent or wrong. UNKNOWN means the originals do not settle what is correct.
 
 | Feature | Original(s) | Sheet | Result | Note |
@@ -72,11 +74,11 @@ PASS means the feature is present and reads as the same thing. PARTIAL means pre
 | Headrest width relative to the back | `recarro 2.jpg` against `seats 5.jpg` | 01, 03 | UNKNOWN | The two originals differ. The model uses the narrower form for every family |
 | Pale angled band on the upper back (band family) | `recarro 2.jpg`, `seats 1.jpeg` | 01, 02 | PARTIAL | Present and pale. The original band has a clearer diagonal lower edge |
 | No band (plain family) | `seats 5.jpg` | 03 | PASS | |
-| Stitch lines on the lower back | `seats 1.jpeg`, `seats 5.jpg` | 02, 03 | PARTIAL | Lines present but faint on navy; the originals show stronger converging diagonals |
-| Concept gray colour and bold stitching | PNG video still, `seats 8.jpg` | 04, 05 | PARTIAL | Colour family is close. Stitching is bolder and more regular than the render |
-| Leather sheen and seam detail | `seats 5.jpg`, `recarro 2.jpg` | 01, 03 | FAIL | The model is matte with no seam piping |
+| Stitch lines on the lower back (5.3) | `seats 1.jpeg`, `seats 5.jpg` | 02, 03 | PARTIAL | Now clear in relief under both lights. The model repeats many short chevrons where the originals show a few long converging diagonals |
+| Concept gray colour and bold stitching (5.3) | PNG video still, `seats 8.jpg` | 04, 05 | PARTIAL | Stitched channels now read as sewn grooves. The covering is paler and cooler (lilac) than the render's warm taupe, and its chevrons replace the render's finer, flatter lines |
+| Leather sheen and seam detail (5.3) | `seats 5.jpg`, `recarro 2.jpg` | 01, 03 | PARTIAL | Seams, channels and piped edges are in relief and the leather has a soft sheen and faint clear coat. The photographed leather is glossier, with bright specular highlights the model does not reach |
 | Pale arms with dark pads | `seats 1.jpeg`, `carpet.jpg` | 02, 08 | PASS | |
-| Silver legs | `seats 1.jpeg`, `seats 4.jpg` | 02, 09 | PASS | Simplified frame |
+| Silver legs (5.3) | `seats 1.jpeg`, `seats 4.jpg` | 02, 09 | PASS | Now metallic, reflecting the cabin light. The frame is still simplified |
 | Pale rear shell with dark top edge | `southwest seats-7.webp` | 06 | PASS | |
 | Rear-shell furniture: literature ledge, device ledge, tray and latch, mesh pocket | `southwest seats-7.webp`, `seats 3.jpg` | 06, 07 | PARTIAL | All present. The original shell is a rounded moulding with a fold-out device holder; the model is flat panels |
 | Two-opening panel on the rear shell | `seats 3.jpg`, `seats 4.jpg` | 07 | UNKNOWN | Drawn on every shell. The originals show it only on the seats in view; no availability claim is made |
@@ -86,15 +88,15 @@ PASS means the feature is present and reads as the same thing. PARTIAL means pre
 | Segmented bin underside with service units | `seats 4.jpg` | 09 | PARTIAL | Segments and round fittings present; far less detail than the original |
 | Window surrounds | `seats 5.jpg`, `recarro 2.jpg` | 01, 03 | PARTIAL | Plain ovals on a flat sidewall, one per row. Only in the optional context layer |
 | Ceiling arch | `seats 2 .jpeg` | 10 | FAIL | The model has no sculpted ceiling; it is open above the bins |
-| Blue cabin light | `seats 1.jpeg`, `seats 4.jpg`, `seats 5.jpg` | 02, 03, 09 | PARTIAL | Reads as blue cabin light, but more saturated and darker than the photographs |
-| Neutral light | `recarro 2.jpg` | 01 | PARTIAL | Even studio light; the original has strong directional daylight |
+| Blue cabin light (5.3) | `seats 1.jpeg`, `seats 4.jpg`, `seats 5.jpg` | 02, 03, 09 | PARTIAL | A blue wash with pale whites, as in the photographs, and no longer oversaturated. Still dimmer and greyer than the luminous blue of `seats 1.jpeg` and `seats 5.jpg`, with no glow from the ceiling |
+| Neutral light (5.3) | `recarro 2.jpg` | 01 | PARTIAL | Environment light with a key from the window side gives the forms direction and soft modelling. No hard sunlit highlights or cast shadows as in the original |
 | Seat belts, heart mark, literature cards | several | — | FAIL (by decision) | Not modelled. Brand marks are deliberately left out |
 | Galleys, barrier, lavatories | `barrier.webp`, `rear galley.jpg`, `forward galley flight deck.jpg` | — | FAIL (by decision) | Not modelled. The context layer has only a plain translucent bulkhead at each end |
 | Dimensions, pitch, proportions | — | — | UNKNOWN | Nothing supplied gives a dimension |
 | True colours | — | — | UNKNOWN | Every photograph is under tinted or strong light |
 | Which family belongs to which layout | — | — | UNKNOWN | No supplied file says |
 
-Summary: 8 PASS, 11 PARTIAL, 4 FAIL, 5 UNKNOWN. The model is recognisable as the cabin in the photographs and works as a spatial index for picking seats, floor areas and bins. It is not a faithful reproduction, and the headrest shape and material finish are the weakest points.
+Summary: 8 PASS, 12 PARTIAL, 3 FAIL, 5 UNKNOWN. The model is recognisable as the cabin in the photographs and works as a spatial index for picking seats, floor areas and bins. It is not a faithful reproduction. The headrest shape is now the weakest point; the material finish is closer but less glossy than the photographed leather.
 
 ## Not verified
 

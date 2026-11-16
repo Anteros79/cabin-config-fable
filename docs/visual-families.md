@@ -37,6 +37,25 @@ Shared by all three in the model: three-part headrest with projecting wings, sep
 
 Two lighting presets (`neutral`, `blue`) reproduce the two lighting conditions in the photographs. Lighting is independent of the family.
 
+## Materials and light
+
+Final values after tuning by eye against comparison sheets 01 (`recarro 2.jpg`) and 03 (`seats 5.jpg`). They live in `src/web/scene/materials.ts` and `src/web/scene/environment.ts`.
+
+| Part | Material | Values |
+| --- | --- | --- |
+| Upholstery (back front, pan; plain on headrest, back core and wing faces) | `MeshPhysicalMaterial` | roughness 0.55, specularIntensity 0.5, sheen 0.4, sheenRoughness 0.5, sheen colour = the part's colour lifted 20 % toward white, clearcoat 0.08, clearcoatRoughness 0.6, normalScale (0.6, 0.6) |
+| Shell (rear relief; rear shell with its map; arms in the arm colour) | `MeshStandardMaterial` | roughness 0.7, metalness 0 |
+| Legs | `MeshStandardMaterial` | metalness 1, roughness 0.35 |
+| Arm pads | `MeshStandardMaterial` | roughness 0.5 |
+
+Changed from the starting values: specularIntensity 0.5 (added; at 1.0 the bright room's reflection greyed the dark navy to slate) and a sheen colour only 20 % lighter than the leather (at 60 % the sheen laid a grey haze over the navy).
+
+Seat back and pan maps are 512 × 1024. Each colour map has a height map drawn from the same seam layout (stitched channels and seams as dark grooves, piping as a light ridge), turned into a tangent-space normal map by a Sobel pass (strength 2.5), and a roughness map that is 0.8 of the base along the piping. The normal and roughness maps depend only on where the seams run, so the families share them (two back layouts, with and without the band, and one pan).
+
+Light: three's `RoomEnvironment`, prefiltered with PMREM, one per light mode; `environmentIntensity` 1.0 neutral, 0.55 blue. In blue mode the room's emissive panels are `#7d94ff` and its main light `#c4cdff`. One directional key from the left (window) side, `#fff8ee` at 1.4 neutral, `#b9c5ff` at 1.2 blue; in blue mode a `#6f86ff` fill at 0.8 from the other side. Tone mapping ACES, exposure 1.0 neutral, 1.05 blue. The wash-light strips are emissive (no light of their own). No shadow maps: a soft radial contact patch on the carpet under each seat grounds it.
+
+Status overlays are not tone mapped, so they are drawn in exactly the legend swatch colours (`tests/web/materials.test.ts` checks ΔE ≤ 10 against `styles.css`; tone mapped at exposure 1.0, "recorded" would be ΔE 26.5 off and "unresolved" ΔE 11.5).
+
 ## What the images do not establish
 
 - Which layout, tail or date any family belongs to.
