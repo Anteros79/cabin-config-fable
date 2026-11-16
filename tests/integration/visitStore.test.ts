@@ -384,6 +384,8 @@ describe("idempotent linked events and key retention", () => {
     expect([first.alreadyCompleted, first.replayed]).toEqual([false, false]);
     const again = store.completeVisit(id, undefined, { idempotencyKey: "complete-key-1" });
     expect([again.alreadyCompleted, again.replayed]).toEqual([true, true]);
+    const fresh2 = store.completeVisit(id, undefined, { idempotencyKey: "complete-key-2" });
+    expect([fresh2.alreadyCompleted, fresh2.replayed]).toEqual([true, false]);
     const none = store.completeVisit(id, undefined);
     expect([none.alreadyCompleted, none.replayed]).toEqual([true, false]);
     store.close();

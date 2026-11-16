@@ -175,5 +175,5 @@ export const api = {
     }),
   report: (id: string) => request<ReportEnvelope>("GET", `/api/visits/${id}/report`),
   addEvent: (id: string, type: string, note: string, author: string, idempotencyKey: string) =>
-    request<{ visit: VisitState }>("POST", `/api/visits/${id}/events`, { type, note, author, idempotencyKey }),
+    request<{ visit: VisitState; replayed: boolean }>("POST", `/api/visits/${id}/events`, { type, note, author, idempotencyKey }),
 };

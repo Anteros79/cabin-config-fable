@@ -12,7 +12,11 @@ export function ReportView({ visitId }: { visitId: string }) {
   const [author, setAuthor] = useState("");
   const [noteState, setNoteState] = useState("");
   // One key per note: a retry after a dropped answer reuses it, so the note is appended once.
-  const noteKey = useRef(newKey());
+  const noteKey = useRef<string | null>(null);
+  const keyForNote = () => {
+    noteKey.current ??= newKey();
+    return noteKey.current;
+  };
 
   const load = useCallback(async () => {
     setError(null);
@@ -34,12 +38,20 @@ export function ReportView({ visitId }: { visitId: string }) {
     e.preventDefault();
     setNoteState("Saving…");
     try {
-      await api.addEvent(visitId, noteType, note, author, noteKey.current);
-      noteKey.current = newKey();
+      await api.addEvent(visitId, noteType, note, author, keyForNote());
+      noteKey.current = null;
       setNote("");
       setNoteState("Linked note added. The locked report content is unchanged.");
       await load();
     } catch (err) {
+      if (err instanceof ApiError && err.code === "IDEMPOTENCY_KEY_REUSED") {
+        noteKey.current = null;
+        setNoteState(
+          "An earlier note was already saved, so this one was not added. The report now shows the saved notes; add this note again if it is still needed.",
+        );
+        await load();
+        return;
+      }
       setNoteState(`Not saved: ${(err as Error).message}`);
     }
   };
