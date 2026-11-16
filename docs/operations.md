@@ -29,7 +29,7 @@ npm start                # http://127.0.0.1:4310
 
 Source root: the data originals are read from `CABIN_KIT_SOURCE_ROOT` when set, else from the vendored `fixtures/originals/`, else from `../../`. The 14 images are read from `CABIN_KIT_SOURCE_ROOT` when set, else from `../../`; only `comparisons` and `originals:verify` need them.
 
-The server, the import commands and the tests all read these through `src/server/config.ts`, so an import and a start with the same environment always use the same files. An empty or blank value means the variable is unset. Relative paths are resolved against the working directory.
+The server, the import commands and the tests read the store and server settings through `src/server/config.ts`, and the source root through `src/importer/originals.ts` (`resolveSourceRoot`, `resolveImageRoot`), so an import and a start with the same environment always use the same files. An empty or blank value means the variable is unset. Relative paths are resolved against the working directory.
 
 The server checks every setting before it opens any store. An unusable value (a port that is not a number, an unknown log level, an allowed host with a path or port in it, a non-loopback host without `CABIN_KIT_ALLOW_REMOTE=1`) stops it with a message on stderr and exit code 2.
 
@@ -113,7 +113,7 @@ The store uses SQLite write-ahead logging. If `visits.sqlite-wal` or `visits.sql
 
 Restore: stop the server, replace `data/visits.sqlite` with the backup (remove any `-wal`/`-shm` files), start the server. A visit store does not need the reference store it was created with; reports for existing visits are produced from the visit's own snapshot.
 
-The reference store can always be rebuilt with `npm run reference:import`, provided the originals and `fixtures/fixture-data.json` are unchanged. `npm run originals:verify` checks the originals against the recorded SHA-256 values: the vendored data originals always, and the source root (`CABIN_KIT_SOURCE_ROOT`, else `../../`) when it was named or holds at least one original. A source root that is checked must hold all 23 originals; each missing one is named and the exit code is 1. Where no original is in `../../` (a clone outside the development folder, CI), the 14 images are reported `skipped (not present)` and the command exits 0.
+The reference store can always be rebuilt with `npm run reference:import`, provided the originals and `fixtures/fixture-data.json` are unchanged. `npm run originals:verify` checks the originals against the recorded SHA-256 values: the vendored data originals always, and the source root (`CABIN_KIT_SOURCE_ROOT`, else `../../`) when it was named or holds at least one original. A source root that is checked must hold all 23 originals; each missing one is named and the exit code is 1. One exception: `CABIN_KIT_SOURCE_ROOT` set to `fixtures/originals` itself checks the nine data originals there and skips the images, since that folder never holds them. Where no original is in `../../` (a clone outside the development folder, CI), the command prints `source root <absolute path> holds no originals; images and source copies not checked (set CABIN_KIT_SOURCE_ROOT to require them)`, reports the 14 images `skipped (not present)` and exits 0.
 
 ## Upgrading and store errors
 

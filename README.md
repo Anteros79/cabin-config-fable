@@ -61,7 +61,7 @@ Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Reco
 | `npm run test:e2e:ui` | The same specs in Playwright's UI mode (run `npm run build:e2e` first) |
 | `npm run budgets` | Build, then check bundle, payload, scene geometry and coverage budgets against `budgets.json` |
 | `npm run verify` | `check`, build, browser tests and the originals check. Writes nothing tracked |
-| `npm run verify:clean` | `verify`, then fails if the working tree changed (CI runs the same) |
+| `npm run verify:clean` | `verify`, then fails if the working tree changed. CI runs the equivalent steps, but its `npm audit` step uses `--audit-level=high`, where the release gate used `moderate` |
 | `npm run evidence:capture` | Renders, sample visits and reports, performance and axe results into `verification/out/` (git-ignored). `-- --promote` copies the curated subset into `verification/` to be committed by hand; `-- --assert-perf` also checks the frame-rate and pick targets |
 | `npm run comparisons` | Comparison sheets from the captures in `verification/out/` and the image originals; skipped when the images are not present |
 | `npm run originals:verify` | Re-hash the supplied originals against the manifest. The source root (`CABIN_KIT_SOURCE_ROOT`, else `../../`) is checked when it was named or holds any original, and must then hold all of them; otherwise the 14 images are skipped |
@@ -71,7 +71,7 @@ Test counts are not listed here because they change; see the CI run (`.github/wo
 
 ## Configuration
 
-One resolver (`src/server/config.ts`) is shared by the server, the import CLI, the tools and the tests. An empty or blank value counts as unset. The server checks every value before it opens a store and stops with exit code 2 on an unusable one.
+Store paths, host, port and the other server settings are resolved in `src/server/config.ts`; the source root is resolved in `src/importer/originals.ts` (`resolveSourceRoot` for the data originals, `resolveImageRoot` for the images). The server, the import CLI, the tools and the tests all use these. An empty or blank value counts as unset. The server checks every value before it opens a store and stops with exit code 2 on an unusable one.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
@@ -81,7 +81,7 @@ One resolver (`src/server/config.ts`) is shared by the server, the import CLI, t
 | `CABIN_KIT_HOST` / `CABIN_KIT_PORT` | `127.0.0.1` / `4310` | Listen address and port. A non-loopback host is refused unless `CABIN_KIT_ALLOW_REMOTE=1` |
 | `CABIN_KIT_ALLOW_REMOTE` | unset | `1` accepts a non-loopback `CABIN_KIT_HOST`. The server has no authentication |
 | `CABIN_KIT_ALLOWED_HOSTS` | unset | Extra host names accepted in the `Host` header, comma-separated (besides `localhost`, `127.0.0.1`, `::1` and the listen host) |
-| `CABIN_KIT_LOG_LEVEL` | `info` | `silent`, `error`, `warn`, `info` or `debug`. One JSON line per request, with its request id |
+| `CABIN_KIT_LOG_LEVEL` | `info` | `silent`, `error`, `warn`, `info` or `debug`. Two JSON lines per request (incoming request, request completed), with its request id |
 | `CABIN_KIT_WEB_ROOT` | `dist/web` | Built client the server serves |
 | `CABIN_KIT_SOURCE_ROOT` | see below | Folder holding the supplied originals |
 
