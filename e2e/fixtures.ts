@@ -21,6 +21,39 @@ export interface Api {
   setFault(body: Record<string, unknown>): Promise<void>;
 }
 
+/** An API client for the server at baseURL (the worker's server, or one a test starts for itself). */
+export function makeApi(baseURL: string): Api {
+  const call = async <T>(method: string, path: string, body?: unknown) => {
+    const res = await fetch(`${baseURL}${path}`, {
+      method,
+      headers: body === undefined ? undefined : { "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return { status: res.status, json: (await res.json().catch(() => null)) as T };
+  };
+  const ok = async <T>(method: string, path: string, body?: unknown): Promise<T> => {
+    const res = await call<T>(method, path, body);
+    if (res.status >= 300) throw new Error(`${method} ${path} answered ${res.status}: ${JSON.stringify(res.json)}`);
+    return res.json;
+  };
+  return {
+    call,
+    async createVisit(tail, date, technician) {
+      const { visit } = await ok<{ visit: { id: string; number: number } }>("POST", "/api/visits", { tail, checkDate: date, technician });
+      return { id: visit.id, number: visit.number };
+    },
+    async addRecord(visitId, record) {
+      await ok("PUT", `/api/visits/${visitId}/records`, { record });
+    },
+    async complete(visitId) {
+      await ok("POST", `/api/visits/${visitId}/complete`, { confirm: true });
+    },
+    async setFault(body) {
+      await ok("POST", "/api/__test/faults", body);
+    },
+  };
+}
+
 interface TestFixtures {
   api: Api;
   /** A fresh draft on N100TL / 2026-11-12, created through the API. */
@@ -65,40 +98,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   ],
 
   api: async ({ server }, use) => {
-    const call = async <T>(method: string, path: string, body?: unknown) => {
-      const res = await fetch(`${server.baseURL}${path}`, {
-        method,
-        headers: body === undefined ? undefined : { "content-type": "application/json" },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      return { status: res.status, json: (await res.json().catch(() => null)) as T };
-    };
-    const ok = async <T>(method: string, path: string, body?: unknown): Promise<T> => {
-      const res = await call<T>(method, path, body);
-      if (res.status >= 300) throw new Error(`${method} ${path} answered ${res.status}: ${JSON.stringify(res.json)}`);
-      return res.json;
-    };
-    const api: Api = {
-      call,
-      async createVisit(tail, date, technician) {
-        const { visit } = await ok<{ visit: { id: string; number: number } }>("POST", "/api/visits", { tail, checkDate: date, technician });
-        return { id: visit.id, number: visit.number };
-      },
-      async addRecord(visitId, record) {
-        await ok("PUT", `/api/visits/${visitId}/records`, { record });
-      },
-      async complete(visitId) {
-        await ok("POST", `/api/visits/${visitId}/complete`, { confirm: true });
-      },
-      async setFault(body) {
-        await ok("POST", "/api/__test/faults", body);
-      },
-    };
+    const api = makeApi(server.baseURL);
     try {
       await use(api);
     } finally {
       // a test that stopped the server restarts it before it ends; if it did not, there is no fault left to clear
-      await call("POST", "/api/__test/faults", {}).catch(() => undefined);
+      await api.call("POST", "/api/__test/faults", {}).catch(() => undefined);
     }
   },
 

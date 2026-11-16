@@ -4,15 +4,16 @@ import { expect, test } from "./fixtures.ts";
 import { flat, pdfText, SIX, setDate, tabTo, totalsOnPage } from "./helpers.ts";
 
 /**
- * Where focus is while the completion dialog is open: "dialog" (an element inside it), "browser" (no page element: the native
- * modal dialog lets Tab leave the document for the browser's own controls, and does not wrap) or "outside" (an element of
- * the page behind the dialog, which must never happen).
+ * Where focus is while the completion dialog is open: "dialog" (an element inside it), "browser" (the document lost focus:
+ * the native modal dialog lets Tab leave the page for the browser's own controls, and does not wrap) or "outside" (an
+ * element of the page behind the dialog, or a focused <body>, which must never happen).
  */
 const focusWhileDialogOpen = (page: import("@playwright/test").Page) =>
   page.evaluate(() => {
+    if (!document.hasFocus()) return "browser";
     const el = document.activeElement;
-    if (el === null || el === document.body) return "browser";
-    return el.closest("dialog.confirm[open]") !== null ? "dialog" : `outside: ${el.outerHTML.slice(0, 80)}`;
+    if (el?.closest("dialog.confirm[open]")) return "dialog";
+    return `outside: ${el?.outerHTML.slice(0, 80) ?? "nothing"}`;
   });
 
 // The README walk-through, by keyboard only. Each step was one check of the old runner; they share one visit, so they are

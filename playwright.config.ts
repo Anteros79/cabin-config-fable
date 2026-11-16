@@ -10,6 +10,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // CI renders WebGL in software (SwiftShader) on a small runner: one worker, and more time per test and per expectation
+  workers: process.env.CI ? 1 : undefined,
+  timeout: process.env.CI ? 90_000 : 30_000,
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   reporter: [["list"], ["html", { open: "never" }]],
   outputDir: "test-results",
   use: {

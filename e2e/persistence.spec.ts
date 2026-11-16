@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Report } from "../src/domain/types.ts";
 import { importReference } from "../src/importer/cli.ts";
-import { expect, test } from "./fixtures.ts";
+import { expect, makeApi, test } from "./fixtures.ts";
 import { lookup, openMap, openVisit, recordPrimary, selectLocation } from "./helpers.ts";
 import { PROJECT_ROOT, startServer } from "./server.ts";
 
@@ -122,14 +122,8 @@ test("a reference update leaves the completed report unchanged and is flagged on
   // This test activates a second reference release, so it gets a server of its own and leaves the worker's alone.
   const own = await startServer();
   try {
-    const call = async <T>(method: string, path: string, body?: unknown) => {
-      const res = await fetch(`${own.baseURL}${path}`, {
-        method,
-        headers: body === undefined ? undefined : { "content-type": "application/json" },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      return (await res.json()) as T;
-    };
+    const ownApi = makeApi(own.baseURL);
+    const call = async <T>(method: string, path: string, body?: unknown) => (await ownApi.call<T>(method, path, body)).json;
     const completed = (await call<{ visit: { id: string } }>("POST", "/api/visits", { tail: "N100TL", checkDate: "2026-11-12" })).visit.id;
     await call("PUT", `/api/visits/${completed}/records`, { record: CUSHION("SEAT:3A") });
     await call("POST", `/api/visits/${completed}/complete`, { confirm: true });

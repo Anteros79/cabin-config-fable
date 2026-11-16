@@ -13,6 +13,7 @@ import {
   openMap,
   openMoveCamera,
   openVisit,
+  pressAt,
   recordPrimary,
   SCENE_BUDGET_176,
   scene,
@@ -56,32 +57,102 @@ test("genuine WebGL scene with one instance per seat, floor area and bin module"
   expect(gl, "a WebGL context is available").toMatch(/WebGL/);
 });
 
-test("the 176-seat layout stays within the draw-call and triangle budgets in every preset (PF-21)", async ({ page, api, visit }) => {
-  // the costly case: recorded states and their badges, an alternate, a selection outline and a hover outline
-  await api.addRecord(visit.id, CUSHION_7C);
-  await api.addRecord(visit.id, { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 });
-  await api.addRecord(visit.id, { locationId: "BIN:R-03", componentId: "BIN_DOOR", selection: "PRIMARY", quantity: 1 });
+/**
+ * The status set of the measured worst case (Task 5.4/5.6 reports): every floor location tinted (FWD unresolved, MID
+ * alternate, AFT recorded, FULL-CABIN alternate), recorded, unresolved and alternate seats, recorded and unresolved bins,
+ * and the mixed seat 7C (cushion recorded, backrest unresolved). A real visit on the 176-seat layout has no unresolved or
+ * seat-alternate state, so those are layered over the visit's own states through the scene's setStates().
+ */
+const WORST_CASE_EXTRA: Record<string, Record<string, string>> = {
+  "FLOOR:FWD": { CARPET_PANEL: "unresolved" },
+  "FLOOR:MID": { CARPET_PANEL: "alternate" },
+  "SEAT:7C": { BACKREST: "unresolved" },
+  "SEAT:12A": { BACKREST: "unresolved" },
+  "SEAT:12B": { CUSHION: "unresolved" },
+  "SEAT:15D": { CUSHION: "alternate" },
+  "SEAT:16E": { BACKREST: "alternate" },
+  "BIN:L-01": { BIN_DOOR: "unresolved" },
+};
+
+test("the 176-seat layout stays within the draw-call and triangle budgets in every preset, in the worst case (PF-21)", async ({ page, api, visit }) => {
+  const record = (locationId: string, componentId: string, selection = "PRIMARY", quantity = 1) =>
+    api.addRecord(visit.id, { locationId, componentId, selection, quantity });
+  await record("SEAT:7C", "CUSHION");
+  await record("SEAT:3A", "CUSHION");
+  await record("SEAT:20F", "BACKREST");
+  await record("FLOOR:AFT", "CARPET_PANEL");
+  await record("BIN:R-03", "BIN_DOOR");
   await openScene(page, visit.id);
   await openMap(page);
-  await selectLocation(page, "Seat 9D");
+  await selectLocation(page, "Seat 7C");
   await open3D(page);
+  const injectWorstCase = () =>
+    page.evaluate((extra) => {
+      const s = window.__cabinKit?.scene as unknown as
+        | { states: Map<string, { components: Record<string, string> }>; setStates(m: Map<string, { components: Record<string, string> }>): void }
+        | undefined;
+      if (!s) throw new Error("test hooks missing (not the e2e build?)");
+      const next = new Map(s.states);
+      for (const [id, add] of Object.entries(extra)) next.set(id, { components: { ...(next.get(id)?.components ?? {}), ...add } });
+      s.setStates(next);
+    }, WORST_CASE_EXTRA);
+  const statusOf = () =>
+    page.evaluate(() => {
+      const s = window.__cabinKit?.scene as unknown as { states: Map<string, { components: Record<string, string> }> };
+      return Object.fromEntries(["FLOOR:FWD", "FLOOR:MID", "FLOOR:AFT", "FLOOR:FULL-CABIN", "SEAT:7C"].map((id) => [id, s.states.get(id)?.components ?? {}]));
+    });
+  // a location under the pointer, so the hover outline is drawn too: the first point of a grid over the canvas that hovers one
+  const hoverALocation = async () => {
+    const box = await page.locator("canvas").boundingBox();
+    if (!box) throw new Error("no canvas");
+    for (const fy of [0.5, 0.35, 0.65]) {
+      for (const fx of [0.3, 0.5, 0.7, 0.15, 0.85]) {
+        const x = box.x + box.width * fx;
+        const y = box.y + box.height * fy;
+        await page.mouse.move(x, y);
+        await page.mouse.move(x + 2, y + 2);
+        await nextFrames(page, 2);
+        const hover = ((await scene(page)).marks as { hover: string | null }).hover;
+        if (hover !== null) return hover;
+      }
+    }
+    return null;
+  };
   const seen: string[] = [];
+  let worst = { drawCalls: 0, triangles: 0, at: "" };
   for (const context of [false, true]) {
     await sceneCall(page, "setLayers", { ...ALL_LAYERS_NO_CONTEXT, context });
     for (const view of ["cutaway", "overhead", "aisle", "carpet", "bins"]) {
       await setCamera(page, view);
-      const box = await page.locator("canvas").boundingBox();
-      if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-      // force one frame so renderer.info describes this view
+      await page.evaluate(() => document.querySelector("canvas")?.scrollIntoView({ block: "center" }));
+      await settle(page);
+      await injectWorstCase();
+      const hover = await hoverALocation();
+      // force one frame so renderer.info describes this view with everything above in it
       await page.evaluate(() => window.__cabinKit?.scene?.invalidate());
       await settle(page);
-      const { drawCalls, triangles } = (await scene(page)).renderer as { drawCalls: number; triangles: number };
-      seen.push(`${view}${context ? "+context" : ""}: ${drawCalls} calls, ${triangles} triangles`);
-      expect(drawCalls, `${view} draw calls`).toBeGreaterThan(0);
-      expect(drawCalls, `${view}${context ? " with context" : ""} draw calls`).toBeLessThanOrEqual(SCENE_BUDGET_176.drawCalls);
-      expect(triangles, `${view}${context ? " with context" : ""} triangles`).toBeLessThanOrEqual(SCENE_BUDGET_176.triangles);
+      const info = await scene(page);
+      const marks = info.marks as { selection: boolean; hover: string | null };
+      const where = `${view}${context ? "+context" : ""}`;
+      expect(info.colourMode, `${where}: status colours on`).toBe("status");
+      expect(marks.selection, `${where}: the selection is outlined`).toBe(true);
+      expect(hover, `${where}: a location is hovered`).not.toBeNull();
+      expect(marks.hover, `${where}: the hover outline is drawn`).not.toBeNull();
+      expect(await statusOf(), `${where}: every floor location tinted, 7C mixed`).toEqual({
+        "FLOOR:FWD": { CARPET_PANEL: "unresolved" },
+        "FLOOR:MID": { CARPET_PANEL: "alternate" },
+        "FLOOR:AFT": { CARPET_PANEL: "recorded" },
+        "FLOOR:FULL-CABIN": { CARPET_KIT: "alternate" },
+        "SEAT:7C": { CUSHION: "recorded", BACKREST: "unresolved" },
+      });
+      const { drawCalls, triangles } = info.renderer as { drawCalls: number; triangles: number };
+      seen.push(`${where} (hover ${hover}): ${drawCalls} calls, ${triangles} triangles`);
+      if (drawCalls > worst.drawCalls || (drawCalls === worst.drawCalls && triangles > worst.triangles)) worst = { drawCalls, triangles, at: where };
+      expect(drawCalls, `${where} draw calls`).toBeLessThanOrEqual(SCENE_BUDGET_176.drawCalls);
+      expect(triangles, `${where} triangles`).toBeLessThanOrEqual(SCENE_BUDGET_176.triangles);
     }
   }
+  test.info().annotations.push({ type: "scene worst case", description: `${worst.at}: ${worst.drawCalls} calls, ${worst.triangles} triangles` });
   test.info().annotations.push({ type: "scene cost", description: seen.join("; ") });
 });
 
@@ -183,13 +254,13 @@ test("a hidden layer never blocks a pick: the seat behind a hidden bin is select
   await settle(page);
   const point = await page.evaluate(() => window.__cabinKit?.scene?.screenPointOf("SEAT:8F", "head") ?? null);
   if (!point) throw new Error("no point for SEAT:8F");
-  await page.mouse.click(point.x, point.y);
+  await pressAt(page, point);
   await expectInspector(page, "Overhead bin R-03");
   await layer("Bins").click();
   await settle(page);
   expect(((await scene(page)).layers as { bins: boolean }).bins, "bins layer hidden").toBe(false);
   // the same click now reaches the seat behind where the bin was
-  await page.mouse.click(point.x, point.y);
+  await pressAt(page, point);
   await expect(page.locator("#inspector-heading")).toHaveText("Seat 8F");
   expect((await scene(page)).selection).toBe("SEAT:8F");
   await layer("Bins").click();

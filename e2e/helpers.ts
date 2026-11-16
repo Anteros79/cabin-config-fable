@@ -36,9 +36,14 @@ export async function setDate(page: Page, iso: string): Promise<void> {
   await page.getByLabel(/check date/i).fill(iso);
 }
 
+const NO_HOOKS = "test hooks missing (not the e2e build?)";
+
 /** The scene's own description (e2e build only). */
 export async function scene(page: Page): Promise<Record<string, unknown>> {
-  return page.evaluate(() => window.__cabinKit?.scene?.describeScene() ?? {});
+  return page.evaluate((noHooks) => {
+    if (!window.__cabinKit) throw new Error(noHooks);
+    return window.__cabinKit.scene?.describeScene() ?? {};
+  }, NO_HOOKS);
 }
 
 /** Lets the page draw `count` animation frames. A frame is the unit of change in the scene, so this is no fixed delay. */
@@ -73,6 +78,7 @@ export async function waitFor3D(page: Page): Promise<void> {
  */
 export async function settle(page: Page): Promise<void> {
   await nextFrames(page, 2);
+  if (!(await page.evaluate(() => window.__cabinKit !== undefined))) throw new Error(NO_HOOKS);
   await page.waitForFunction(() => {
     const info = window.__cabinKit?.scene?.describeScene() as { transitioning?: boolean; ghostFading?: boolean; framePending?: boolean } | undefined;
     return !info || (!info.transitioning && !info.ghostFading && info.framePending === false);
@@ -154,7 +160,17 @@ export async function clickLocation(page: Page, locationId: string, part: "head"
   await settle(page);
   const point = await page.evaluate(([id, p]) => window.__cabinKit?.scene?.screenPointOf(id, p) ?? null, [locationId, part] as const);
   if (!point) throw new Error(`no screen point for ${locationId}`);
+  await pressAt(page, point);
+}
+
+/**
+ * A click as the pick gesture sees it. The pointer moves first and the scene draws the hover that move causes; only then
+ * are the press and the release sent, back to back, so no frame's work lands between them. On a slow software renderer
+ * (SwiftShader in CI) that keeps the press inside the pick window (600 ms).
+ */
+export async function pressAt(page: Page, point: { x: number; y: number }): Promise<void> {
   await page.mouse.move(point.x, point.y);
+  await settle(page);
   await page.mouse.down();
   await page.mouse.up();
 }
