@@ -225,7 +225,7 @@ describe("preparation overview", () => {
     const kit = prep.lines.find((l) => l.partNo === "FAKE-CK-2001")!;
     expect(kit.alternates).toHaveLength(1);
     expect(kit.alternates[0]).toMatchObject({ altPartNo: "FAKE-CK-2000", qtyPerReplacement: 1, unit: "KIT", effectiveTo: "2026-12-31" });
-    expect(kit.alternates[0].requiredSupplements.map((s) => [s.partNo, s.qty, s.unit])).toEqual([
+    expect(kit.alternates[0]?.requiredSupplements.map((s) => [s.partNo, s.qty, s.unit])).toEqual([
       ["FAKE-P-39", 2, "PANEL"],
       ["FAKE-P-40", 2, "PANEL"],
       ["FAKE-P-41", 1, "PANEL"],
@@ -239,7 +239,7 @@ describe("preparation overview", () => {
     const late = buildPreparation(snapshotFor(release, "N100TL", "2027-01-01"));
     const kit = late.lines.find((l) => l.partNo === "FAKE-CK-2001")!;
     expect(kit.alternates).toEqual([]);
-    expect(kit.excludedAlternates[0].altPartNo).toBe("FAKE-CK-2000");
+    expect(kit.excludedAlternates[0]?.altPartNo).toBe("FAKE-CK-2000");
     const partial = buildPreparation(snapshotFor(release, "N090TL", "2026-11-12"));
     expect(partial.counts.unresolvedComponents).toBe(24);
     expect(partial.gaps.find((g) => g.componentId === "BIN_DOOR")!.locationIds).toHaveLength(16);

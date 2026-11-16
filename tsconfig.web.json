@@ -1,0 +1,12 @@
+{
+  // Browser code. src/domain is checked here too, without Node types, so the
+  // domain stays free of Node imports (PF-4).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "tsBuildInfoFile": "./node_modules/.cache/tsc/web.tsbuildinfo"
+  },
+  "include": ["src/web", "src/domain"]
+}

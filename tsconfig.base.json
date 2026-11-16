@@ -1,0 +1,26 @@
+{
+  // Shared options for tsconfig.node.json and tsconfig.web.json.
+  // exactOptionalPropertyTypes and noPropertyAccessFromIndexSignature stay off:
+  // together they add about 250 further errors for little safety (Task 0.5, TST-10).
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "composite": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": false,
+    "noPropertyAccessFromIndexSignature": false
+  }
+}

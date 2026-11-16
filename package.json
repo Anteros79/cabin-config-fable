@@ -24,7 +24,7 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome ci . && npm run typecheck && vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit tests/integration",
     "test:process": "vitest run tests/process",

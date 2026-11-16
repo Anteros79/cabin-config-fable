@@ -47,8 +47,10 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
     for (let step = 0; step < 80; step++) {
       if (dCol !== 0) col += dCol;
       if (dRow !== 0) rowIndex += dRow;
-      if (col < 0 || col >= LETTERS.length || rowIndex < 0 || rowIndex >= existing.length) return;
-      const next = `${existing[rowIndex].printedLabel}${LETTERS[col]}`;
+      const row = existing[rowIndex];
+      const letter = LETTERS[col];
+      if (row === undefined || letter === undefined) return;
+      const next = `${row.printedLabel}${letter}`;
       if (seats.has(next)) {
         setFocusCode(next);
         gridRef.current?.querySelector<HTMLButtonElement>(`[data-seat="${next}"]`)?.focus();
@@ -90,7 +92,11 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
 
   const skippedBefore = (index: number): string[] => {
     const out: string[] = [];
-    for (let i = index - 1; i >= 0 && !rows[i].exists; i--) out.unshift(rows[i].printedLabel);
+    for (let i = index - 1; i >= 0; i--) {
+      const row = rows[i];
+      if (row === undefined || row.exists) break;
+      out.unshift(row.printedLabel);
+    }
     return out;
   };
 

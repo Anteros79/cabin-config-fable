@@ -232,12 +232,15 @@ export function buildBinGeometry(side: 1 | -1): { door: THREE.BufferGeometry; bo
     const a = a0 + ((a1 - a0) * i) / seg;
     inner.push([cz - (r - 0.02) * Math.cos(a), cy + (r - 0.02) * Math.sin(a)]);
   }
+  const [innerStart, ...innerRest] = inner;
+  const [arcStart] = arc;
+  if (!innerStart || !arcStart) throw new Error("invariant: both arcs have seg + 1 points");
   const shape = new THREE.Shape();
-  shape.moveTo(inner[0][0], inner[0][1]);
-  for (const [z, y] of inner.slice(1)) shape.lineTo(z, y);
+  shape.moveTo(innerStart[0], innerStart[1]);
+  for (const [z, y] of innerRest) shape.lineTo(z, y);
   shape.lineTo(1.74, 1.652);
   shape.lineTo(1.74, 2.3);
-  shape.lineTo(arc[0][0], 2.3);
+  shape.lineTo(arcStart[0], 2.3);
   shape.closePath();
   const body = new THREE.ExtrudeGeometry(shape, { depth: 0.985, bevelEnabled: false, steps: 1 });
   // extrude runs along +Z of the shape plane (shape x = cabin z, shape y = cabin y): rotate into place

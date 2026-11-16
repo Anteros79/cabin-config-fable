@@ -13,7 +13,7 @@ export function isIsoDate(value: unknown): value is IsoDate {
   if (mo < 1 || mo > 12 || d < 1 || y < 1900 || y > 2200) return false;
   const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mo - 1];
-  return d <= days;
+  return days !== undefined && d <= days;
 }
 
 /**

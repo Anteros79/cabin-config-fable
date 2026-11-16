@@ -70,7 +70,8 @@ export function parseCsv(text: string): CsvTable {
   const headers = rows.shift() ?? [];
   const records = rows.map((r, index) => {
     if (r.length !== headers.length) throw new Error(`CSV data row ${index + 2} has ${r.length} cells, expected ${headers.length}`);
-    return Object.fromEntries(headers.map((h, c) => [h, r[c]]));
+    // r.length === headers.length (checked above), so every cell is present.
+    return Object.fromEntries(headers.map((h, c) => [h, r[c] ?? ""]));
   });
   return { hasBom, headers, rows, records };
 }

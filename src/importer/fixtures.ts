@@ -130,6 +130,12 @@ function floorAreas(rows: number): { id: string; label: string; from: number; to
   ];
 }
 
+function seatSpecOf(data: FixtureData, id: string): SeatSpec {
+  const spec = data.seatSpecs[id];
+  if (!spec) throw new Error(`invariant: fixture data has no seat spec ${id}`);
+  return spec;
+}
+
 function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, sourceId: string): LayoutRevision {
   const rows: RowLabel[] = [];
   const locations: CabinLocation[] = [];
@@ -277,7 +283,7 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
         const specId = data.variants.some((o) => o.seatSpec === v.seatSpec && o.subtype !== v.subtype)
           ? `${v.seatSpec}-${v.subtype.replace("FX-", "")}`
           : v.seatSpec;
-        revision = buildRevision(specId, data.seatSpecs[v.seatSpec], v.subtype, "FX-DOC-CONFIG");
+        revision = buildRevision(specId, seatSpecOf(data, v.seatSpec), v.subtype, "FX-DOC-CONFIG");
         revisionFor.set(key, revision);
         layouts.push({ id: revision.layoutId, namespace: ns, subtypeId: v.subtype, name: revision.name });
         layoutRevisions.push(revision);
@@ -323,7 +329,9 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
   const revisionById = new Map(layoutRevisions.map((r) => [r.id, r]));
   for (const v of data.variants) {
     if (!v.released || v.seatSpec === null) continue;
-    const revision = revisionById.get(variantById.get(v.id)!.layoutRevisionIds[0])!;
+    const revisionId = variantById.get(v.id)?.layoutRevisionIds[0];
+    const revision = revisionId === undefined ? undefined : revisionById.get(revisionId);
+    if (!revision) throw new Error(`invariant: released variant ${v.id} has no layout revision`);
     const omissions = data.variantOmissions[v.id] ?? {};
     const constraint: ContextConstraint = { variant: [v.id] };
     const common = { namespace: ns, constraint, released: true, effectiveFrom: data.ruleEffectiveFrom, effectiveTo: null, qtyPerReplacement: 1 };
@@ -359,7 +367,7 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
       locations: { kind: "FLOOR", ids: ["FLOOR:FULL-CABIN"] },
       sourceId: data.carpetRuleSource,
     });
-    for (const area of floorAreas(data.seatSpecs[v.seatSpec].rows)) {
+    for (const area of floorAreas(seatSpecOf(data, v.seatSpec).rows)) {
       if (area.id === "AFT" && omissions.aftPanelUnreleased) continue;
       const partNo = `FAKE-${v.id}-${area.id}-PANEL`;
       addPart(partNo, `Fictional ${area.label.toLowerCase()} carpet panel, ${v.id}`);

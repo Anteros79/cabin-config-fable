@@ -18,7 +18,7 @@ type Route =
   | { name: "reference" };
 
 function parseRoute(hash: string): Route {
-  const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
+  const [path = "", query = ""] = hash.replace(/^#\/?/, "").split("?");
   const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
   const params = new URLSearchParams(query);
   if (parts[0] === "visit" && parts[1]) {
@@ -50,14 +50,14 @@ const FALLBACK_PROFILES: VisualProfile[] = [
 ];
 
 class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string }, { error: Error | null }> {
-  state = { error: null as Error | null };
+  override state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) {
     return { error };
   }
-  componentDidUpdate(prev: { resetKey: string }) {
+  override componentDidUpdate(prev: { resetKey: string }) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) this.setState({ error: null });
   }
-  render() {
+  override render() {
     if (this.state.error) {
       return (
         <section className="panel" role="alert">

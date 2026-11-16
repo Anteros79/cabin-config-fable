@@ -175,10 +175,8 @@ export function validateRelease(content: ReleaseContent): Finding[] {
   for (const a of content.assignments) byTail.set(a.tail, [...(byTail.get(a.tail) ?? []), a]);
   for (const [tail, list] of byTail) {
     const released = list.filter((a) => a.status === "released");
-    for (let i = 0; i < released.length; i++) {
-      for (let j = i + 1; j < released.length; j++) {
-        const a = released[i];
-        const b = released[j];
+    for (const [i, a] of released.entries()) {
+      for (const b of released.slice(i + 1)) {
         if (isIsoDate(a.effectiveFrom) && isIsoDate(b.effectiveFrom) && intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) {
           conflict("ASSIGNMENT_OVERLAP", `Tail ${tail} has overlapping released assignments ${a.id} and ${b.id}. Lookups inside the overlap are refused.`, [
             a.id,
@@ -220,7 +218,8 @@ export function validateRelease(content: ReleaseContent): Finding[] {
     if (set.empty) err("UNREACHABLE_RULE", `${ref} cannot match any location in any configuration (unreachable).`, [r.id]);
     else {
       for (const pair of set.pairs.keys()) {
-        const revision = revisions.get(pair.split("|")[1]);
+        const [, revisionId] = pair.split("|");
+        const revision = revisionId === undefined ? undefined : revisions.get(revisionId);
         if (revision && revision.namespace !== r.namespace)
           err("NAMESPACE", `${ref} (${r.namespace}) reaches layout revision ${revision.id} in namespace ${revision.namespace}.`, [r.id]);
       }
@@ -241,10 +240,8 @@ export function validateRelease(content: ReleaseContent): Finding[] {
       bySignature.set(sig, [...(bySignature.get(sig) ?? []), r]);
     }
     for (const group of bySignature.values()) {
-      for (let i = 0; i < group.length; i++) {
-        for (let j = i + 1; j < group.length; j++) {
-          const a = group[i];
-          const b = group[j];
+      for (const [i, a] of group.entries()) {
+        for (const b of group.slice(i + 1)) {
           if (!isIsoDate(a.effectiveFrom) || !isIsoDate(b.effectiveFrom)) continue;
           if (!intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) continue;
           if (matchSetsEqual(ruleSets.get(a.id)!, ruleSets.get(b.id)!)) {

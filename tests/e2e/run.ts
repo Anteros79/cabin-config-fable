@@ -105,7 +105,7 @@ async function startVisitUi(page: Page, tail: string, date: string, technician =
   await page.click("text=Start visit (saves a draft)");
   await page.waitForSelector("#visit-h");
   await page.waitForFunction(() => /#\/visit\/[0-9a-f-]{36}$/.test(location.hash));
-  return page.evaluate(() => location.hash.split("/")[2]);
+  return page.evaluate(() => location.hash.split("/")[2] ?? "");
 }
 async function openMap(page: Page): Promise<void> {
   await page.click("#tab-map");
@@ -138,7 +138,10 @@ async function canvasIsPainted(page: Page): Promise<boolean> {
     g.drawImage(canvas, 0, 0, 64, 64);
     const data = g.getImageData(0, 0, 64, 64).data;
     const seen = new Set<number>();
-    for (let i = 0; i < data.length; i += 4) seen.add((data[i] >> 4) * 256 + (data[i + 1] >> 4) * 16 + (data[i + 2] >> 4));
+    for (let i = 0; i < data.length; i += 4) {
+      const [r = 0, g = 0, b = 0] = data.subarray(i, i + 3);
+      seen.add((r >> 4) * 256 + (g >> 4) * 16 + (b >> 4));
+    }
     return seen.size > 12; // many distinct colours: a rendered scene, not a blank surface
   });
 }
@@ -154,7 +157,15 @@ async function clickLocation(page: Page, locationId: string, part: "head" | "pan
 const cam = (page: Page, view: string, id?: string) =>
   page.evaluate(([v, i]) => window.__cabinKit!.scene!.setCamera(v as never, i), [view, id ?? null] as const);
 const sceneSet = (page: Page, fn: string, arg: unknown) =>
-  page.evaluate(([f, a]) => (window.__cabinKit!.scene as unknown as Record<string, (x: unknown) => void>)[f](a), [fn, arg] as const);
+  page.evaluate(
+    ([f, a]) => {
+      const scene = window.__cabinKit!.scene as unknown as Record<string, ((x: unknown) => void) | undefined>;
+      const method = scene[f];
+      if (!method) throw new Error(`scene has no method ${f}`);
+      method.call(scene, a);
+    },
+    [fn, arg] as const,
+  );
 async function axe(page: Page, label: string): Promise<void> {
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const serious = result.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
@@ -248,7 +259,7 @@ try {
     await tabTo(page, ".status-card .actions button.primary");
     await page.keyboard.press("Enter");
     await page.waitForFunction(() => /#\/visit\/[0-9a-f-]{36}$/.test(location.hash));
-    visitId = await page.evaluate(() => location.hash.split("/")[2]);
+    visitId = await page.evaluate(() => location.hash.split("/")[2] ?? "");
     await page.waitForSelector("#work-h");
   });
   await check("select seat 3A in the map with arrow keys and record the cushion", async () => {
@@ -673,7 +684,7 @@ try {
         method: "pointer pick to the next rendered frame showing the selection, 10 picks",
         samplesMs: latencies.map((v) => Number(v.toFixed(1))),
         maxMs: Number(Math.max(...latencies).toFixed(1)),
-        medianMs: Number([...latencies].sort((a, b) => a - b)[Math.floor(latencies.length / 2)].toFixed(1)),
+        medianMs: Number(([...latencies].sort((a, b) => a - b)[Math.floor(latencies.length / 2)] ?? Number.NaN).toFixed(1)),
         target: "within 250 ms",
       },
       measuredAt: new Date().toISOString(),
@@ -1163,7 +1174,7 @@ try {
     await m.waitForSelector(".status-card[data-state=RESOLVED]");
     await m.tap("text=Start visit (saves a draft)");
     await m.waitForSelector("#work-h");
-    mobileVisit = await m.evaluate(() => location.hash.split("/")[2]);
+    mobileVisit = await m.evaluate(() => location.hash.split("/")[2] ?? "");
     const overflow = await m.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow <= 1, `page overflows horizontally by ${overflow}px`);
   });
@@ -1187,7 +1198,7 @@ try {
       els
         .slice(0, 40)
         .map((e) => e.getBoundingClientRect())
-        .map((r) => [r.width, r.height]),
+        .map((r): [number, number] => [r.width, r.height]),
     );
     expect(
       sizes.every(([w, h]) => w >= 36 && h >= 40),

@@ -5,7 +5,7 @@ import { validateRelease } from "../../src/domain/validate.ts";
 import { buildStagedRelease, defaultSourceRoot } from "../../src/importer/assemble.ts";
 import { ORIGINAL_FILES } from "../../src/importer/candidate.ts";
 import { parseCsv } from "../../src/importer/readers/csv.ts";
-import { cleanupTempDirs, errorsOf, fixtureContent, stagedFull, tempDir } from "../helpers.ts";
+import { at, cleanupTempDirs, errorsOf, fixtureContent, stagedFull, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -172,8 +172,8 @@ describe("staged import of fixtures and the supplied candidate registry", () => 
     const staged = buildStagedRelease({ sourceRoot: root });
     const mismatch = staged.findings.filter((f) => f.code === "CROSS_FORMAT_MISMATCH");
     expect(mismatch).toHaveLength(1);
-    expect(mismatch[0].severity).toBe("error");
-    expect(mismatch[0].message).toMatch(/commercial_tier/);
+    expect(mismatch[0]?.severity).toBe("error");
+    expect(mismatch[0]?.message).toMatch(/commercial_tier/);
   });
 
   it("reports a missing supplied file instead of inventing content", () => {
@@ -230,26 +230,28 @@ describe("mandatory fictional fixture seat sets", () => {
 
 describe("release validation blocks bad reference data", () => {
   it("duplicate keys", () => {
-    expect(errorsOf(fixtureContent((c) => c.rules.push({ ...c.rules[0] })))).toContain("DUPLICATE_KEY");
-    expect(errorsOf(fixtureContent((c) => c.aircraft.push({ ...c.aircraft[0] })))).toContain("DUPLICATE_KEY");
-    expect(errorsOf(fixtureContent((c) => c.layoutRevisions[0].locations.push({ ...c.layoutRevisions[0].locations[0] })))).toContain("DUPLICATE_KEY");
+    expect(errorsOf(fixtureContent((c) => c.rules.push({ ...at(c.rules, 0) })))).toContain("DUPLICATE_KEY");
+    expect(errorsOf(fixtureContent((c) => c.aircraft.push({ ...at(c.aircraft, 0) })))).toContain("DUPLICATE_KEY");
+    expect(errorsOf(fixtureContent((c) => at(c.layoutRevisions, 0).locations.push({ ...at(at(c.layoutRevisions, 0).locations, 0) })))).toContain(
+      "DUPLICATE_KEY",
+    );
   });
   it("orphans", () => {
-    expect(errorsOf(fixtureContent((c) => (c.rules[0].partNo = "NOPE")))).toContain("ORPHAN");
-    expect(errorsOf(fixtureContent((c) => (c.rules[0].sourceId = "NOPE")))).toContain("ORPHAN");
-    expect(errorsOf(fixtureContent((c) => (c.assignments[0].variantId = "V99")))).toContain("ORPHAN");
-    expect(errorsOf(fixtureContent((c) => (c.assignments[0].tail = "N999XX")))).toContain("ORPHAN");
+    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).partNo = "NOPE")))).toContain("ORPHAN");
+    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).sourceId = "NOPE")))).toContain("ORPHAN");
+    expect(errorsOf(fixtureContent((c) => (at(c.assignments, 0).variantId = "V99")))).toContain("ORPHAN");
+    expect(errorsOf(fixtureContent((c) => (at(c.assignments, 0).tail = "N999XX")))).toContain("ORPHAN");
   });
   it("seat totals and identities", () => {
-    expect(errorsOf(fixtureContent((c) => (c.layoutRevisions[0].declaredSeatCount = 175)))).toContain("SEAT_TOTAL");
-    expect(errorsOf(fixtureContent((c) => (c.layoutRevisions[0].locations[0].seat!.printedRow = "77")))).toContain("SEAT_ROW");
+    expect(errorsOf(fixtureContent((c) => (at(c.layoutRevisions, 0).declaredSeatCount = 175)))).toContain("SEAT_TOTAL");
+    expect(errorsOf(fixtureContent((c) => (at(at(c.layoutRevisions, 0).locations, 0).seat!.printedRow = "77")))).toContain("SEAT_ROW");
   });
   it("units, quantities and date intervals", () => {
-    expect(errorsOf(fixtureContent((c) => (c.rules[0].unit = "BOX")))).toContain("UNKNOWN_UNIT");
-    expect(errorsOf(fixtureContent((c) => (c.rules[0].qtyPerReplacement = 0)))).toContain("INVALID_QUANTITY");
-    expect(errorsOf(fixtureContent((c) => (c.rules[0].effectiveTo = "2020-01-01")))).toContain("INVALID_INTERVAL");
-    expect(errorsOf(fixtureContent((c) => (c.assignments[0].effectiveFrom = "2026-02-30")))).toContain("INVALID_DATE");
-    expect(errorsOf(fixtureContent((c) => (c.assignments[0].carpet = "SHAG")))).toContain("VOCABULARY");
+    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).unit = "BOX")))).toContain("UNKNOWN_UNIT");
+    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).qtyPerReplacement = 0)))).toContain("INVALID_QUANTITY");
+    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).effectiveTo = "2020-01-01")))).toContain("INVALID_INTERVAL");
+    expect(errorsOf(fixtureContent((c) => (at(c.assignments, 0).effectiveFrom = "2026-02-30")))).toContain("INVALID_DATE");
+    expect(errorsOf(fixtureContent((c) => (at(c.assignments, 0).carpet = "SHAG")))).toContain("VOCABULARY");
   });
   it("unreachable rule locations", () => {
     const codes = errorsOf(
@@ -270,8 +272,8 @@ describe("release validation blocks bad reference data", () => {
     expect(errorsOf(fixtureContent((c) => c.kitChildren.push(kit("FAKE-CK-2000", "NOPE"))))).toContain("KIT_ORPHAN_CHILD");
   });
   it("airline-looking data cannot enter without an approved source", () => {
-    expect(errorsOf(fixtureContent((c) => (c.rules[0].namespace = "accepted")))).toContain("NAMESPACE");
-    expect(errorsOf(fixtureContent((c) => (c.sources[0].authority = "approved")))).toContain("UNSUPPORTED_AUTHORITY");
+    expect(errorsOf(fixtureContent((c) => (at(c.rules, 0).namespace = "accepted")))).toContain("NAMESPACE");
+    expect(errorsOf(fixtureContent((c) => (at(c.sources, 0).authority = "approved")))).toContain("UNSUPPORTED_AUTHORITY");
   });
   it("overlapping assignments and identical rules are recorded as conflicts, not silently accepted", () => {
     const findings = validateRelease(

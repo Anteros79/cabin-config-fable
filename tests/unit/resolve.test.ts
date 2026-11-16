@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
 import { buildIndex, isStrictlyMoreSpecific, isSubset } from "../../src/domain/specificity.ts";
 import type { ApplicabilityRule, ReleaseContent } from "../../src/domain/types.ts";
-import { asRelease, fixtureContent, fixtureRelease, partAt, resolutionAt } from "../helpers.ts";
+import { asRelease, entry, fixtureContent, fixtureRelease, partAt, resolutionAt } from "../helpers.ts";
 
 const release = fixtureRelease();
 
@@ -100,30 +100,30 @@ describe("inclusive date boundaries", () => {
   });
   it("substitute approval is offered on 2026-12-31 and excluded with reasons on 2027-01-01", () => {
     const last = lookup(release, "N100TL", "2026-12-31");
-    const kitLast = last.resolution!.rules[(resolutionAt(last, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId];
+    const kitLast = entry(last.resolution!.rules, (resolutionAt(last, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId);
     expect(kitLast.partNo).toBe("FAKE-CK-2001");
     expect(kitLast.substitutes.map((s) => s.altPartNo)).toEqual(["FAKE-CK-2000"]);
     expect(kitLast.excludedSubstitutes).toEqual([]);
     const next = lookup(release, "N100TL", "2027-01-01");
-    const kitNext = next.resolution!.rules[(resolutionAt(next, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId];
+    const kitNext = entry(next.resolution!.rules, (resolutionAt(next, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId);
     expect(kitNext.partNo).toBe("FAKE-CK-2001"); // the primary stays valid
     expect(kitNext.substitutes).toEqual([]);
-    expect(kitNext.excludedSubstitutes[0].reasons.map((r) => r.code).sort()).toEqual(["APPROVAL_EXPIRED", "SOURCE_EXPIRED"]);
+    expect(kitNext.excludedSubstitutes[0]?.reasons.map((r) => r.code).sort()).toEqual(["APPROVAL_EXPIRED", "SOURCE_EXPIRED"]);
     // not yet effective the day before the approval starts
     const early = lookup(
       fixtureRelease((c) => (c.assignments.find((a) => a.tail === "N100TL")!.effectiveFrom = "2025-01-01")),
       "N100TL",
       "2025-07-21",
     );
-    const kitEarly = early.resolution!.rules[(resolutionAt(early, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId];
-    expect(kitEarly.excludedSubstitutes[0].reasons.map((r) => r.code)).toEqual(["APPROVAL_NOT_YET_EFFECTIVE"]);
+    const kitEarly = entry(early.resolution!.rules, (resolutionAt(early, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string }).ruleId);
+    expect(kitEarly.excludedSubstitutes[0]?.reasons.map((r) => r.code)).toEqual(["APPROVAL_NOT_YET_EFFECTIVE"]);
   });
 });
 
 describe("mandatory fixture parts", () => {
   it("FAKE-SC-1001 is the V01 ELR-A cushion at 1A-5A and nowhere else", () => {
     const r = lookup(release, "N100TL", "2026-11-12");
-    const where = r.resolution!.components.filter((c) => c.status === "RESOLVED" && r.resolution!.rules[c.ruleId].partNo === "FAKE-SC-1001");
+    const where = r.resolution!.components.filter((c) => c.status === "RESOLVED" && r.resolution!.rules[c.ruleId]?.partNo === "FAKE-SC-1001");
     expect(where.map((c) => `${c.locationId}/${c.componentId}`)).toEqual([
       "SEAT:1A/CUSHION",
       "SEAT:2A/CUSHION",
@@ -138,7 +138,7 @@ describe("mandatory fixture parts", () => {
     expect(partAt(lookup(release, "N100TL", "2026-11-12"), "FLOOR:FULL-CABIN", "CARPET_KIT")).toBe("FAKE-CK-2001");
     const r = lookup(release, "N200TL", "2026-07-01");
     const res = resolutionAt(r, "FLOOR:FULL-CABIN", "CARPET_KIT") as { ruleId: string; dominatedRuleIds: string[] };
-    const rule = r.resolution!.rules[res.ruleId];
+    const rule = entry(r.resolution!.rules, res.ruleId);
     expect(rule.partNo).toBe("FAKE-CK-2002");
     expect(res.dominatedRuleIds).toEqual(["FX-R-V04-CARPET-KIT"]);
     expect(rule.pendingChanges.map((p) => p.note)).toEqual(["Fictional STA 521 revision pending."]);
@@ -153,9 +153,9 @@ describe("mandatory fixture parts", () => {
     expect(fwd.status).toBe("AMBIGUOUS");
     expect(fwd.status === "AMBIGUOUS" && fwd.candidates.map((c) => c.ruleId).sort()).toEqual(["FX-R-700-PRE-FWD-PANEL", "FX-R-V09-FWD-PANEL"]);
     const backrest = resolutionAt(r, "SEAT:12A", "BACKREST");
-    expect(backrest.status === "NO_MATCH" && backrest.excluded[0].reasons.map((x) => x.code)).toEqual(["SOURCE_EXPIRED"]);
+    expect(backrest.status === "NO_MATCH" && backrest.excluded[0]?.reasons.map((x) => x.code)).toEqual(["SOURCE_EXPIRED"]);
     const aft = resolutionAt(r, "FLOOR:AFT", "CARPET_PANEL");
-    expect(aft.status === "NO_MATCH" && aft.excluded[0].reasons.map((x) => x.code).sort()).toEqual(["NOT_RELEASED", "SOURCE_NOT_RELEASED"]);
+    expect(aft.status === "NO_MATCH" && aft.excluded[0]?.reasons.map((x) => x.code).sort()).toEqual(["NOT_RELEASED", "SOURCE_NOT_RELEASED"]);
     const bin = resolutionAt(r, "BIN:L-01", "BIN_DOOR");
     expect(bin.status === "NO_MATCH" && bin.excluded).toEqual([]);
   });
@@ -293,10 +293,10 @@ describe("rule validity versus source validity", () => {
   it("an expired rule and an expired source are reported as different reasons", () => {
     const ruleExpired = withRules([{ ...broad(), effectiveTo: "2026-11-11" }]);
     const a = at3A(ruleExpired);
-    expect(a.status === "NO_MATCH" && a.excluded[0].reasons.map((x) => x.code)).toEqual(["RULE_EXPIRED"]);
+    expect(a.status === "NO_MATCH" && a.excluded[0]?.reasons.map((x) => x.code)).toEqual(["RULE_EXPIRED"]);
     const sourceExpired = withRules([{ ...broad(), sourceId: "FX-DOC-OLD" }]);
     const b = at3A(sourceExpired);
-    expect(b.status === "NO_MATCH" && b.excluded[0].reasons.map((x) => x.code)).toEqual(["SOURCE_EXPIRED"]);
+    expect(b.status === "NO_MATCH" && b.excluded[0]?.reasons.map((x) => x.code)).toEqual(["SOURCE_EXPIRED"]);
   });
   it("rule end date is inclusive", () => {
     const rel = withRules([{ ...broad(), effectiveTo: "2026-11-12" }]);
@@ -306,14 +306,14 @@ describe("rule validity versus source validity", () => {
     expect(at3A(withRules([{ ...broad(), effectiveFrom: "2026-11-13" }])).status).toBe("NO_MATCH");
     const future = withRules([broad()], (c) => (c.sources.find((s) => s.id === "FX-DOC-A")!.effectiveFrom = "2027-01-01"));
     const r = at3A(future);
-    expect(r.status === "NO_MATCH" && r.excluded[0].reasons.map((x) => x.code)).toEqual(["SOURCE_NOT_YET_EFFECTIVE"]);
+    expect(r.status === "NO_MATCH" && r.excluded[0]?.reasons.map((x) => x.code)).toEqual(["SOURCE_NOT_YET_EFFECTIVE"]);
   });
   it("an unreleased more-specific change cannot grant eligibility or displace the released rule", () => {
     const rel = withRules([broad(), rule("DRAFT", "P-DRAFT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] }, { released: false })]);
     expect(at3A(rel)).toMatchObject({ status: "RESOLVED", ruleId: "BROAD" });
     const only = withRules([rule("DRAFT", "P-DRAFT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] }, { released: false })]);
     const r = at3A(only);
-    expect(r.status === "NO_MATCH" && r.excluded[0].reasons.map((x) => x.code)).toContain("NOT_RELEASED");
+    expect(r.status === "NO_MATCH" && r.excluded[0]?.reasons.map((x) => x.code)).toContain("NOT_RELEASED");
   });
   it("an expired specific rule falls back to the still-valid broad rule rather than leaving a silent gap", () => {
     const rel = withRules([broad(), rule("EXACT", "P-EXACT", { variant: ["V01"] }, { kind: "SEAT", ids: ["SEAT:3A"] }, { effectiveTo: "2026-01-01" })]);
@@ -342,7 +342,7 @@ describe("substitute scope", () => {
     });
     const r = lookup(rel, "N100TL", "2026-11-12");
     const ruleId = (resolutionAt(r, "SEAT:3A", "CUSHION") as { ruleId: string }).ruleId;
-    expect(r.resolution!.rules[ruleId].substitutes.find((s) => s.id === "X-SUB-SEAT")!.locationIds).toEqual(["SEAT:3A", "SEAT:4A"]);
+    expect(entry(r.resolution!.rules, ruleId).substitutes.find((s) => s.id === "X-SUB-SEAT")!.locationIds).toEqual(["SEAT:3A", "SEAT:4A"]);
     // a different carpet context removes the approval entirely
     const botany = asRelease(
       fixtureContent((c) => {
@@ -364,7 +364,7 @@ describe("substitute scope", () => {
     );
     const rb = lookup(botany, "N100TL", "2026-11-12");
     const ruleB = (resolutionAt(rb, "SEAT:3A", "CUSHION") as { ruleId: string }).ruleId;
-    expect(rb.resolution!.rules[ruleB].substitutes).toEqual([]);
-    expect(rb.resolution!.rules[ruleB].excludedSubstitutes).toEqual([]);
+    expect(entry(rb.resolution!.rules, ruleB).substitutes).toEqual([]);
+    expect(entry(rb.resolution!.rules, ruleB).excludedSubstitutes).toEqual([]);
   });
 });

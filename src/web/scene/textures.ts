@@ -25,7 +25,8 @@ export interface ProfilePalette {
   aisleBorder: string;
 }
 
-export const PALETTES: Record<string, ProfilePalette> = {
+// The default palette is a named key, so reading it never yields undefined.
+export const PALETTES: { "photo-navy-band": ProfilePalette; [id: string]: ProfilePalette } = {
   "photo-navy-band": {
     id: "photo-navy-band",
     // Under daylight the photographed leather is a very dark navy; it only reads as royal blue under blue cabin light.

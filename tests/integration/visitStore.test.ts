@@ -33,7 +33,7 @@ describe("visit records", () => {
     ).visit;
     expect(again.records).toHaveLength(1);
     expect(again.records[0]).toMatchObject({ quantity: 3, version: 2, note: "three panels" });
-    expect(again.records[0].lines).toMatchObject([{ partNo: "FAKE-V01-FWD-PANEL", qty: 3, unit: "PANEL" }]);
+    expect(again.records[0]?.lines).toMatchObject([{ partNo: "FAKE-V01-FWD-PANEL", qty: 3, unit: "PANEL" }]);
     expect(totals(store.getReport(visit.id).report)).toEqual([["FAKE-V01-FWD-PANEL", 3, "PANEL"]]);
     store.close();
   });
@@ -123,7 +123,7 @@ describe("stale edits and safe retries", () => {
     const b = store.upsertRecord(first.visit.id, panel, 0, { idempotencyKey: "retry-key-0002" });
     expect(a.replayed).toBe(false);
     expect(b.replayed).toBe(true); // not a STALE_RECORD conflict, and not applied twice
-    expect(b.visit.records[0].version).toBe(1);
+    expect(b.visit.records[0]?.version).toBe(1);
     expect(b.visit.version).toBe(2);
     expect(codeOf(() => store.upsertRecord(first.visit.id, { ...panel, quantity: 3 }, 0, { idempotencyKey: "retry-key-0002" }))).toBe("IDEMPOTENCY_KEY_REUSED");
     store.removeRecord(first.visit.id, panel.locationId, panel.componentId, 1, { idempotencyKey: "retry-key-0003" });
@@ -227,7 +227,7 @@ describe("persistence and history", () => {
     expect(v.records).toHaveLength(2);
     expect(store.getReport(finished.id).report).toEqual(report);
     expect(totals(report)).toEqual([["FAKE-CK-2002", 1, "KIT"]]);
-    expect(report.work[0].pendingChanges.map((p) => p.note)).toEqual(["Fictional STA 521 revision pending."]);
+    expect(report.work[0]?.pendingChanges.map((p) => p.note)).toEqual(["Fictional STA 521 revision pending."]);
     expect(store.listVisits().items.map((x) => x.status)).toEqual(["COMPLETED", "DRAFT"]);
     store.close();
   });
@@ -300,7 +300,7 @@ describe("reference updates do not rebase visits", () => {
     // The live lookup now differs...
     const live = lookup(releaseB, "N100TL", "2026-11-12");
     const liveRule = live.resolution!.components.find((c) => c.locationId === "SEAT:3A" && c.componentId === "CUSHION")!;
-    expect(liveRule.status === "RESOLVED" && live.resolution!.rules[liveRule.ruleId].partNo).toBe("FAKE-SC-9999");
+    expect(liveRule.status === "RESOLVED" && live.resolution!.rules[liveRule.ruleId]?.partNo).toBe("FAKE-SC-9999");
     // ...but visit history is byte-for-byte unchanged,
     expect(store.fingerprint()).toBe(fingerprintBefore);
     expect(store.getReport(done.id).report).toEqual(report);
@@ -313,7 +313,7 @@ describe("reference updates do not rebase visits", () => {
     expect(totals(store.completeVisit(continued.id, undefined).report)).toEqual(SIX_LINE_TOTALS.map((x) => [...x]));
     // A new visit uses the new release.
     const fresh = store.createVisit(snapshotFor(releaseB, "N100TL", "2026-11-12"), "Demo").visit;
-    expect(store.upsertRecord(fresh.id, CUSHION_3A, undefined).visit.records[0].lines[0].partNo).toBe("FAKE-SC-9999");
+    expect(store.upsertRecord(fresh.id, CUSHION_3A, undefined).visit.records[0]?.lines[0]?.partNo).toBe("FAKE-SC-9999");
     store.close();
   });
 

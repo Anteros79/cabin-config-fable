@@ -50,7 +50,21 @@ export function resolutionAt(result: LookupResult, locationId: string, component
 
 export function partAt(result: LookupResult, locationId: string, componentId: string): string | null {
   const r = resolutionAt(result, locationId, componentId);
-  return r.status === "RESOLVED" ? result.resolution!.rules[r.ruleId].partNo : null;
+  return r.status === "RESOLVED" ? entry(result.resolution!.rules, r.ruleId).partNo : null;
+}
+
+/** The element a test expects at `index`; fails the test, naming the index, when it is absent. */
+export function at<T>(items: readonly T[], index: number): T {
+  const item = items[index];
+  if (item === undefined) throw new Error(`test expected an element at index ${index} of ${items.length}`);
+  return item;
+}
+
+/** The record entry a test expects under `key`; fails the test, naming the key, when it is absent. */
+export function entry<T>(record: Readonly<Record<string, T>>, key: string): T {
+  const value = record[key];
+  if (value === undefined) throw new Error(`test expected an entry for ${key}`);
+  return value;
 }
 
 export function snapshotFor(release: ReferenceRelease, tail: string, date: string): VisitSnapshot {

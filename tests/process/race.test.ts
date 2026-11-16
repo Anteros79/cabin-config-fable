@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { Report } from "../../src/domain/types.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import type { VisitStore } from "../../src/server/visitStore.ts";
-import { CUSHION_3A, cleanupTempDirs, makeStores, openVisits, snapshotFor, type TestStores } from "../helpers.ts";
+import { at, CUSHION_3A, cleanupTempDirs, makeStores, openVisits, snapshotFor, type TestStores } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -154,7 +154,7 @@ describe("separate-process races", () => {
       const results = await Promise.all([0, 1, 2, 3].map(() => run(stores, id, "complete", t, {})));
       expect(results.every((r) => r.ok)).toBe(true);
       expect(results.filter((r) => r.alreadyCompleted === false)).toHaveLength(1);
-      for (const r of results) expect(r.report).toEqual(results[0].report);
+      for (const r of results) expect(r.report).toEqual(results[0]?.report);
       expect(store.getVisit(id).events.filter((e) => e.type === "COMPLETED")).toHaveLength(1);
     }
     store.close();
@@ -173,10 +173,10 @@ describe("separate-process races", () => {
       expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
       const loser = a.ok ? b : a;
       expect(loser.code).toBe("STALE_RECORD");
-      const record = store.getVisit(id).records[0];
+      const record = at(store.getVisit(id).records, 0);
       expect(record.version).toBe(1);
       expect(record.quantity).toBe(a.ok ? 2 : 4);
-      expect(record.lines[0].qty).toBe(record.quantity);
+      expect(record.lines[0]?.qty).toBe(record.quantity);
     }
     store.close();
   });

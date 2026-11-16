@@ -8,7 +8,7 @@ import { importReference } from "../../src/importer/cli.ts";
 import { canonicalPath, isSameFile, resolveServerConfig, resolveStoreConfig } from "../../src/server/config.ts";
 import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStoreError, resetReferenceStore } from "../../src/server/referenceStore.ts";
 import { VisitStore } from "../../src/server/visitStore.ts";
-import { CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
+import { at, CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeStores, openVisits, snapshotFor, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -55,7 +55,7 @@ describe("staged import and atomic activation", () => {
     const list = store.listReleases();
     expect(list.map((r) => r.status)).toEqual(["active", "superseded"]);
     expect(store.activeReleaseId()).toBe(second.releaseId);
-    expect(list[1].id).toBe(first);
+    expect(list[1]?.id).toBe(first);
     expect(store.events().map((e) => e.type)).toEqual(["VALIDATED", "ACTIVATED", "VALIDATED", "ACTIVATED"]);
     store.close();
   });
@@ -65,13 +65,13 @@ describe("staged import and atomic activation", () => {
     const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
     const active = store.activeReleaseId()!;
     const bad = buildStagedRelease({ includeCandidate: false });
-    bad.content.rules[0].partNo = "NOPE";
+    at(bad.content.rules, 0).partNo = "NOPE";
     const findings = [{ severity: "error" as const, code: "ORPHAN", message: "bad" }];
     const staged = store.stage(bad.content, findings, {});
     expect(staged.status).toBe("rejected");
     expect(refCode(() => store.activate(staged.id))).toBe("RELEASE_NOT_VALIDATED");
     expect(store.activeReleaseId()).toBe(active);
-    expect(store.loadActive().rules[0].partNo).not.toBe("NOPE");
+    expect(store.loadActive().rules[0]?.partNo).not.toBe("NOPE");
     store.close();
   });
 
@@ -95,7 +95,7 @@ describe("staged import and atomic activation", () => {
     const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
     const before = store.listReleases().length;
     const broken = buildStagedRelease({ includeCandidate: false });
-    broken.content.rules.push({ ...broken.content.rules[0] }); // duplicate primary key inside the transaction
+    broken.content.rules.push({ ...at(broken.content.rules, 0) }); // duplicate primary key inside the transaction
     expect(() => store.stage(broken.content, [], {})).toThrow();
     expect(store.listReleases()).toHaveLength(before);
     expect(store.loadActive().id).toBe(store.activeReleaseId());
@@ -126,13 +126,13 @@ describe("staged import and atomic activation", () => {
     expect(snapA.referenceReleaseId).toBe(releaseA.id);
     expect(snapA.referenceContentHash).toBe(releaseA.contentHash);
     const cushion = snapA.resolution.components.find((c) => c.locationId === "SEAT:3A" && c.componentId === "CUSHION")!;
-    expect(cushion.status === "RESOLVED" && snapA.resolution.rules[cushion.ruleId].partNo).toBe("FAKE-SC-1001");
+    expect(cushion.status === "RESOLVED" && snapA.resolution.rules[cushion.ruleId]?.partNo).toBe("FAKE-SC-1001");
     // A fresh read is entirely release B.
     const releaseB = reader.loadActive();
     expect(releaseB.id).toBe(staged.id);
     const r = lookup(releaseB, "N100TL", "2026-11-12");
     const c2 = r.resolution!.components.find((c) => c.locationId === "SEAT:3A" && c.componentId === "CUSHION")!;
-    expect(c2.status === "RESOLVED" && r.resolution!.rules[c2.ruleId].partNo).toBe("FAKE-SC-9999");
+    expect(c2.status === "RESOLVED" && r.resolution!.rules[c2.ruleId]?.partNo).toBe("FAKE-SC-9999");
     reader.close();
     writer.close();
   });

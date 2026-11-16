@@ -2,20 +2,13 @@ import type { CabinLocation } from "./types.ts";
 
 function ranges(numbers: number[]): string {
   const sorted = [...new Set(numbers)].sort((a, b) => a - b);
-  const out: string[] = [];
-  let start = sorted[0];
-  let prev = sorted[0];
-  for (let i = 1; i <= sorted.length; i++) {
-    const n = sorted[i];
-    if (n === prev + 1) {
-      prev = n;
-      continue;
-    }
-    out.push(start === prev ? `${start}` : `${start}-${prev}`);
-    start = n;
-    prev = n;
+  const runs: [number, number][] = [];
+  for (const n of sorted) {
+    const last = runs.at(-1);
+    if (last && n === last[1] + 1) last[1] = n;
+    else runs.push([n, n]);
   }
-  return out.join(", ");
+  return runs.map(([start, end]) => (start === end ? `${start}` : `${start}-${end}`)).join(", ");
 }
 
 /** Compact human description of a location set, e.g. "Seat A rows 1-5 (5 locations)". */

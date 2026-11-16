@@ -300,7 +300,7 @@ describe("preparation and reference endpoints", () => {
     const csv = await app.app.inject("/api/preparation?tail=N100TL&date=2026-11-12&format=csv");
     expect(csv.headers["content-type"]).toMatch(/text\/csv/);
     const lines = csv.body.trim().split("\r\n");
-    expect(lines[0].split(",")[0]).toBe("line_type");
+    expect(lines[0]?.split(",")[0]).toBe("line_type");
     expect(lines.filter((l) => l.startsWith("ALTERNATE,FAKE-CK-2000"))).toHaveLength(1);
     expect(lines.filter((l) => l.startsWith("REQUIRED_SUPPLEMENT,FAKE-P-"))).toHaveLength(4);
     expect(lines.find((l) => l.startsWith("PRIMARY,FAKE-SC-1001"))).toContain("Seat A rows 1-5 (5 locations)");

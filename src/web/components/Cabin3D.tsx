@@ -183,7 +183,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           {(["seats", "floor", "bins", "context"] as const).map((key) => (
             <label key={key} className="check">
               <input type="checkbox" checked={layers[key]} onChange={() => toggle(key)} />
-              {key === "context" ? "Context (walls)" : key[0].toUpperCase() + key.slice(1)}
+              {key === "context" ? "Context (walls)" : key.charAt(0).toUpperCase() + key.slice(1)}
             </label>
           ))}
         </div>

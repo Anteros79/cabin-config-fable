@@ -4,6 +4,9 @@ import { DomainError } from "../../src/domain/visitLogic.ts";
 import { VisitStore } from "../../src/server/visitStore.ts";
 
 const [visitsPath, referencePath, visitId, op, startAtText, payloadText] = process.argv.slice(2);
+if (visitsPath === undefined || referencePath === undefined || visitId === undefined) {
+  throw new Error("usage: worker.ts <visitsPath> <referencePath> <visitId> <op> <startAt> [payload]");
+}
 const payload = payloadText ? JSON.parse(payloadText) : {};
 const store = VisitStore.open(visitsPath, referencePath);
 const startAt = Number(startAtText);

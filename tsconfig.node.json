@@ -1,0 +1,25 @@
+{
+  // Node code: domain, importer, server, tools, tests and the Vite/Vitest configs.
+  // No DOM library, so server code cannot reach browser globals.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.cache/tsc/node",
+    "tsBuildInfoFile": "./node_modules/.cache/tsc/node.tsbuildinfo"
+  },
+  "include": [
+    "src/domain",
+    "src/importer",
+    "src/server",
+    "tests/*.ts",
+    "tests/unit",
+    "tests/integration",
+    "tests/process",
+    "tools/*.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
+}

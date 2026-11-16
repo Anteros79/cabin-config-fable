@@ -124,7 +124,8 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
       message: `Tail ${tail} has ${released.length} overlapping configurations on ${checkDate} (${released.map((a) => a.variantId).join(", ")}). None is selected; the reference data must be corrected.`,
     };
   }
-  if (released.length === 0) {
+  const [assignment] = released;
+  if (assignment === undefined) {
     if (planned.length > 0) {
       return {
         ...common,
@@ -145,7 +146,6 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     };
   }
 
-  const assignment = released[0];
   const variant = index.variants.get(assignment.variantId)!;
   const layoutRevision = index.layoutRevisions.get(assignment.layoutRevisionId)!;
   const layout = index.layouts.get(layoutRevision.layoutId);
@@ -324,7 +324,8 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
         continue;
       }
       const winners = undominated(index, eligible);
-      if (winners.length !== 1) {
+      const winner = winners.length === 1 ? winners[0] : undefined;
+      if (winner === undefined) {
         winners.forEach((r) => {
           noteSource(r.sourceId);
         });
@@ -338,7 +339,6 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
         });
         continue;
       }
-      const winner = winners[0];
       if (!rules[winner.id]) rules[winner.id] = freeze(winner);
       counts.resolved += 1;
       components.push({

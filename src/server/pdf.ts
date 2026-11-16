@@ -112,7 +112,12 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       drawHeader();
       rows.forEach((row, index) => {
         doc.font("Helvetica").fontSize(fontSize);
-        const h = Math.max(...row.map((cell, i) => doc.heightOfString(safe(cell), { width: columns[i].width - pad * 2 }))) + pad * 2;
+        const cells = row.map((cell, i) => {
+          const column = columns[i];
+          if (!column) throw new Error(`invariant: table row has ${row.length} cells for ${columns.length} columns`);
+          return { column, text: safe(cell) };
+        });
+        const h = Math.max(...cells.map(({ column, text }) => doc.heightOfString(text, { width: column.width - pad * 2 }))) + pad * 2;
         if (doc.y + h > bottom()) {
           doc.addPage();
           drawHeader();
@@ -121,10 +126,10 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
         const y = doc.y;
         if (index % 2 === 1) doc.rect(MARGIN, y, width, h).fill("#f6f8fc").fillColor("#000000");
         let x = MARGIN;
-        row.forEach((cell, i) => {
-          doc.fillColor("#000000").text(safe(cell), x + pad, y + pad, { width: columns[i].width - pad * 2, align: columns[i].align ?? "left" });
-          x += columns[i].width;
-        });
+        for (const { column, text } of cells) {
+          doc.fillColor("#000000").text(text, x + pad, y + pad, { width: column.width - pad * 2, align: column.align ?? "left" });
+          x += column.width;
+        }
         doc
           .moveTo(MARGIN, y + h)
           .lineTo(MARGIN + width, y + h)

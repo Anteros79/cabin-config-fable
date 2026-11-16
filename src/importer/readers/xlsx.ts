@@ -38,8 +38,8 @@ function decodeXml(text: string): string {
 }
 
 function attr(tag: string, name: string): string | null {
-  const m = new RegExp(`\\s${name}="([^"]*)"`).exec(tag);
-  return m ? decodeXml(m[1]) : null;
+  const value = new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+  return value === undefined ? null : decodeXml(value);
 }
 
 function columnIndex(ref: string): number {
@@ -61,7 +61,8 @@ export function readXlsx(bytes: Uint8Array): XlsxWorkbook {
   const shared: string[] = [];
   const sst = text("xl/sharedStrings.xml");
   for (const m of sst.matchAll(/<si>([\s\S]*?)<\/si>/g)) {
-    const parts = [...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((t) => decodeXml(t[1]));
+    const [, si = ""] = m;
+    const parts = [...si.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(([, t = ""]) => decodeXml(t));
     shared.push(parts.join(""));
   }
   const rels = new Map<string, string>();
@@ -77,7 +78,7 @@ export function readXlsx(bytes: Uint8Array): XlsxWorkbook {
     const rid = attr(m[0], "r:id") ?? "";
     const xml = text(rels.get(rid) ?? "");
     const dimension = /<dimension\s[^>]*ref="([^"]*)"/.exec(xml)?.[1] ?? null;
-    const mergedCells = [...xml.matchAll(/<mergeCell\s[^>]*ref="([^"]*)"/g)].map((x) => x[1]);
+    const mergedCells = [...xml.matchAll(/<mergeCell\s[^>]*ref="([^"]*)"/g)].map(([, ref = ""]) => ref);
     const cells: XlsxCell[] = [];
     const rows: XlsxCellValue[][] = [];
     for (const rowMatch of xml.matchAll(/<row\s[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
@@ -89,7 +90,7 @@ export function readXlsx(bytes: Uint8Array): XlsxWorkbook {
         const type = attr(c[0].slice(0, c[0].indexOf(">") + 1), "t") ?? "n";
         const inner = c[1] ?? "";
         const raw = /<v>([\s\S]*?)<\/v>/.exec(inner)?.[1];
-        const inline = [...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((t) => decodeXml(t[1])).join("");
+        const inline = [...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(([, t = ""]) => decodeXml(t)).join("");
         let value: XlsxCellValue = null;
         if (type === "s") value = raw === undefined ? null : (shared[Number(raw)] ?? null);
         else if (type === "b") value = raw === "1";

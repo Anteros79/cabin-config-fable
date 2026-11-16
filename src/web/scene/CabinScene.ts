@@ -69,14 +69,13 @@ export class CabinScene {
   private colourMode: ColourMode = "status";
   private layout: LayoutRevision | null = null;
   private seats: SeatEntry[] = [];
-  private seatIndex = new Map<string, number>();
   private seatMeshes: { mesh: THREE.InstancedMesh; component: string | null }[] = [];
   private panOverlay: THREE.InstancedMesh | null = null;
   private backOverlay: THREE.InstancedMesh | null = null;
   private floorMeshes: { mesh: THREE.Mesh; locationId: string | null; overlay: THREE.Mesh | null }[] = [];
   private fullCabinOverlay: THREE.Mesh | null = null;
   private binSides: { side: "L" | "R"; door: THREE.InstancedMesh; body: THREE.InstancedMesh; locations: CabinLocation[]; extras: THREE.Object3D[] }[] = [];
-  private contextSides: { side: "L" | "R"; objects: THREE.Mesh[] }[] = [];
+  private contextSides: { side: "L" | "R"; wallMaterial: THREE.MeshStandardMaterial }[] = [];
   private states = new Map<string, LocationState>();
   private selection: string | null = null;
   private selectionMark: THREE.LineSegments;
@@ -210,14 +209,15 @@ export class CabinScene {
     this.seats = layout.locations
       .filter((l) => l.kind === "SEAT")
       .map((location) => ({ location, matrix: new THREE.Matrix4().makeTranslation(location.placement.x, 0, location.placement.z) }));
-    this.seatIndex = new Map(this.seats.map((s, i) => [s.location.id, i]));
     const n = this.seats.length;
     const std = (color: string, roughness: number, metalness = 0, extra: THREE.MeshStandardMaterialParameters = {}) =>
       new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
     const addSeatMesh = (geometry: THREE.BufferGeometry, material: THREE.Material, component: string | null, matrices?: (THREE.Matrix4 | null)[]) => {
       if (n === 0) return null;
       const mesh = new THREE.InstancedMesh(geometry, material, n);
-      for (let i = 0; i < n; i++) mesh.setMatrixAt(i, matrices ? (matrices[i] ?? ZERO) : this.seats[i].matrix);
+      this.seats.forEach((seat, i) => {
+        mesh.setMatrixAt(i, matrices ? (matrices[i] ?? ZERO) : seat.matrix);
+      });
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
       this.groups.seats.add(mesh);
@@ -363,17 +363,15 @@ export class CabinScene {
       const map = wallTexture.clone();
       map.needsUpdate = true;
       map.repeat.set(Math.max(rows, 1), 1);
-      const wall = new THREE.Mesh(
-        new THREE.PlaneGeometry(length, 1.66),
-        new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, transparent: true }),
-      );
+      const wallMaterial = new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, transparent: true });
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(length, 1.66), wallMaterial);
       wall.position.set(length / 2, 0.83, sign * (halfW + 0.005));
       wall.rotation.y = sign > 0 ? Math.PI : 0;
       const strip = new THREE.Mesh(new THREE.BoxGeometry(length, 0.03, 0.03), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
       strip.position.set(length / 2, 1.63, sign * (halfW - 0.03));
       strip.userData.wash = true;
       this.groups.context.add(wall, strip);
-      this.contextSides.push({ side, objects: [wall, strip] });
+      this.contextSides.push({ side, wallMaterial });
     }
     wallTexture.dispose();
     for (const x of [0.02, length - 0.02]) {
@@ -472,7 +470,7 @@ export class CabinScene {
     }
     for (const c of this.contextSides) {
       const near = !inside && (c.side === "L" ? cam.z > 0.7 : cam.z < -0.7);
-      const wall = c.objects[0].material as THREE.MeshStandardMaterial;
+      const wall = c.wallMaterial;
       wall.opacity = near ? 0.1 : 1;
       wall.depthWrite = !near;
     }
@@ -711,17 +709,21 @@ export class CabinScene {
     if (this.layers.bins && this.pickableFloorBins)
       for (const b of this.binSides) if (!b.door.userData.ghost && b.locations.length) targets.push(b.door, b.body);
     const hits = this.raycaster.intersectObjects(targets, false);
-    if (hits.length === 0) return null;
     const first = hits[0];
+    if (!first) return null;
     const seat = this.seatMeshes.find((s) => s.mesh === first.object);
-    if (seat && first.instanceId !== undefined) return { location: this.seats[first.instanceId].location, component: seat.component };
+    if (seat && first.instanceId !== undefined) {
+      const entry = this.seats[first.instanceId];
+      return entry ? { location: entry.location, component: seat.component } : null;
+    }
     const floor = this.floorMeshes.find((f) => f.mesh === first.object);
     if (floor?.locationId) {
       const location = this.layout.locations.find((l) => l.id === floor.locationId);
       return location ? { location, component: null } : null;
     }
     const bin = this.binSides.find((b) => b.door === first.object || b.body === first.object);
-    if (bin && first.instanceId !== undefined && bin.locations[first.instanceId]) return { location: bin.locations[first.instanceId], component: null };
+    const binLocation = bin && first.instanceId !== undefined ? bin.locations[first.instanceId] : undefined;
+    if (binLocation) return { location: binLocation, component: null };
     return null;
   }
 
