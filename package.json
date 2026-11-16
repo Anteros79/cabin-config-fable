@@ -29,9 +29,9 @@
     "verify": "npm run typecheck && npm run test && npm run test:e2e && npm run comparisons && npm run originals:verify"
   },
   "dependencies": {
-    "@fastify/static": "^9.0.0",
-    "fastify": "^5.12.8",
+    "@fastify/static": "^10.1.11",
     "fast-xml-parser": "^5.0.0",
+    "fastify": "^5.12.8",
     "fflate": "^0.8.2",
     "pdfkit": "^0.20.2",
     "zod": "^4.0.0"
@@ -44,11 +44,11 @@
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "pdfjs-dist": "^5.0.0",
+    "pdfjs-dist": "5.5.207",
     "playwright-core": "^1.65.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "sharp": "^0.34.0",
+    "sharp": "^0.35.5",
     "three": "^0.187.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
