@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { geometryDeclaration, seatPlacement, sideOf } from "../domain/geometry.ts";
+import { geometryDeclaration, isKnownSeatLetter, seatPlacement, sideOf } from "../domain/geometry.ts";
 import type { AircraftSubtype, CabinLocation, Finding, Layout, LayoutCategory, LayoutRevision, RangeClaim, RowLabel, SourceArtifact } from "../domain/types.ts";
 import { ORIGINAL_FILES } from "./originals.ts";
 import { parseCsv } from "./readers/csv.ts";
@@ -376,6 +376,13 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       findings.push({ severity: "error", code: "SEAT_ROW", message: `Seat ${key} sits on a row marked as not existing.`, refs: [key] });
     if (s.seat_code !== `${s.row_number}${s.seat_letter}`)
       findings.push({ severity: "error", code: "SEAT_IDENTITY", message: `Seat ${key} has seat_code "${s.seat_code}".`, refs: [key] });
+    if (!isKnownSeatLetter(String(s.seat_letter)))
+      findings.push({
+        severity: "error",
+        code: "SEAT_LETTER_UNKNOWN",
+        message: `Seat ${key} has seat letter "${s.seat_letter}", which the geometry frame cannot place (A-F); the seat is left out.`,
+        refs: [key],
+      });
   }
 
   // Cross-format agreement (declared, counted conversions; any substantive difference is reported, not resolved)
@@ -540,7 +547,8 @@ export function buildCandidateContent(sourceRoot: string): CandidateContent {
       locator: `${ORIGINAL_FILES.registryJson}#/lopa_rows/${i}`,
     }));
     const physical = new Map(rowLabels.map((r) => [r.printedLabel, r.physicalOrder]));
-    const configSeats = seats.map((s, i) => ({ s, i })).filter((x) => String(x.s.lopa_id) === lopaId);
+    // a seat whose letter cannot be placed is reported above (SEAT_LETTER_UNKNOWN) and left out here
+    const configSeats = seats.map((s, i) => ({ s, i })).filter((x) => String(x.s.lopa_id) === lopaId && isKnownSeatLetter(String(x.s.seat_letter)));
     const elrRaw = String(c.elr_pitch_inches ?? "");
     const locations: CabinLocation[] = configSeats.map(({ s, i }) => {
       const letter = String(s.seat_letter);

@@ -108,6 +108,15 @@ function group<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
   return map;
 }
 
+/**
+ * The number of a printed row label: one to three digits ("7", "12", "007" -> 7). Anything else
+ * (empty, "12A", "1000", " 7") is not a numbered row and gives null; such a seat never matches a
+ * row range (DOM-19).
+ */
+export function parsePrintedRow(label: string): number | null {
+  return /^\d{1,3}$/.test(label) ? Number(label) : null;
+}
+
 export function selectLocations(selector: LocationSelector, revision: LayoutRevision): CabinLocation[] {
   return revision.locations.filter((loc) => locationMatches(selector, loc));
 }
@@ -125,12 +134,15 @@ export function locationMatches(selector: LocationSelector, loc: CabinLocation):
     const side = loc.seat?.side ?? loc.bin?.side;
     if (!side || !selector.sides.includes(side)) return false;
   }
-  if (selector.rowFrom !== undefined || selector.rowTo !== undefined) {
+  // null (from unvalidated data) and undefined both mean "no bound" (DOM-19)
+  const rowFrom: number | null = selector.rowFrom ?? null;
+  const rowTo: number | null = selector.rowTo ?? null;
+  if (rowFrom !== null || rowTo !== null) {
     if (!loc.seat) return false;
-    const row = Number(loc.seat.printedRow);
-    if (!Number.isFinite(row)) return false;
-    if (selector.rowFrom !== undefined && row < selector.rowFrom) return false;
-    if (selector.rowTo !== undefined && row > selector.rowTo) return false;
+    const row = parsePrintedRow(loc.seat.printedRow);
+    if (row === null) return false;
+    if (rowFrom !== null && row < rowFrom) return false;
+    if (rowTo !== null && row > rowTo) return false;
   }
   if (selector.floorAreaTypes) {
     if (!loc.floor || !selector.floorAreaTypes.includes(loc.floor.areaType)) return false;

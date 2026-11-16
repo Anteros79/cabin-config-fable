@@ -117,8 +117,8 @@ export function PrepView({ visitId, tail, date }: Props) {
             </a>
           </form>
           <p role="status" className="fine">
-            Showing {lines.length} of {prep.counts.parts} primary parts · {prep.counts.resolvedComponents} resolved components ·{" "}
-            {prep.counts.unresolvedComponents} unresolved · {prep.counts.alternates} alternates · {prep.counts.pendingChanges} pending changes
+            Showing {lines.length} of {prep.lines.length} lines · {prep.counts.parts} distinct primary parts · {prep.counts.resolvedComponents} resolved
+            components · {prep.counts.unresolvedComponents} unresolved · {prep.counts.alternates} alternates · {prep.counts.pendingChanges} pending changes
           </p>
           <div className="table-scroll" tabIndex={0} role="region" aria-label="Applicable parts table">
             <table id="prep-table">

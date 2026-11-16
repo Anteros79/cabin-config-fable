@@ -229,7 +229,10 @@ export interface LocationSelector {
   zones?: string[];
   letters?: string[];
   sides?: ("L" | "R")[];
-  /** Printed row numbers, inclusive. */
+  /**
+   * Printed row numbers, inclusive (`parsePrintedRow`). Absent is no bound on that side; at run time a
+   * null from unvalidated data reads the same way.
+   */
   rowFrom?: number;
   rowTo?: number;
   floorAreaTypes?: ("FULL_CABIN" | "AREA")[];
@@ -382,6 +385,11 @@ export interface ExclusionReason {
     /** The kit below the part cannot be expanded: it is cyclic, nested too deep or its quantities overflow. */
     | "KIT_INVALID";
   message: string;
+  /**
+   * The source a `KIT_SOURCE_INVALID` reason refers to (the kit child's), so a report can cite it
+   * (DOM-16). Absent on every other reason and on reasons frozen before it was written.
+   */
+  sourceId?: string;
 }
 
 export interface PartLine {
@@ -502,6 +510,10 @@ export interface LookupResult {
     variantId: string;
     layoutRevisionId: string;
     status: string;
+    /** How lookup treated it: a released assignment of unreleased data is treated as planned (DOM-21). */
+    effectiveStatus: "released" | "planned";
+    /** Why the treatment differs from `status`, or which referenced data is missing; null when nothing needs explaining. */
+    reason: string | null;
     effectiveFrom: IsoDate;
     effectiveTo: IsoDate | null;
     coversDate: boolean;

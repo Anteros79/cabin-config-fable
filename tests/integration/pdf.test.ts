@@ -171,6 +171,32 @@ function event(over: Partial<VisitEvent> & { note: string }): VisitEvent {
   } as VisitEvent;
 }
 
+/** `n` mandatory-child part lines, one printed line each in the parts cell. */
+function manyLines(n: number): Report["work"][number]["lines"] {
+  return Array.from({ length: n }, (_, i) => ({
+    partNo: `LINEPART${i}`,
+    description: "",
+    qty: 1,
+    unit: "EA",
+    role: "MANDATORY_CHILD" as const,
+    parentPartNo: null,
+    sourceId: "FX-DOC-A",
+  }));
+}
+
+/** `n` excluded rules, each with two reasons, as a work item with many rules not used would carry. */
+function manyExclusions(n: number): Report["work"][number]["excludedRules"] {
+  return Array.from({ length: n }, (_, i) => ({
+    ruleId: `X-EXCL-${i}`,
+    partNo: "FAKE-SC-1001",
+    sourceId: "FX-DOC-A",
+    reasons: [
+      { code: "RULE_EXPIRED" as const, message: `Rule X-EXCL-${i} ended after 2026-11-11.` },
+      { code: "SOURCE_NOT_RELEASED" as const, message: "Source FX-DOC-A rev 1 is not released." },
+    ],
+  }));
+}
+
 describe("PDF robustness and accessibility", () => {
   it("a 2000-character note is printed in full in the Notes section", async () => {
     const app = makeApp();
@@ -278,13 +304,10 @@ describe("PDF robustness and accessibility", () => {
   it("the tallest row that does not throw still fits on one page below the repeated header", async () => {
     const app = makeApp();
     const { report, basisSha256 } = await completedReport(app);
-    const withPending = (n: number) =>
-      ({
-        ...report,
-        work: report.work.map((w) => ({ ...w, pendingChanges: Array.from({ length: n }, (_, i) => ({ note: `PEND${i} with some words to wrap` })) })),
-      }) as unknown as Report;
+    // Pending changes and rules not used now move to Notes when long, so many part lines make the tall row.
+    const withLines = (n: number) => ({ ...report, work: report.work.map((w) => ({ ...w, lines: manyLines(n) })) }) as Report;
     const renders = async (n: number) =>
-      renderReportPdf(withPending(n), [], basisSha256).then(
+      renderReportPdf(withLines(n), [], basisSha256).then(
         (bytes) => bytes,
         () => null,
       );
@@ -301,10 +324,10 @@ describe("PDF robustness and accessibility", () => {
     const bytes = await renders(lo);
     if (!bytes) throw new Error("expected the accepted row to render");
     const items = await pdfItems(bytes);
-    const rowPages = new Set(items.filter((i) => /PEND\d+/.test(i.str)).map((i) => i.page));
+    const rowPages = new Set(items.filter((i) => /LINEPART\d+/.test(i.str)).map((i) => i.page));
     expect(rowPages.size).toBe(1); // the row was not split across pages by an overflowing text run
     const page = [...rowPages][0];
-    const lowest = Math.min(...items.filter((i) => i.page === page && /PEND\d+|with some words|to wrap/.test(i.str)).map((i) => i.y));
+    const lowest = Math.min(...items.filter((i) => i.page === page && /LINEPART\d+|\(required\)/.test(i.str)).map((i) => i.y));
     // Page content ends MARGIN + FOOTER_SPACE (74 pt) above the bottom edge; no row text crosses it.
     expect(lowest).toBeGreaterThanOrEqual(74);
     await app.close();
@@ -346,12 +369,48 @@ describe("PDF robustness and accessibility", () => {
     await app.close();
   });
 
+  it("a work item with 60 exclusions and pending changes renders, the full text in Notes", async () => {
+    const app = makeApp();
+    const { report, basisSha256 } = await completedReport(app, "Torn seam");
+    const pendingChanges = Array.from({ length: 30 }, (_, i) => ({ note: `Pending change ${i} with some words to wrap` }));
+    const heavy = { ...report, work: report.work.map((w) => ({ ...w, excludedRules: manyExclusions(60), pendingChanges })) } as unknown as Report;
+    const { text } = await pdfText(await renderReportPdf(heavy, [], basisSha256));
+    const flat = text.replace(/\s+/g, "");
+    expect(text).toContain("See note 1");
+    expect(flat).toContain("1.Seat3A/CUSHION:Note:Tornseam");
+    for (const id of ["X-EXCL-0", "X-EXCL-59"]) expect(flat).toContain(`${id}(FAKE-SC-1001):Rule${id}endedafter2026-11-11.`);
+    expect(flat).toContain("Pendingchange29withsomewordstowrap");
+    await app.close();
+  });
+
+  it("a gap with a very long reason renders, the full reason in Notes", async () => {
+    const app = makeApp();
+    const { report, basisSha256 } = await completedReport(app);
+    const reason = `GAPSTART ${"The rule ended after 2026-11-11. ".repeat(200)}GAPEND`;
+    const gaps = [
+      {
+        componentId: "CUSHION",
+        status: "NO_MATCH" as const,
+        message: reason,
+        locationIds: ["SEAT:3A"],
+        locationSummary: "Seat A row 3 (1 location)",
+        sourceIds: [],
+      },
+    ];
+    const { text } = await pdfText(await renderReportPdf({ ...report, gaps }, [], basisSha256));
+    expect(text).toContain("See note G1");
+    expect(text).toContain("Notes on unresolved gaps");
+    const flat = text.replace(/\s+/g, "");
+    expect(flat).toContain("GAPSTART");
+    expect(flat).toContain("GAPEND");
+    await app.close();
+  });
+
   it("a table row taller than a page throws a loud error", async () => {
     const app = makeApp();
     const { report, basisSha256 } = await completedReport(app);
-    // Many pending changes make the sources cell taller than any page while the note rule does not apply.
-    const pending = Array.from({ length: 400 }, (_, i) => ({ note: `Pending item ${i} with some words to wrap` }));
-    const tall = { ...report, work: report.work.map((w) => ({ ...w, pendingChanges: pending })) } as unknown as Report;
+    // Many part lines make the parts cell taller than any page; that column has no overflow section.
+    const tall = { ...report, work: report.work.map((w) => ({ ...w, lines: manyLines(400) })) } as Report;
     await expect(renderReportPdf(tall, [], basisSha256)).rejects.toThrow("pdf: row taller than a page in");
     await app.close();
   });

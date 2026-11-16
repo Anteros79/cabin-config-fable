@@ -47,11 +47,16 @@ export function buildSnapshot(release: ReferenceRelease, result: LookupResult, c
 function lineQty(partNo: string, unit: string, ...factors: number[]): number {
   const qty = factors.reduce((product, f) => product * f, 1);
   if (!Number.isSafeInteger(qty) || qty > MAX_DERIVED_QTY) {
-    throw new DomainError("QUANTITY_TOO_LARGE", `The quantity of ${partNo} (${unit}) for this record would exceed ${MAX_DERIVED_QTY}.`, 422, {
-      partNo,
-      unit,
-      max: MAX_DERIVED_QTY,
-    });
+    throw new DomainError(
+      "QUANTITY_TOO_LARGE",
+      `The quantity of ${partNo} (${unit}) for this record is too large or not a whole number; it must be a whole number no greater than ${MAX_DERIVED_QTY}.`,
+      422,
+      {
+        partNo,
+        unit,
+        max: MAX_DERIVED_QTY,
+      },
+    );
   }
   return qty;
 }

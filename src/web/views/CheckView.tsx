@@ -350,7 +350,10 @@ export function CheckView({ visitId, navigate, visualProfiles }: Props) {
                       {lookup.assignmentsConsidered.map((a) => (
                         <tr key={a.id}>
                           <td>{a.variantId}</td>
-                          <td>{a.status}</td>
+                          <td>
+                            {a.status}
+                            {a.reason ? ` (${a.reason})` : ""}
+                          </td>
                           <td>
                             {a.effectiveFrom} to {a.effectiveTo ?? "open"}
                           </td>

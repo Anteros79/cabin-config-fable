@@ -18,12 +18,28 @@ export const BIN_HEIGHT = 0.44;
 export const BIN_DEPTH = 0.78;
 
 // Right-handed frame with +X aft and +Y up puts +Z on the left (port, A/B/C) side when facing forward.
-const LATERAL: Record<string, number> = { A: 1.42, B: 0.95, C: 0.48, D: -0.48, E: -0.95, F: -1.42 };
+const LATERAL: ReadonlyMap<string, number> = new Map([
+  ["A", 1.42],
+  ["B", 0.95],
+  ["C", 0.48],
+  ["D", -0.48],
+  ["E", -0.95],
+  ["F", -1.42],
+]);
 
-export function lateralCentre(letter: string): number {
-  return LATERAL[letter] ?? 0;
+/** True for a seat letter the geometry frame can place (A-F). */
+export function isKnownSeatLetter(letter: string): boolean {
+  return LATERAL.has(letter);
 }
 
+/** Lateral centre of a seat letter; throws `RangeError` for a letter outside the table (DOM-18). */
+export function lateralCentre(letter: string): number {
+  const z = LATERAL.get(letter);
+  if (z === undefined) throw new RangeError(`Unknown seat letter: ${letter}`);
+  return z;
+}
+
+/** The cabin side of a seat letter; throws `RangeError` for a letter outside the table. */
 export function sideOf(letter: string): "L" | "R" {
   return lateralCentre(letter) > 0 ? "L" : "R";
 }
@@ -54,6 +70,7 @@ export function geometryDeclaration(physicalRows: number): GeometryDeclaration {
   };
 }
 
+/** Placement of a seat; throws `RangeError` for a letter outside the table. */
 export function seatPlacement(physicalRow: number, letter: string): Placement {
   return { x: rowCentreX(physicalRow), y: 0, z: lateralCentre(letter), lx: SEAT_DEPTH, lz: SEAT_WIDTH, ly: SEAT_HEIGHT };
 }

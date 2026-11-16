@@ -11,8 +11,13 @@ interface Column {
 const MARGIN = 40;
 const FOOTER_SPACE = 34;
 const HEADER_SPACE = 30;
-/** A work-item or event note longer than this is printed once, in full, in a Notes section. */
+/**
+ * A work item's notes, pending changes and rules not used, or an event note, longer than this is
+ * printed once, in full, in a Notes section, so no table row can outgrow a page.
+ */
 const LONG_NOTE = 160;
+/** A gap reason longer than this is printed in full in a Notes section after the gaps table. */
+const LONG_GAP_REASON = 600;
 /** pdfkit supports `scope` on a header cell; the bundled types do not list it yet. */
 const COLUMN_SCOPE = { scope: "Column" } as NonNullable<Parameters<PDFKit.PDFDocument["struct"]>[1]>;
 
@@ -222,8 +227,8 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
 
     /** Long notes are printed once in a Notes section; the table cell points at them. */
     const notes: { label: string; text: string }[] = [];
-    const noteCell = (prefix: string, location: string, text: string): string => {
-      if (text.length <= LONG_NOTE) return text;
+    const noteCell = (prefix: string, location: string, text: string, limit = LONG_NOTE): string => {
+      if (text.length <= limit) return text;
       const label = `${prefix}${notes.length + 1}`;
       notes.push({ label, text: `${label}. ${location}: ${text}` });
       return `See note ${label}`;
@@ -346,9 +351,14 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
           w.lines.map((l) => `${l.partNo} ${l.qty} ${l.unit}${l.role === "MANDATORY_CHILD" ? " (required)" : ""}`).join("\n"),
           [
             ...new Set([sourceLabel(report, w.ruleSourceId), sourceLabel(report, w.selectionSourceId)]),
-            w.note ? (w.note.length > LONG_NOTE ? noteCell("", `${w.locationLabel} / ${w.componentId}`, w.note) : `Note: ${w.note}`) : "",
-            ...w.pendingChanges.map((p) => `Pending change: ${p.note}`),
-            rulesNotUsedLine(w.excludedRules) ?? "",
+            // the note, pending changes and rules not used stay in the cell while short, else move to Notes together
+            noteCell(
+              "",
+              `${w.locationLabel} / ${w.componentId}`,
+              [w.note ? `Note: ${w.note}` : "", ...w.pendingChanges.map((p) => `Pending change: ${p.note}`), rulesNotUsedLine(w.excludedRules) ?? ""]
+                .filter(Boolean)
+                .join("\n"),
+            ),
           ]
             .filter(Boolean)
             .join("\n"),
@@ -369,9 +379,15 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
           { header: "Locations", width: 170 },
           { header: "Reason", width: width - 312 },
         ],
-        report.gaps.map((g) => [g.componentId, g.status === "NO_MATCH" ? "No match" : "Ambiguous", g.locationSummary, g.message]),
+        report.gaps.map((g) => [
+          g.componentId,
+          g.status === "NO_MATCH" ? "No match" : "Ambiguous",
+          g.locationSummary,
+          noteCell("G", `${g.componentId} at ${g.locationSummary}`, g.message, LONG_GAP_REASON),
+        ]),
       );
       para("Unresolved components could not be recorded on this visit.", 7);
+      printNotes("Notes on unresolved gaps");
     }
 
     heading("Sources, revisions and validity");

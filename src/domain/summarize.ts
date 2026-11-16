@@ -1,3 +1,5 @@
+import { compareCodePoints } from "./order.ts";
+import { parsePrintedRow } from "./specificity.ts";
 import type { CabinLocation } from "./types.ts";
 
 function ranges(numbers: number[]): string {
@@ -20,8 +22,8 @@ export function summarizeLocations(locations: CabinLocation[]): string {
     const byLetter = new Map<string, number[]>();
     const odd: string[] = [];
     for (const l of seats) {
-      const row = Number(l.seat!.printedRow);
-      if (!Number.isFinite(row)) {
+      const row = parsePrintedRow(l.seat!.printedRow);
+      if (row === null) {
         odd.push(l.seat!.code);
         continue;
       }
@@ -29,7 +31,7 @@ export function summarizeLocations(locations: CabinLocation[]): string {
     }
     // merge letters that share the same row set
     const bySet = new Map<string, string[]>();
-    for (const [letter, rows] of [...byLetter.entries()].sort()) {
+    for (const [letter, rows] of [...byLetter.entries()].sort(([a], [b]) => compareCodePoints(a, b))) {
       const key = ranges(rows);
       bySet.set(key, [...(bySet.get(key) ?? []), letter]);
     }

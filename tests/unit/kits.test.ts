@@ -255,6 +255,9 @@ describe("derived quantities", () => {
     const snap = snapshotFor(rel, "N100TL", "2026-11-12");
     expect(carpetKit(lookup(rel, "N100TL", "2026-11-12")).children[0]?.qty).toBe(MAX_QTY); // the kit itself is within bounds
     expect(code(() => deriveRecord(snap, KIT_PRIMARY))).toBe("QUANTITY_TOO_LARGE");
+    expect(() => deriveRecord(snap, KIT_PRIMARY)).toThrow(
+      `The quantity of FAKE-P-39 (PANEL) for this record is too large or not a whole number; it must be a whole number no greater than ${MAX_DERIVED_QTY}.`,
+    );
     // the same refusal holds for a snapshot whose numbers would overflow to Infinity (JSON null)
     const forged = structuredClone(snap);
     for (const rule of Object.values(forged.resolution.rules)) if (rule.partNo === "FAKE-CK-2001") rule.qtyPerReplacement = Number.MAX_VALUE;

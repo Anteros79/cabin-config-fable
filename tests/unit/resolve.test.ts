@@ -528,3 +528,69 @@ describe("substitute scope", () => {
     expect(entry(rb.resolution!.rules, ruleB).excludedSubstitutes).toEqual([]);
   });
 });
+
+describe("dates and assignments considered (DOM-21)", () => {
+  it.each([20261112, new Date("2026-11-12"), ["2026-11-12"], { date: "2026-11-12" }, true])("non-string date %j -> INVALID_INPUT DATE_INVALID", (date) => {
+    const r = lookup(release, "N100TL", date);
+    expect(r.state).toBe("INVALID_INPUT");
+    expect(r.reasonCode).toBe("DATE_INVALID");
+  });
+
+  it.each([undefined, null, "", "   "])("absent or blank date %j -> DATE_MISSING", (date) => {
+    expect(lookup(release, "N100TL", date).reasonCode).toBe("DATE_MISSING");
+  });
+
+  it("three overlapping released assignments -> OVERLAP naming all three", () => {
+    const rel = fixtureRelease((c) => {
+      const v04 = c.assignments.find((a) => a.tail === "N400TL" && a.variantId === "V04")!;
+      c.assignments.push({ ...v04, id: "X-THIRD", effectiveFrom: "2026-09-10", effectiveTo: "2026-09-20" });
+    });
+    const r = lookup(rel, "N400TL", "2026-09-15");
+    expect(r.state).toBe("OVERLAP");
+    expect(r.message).toMatch(/has 3 overlapping configurations/);
+    for (const id of ["FX-TA-N400TL-V05-2024-01-01", "FX-TA-N400TL-V04-2026-09-01", "X-THIRD"]) expect(r.message).toContain(id);
+  });
+
+  it("a released assignment of an unreleased variant is reported as treated as planned", () => {
+    const rel = fixtureRelease((c) => {
+      c.variants.find((v) => v.id === "V01")!.released = false;
+    });
+    const r = lookup(rel, "N100TL", "2026-11-12");
+    expect(r.state).toBe("PLANNED");
+    const [considered] = r.assignmentsConsidered!;
+    expect(considered).toMatchObject({ status: "released", effectiveStatus: "planned" });
+    expect(considered?.reason).toMatch(/Variant V01 is not released/);
+  });
+
+  it("a released configuration has effectiveStatus released and no reason; a planned one says planned", () => {
+    expect(lookup(release, "N100TL", "2026-11-12").assignmentsConsidered).toEqual([
+      expect.objectContaining({ status: "released", effectiveStatus: "released", reason: null }),
+    ]);
+    const planned = lookup(release, "N110TL", "2026-11-12").assignmentsConsidered!;
+    expect(planned.every((a) => a.effectiveStatus === "planned")).toBe(true);
+  });
+
+  const missingCases: [string, (c: ReleaseContent) => void, RegExp][] = [
+    [
+      "variant",
+      (c) => {
+        c.assignments.find((a) => a.tail === "N100TL")!.variantId = "V-GONE";
+      },
+      /Variant V-GONE is not in the reference data/,
+    ],
+    [
+      "layout revision",
+      (c) => {
+        c.assignments.find((a) => a.tail === "N100TL")!.layoutRevisionId = "L-GONE@1";
+      },
+      /Layout revision L-GONE@1 is not in the reference data/,
+    ],
+  ];
+  it.each(missingCases)("an assignment whose %s is missing is SOURCE_INVALID / INCONSISTENT_CONFIGURATION, not PLANNED", (_what, mutate, message) => {
+    const r = lookup(fixtureRelease(mutate), "N100TL", "2026-11-12");
+    expect(r.state).toBe("SOURCE_INVALID");
+    expect(r.reasonCode).toBe("INCONSISTENT_CONFIGURATION");
+    expect(r.message).toMatch(message);
+    expect(r.assignmentsConsidered?.[0]).toMatchObject({ effectiveStatus: "released", reason: expect.stringMatching(message) });
+  });
+});

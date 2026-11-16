@@ -1,4 +1,5 @@
 import { intervalsOverlap } from "./dates.ts";
+import { isKnownSeatLetter, sideOf } from "./geometry.ts";
 import { validateKits } from "./kits.ts";
 import { compareCodePoints } from "./order.ts";
 import { configurationProblems, isReleasedConfiguration } from "./resolve.ts";
@@ -150,6 +151,15 @@ export function validateRelease(input: unknown): Finding[] {
           err("SEAT_ROW", `Seat ${r.id}#${seat.code} physical row disagrees with its printed row.`, [`${r.id}#${loc.id}`]);
         if (seat.code !== `${seat.printedRow}${seat.letter}` || loc.id !== `SEAT:${seat.code}`) {
           err("SEAT_IDENTITY", `Seat ${r.id}#${loc.id} has inconsistent identity (${seat.printedRow}/${seat.letter}/${seat.code}).`, [`${r.id}#${loc.id}`]);
+        }
+        if (!isKnownSeatLetter(seat.letter)) {
+          err("SEAT_LETTER_UNKNOWN", `Seat ${r.id}#${loc.id} has seat letter "${seat.letter}", which the geometry frame cannot place (A-F).`, [
+            `${r.id}#${loc.id}`,
+          ]);
+        } else if (seat.side !== sideOf(seat.letter)) {
+          err("SEAT_SIDE_MISMATCH", `Seat ${r.id}#${loc.id} is on side ${seat.side}, but letter ${seat.letter} is on side ${sideOf(seat.letter)}.`, [
+            `${r.id}#${loc.id}`,
+          ]);
         }
         if (seat.pitch && seat.pitch.min !== null && seat.pitch.max !== null && seat.pitch.max < seat.pitch.min) {
           err("RANGE_INVALID", `Seat ${r.id}#${seat.code} pitch range is inverted.`, [`${r.id}#${loc.id}`]);

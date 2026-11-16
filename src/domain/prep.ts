@@ -57,6 +57,7 @@ export interface PrepOverview {
   note: string;
   lines: PrepLine[];
   gaps: ReportGap[];
+  /** `parts` is the number of distinct primary part numbers; one part may appear on several lines (DOM-21). */
   counts: { parts: number; resolvedComponents: number; unresolvedComponents: number; alternates: number; pendingChanges: number };
 }
 
@@ -145,7 +146,7 @@ export function buildPreparation(snapshot: VisitSnapshot): PrepOverview {
     lines,
     gaps,
     counts: {
-      parts: lines.length,
+      parts: new Set(lines.map((l) => l.partNo)).size,
       resolvedComponents: resolution.counts.resolved,
       unresolvedComponents: resolution.counts.noMatch + resolution.counts.ambiguous,
       alternates: lines.reduce((n, l) => n + l.alternates.length, 0),

@@ -13,21 +13,39 @@ import type {
   VisitSnapshot,
 } from "./types.ts";
 import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS, REPORT_SCHEMA } from "./types.ts";
+import { DomainError } from "./visitLogic.ts";
 
-const KIND_ORDER = { SEAT: 0, FLOOR: 1, BIN: 2 } as const;
+const KIND_ORDER: Readonly<Record<string, number>> = { SEAT: 0, FLOOR: 1, BIN: 2 };
 
+function inconsistent(message: string): DomainError {
+  return new DomainError("SNAPSHOT_INCONSISTENT", `The visit snapshot is inconsistent: ${message}`, 500);
+}
+
+/**
+ * Physical order of the snapshot's locations (DOM-20): seats by physical row then letter, then the
+ * floor areas by first row, then the bins by module; ties by id. An unknown location kind is refused.
+ */
 function locationOrder(snapshot: VisitSnapshot): Map<string, number> {
+  const key = (l: CabinLocation): [number, number, string] => {
+    const kind = KIND_ORDER[l.kind];
+    if (kind === undefined) throw inconsistent(`location ${l.id} has unknown kind ${JSON.stringify(l.kind)}.`);
+    if (l.kind === "SEAT") return [kind, l.seat?.physicalRow ?? 0, l.seat?.letter ?? ""];
+    return [kind, l.floor?.rowFrom ?? l.bin?.module ?? 0, ""];
+  };
+  const keyed = snapshot.context.layoutRevision.locations.map((l) => ({ l, k: key(l) }));
+  keyed.sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || compareCodePoints(a.k[2], b.k[2]) || compareCodePoints(a.l.id, b.l.id));
   const order = new Map<string, number>();
-  const sorted = [...snapshot.context.layoutRevision.locations].sort(
-    (a, b) =>
-      KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
-      (a.seat?.physicalRow ?? a.bin?.module ?? a.floor?.rowFrom ?? 0) - (b.seat?.physicalRow ?? b.bin?.module ?? b.floor?.rowFrom ?? 0) ||
-      compareCodePoints(a.id, b.id),
-  );
-  sorted.forEach((l, i) => {
+  keyed.forEach(({ l }, i) => {
     order.set(l.id, i);
   });
   return order;
+}
+
+/** Position of a location in `order`; a location absent from the snapshot is refused. */
+function positionOf(order: Map<string, number>, locationId: string, what: string): number {
+  const position = order.get(locationId);
+  if (position === undefined) throw inconsistent(`${what} refers to location ${locationId}, which is not in the frozen layout.`);
+  return position;
 }
 
 /** The exclusions kept on a component. A snapshot frozen before report schema 2 may lack them: that reads as none. */
@@ -41,15 +59,26 @@ export function rulesNotUsedLine(excluded: readonly ExcludedRule[] | undefined):
   return `Rules not used: ${excluded.map((e) => `${e.ruleId} (${e.partNo}): ${e.reasons.map((r) => r.message).join(" ")}`).join("; ")}`;
 }
 
-/** Sources a gap cites: its ambiguous candidates' and its excluded rules' (when the snapshot recorded them). */
+/**
+ * Sources an excluded rule cites: its own (when the snapshot recorded it) and, for a `KIT_SOURCE_INVALID`
+ * reason, the kit child's source that made it unusable (DOM-16).
+ */
+function excludedSourceIds(e: ExcludedRule): string[] {
+  const ids = e.sourceId ? [e.sourceId] : [];
+  for (const r of e.reasons) if (r.sourceId) ids.push(r.sourceId);
+  return ids;
+}
+
+/** Sources a gap cites: its ambiguous candidates' and its excluded rules'. */
 function gapSourceIds(c: Exclude<ComponentResolution, { status: "RESOLVED" }>): string[] {
-  const ids = excludedOf(c).flatMap((e) => (e.sourceId ? [e.sourceId] : []));
+  const ids = excludedOf(c).flatMap(excludedSourceIds);
   if (c.status === "AMBIGUOUS") ids.push(...c.candidates.map((x) => x.sourceId));
   return ids;
 }
 
 export function buildGaps(snapshot: VisitSnapshot): ReportGap[] {
   const byId = new Map<string, CabinLocation>(snapshot.context.layoutRevision.locations.map((l) => [l.id, l]));
+  const order = locationOrder(snapshot);
   const groups = new Map<string, { gap: ReportGap; sourceIds: Set<string> }>();
   for (const c of snapshot.resolution.components) {
     if (c.status === "RESOLVED") continue;
@@ -72,8 +101,9 @@ export function buildGaps(snapshot: VisitSnapshot): ReportGap[] {
     return gap;
   });
   for (const gap of gaps) {
-    gap.locationIds.sort(compareCodePoints);
-    gap.locationSummary = summarizeLocations(gap.locationIds.map((id) => byId.get(id)!).filter(Boolean));
+    const positions = new Map(gap.locationIds.map((id) => [id, positionOf(order, id, `A gap on ${gap.componentId}`)]));
+    gap.locationIds.sort((a, b) => (positions.get(a) ?? 0) - (positions.get(b) ?? 0));
+    gap.locationSummary = summarizeLocations(gap.locationIds.flatMap((id) => byId.get(id) ?? []));
   }
   return gaps.sort(
     (a, b) => compareCodePoints(a.componentId, b.componentId) || compareCodePoints(a.status, b.status) || compareCodePoints(a.message, b.message),
@@ -90,8 +120,13 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
   const order = locationOrder(snapshot);
   const byId = new Map<string, CabinLocation>(context.layoutRevision.locations.map((l) => [l.id, l]));
 
+  for (const r of visit.records) positionOf(order, r.locationId, `Record ${r.locationId} / ${r.componentId}`);
   const records = [...visit.records].sort(
-    (a, b) => (order.get(a.locationId) ?? 0) - (order.get(b.locationId) ?? 0) || compareCodePoints(a.componentId, b.componentId),
+    (a, b) =>
+      (order.get(a.locationId) ?? 0) - (order.get(b.locationId) ?? 0) ||
+      compareCodePoints(a.componentId, b.componentId) ||
+      compareCodePoints(a.selection, b.selection) ||
+      compareCodePoints(a.substituteId ?? "", b.substituteId ?? ""),
   );
   const componentAt = new Map<string, ComponentResolution>(resolution.components.map((c) => [`${c.locationId}\u0000${c.componentId}`, c]));
   // Every source the report cites: work items (rule, selection, mandatory children, pending changes),
@@ -112,12 +147,12 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
       if (p.sourceId) sourceIds.add(p.sourceId);
     });
     excludedRules.forEach((e) => {
-      if (e.sourceId) sourceIds.add(e.sourceId);
+      for (const id of excludedSourceIds(e)) sourceIds.add(id);
     });
     return {
       locationId: r.locationId,
       locationLabel: r.locationLabel,
-      locationKind: byId.get(r.locationId)?.kind ?? "SEAT",
+      locationKind: byId.get(r.locationId)!.kind, // present: positionOf checked every record above
       componentId: r.componentId,
       componentName: r.componentName,
       selection: r.selection,
@@ -159,7 +194,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
   }
   const totals = [...totalsMap.values()].sort((a, b) => compareCodePoints(a.partNo, b.partNo) || compareCodePoints(a.unit, b.unit));
   totals.forEach((t) => {
-    t.roles.sort();
+    t.roles.sort(compareCodePoints);
   });
 
   const gaps = buildGaps(snapshot);

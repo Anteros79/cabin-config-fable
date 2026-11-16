@@ -75,6 +75,7 @@ export function kitSourceExclusions(index: ReleaseIndex, partNo: string, date: I
     reasons.push({
       code: "KIT_SOURCE_INVALID",
       message: `Kit child ${line.childPartNo} of ${line.parentPartNo} cites source ${line.sourceId}, which is not valid on ${date}: ${problems.map((p) => p.message).join(" ")}`,
+      sourceId: line.sourceId,
     });
     if (!sourceIds.includes(line.sourceId)) sourceIds.push(line.sourceId);
   }
@@ -101,16 +102,29 @@ function base(tail: string, checkDate: string, releaseId: string | null) {
   return { tail, checkDate, referenceReleaseId: releaseId, demo: true as const };
 }
 
-function describe(a: TailAssignment, date: IsoDate) {
-  return {
-    id: a.id,
-    variantId: a.variantId,
-    layoutRevisionId: a.layoutRevisionId,
-    status: a.status,
-    effectiveFrom: a.effectiveFrom,
-    effectiveTo: a.effectiveTo,
-    coversDate: withinInclusive(date, a.effectiveFrom, a.effectiveTo),
-  };
+/** References an assignment makes that are missing from the release; empty when both exist. */
+function missingReferences(a: TailAssignment, variant: MaintenanceVariant | undefined, revision: LayoutRevision | undefined): string[] {
+  const missing: string[] = [];
+  if (!variant) missing.push(`Variant ${a.variantId} is not in the reference data.`);
+  if (!revision) missing.push(`Layout revision ${a.layoutRevisionId} is not in the reference data.`);
+  return missing;
+}
+
+/**
+ * How lookup treats an assignment (DOM-21). A released assignment is treated as released when its
+ * variant and layout revision are released data, and also when either is missing: that is an
+ * inconsistent configuration, never a planned one. `reason` says why the treatment differs from the
+ * stated status, or what is missing; null when there is nothing to explain.
+ */
+function treatment(a: TailAssignment, variant: MaintenanceVariant | undefined, revision: LayoutRevision | undefined) {
+  const missing = missingReferences(a, variant, revision);
+  if (a.status !== "released") return { effectiveStatus: "planned" as const, reason: missing.length > 0 ? missing.join(" ") : null };
+  if (missing.length > 0) return { effectiveStatus: "released" as const, reason: missing.join(" ") };
+  if (isReleasedConfiguration(a, variant, revision)) return { effectiveStatus: "released" as const, reason: null };
+  const why: string[] = [];
+  if (variant && !variant.released) why.push(`Variant ${variant.id} is not released.`);
+  if (revision && (revision.status === "planned" || revision.status === "candidate")) why.push(`Layout revision ${revision.id} is ${revision.status}.`);
+  return { effectiveStatus: "planned" as const, reason: `Treated as planned: ${why.join(" ")}` };
 }
 
 /**
@@ -148,12 +162,14 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
   const tail = normalizeTail(rawTail);
   const checkDate = typeof rawDate === "string" ? rawDate.trim() : "";
   const common = base(tail, checkDate, release.id);
+  // Absent or blank is a missing date; any other non-string (a number, a Date, an array) is an invalid one (DOM-21).
+  const dateMissing = rawDate === undefined || rawDate === null || (typeof rawDate === "string" && checkDate === "");
 
   if (!tail) return { ...common, state: "INVALID_INPUT", reasonCode: "TAIL_MISSING", message: "Enter a tail number." };
   if (!TAIL_PATTERN.test(tail)) {
     return { ...common, state: "INVALID_INPUT", reasonCode: "TAIL_INVALID", message: "Tail numbers use 2-10 letters, digits or hyphens." };
   }
-  if (!checkDate) return { ...common, state: "INVALID_INPUT", reasonCode: "DATE_MISSING", message: "Enter the appearance-check date." };
+  if (dateMissing) return { ...common, state: "INVALID_INPUT", reasonCode: "DATE_MISSING", message: "Enter the appearance-check date." };
   if (!isIsoDate(checkDate)) {
     return { ...common, state: "INVALID_INPUT", reasonCode: "DATE_INVALID", message: "The check date must be a real calendar date (YYYY-MM-DD)." };
   }
@@ -165,7 +181,21 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
   }
 
   const all = [...(index.assignmentsByTail.get(tail) ?? [])].sort((a, b) => compareCodePoints(a.effectiveFrom, b.effectiveFrom));
-  const considered = all.map((a) => describe(a, checkDate));
+  const treated = new Map(all.map((a) => [a, treatment(a, index.variants.get(a.variantId), index.layoutRevisions.get(a.layoutRevisionId))] as const));
+  const considered = all.map((a) => {
+    const { effectiveStatus, reason } = treated.get(a)!;
+    return {
+      id: a.id,
+      variantId: a.variantId,
+      layoutRevisionId: a.layoutRevisionId,
+      status: a.status,
+      effectiveStatus,
+      reason,
+      effectiveFrom: a.effectiveFrom,
+      effectiveTo: a.effectiveTo,
+      coversDate: withinInclusive(checkDate, a.effectiveFrom, a.effectiveTo),
+    };
+  });
   if (all.length === 0) {
     return {
       ...common,
@@ -178,8 +208,9 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
   }
 
   const covering = all.filter((a) => withinInclusive(checkDate, a.effectiveFrom, a.effectiveTo));
-  // isReleasedPair, not isUsablePair: an unlisted pair must stay INCONSISTENT_CONFIGURATION, not become PLANNED
-  const isReleased = (a: TailAssignment) => isReleasedConfiguration(a, index.variants.get(a.variantId), index.layoutRevisions.get(a.layoutRevisionId));
+  // isReleasedPair, not isUsablePair: an unlisted pair must stay INCONSISTENT_CONFIGURATION, not become PLANNED;
+  // a missing variant or layout revision likewise (DOM-21)
+  const isReleased = (a: TailAssignment) => treated.get(a)?.effectiveStatus === "released";
   const released = covering.filter(isReleased);
   const planned = covering.filter((a) => !isReleased(a));
 
@@ -190,7 +221,7 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
       assignmentsConsidered: considered,
       state: "OVERLAP",
       reasonCode: "OVERLAPPING_ASSIGNMENTS",
-      message: `Tail ${tail} has ${released.length} overlapping configurations on ${checkDate} (${released.map((a) => a.variantId).join(", ")}). None is selected; the reference data must be corrected.`,
+      message: `Tail ${tail} has ${released.length} overlapping configurations on ${checkDate} (${released.map((a) => `${a.id}: ${a.variantId}`).join(", ")}). None is selected; the reference data must be corrected.`,
     };
   }
   const [assignment] = released;
@@ -215,10 +246,6 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     };
   }
 
-  const variant = index.variants.get(assignment.variantId)!;
-  const layoutRevision = index.layoutRevisions.get(assignment.layoutRevisionId)!;
-  const layout = index.layouts.get(layoutRevision.layoutId);
-  const subtype = index.subtypes.get(aircraft.subtypeId);
   const invalid = (reasonCode: string, message: string): LookupResult => ({
     ...common,
     aircraft,
@@ -227,6 +254,16 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     reasonCode,
     message,
   });
+  const variant = index.variants.get(assignment.variantId);
+  const layoutRevision = index.layoutRevisions.get(assignment.layoutRevisionId);
+  if (!variant || !layoutRevision) {
+    return invalid(
+      "INCONSISTENT_CONFIGURATION",
+      `Assignment ${assignment.id} refers to data missing from the reference release. ${missingReferences(assignment, variant, layoutRevision).join(" ")}`,
+    );
+  }
+  const layout = index.layouts.get(layoutRevision.layoutId);
+  const subtype = index.subtypes.get(aircraft.subtypeId);
   if (!layout || !subtype) return invalid("INCONSISTENT_CONFIGURATION", "The configuration refers to a layout or subtype missing from the reference data.");
   const problems = configurationProblems(aircraft, variant, layoutRevision);
   if (problems.length > 0) {
@@ -291,6 +328,26 @@ export function contextOf(context: ResolvedContext): AssignmentContext {
   };
 }
 
+const KIT_CODES: ReadonlySet<ExclusionReason["code"]> = new Set(["KIT_INVALID", "KIT_SOURCE_INVALID"]);
+const KIT_REASON_TEXT: Partial<Record<ExclusionReason["code"], string>> = {
+  KIT_INVALID: "the kit cannot be expanded",
+  KIT_SOURCE_INVALID: "a kit child cites a source that is not valid on the check date",
+};
+
+/**
+ * The NO_MATCH message. When every rule was excluded only for its mandatory kit, the rule is valid on
+ * the date and the message says so, naming what is wrong with the kit.
+ */
+function noMatchMessage(excluded: ExcludedRule[]): string {
+  if (excluded.length === 0) return "No released applicability rule matches this component in this configuration.";
+  const reasons = excluded.flatMap((e) => e.reasons);
+  if (reasons.every((r) => KIT_CODES.has(r.code))) {
+    const named = [...new Set(reasons.map((r) => KIT_REASON_TEXT[r.code] ?? r.code))].join("; ");
+    return `A rule covers this component but the kit data of its part is unusable: ${named}.`;
+  }
+  return "A rule covers this component but is not valid on the check date.";
+}
+
 export function resolveComponents(index: ReleaseIndex, context: ResolvedContext, date: IsoDate): Resolution {
   const ctx = contextOf(context);
   const pairKey = `${ctx.variantId}|${ctx.layoutRevisionId}`;
@@ -322,13 +379,15 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
   const counts = { resolved: 0, noMatch: 0, ambiguous: 0 };
 
   const freeze = (rule: ApplicabilityRule): FrozenRule => {
+    const ruleLocations = index.ruleMatch.get(rule.id)?.pairs.get(pairKey) ?? new Set<string>();
     const substitutes: FrozenSubstitute[] = [];
     const excludedSubstitutes: ExcludedSubstitute[] = [];
     for (const sub of index.release.substitutes) {
       if (sub.componentId !== rule.componentId || sub.primaryPartNo !== rule.partNo) continue;
       if (!matchesContext(sub.constraint, ctx)) continue;
       const covered = index.substituteMatch.get(sub.id)?.pairs.get(pairKey);
-      if (!covered) continue;
+      // only where the substitute can stand in for this rule: at least one location both cover (DOM-17)
+      if (!covered || ![...covered].some((id) => ruleLocations.has(id))) continue;
       const kit = kitExclusions(index, sub.altPartNo, date);
       const exclusions = [...substituteExclusions(index, sub, date), ...kit.reasons];
       if (exclusions.length > 0) {
@@ -407,10 +466,7 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
           locationId: location.id,
           componentId,
           status: "NO_MATCH",
-          message:
-            excluded.length > 0
-              ? "A rule covers this component but is not valid on the check date."
-              : "No released applicability rule matches this component in this configuration.",
+          message: noMatchMessage(excluded),
           excluded,
         });
         continue;
