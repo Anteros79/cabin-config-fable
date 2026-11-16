@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
 import { rulesNotUsedLine } from "../../domain/report.ts";
 import { api } from "../api.ts";
+import { ScrollRegion } from "../components/ScrollRegion.tsx";
 import { canRetry, describeSaveStatus, useMutations } from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
+import { contentKeyed } from "../model.ts";
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
@@ -46,7 +48,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
   if (error) {
     return (
       <section className="panel">
-        <h2>Report</h2>
+        <h2 tabIndex={-1}>Report</h2>
         <div className="alert" role="alert">
           <p>{error}</p>
           <button type="button" onClick={res.reload}>
@@ -82,7 +84,9 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
         </a>
       </div>
       <header>
-        <h2 id="report-h">Cabin Kit after-action report</h2>
+        <h2 id="report-h" tabIndex={-1}>
+          Cabin Kit after-action report
+        </h2>
         <p className={`report-kind ${final ? "final" : "draft"}`}>
           {final ? "FINAL — visit completed and locked" : "DRAFT PREVIEW — visit not completed; content may still change"}
         </p>
@@ -160,7 +164,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
         {report.totals.length === 0 ? (
           <p>No replacements recorded.</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-label="Aggregate part totals table">
+          <ScrollRegion label="Aggregate part totals table">
             <table id="totals-table">
               <thead>
                 <tr>
@@ -189,7 +193,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
         <p className="fine">Totals are grouped by part number and unit. {report.replacementCountSemantics}</p>
       </section>
@@ -201,7 +205,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
         {report.work.length === 0 ? (
           <p>No replacements recorded.</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-label="Work recorded by location table">
+          <ScrollRegion label="Work recorded by location table">
             <table>
               <thead>
                 <tr>
@@ -270,7 +274,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </section>
 
@@ -279,7 +283,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
         {report.gaps.length === 0 ? (
           <p>None. Every component in the frozen configuration had one applicable primary part.</p>
         ) : (
-          <div className="table-scroll" tabIndex={0} role="region" aria-label="Unresolved gaps table">
+          <ScrollRegion label="Unresolved gaps table">
             <table>
               <thead>
                 <tr>
@@ -290,8 +294,8 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
                 </tr>
               </thead>
               <tbody>
-                {report.gaps.map((g, i) => (
-                  <tr key={i}>
+                {contentKeyed(report.gaps, (g) => `${g.componentId}|${g.status}|${g.locationSummary}|${g.message}`).map(([key, g]) => (
+                  <tr key={key}>
                     <th scope="row">{g.componentId}</th>
                     <td>{g.status === "NO_MATCH" ? "No match" : "Ambiguous"}</td>
                     <td>{g.locationSummary}</td>
@@ -300,13 +304,13 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </section>
 
       <section aria-labelledby="r-sources">
         <h3 id="r-sources">Sources, revisions and validity</h3>
-        <div className="table-scroll" tabIndex={0} role="region" aria-label="Sources table">
+        <ScrollRegion label="Sources table">
           <table>
             <thead>
               <tr>
@@ -333,7 +337,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
         <p className="fine">{report.dateRule}</p>
       </section>
 

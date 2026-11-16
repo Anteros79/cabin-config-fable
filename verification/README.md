@@ -106,3 +106,9 @@ Summary: 8 PASS, 11 PARTIAL, 4 FAIL, 5 UNKNOWN. The model is recognisable as the
 - Live web links cited in the DOCX.
 - Long-running use, large visit stores beyond the 100-plus visits in the tests, and more than two concurrent writers.
 - Agreement of any candidate data with a real aircraft.
+
+## Screen reader pass (VoiceOver, manual)
+
+Not done. Task 4.6 asks for one pass of the README walk-through by keyboard only with VoiceOver on, writing down what was announced at each step. The task was carried out by an automated agent that cannot run VoiceOver or hear its output, so no announcements were observed and none are claimed here.
+
+What is checked automatically instead: the jsdom tests in `tests/web/a11y.test.tsx` (focus moves to the view heading on a route change and the page title is placed in a polite live region; the completion dialog is a native modal `<dialog>`, starts on Cancel, and returns focus to "Complete visit…" on Cancel or Escape; the view tabs follow the WAI-ARIA tabs pattern; "Go to parts" and Enter on the canvas focus the inspector heading; the canvas has `role="application"` and a described list of keys), and the keyboard-only workflow in `tests/e2e/run.ts`. Whether focus stays inside the open dialog is a browser behaviour that jsdom cannot show; it is left to the Playwright work in Task 6.1. This pass should still be done by a person with VoiceOver before release.

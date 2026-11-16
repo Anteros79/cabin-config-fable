@@ -12,15 +12,18 @@
   --warn-bg: #fff3d1;
   --bad: #a3201a;
   --bad-bg: #fde7e5;
-  --sel: #ffc531;
+  --select: #ffc531;
   --radius: 6px;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 15px;
   line-height: 1.45;
   color: var(--ink);
   background: var(--bg);
 }
 
+/* 15px at the browser default of 16px; a larger setting scales everything */
+html {
+  font-size: 93.75%;
+}
 * {
   box-sizing: border-box;
 }
@@ -61,6 +64,10 @@ a {
 :focus-visible {
   outline: 3px solid #0b57d0;
   outline-offset: 2px;
+}
+/* the default blue ring is about 2:1 on the header's navy */
+.app-header :focus-visible {
+  outline-color: #fff;
 }
 .sr-only {
   position: absolute;
@@ -352,6 +359,16 @@ textarea {
   border-color: #e6c877;
   color: #4a3200;
 }
+dialog.confirm {
+  max-width: min(34rem, calc(100vw - 2rem));
+  padding: 0.9rem 1.1rem;
+}
+dialog.confirm::backdrop {
+  background: rgba(20, 26, 46, 0.45);
+}
+dialog.confirm h2 {
+  font-size: 1.1rem;
+}
 .advisory-inline {
   color: var(--warn);
   font-weight: 600;
@@ -428,8 +445,6 @@ td {
 thead th {
   background: #e8ecf5;
   border-bottom: 2px solid #aab3c7;
-  position: sticky;
-  top: 0;
 }
 tbody th {
   font-weight: 600;
@@ -533,7 +548,10 @@ ul.plain {
   flex-wrap: wrap;
   gap: 0.4rem 0.9rem;
   align-items: flex-end;
-  margin-bottom: 0.5rem;
+  border: 0;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  min-width: 0;
 }
 .tool-group {
   display: flex;
@@ -617,6 +635,10 @@ ul.plain {
   touch-action: none;
   cursor: grab;
 }
+/* the wrapper clips overflow, so the ring is drawn inside the canvas */
+.canvas-wrap canvas:focus-visible {
+  outline-offset: -3px;
+}
 .canvas-note {
   position: absolute;
   inset: 45% 0 auto 0;
@@ -670,7 +692,7 @@ ul.plain {
   background: #ff5757;
 }
 .swatch.selected {
-  background: var(--sel);
+  background: var(--select);
 }
 .swatch.tier-elr {
   background: #19c8b4;
@@ -701,6 +723,18 @@ ul.plain {
 }
 .cabin-map section:first-of-type {
   grid-row: span 2;
+}
+/* the seat map, its rows and the bin sides are fieldsets (named groups); they keep the plain look */
+fieldset.seat-grid,
+fieldset.seat-row,
+fieldset.bin-side {
+  margin-inline: 0;
+  min-width: 0;
+}
+fieldset.seat-row,
+fieldset.bin-side {
+  border: 0;
+  padding: 0;
 }
 .seat-grid {
   max-height: min(64vh, 46rem);
@@ -768,13 +802,27 @@ button.loc {
 }
 button.loc.tier-extra-legroom,
 button.loc.tier-elr {
-  box-shadow: inset 0 -4px 0 #19c8b4;
+  --tier: #19c8b4;
 }
 button.loc.tier-preferred {
-  box-shadow: inset 0 -4px 0 #b08cff;
+  --tier: #b08cff;
 }
 button.loc.tier-exit {
-  box-shadow: inset 0 -4px 0 #ff9550;
+  --tier: #ff9550;
+}
+/* the tier mark is its own box, so the selection ring and forced colours leave it alone */
+button.loc.tier-extra-legroom::before,
+button.loc.tier-elr::before,
+button.loc.tier-preferred::before,
+button.loc.tier-exit::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--tier);
+  pointer-events: none;
 }
 button.loc.recorded {
   background: var(--ok-bg);
@@ -791,11 +839,10 @@ button.loc.partial {
   border-color: var(--bad);
   border-style: dashed;
 }
+/* selection is drawn inside the button, so the focus outline stays visible on a selected seat */
 button.loc.selected {
-  outline: 3px solid var(--ink);
-  outline-offset: 1px;
-  background: var(--sel);
-  color: #1c1400;
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 3px var(--select);
 }
 /* state marks are decorative: the state is in each button's accessible name */
 button.loc.recorded::after {
@@ -838,7 +885,7 @@ button.loc.partial:not(.recorded)::after {
   margin-top: 0.6rem;
 }
 .component-card.highlighted {
-  border-top: 3px solid var(--sel);
+  border-top: 3px solid var(--select);
 }
 .alternate {
   border: 1px solid #c9b8f5;
@@ -998,8 +1045,8 @@ button.loc.partial:not(.recorded)::after {
   }
 }
 @media (max-width: 720px) {
-  :root {
-    font-size: 15.5px;
+  html {
+    font-size: 96.875%;
   }
   main {
     padding: 0.5rem 0.5rem 2rem;
@@ -1037,8 +1084,26 @@ button.loc.partial:not(.recorded)::after {
   .records li {
     flex-direction: column;
   }
-  thead th {
-    position: static;
+}
+
+@media (forced-colors: active) {
+  .tabs [role="tab"][aria-selected="true"],
+  .app-header nav a[aria-current="page"] {
+    border-bottom: 3px solid Highlight;
+  }
+  .swatch,
+  button.loc::before {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+  button.loc.selected {
+    outline: 3px solid Highlight;
+    outline-offset: 1px;
+  }
+  /* selected and focused at once: a double ring, distinct from either alone */
+  button.loc.selected:focus-visible {
+    outline: 6px double Highlight;
+    outline-offset: 2px;
   }
 }
 
@@ -1073,7 +1138,6 @@ button.loc.partial:not(.recorded)::after {
     display: table-header-group;
   }
   thead th {
-    position: static;
     background: #e8ecf5 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

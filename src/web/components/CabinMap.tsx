@@ -30,10 +30,11 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
   const floors = layout.locations.filter((l) => l.kind === "FLOOR");
   const bins = layout.locations.filter((l) => l.kind === "BIN");
   const rows = layout.rows;
-  const gridRef = useRef<HTMLDivElement | null>(null);
+  const gridRef = useRef<HTMLFieldSetElement | null>(null);
   const firstSeat = layout.locations.find((l) => l.kind === "SEAT");
   const [focusCode, setFocusCode] = useState<string | null>(null);
-  const selectedSeat = selection ? layout.locations.find((l) => l.id === selection && l.kind === "SEAT") : undefined;
+  const selected = selection ? layout.locations.find((l) => l.id === selection) : undefined;
+  const selectedSeat = selected?.kind === "SEAT" ? selected : undefined;
   const tabStop = (focusCode && seats.has(focusCode) ? focusCode : null) ?? selectedSeat?.seat?.code ?? firstSeat?.seat?.code ?? null;
   const [goTo, setGoTo] = useState("");
   const [goToMessage, setGoToMessage] = useState("");
@@ -143,6 +144,11 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         <span role="status" className="fine">
           {goToMessage}
         </span>
+        {selected && (
+          <button type="button" className="link" onClick={() => document.getElementById("inspector-heading")?.focus()}>
+            Go to parts for {selected.label}
+          </button>
+        )}
       </form>
 
       <section aria-labelledby="map-seats">
@@ -153,7 +159,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         {seats.size === 0 ? (
           <p className="notice">No seat set is defined for this layout.</p>
         ) : (
-          <div className="seat-grid" ref={gridRef} role="group" aria-label={`Seat map, ${existing.length} rows`}>
+          <fieldset className="seat-grid" ref={gridRef} aria-label={`Seat map, ${existing.length} rows`}>
             <div className="seat-row head" aria-hidden="true">
               <span className="row-label">Row</span>
               {LETTERS.map((l, i) => (
@@ -172,7 +178,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                       Printed row{skipped.length > 1 ? "s" : ""} {skipped.join(", ")} {skipped.length > 1 ? "do" : "does"} not exist in this layout
                     </p>
                   )}
-                  <div className="seat-row" role="group" aria-label={`Row ${row.printedLabel}`}>
+                  <fieldset className="seat-row" aria-label={`Row ${row.printedLabel}`}>
                     <span className="row-label" aria-hidden="true">
                       {row.printedLabel}
                     </span>
@@ -203,11 +209,11 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                         </span>
                       );
                     })}
-                  </div>
+                  </fieldset>
                 </div>
               );
             })}
-          </div>
+          </fieldset>
         )}
       </section>
 
@@ -231,7 +237,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         ) : (
           <div className="bin-columns">
             {(["L", "R"] as const).map((side) => (
-              <div key={side} role="group" aria-label={`${side === "L" ? "Left" : "Right"} side bins`}>
+              <fieldset key={side} className="bin-side" aria-label={`${side === "L" ? "Left" : "Right"} side bins`}>
                 <h4>{side === "L" ? "Left (A-C side)" : "Right (D-F side)"}</h4>
                 <div className="loc-list">
                   {bins
@@ -240,7 +246,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                       button(l, `${l.bin!.side}-${String(l.bin!.module).padStart(2, "0")} · rows ${l.bin!.rowFrom}-${l.bin!.rowTo}`, "Overhead bin "),
                     )}
                 </div>
-              </div>
+              </fieldset>
             ))}
           </div>
         )}

@@ -39,7 +39,7 @@ class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string },
     if (this.state.error) {
       return (
         <section className="panel" role="alert">
-          <h2>This screen could not be shown</h2>
+          <h2 tabIndex={-1}>This screen could not be shown</h2>
           <p>{this.state.error.message}</p>
           <p>Saved visits are stored on the server and are not affected.</p>
           <button type="button" onClick={() => this.setState({ error: null })}>
@@ -50,6 +50,21 @@ class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string },
       );
     }
     return this.props.children;
+  }
+}
+
+/** Which view a route shows: a change of view moves focus; a change of query on the same view does not. */
+function viewKey(route: Route): string {
+  switch (route.name) {
+    case "visit":
+    case "report":
+      return `${route.name}:${route.id}`;
+    case "prep":
+      return `prep:${route.visitId ?? ""}`;
+    case "layouts":
+      return `layouts:${route.id ?? ""}`;
+    default:
+      return route.name;
   }
 }
 
@@ -132,10 +147,42 @@ export function App() {
 
   const routeId = route.name === "visit" || route.name === "report" ? route.id : null;
   const meta = routeId && visitMeta?.id === routeId ? visitMeta : null;
+  const label = meta ? `${route.name === "report" ? "Report" : "Visit"} #${meta.number} · ${meta.tail}` : TITLES[route.name];
+  const title = `${label} · Cabin Kit`;
   useEffect(() => {
-    const label = meta ? `${route.name === "report" ? "Report" : "Visit"} #${meta.number} · ${meta.tail}` : TITLES[route.name];
-    document.title = `${label} · Cabin Kit`;
-  }, [route.name, meta]);
+    document.title = title;
+  }, [title]);
+
+  // A new view (not a new query on the same view) moves focus to its heading, and the page title is announced. Not on first load.
+  const view = viewKey(route);
+  const lastView = useRef(view);
+  const navigated = useRef(false);
+  const [announcement, setAnnouncement] = useState("");
+  const titleRef = useRef(title);
+  titleRef.current = title;
+  useEffect(() => {
+    const main = mainRef.current;
+    if (view === lastView.current || !main) return;
+    lastView.current = view;
+    navigated.current = true;
+    setAnnouncement(titleRef.current);
+    const focusHeading = (): boolean => {
+      const heading = main.querySelector<HTMLElement>("h2");
+      heading?.focus();
+      return heading !== null;
+    };
+    if (focusHeading()) return;
+    // A view that is still loading shows its heading later; focus it when it appears.
+    const observer = new MutationObserver(() => {
+      if (focusHeading()) observer.disconnect();
+    });
+    observer.observe(main, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [view]);
+  // A title that fills in after the view loads (the visit number) is announced too.
+  useEffect(() => {
+    if (navigated.current) setAnnouncement(title);
+  }, [title]);
 
   // `replace` swaps the current history entry (a redirect), so Back does not land on the URL that was replaced.
   const navigate = useCallback((next: string, options?: NavigateOptions) => {
@@ -151,16 +198,10 @@ export function App() {
 
   return (
     <>
-      <a
-        className="skip"
-        href="#main"
-        onClick={(e) => {
-          e.preventDefault();
-          mainRef.current?.focus();
-        }}
-      >
+      {/* A button, not a link: following "#main" would replace the route in the address bar. */}
+      <button type="button" className="skip" onClick={() => mainRef.current?.focus()}>
         Skip to content
-      </a>
+      </button>
       <header className="app-header no-print">
         <div className="brand">
           <h1>Cabin Kit</h1>
@@ -197,11 +238,16 @@ export function App() {
           </p>
         )}
       </div>
+      <p className="sr-only" aria-live="polite">
+        {announcement}
+      </p>
       <main id="main" ref={mainRef} tabIndex={-1}>
         <ErrorBoundary resetKey={hash}>
           {route.name === "notFound" && (
             <section className="panel" aria-labelledby="notfound-h">
-              <h2 id="notfound-h">Page not found</h2>
+              <h2 id="notfound-h" tabIndex={-1}>
+                Page not found
+              </h2>
               <p>This page does not exist.</p>
               <a href="#/">Go to the appearance check</a>
             </section>

@@ -1,5 +1,7 @@
 import { api } from "../api.ts";
+import { ScrollRegion } from "../components/ScrollRegion.tsx";
 import { useResource } from "../hooks/useResource.ts";
+import { contentKeyed } from "../model.ts";
 
 const SEVERITY: Record<string, string> = { error: "Blocking", conflict: "Conflict / unresolved", warning: "Warning", info: "Information" };
 
@@ -12,7 +14,7 @@ export function ReferenceView() {
   if (error) {
     return (
       <section className="panel">
-        <h2>Reference data</h2>
+        <h2 tabIndex={-1}>Reference data</h2>
         <div className="alert" role="alert">
           <p>{error}</p>
           <button type="button" onClick={res.reload}>
@@ -27,7 +29,9 @@ export function ReferenceView() {
   const findings = [...info.findings].sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
   return (
     <section className="panel" aria-labelledby="ref-h">
-      <h2 id="ref-h">Reference data</h2>
+      <h2 id="ref-h" tabIndex={-1}>
+        Reference data
+      </h2>
       <p className="authority">{info.authorityNotice}</p>
       <dl className="facts wide">
         <dt>Active release</dt>
@@ -57,8 +61,8 @@ export function ReferenceView() {
 
       <h3>Import findings ({findings.length})</h3>
       <ul className="findings">
-        {findings.map((f, i) => (
-          <li key={i} className={`finding ${f.severity}`}>
+        {contentKeyed(findings, (f) => `${f.severity}|${f.code}|${f.message}|${(f.refs ?? []).join(",")}`).map(([key, f]) => (
+          <li key={key} className={`finding ${f.severity}`}>
             <strong>{SEVERITY[f.severity] ?? f.severity}</strong> <span className="code">{f.code}</span> {f.message}
           </li>
         ))}
@@ -76,7 +80,7 @@ export function ReferenceView() {
       </ul>
 
       <h3>Sources ({info.sources.length})</h3>
-      <div className="table-scroll" tabIndex={0} role="region" aria-label="Sources table">
+      <ScrollRegion label="Sources table">
         <table>
           <thead>
             <tr>
@@ -119,7 +123,7 @@ export function ReferenceView() {
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
 
       <h3>Releases</h3>
       <ul>

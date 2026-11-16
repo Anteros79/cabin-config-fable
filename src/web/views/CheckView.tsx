@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
 import type { RecordInput, VisitRecord, VisualProfile } from "../../domain/types.ts";
 import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
+import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { Inspector } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
@@ -94,7 +95,6 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   const [selection, setSelection] = useState<string | null>(null);
   const [focusComponent, setFocusComponent] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const confirmRef = useRef<HTMLHeadingElement | null>(null);
   const [lastDraft, setLastDraft] = useState<string | null>(recall);
   // A lookup the route cannot hold (an empty tail, which the server reports as invalid input), tied to the route it was made on.
   const [unrouted, setUnrouted] = useState<{ tail: string; date: string; route: string } | null>(null);
@@ -242,29 +242,35 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       return next;
     });
   }, []);
-  /** True when nothing unrecorded is lost, or the person agreed to lose it. */
   const [resetKey, setResetKey] = useState(0);
-  const mayDiscard = (): boolean => {
-    if (dirtyTargets.size === 0 || !workspace) return true;
+  /** What waits for the person to discard their unrecorded input, and whose input it is. */
+  const [pendingDiscard, setPendingDiscard] = useState<{ names: string[]; proceed: () => void } | null>(null);
+  /** Runs `proceed` at once when nothing unrecorded would be lost; otherwise asks first, and Discard really resets the forms. */
+  const afterDiscard = (proceed: () => void) => {
+    if (dirtyTargets.size === 0 || !workspace) {
+      proceed();
+      return;
+    }
     const names = [...dirtyTargets].map((target) => {
       const [locationId = "", componentId = ""] = target.slice("record:".length).split("|");
       return `${workspace.layout.locations.find((l) => l.id === locationId)?.label ?? locationId} / ${workspace.componentDefs[componentId]?.name ?? componentId}`;
     });
-    // Task 4.6 replaces this with the confirm dialog ("Discard" / "Go back").
-    const text = names.length === 1 ? `an unrecorded change for ${names[0]}. Discard it?` : `unrecorded changes for ${names.join("; ")}. Discard them?`;
-    return window.confirm(`You have ${text}`);
-  };
-  /** Agreeing to discard really resets the forms, so the draft does not outlive the answer. */
-  const discardAll = (): boolean => {
-    if (!mayDiscard()) return false;
-    if (dirtyTargets.size > 0) setResetKey((k) => k + 1);
-    return true;
+    setPendingDiscard({
+      names,
+      proceed: () => {
+        setResetKey((k) => k + 1);
+        proceed();
+      },
+    });
   };
   const select = (locationId: string, componentId: string | null) => {
-    if (locationId !== selection && !mayDiscard()) return;
-    window.__cabinKit?.scene?.markInteraction();
-    setSelection(locationId);
-    setFocusComponent(componentId);
+    const apply = () => {
+      window.__cabinKit?.scene?.markInteraction();
+      setSelection(locationId);
+      setFocusComponent(componentId);
+    };
+    if (locationId === selection) apply();
+    else afterDiscard(apply);
   };
 
   // A reload or close would lose typed input, or leave a save whose outcome is not known.
@@ -351,10 +357,6 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     }
   };
 
-  useEffect(() => {
-    if (confirming) confirmRef.current?.focus();
-  }, [confirming]);
-
   const location = workspace?.layout.locations.find((l) => l.id === selection) ?? null;
   const info = lookup ? (STATE_TEXT[lookup.state] ?? { title: lookup.state, tone: "bad" as const }) : null;
   const ctx = visitId ? visit?.snapshot.context : lookup?.context;
@@ -368,7 +370,9 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     <div className="check-view">
       {!visitId && (
         <section className="panel lookup" aria-labelledby="lookup-h">
-          <h2 id="lookup-h">Appearance check</h2>
+          <h2 id="lookup-h" tabIndex={-1}>
+            Appearance check
+          </h2>
           <form onSubmit={doLookup} className="lookup-form" noValidate>
             <label className="field">
               <span>Tail number</span>
@@ -478,7 +482,9 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
 
       {visitId && (
         <section className="panel visit-head" aria-labelledby="visit-h">
-          <h2 id="visit-h">{visit ? `Visit #${visit.number} · ${visit.tail} · ${visit.checkDate}` : "Visit"}</h2>
+          <h2 id="visit-h" tabIndex={-1}>
+            {visit ? `Visit #${visit.number} · ${visit.tail} · ${visit.checkDate}` : "Visit"}
+          </h2>
           {visitLoading && !visit && <p role="status">Loading visit…</p>}
           {visitError && (
             <div className="alert" role="alert">
@@ -625,42 +631,57 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                       ))}
                     </ul>
                   )}
-                  {visit.status === "DRAFT" && !confirming && (
-                    <button type="button" className="primary" disabled={visit.records.length === 0} onClick={() => discardAll() && setConfirming(true)}>
+                  {visit.status === "DRAFT" && (
+                    <button type="button" className="primary" disabled={visit.records.length === 0} onClick={() => afterDiscard(() => setConfirming(true))}>
                       Complete visit…
                     </button>
                   )}
-                  {confirming && (
-                    <div className="confirm" role="alertdialog" aria-labelledby="confirm-h" aria-describedby="confirm-d">
-                      <h4 id="confirm-h" tabIndex={-1} ref={confirmRef}>
-                        Complete and lock this visit?
-                      </h4>
-                      <p id="confirm-d">
-                        {visit.records.length} record{visit.records.length === 1 ? "" : "s"} will be locked into the after-action report for {visit.tail} on{" "}
-                        {visit.checkDate}. Completed visits cannot be edited.
-                        {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
-                      </p>
-                      {writes.anyBusy && <p className="fine">Waiting for saves in progress to finish before completing.</p>}
-                      {!writes.anyBusy && writes.anyUnknown && (
-                        <p className="fine">A save has an unknown outcome. Retry it safely before completing, so the report includes it.</p>
-                      )}
-                      <div className="actions">
-                        {/* the expected visit version is taken at the click: a queued or unresolved save would make it stale */}
-                        <button type="button" className="primary" onClick={() => void complete()} disabled={writes.anyBusy || writes.anyUnknown}>
-                          Confirm completion
-                        </button>
-                        <button type="button" onClick={() => setConfirming(false)}>
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <ConfirmDialog
+                    open={confirming && visit.status === "DRAFT"}
+                    title="Complete and lock this visit?"
+                    confirmLabel="Confirm completion"
+                    cancelLabel="Cancel"
+                    busy={writes.anyBusy || writes.anyUnknown}
+                    onConfirm={() => void complete()}
+                    onCancel={() => setConfirming(false)}
+                  >
+                    <p>
+                      {visit.records.length} record{visit.records.length === 1 ? "" : "s"} will be locked into the after-action report for {visit.tail} on{" "}
+                      {visit.checkDate}. Completed visits cannot be edited.
+                      {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
+                    </p>
+                    {/* the expected visit version is taken at the click: a queued or unresolved save would make it stale */}
+                    {writes.anyBusy && <p className="fine">Waiting for saves in progress to finish before completing.</p>}
+                    {!writes.anyBusy && writes.anyUnknown && (
+                      <p className="fine">A save has an unknown outcome. Retry it safely before completing, so the report includes it.</p>
+                    )}
+                  </ConfirmDialog>
                 </section>
               )}
             </aside>
           </div>
         </>
       )}
+      <ConfirmDialog
+        open={pendingDiscard !== null}
+        title={pendingDiscard && pendingDiscard.names.length > 1 ? "Discard unrecorded changes?" : "Discard the unrecorded change?"}
+        confirmLabel="Discard"
+        cancelLabel="Go back"
+        destructive
+        onConfirm={() => {
+          const proceed = pendingDiscard?.proceed;
+          setPendingDiscard(null);
+          proceed?.();
+        }}
+        onCancel={() => setPendingDiscard(null)}
+      >
+        <p>{pendingDiscard?.names.length === 1 ? "This change has not been recorded:" : "These changes have not been recorded:"}</p>
+        <ul>
+          {pendingDiscard?.names.map((name) => (
+            <li key={name}>{name}</li>
+          ))}
+        </ul>
+      </ConfirmDialog>
     </div>
   );
 }

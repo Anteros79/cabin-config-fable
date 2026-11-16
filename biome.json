@@ -44,16 +44,5 @@
       },
       "style": { "noNonNullAssertion": "warn" }
     }
-  },
-  "overrides": [
-    {
-      "includes": ["src/web/**"],
-      "linter": {
-        "rules": {
-          "a11y": { "noNoninteractiveTabindex": "warn", "useSemanticElements": "warn", "useValidAnchor": "warn" },
-          "suspicious": { "noArrayIndexKey": "warn" }
-        }
-      }
-    }
-  ]
+  }
 }

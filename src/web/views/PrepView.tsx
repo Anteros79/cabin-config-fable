@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { rulesNotUsedLine } from "../../domain/report.ts";
 import { api } from "../api.ts";
+import { ScrollRegion } from "../components/ScrollRegion.tsx";
 import { useResource } from "../hooks/useResource.ts";
+import { contentKeyed } from "../model.ts";
 
 interface Props {
   visitId: string | null;
@@ -60,7 +62,9 @@ export function PrepView({ visitId, tail, date }: Props) {
 
   return (
     <section className="panel prep" aria-labelledby="prep-h">
-      <h2 id="prep-h">Preparation: applicable parts{prep ? ` · ${prep.tail} · ${prep.checkDate}` : ""}</h2>
+      <h2 id="prep-h" tabIndex={-1}>
+        Preparation: applicable parts{prep ? ` · ${prep.tail} · ${prep.checkDate}` : ""}
+      </h2>
       {error && (
         <div className="alert" role="alert">
           <p>{error}</p>
@@ -119,7 +123,7 @@ export function PrepView({ visitId, tail, date }: Props) {
             Showing {lines.length} of {prep.lines.length} lines · {prep.counts.parts} distinct primary parts · {prep.counts.resolvedComponents} resolved
             components · {prep.counts.unresolvedComponents} unresolved · {prep.counts.alternates} alternates · {prep.counts.pendingChanges} pending changes
           </p>
-          <div className="table-scroll" tabIndex={0} role="region" aria-label="Applicable parts table">
+          <ScrollRegion label="Applicable parts table">
             <table id="prep-table">
               <thead>
                 <tr>
@@ -200,13 +204,13 @@ export function PrepView({ visitId, tail, date }: Props) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
 
           <h3>Unresolved gaps ({prep.counts.unresolvedComponents} components)</h3>
           {prep.gaps.length === 0 ? (
             <p>None.</p>
           ) : (
-            <div className="table-scroll" tabIndex={0} role="region" aria-label="Unresolved gaps table">
+            <ScrollRegion label="Unresolved gaps table">
               <table>
                 <thead>
                   <tr>
@@ -217,8 +221,8 @@ export function PrepView({ visitId, tail, date }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {prep.gaps.map((g, i) => (
-                    <tr key={i}>
+                  {contentKeyed(prep.gaps, (g) => `${g.componentId}|${g.status}|${g.locationSummary}|${g.message}`).map(([key, g]) => (
+                    <tr key={key}>
                       <th scope="row">{g.componentId}</th>
                       <td>{g.status === "NO_MATCH" ? "No match" : "Ambiguous"}</td>
                       <td>{g.locationSummary}</td>
@@ -227,7 +231,7 @@ export function PrepView({ visitId, tail, date }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           )}
         </>
       )}

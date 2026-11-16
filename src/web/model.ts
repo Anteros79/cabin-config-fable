@@ -112,3 +112,17 @@ export function seatLabelFor(location: CabinLocation, flags: LocationFlags | und
   if (flags?.unresolved) parts.push(`${flags.unresolved} component${flags.unresolved === 1 ? "" : "s"} unresolved`);
   return parts.join(", ");
 }
+
+/**
+ * Pairs each item with a React key built from its content. A repeat of the same content gets
+ * an occurrence number, so keys stay unique and stable when the list is read again.
+ */
+export function contentKeyed<T>(items: readonly T[], keyOf: (item: T) => string): [string, T][] {
+  const seen = new Map<string, number>();
+  return items.map((item) => {
+    const base = keyOf(item);
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    return [n === 0 ? base : `${base}#${n}`, item];
+  });
+}

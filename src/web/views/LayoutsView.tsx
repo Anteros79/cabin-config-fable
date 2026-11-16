@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { VisualProfile } from "../../domain/types.ts";
 import { api, type LayoutSummary } from "../api.ts";
 import { Inspector } from "../components/Inspector.tsx";
+import { ScrollRegion } from "../components/ScrollRegion.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
@@ -49,7 +50,7 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
   if (error) {
     return (
       <section className="panel">
-        <h2>Layouts</h2>
+        <h2 tabIndex={-1}>Layouts</h2>
         <div className="alert" role="alert">
           <p>{error}</p>
           <button type="button" onClick={failed.reload}>
@@ -70,7 +71,9 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
           <p>
             <a href="#/layouts">← All layouts</a>
           </p>
-          <h2 id="layout-h">{rev.name}</h2>
+          <h2 id="layout-h" tabIndex={-1}>
+            {rev.name}
+          </h2>
           <p>
             <span className={`pill ${rev.namespace === "candidate" ? "candidate" : rev.status === "planned" ? "unresolved" : "ok"}`}>
               {STATUS_TEXT[rev.status] ?? rev.status}
@@ -127,12 +130,14 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
   ];
   return (
     <section className="panel" aria-labelledby="layouts-h">
-      <h2 id="layouts-h">Layouts</h2>
+      <h2 id="layouts-h" tabIndex={-1}>
+        Layouts
+      </h2>
       {groups.map(([title, blurb, items]) => (
         <section key={title} aria-label={title}>
           <h3>{title}</h3>
           <p className="fine">{blurb}</p>
-          <div className="table-scroll" tabIndex={0} role="region" aria-label={`${title} table`}>
+          <ScrollRegion label={`${title} table`}>
             <table>
               <thead>
                 <tr>
@@ -167,7 +172,7 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </section>
       ))}
       <section aria-labelledby="cats-h">

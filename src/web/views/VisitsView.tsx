@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.ts";
+import { ScrollRegion } from "../components/ScrollRegion.tsx";
 import { useResource } from "../hooks/useResource.ts";
 import { formatRoute, type NavigateOptions, type Route } from "../routes.ts";
 
@@ -49,7 +50,9 @@ export function VisitsView({
 
   return (
     <section className="panel" aria-labelledby="visits-h">
-      <h2 id="visits-h">Saved visits</h2>
+      <h2 id="visits-h" tabIndex={-1}>
+        Saved visits
+      </h2>
       <form
         className="filters"
         onSubmit={(e) => {
@@ -85,7 +88,7 @@ export function VisitsView({
         {busy ? "Loading…" : `${total} visit${total === 1 ? "" : "s"}${total > 0 ? ` · page ${page} of ${pages}` : ""}`}
       </p>
       {data && data.items.length > 0 && (
-        <div className="table-scroll" tabIndex={0} role="region" aria-label="Saved visits table">
+        <ScrollRegion label="Saved visits table">
           <table>
             <caption className="sr-only">Saved visits, newest first</caption>
             <thead>
@@ -121,7 +124,7 @@ export function VisitsView({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
       {data && data.items.length === 0 && !busy && !outOfRange && <p>No visits match.</p>}
       <nav className="pager" aria-label="Visit pages">

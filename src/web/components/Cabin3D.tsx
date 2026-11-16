@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { VisualProfile } from "../../domain/types.ts";
 import type { Workspace } from "../model.ts";
 import type { CabinScene, CameraView, ColourMode, Layers, LightMode, LocationState } from "../scene/CabinScene.ts";
@@ -102,7 +102,10 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => sceneRef.current?.resize());
+    // A hidden panel has no size; resizing to it would refit the camera for nothing.
+    const observer = new ResizeObserver(() => {
+      if (canvas.clientWidth > 0 && canvas.clientHeight > 0) sceneRef.current?.resize();
+    });
     observer.observe(canvas);
     return () => observer.disconnect();
   }, []);
@@ -127,16 +130,20 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
     } else if (e.key === "Home") {
       e.preventDefault();
       scene.setCamera("cutaway");
+    } else if (e.key === "Enter" && selection) {
+      e.preventDefault();
+      document.getElementById("inspector-heading")?.focus();
     }
   };
   const camera = (view: CameraView) => sceneRef.current?.setCamera(view, selection);
   const toggle = (key: keyof Layers) => setLayers((l) => ({ ...l, [key]: !l[key] }));
   const activeProfile = visualProfiles.find((p) => p.id === profile);
+  const keysId = useId();
 
   return (
     <div className="viewer3d">
-      <div className="toolbar" role="group" aria-label="3D view controls">
-        <div className="tool-group" role="group" aria-label="Camera">
+      <fieldset className="toolbar" aria-label="3D view controls">
+        <fieldset className="tool-group" aria-label="Camera">
           {CAMERA_BUTTONS.map((b) => (
             <button key={b.view} type="button" title={b.hint} onClick={() => camera(b.view)} disabled={!ready}>
               {b.label}
@@ -151,8 +158,8 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           <button type="button" onClick={() => camera("cutaway")} disabled={!ready} title="Back to the default view">
             Reset
           </button>
-        </div>
-        <div className="tool-group" role="group" aria-label="Move camera">
+        </fieldset>
+        <fieldset className="tool-group" aria-label="Move camera">
           {(
             [
               ["left", "Rotate left", "⟲"],
@@ -175,8 +182,8 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
               <span aria-hidden="true">{glyph}</span>
             </button>
           ))}
-        </div>
-        <div className="tool-group" role="group" aria-label="Layers">
+        </fieldset>
+        <fieldset className="tool-group" aria-label="Layers">
           <span className="group-label" aria-hidden="true">
             Layers
           </span>
@@ -186,7 +193,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
               {key === "context" ? "Context (walls)" : key.charAt(0).toUpperCase() + key.slice(1)}
             </label>
           ))}
-        </div>
+        </fieldset>
         <label className="tool-group select">
           <span>Colours</span>
           <select value={colourMode} onChange={(e) => setColourMode(e.target.value as ColourMode)}>
@@ -212,15 +219,27 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
             ))}
           </select>
         </label>
-      </div>
+      </fieldset>
       <div className="canvas-wrap">
+        {/* biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: role="application" makes screen readers pass the camera keys to the focusable canvas (WEB-14) */}
         <canvas
           ref={canvasRef}
           tabIndex={0}
-          aria-label={`3D cabin view of ${workspace.layout.name}. Drag to orbit, right-drag or two fingers to pan, wheel or pinch to zoom, arrow keys to orbit, plus and minus to zoom, Home to reset. Use the Map and list tab to select locations by keyboard.`}
+          role="application"
+          aria-roledescription="3D cabin view"
+          aria-label={workspace.layout.name}
+          aria-describedby={keysId}
           onKeyDown={onKeyDown}
           data-ready={ready ? "true" : "false"}
         />
+        <ul id={keysId} className="sr-only">
+          <li>Arrow keys orbit the camera.</li>
+          <li>Plus and minus zoom in and out.</li>
+          <li>Home resets the view.</li>
+          <li>Enter goes to the parts for the selected location.</li>
+          <li>Drag to orbit, right-drag or two fingers to pan, wheel or pinch to zoom.</li>
+          <li>Use the Map and list tab to select locations by keyboard.</li>
+        </ul>
         {!ready && <p className="canvas-note">Starting 3D…</p>}
         {hover && (
           <p className="hover-label" aria-hidden="true">

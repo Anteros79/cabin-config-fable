@@ -352,6 +352,13 @@ function ComponentCard({
 
 /** Component-level parts for the selected location: primary part, separate alternates, record form. */
 export function Inspector({ workspace, location, focusComponent, statusOf, onRecord, onRemove, onRetry, onSelect, onDirtyChange, resetKey = 0 }: Props) {
+  // A control that selected the location can disappear with the old one (Whole-cabin carpet kit); focus then goes to the new heading, not to the page.
+  const locationId = location?.id ?? null;
+  useEffect(() => {
+    if (!locationId) return;
+    const active = document.activeElement;
+    if (active === null || active === document.body) document.getElementById("inspector-heading")?.focus();
+  }, [locationId]);
   if (!location) {
     return (
       <div className="inspector empty">

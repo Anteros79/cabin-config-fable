@@ -4,6 +4,12 @@ import { buildStates, type Workspace } from "../model.ts";
 import { Cabin3D } from "./Cabin3D.tsx";
 import { CabinMap } from "./CabinMap.tsx";
 
+type TabId = "3d" | "map";
+const TABS: { id: TabId; label: string }[] = [
+  { id: "3d", label: "3D cutaway" },
+  { id: "map", label: "Map and list" },
+];
+
 interface Props {
   workspace: Workspace;
   selection: string | null;
@@ -13,11 +19,24 @@ interface Props {
 
 /** 3D cutaway with a complete map-and-list alternative. A 3D failure never loses selection or work. */
 export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props) {
-  const [tab, setTab] = useState<"3d" | "map">("3d");
+  const [tab, setTab] = useState<TabId>("3d");
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const { scene, flags } = useMemo(() => buildStates(workspace), [workspace]);
   const showing = failure ? "map" : tab;
+  /** WAI-ARIA tabs: Left and Right move between the tabs (wrapping), Home and End go to the ends; moving also activates. */
+  const onTabKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const enabled = TABS.filter((t) => !(t.id === "3d" && failure));
+    const at = enabled.findIndex((t) => t.id === showing);
+    const index: Record<string, number> = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: enabled.length - 1 };
+    const wanted = index[e.key];
+    if (wanted === undefined) return;
+    e.preventDefault();
+    const next = enabled[(wanted + enabled.length) % enabled.length];
+    if (!next) return;
+    setTab(next.id);
+    document.getElementById(`tab-${next.id}`)?.focus();
+  };
   const counts = useMemo(() => {
     let recorded = 0;
     let unresolved = 0;
@@ -32,20 +51,25 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
     <div className="viewer">
       <div className="tabs-row">
         <div className="tabs" role="tablist" aria-label="Cabin view">
-          <button
-            type="button"
-            role="tab"
-            id="tab-3d"
-            aria-selected={showing === "3d"}
-            aria-controls="panel-3d"
-            disabled={!!failure}
-            onClick={() => setTab("3d")}
-          >
-            3D cutaway
-          </button>
-          <button type="button" role="tab" id="tab-map" aria-selected={showing === "map"} aria-controls="panel-map" onClick={() => setTab("map")}>
-            Map and list
-          </button>
+          {TABS.map((t) => {
+            const disabled = t.id === "3d" && !!failure;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`tab-${t.id}`}
+                aria-selected={showing === t.id}
+                aria-controls={`panel-${t.id}`}
+                tabIndex={showing === t.id ? 0 : -1}
+                disabled={disabled}
+                onClick={() => setTab(t.id)}
+                onKeyDown={onTabKey}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
         <span className="viewer-counts" role="status">
           {workspace.layout.locations.filter((l) => l.kind === "SEAT").length} seats · {counts.recorded} recorded · {counts.unresolved} unresolved
@@ -69,24 +93,21 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
           </button>
         </div>
       )}
-      {showing === "3d" && (
-        <div role="tabpanel" id="panel-3d" aria-labelledby="tab-3d">
-          <Cabin3D
-            key={attempt}
-            workspace={workspace}
-            states={scene}
-            selection={selection}
-            onSelect={onSelect}
-            visualProfiles={visualProfiles}
-            onFailed={setFailure}
-          />
-        </div>
-      )}
-      {showing === "map" && (
-        <div role="tabpanel" id="panel-map" aria-labelledby="tab-map">
-          <CabinMap workspace={workspace} flags={flags} selection={selection} onSelect={onSelect} />
-        </div>
-      )}
+      {/* Both panels stay mounted, so each tab's aria-controls names a panel that exists; the inactive one is hidden. */}
+      <div role="tabpanel" id="panel-3d" aria-labelledby="tab-3d" hidden={showing !== "3d"}>
+        <Cabin3D
+          key={attempt}
+          workspace={workspace}
+          states={scene}
+          selection={selection}
+          onSelect={onSelect}
+          visualProfiles={visualProfiles}
+          onFailed={setFailure}
+        />
+      </div>
+      <div role="tabpanel" id="panel-map" aria-labelledby="tab-map" hidden={showing !== "map"}>
+        <CabinMap workspace={workspace} flags={flags} selection={selection} onSelect={onSelect} />
+      </div>
     </div>
   );
 }

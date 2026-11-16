@@ -173,37 +173,49 @@ describe("Inspector unrecorded changes", () => {
   it("selecting another seat with an unrecorded change asks first, and Go back keeps the form", async () => {
     const { card } = await openPanel();
     fireEvent.change(within(card).getByLabelText("Note (optional)"), { target: { value: "frayed edge" } });
-    const confirm = vi.fn((_message: string) => false);
-    vi.stubGlobal("confirm", confirm);
-    fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
-    expect(confirm).toHaveBeenCalledOnce();
-    expect(confirm.mock.calls[0]?.[0]).toMatch(/^You have an unrecorded change for .+ \/ Carpet panel\. Discard it\?$/);
+    const pick = screen.getByRole("button", { name: "Pick seat 3B" });
+    pick.focus();
+    fireEvent.click(pick);
+    const dialog = screen.getByRole("dialog", { name: "Discard the unrecorded change?" });
+    expect(dialog).toHaveTextContent(/This change has not been recorded:.+ \/ Carpet panel/);
+    // Go back is the default: it has focus, and Discard is the destructive choice.
+    expect(within(dialog).getByRole("button", { name: "Go back" })).toHaveFocus();
+    expect(within(dialog).getByRole("button", { name: "Discard" })).toHaveClass("danger");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Go back" }));
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
+    expect(pick).toHaveFocus();
     expect(screen.getByRole("region", { name: /^Carpet panel/ })).toBeInTheDocument();
     expect(within(card).getByLabelText("Note (optional)")).toHaveValue("frayed edge");
-    confirm.mockReturnValue(true);
-    fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
+    fireEvent.click(pick);
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(await screen.findByRole("region", { name: /^Seat cushion cover/ })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: /^Carpet panel/ })).toBeNull();
   });
 
+  it("Escape in the discard dialog is Go back", async () => {
+    const { card } = await openPanel();
+    fireEvent.change(within(card).getByLabelText("Note (optional)"), { target: { value: "frayed edge" } });
+    fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
+    fireEvent(screen.getByRole("dialog", { name: "Discard the unrecorded change?" }), new Event("cancel", { cancelable: true }));
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
+    expect(within(card).getByLabelText("Note (optional)")).toHaveValue("frayed edge");
+  });
+
   it("selecting another seat with no change does not ask", async () => {
     await openPanel();
-    const confirm = vi.fn((_message: string) => false);
-    vi.stubGlobal("confirm", confirm);
     fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
-    expect(confirm).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
+    expect(await screen.findByRole("region", { name: /^Seat cushion cover/ })).toBeInTheDocument();
   });
 
   it("Complete with an unrecorded change asks first", async () => {
     const { card } = await openPanel();
     fireEvent.change(within(card).getByLabelText("Note (optional)"), { target: { value: "frayed edge" } });
-    const confirm = vi.fn((_message: string) => false);
-    vi.stubGlobal("confirm", confirm);
     fireEvent.click(screen.getByRole("button", { name: "Complete visit…" }));
-    expect(confirm).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Go back" }));
     expect(screen.queryByRole("button", { name: "Confirm completion" })).toBeNull();
-    confirm.mockReturnValue(true);
     fireEvent.click(screen.getByRole("button", { name: "Complete visit…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(screen.getByRole("button", { name: "Confirm completion" })).toBeInTheDocument();
   });
 
@@ -259,10 +271,10 @@ describe("Inspector removed records", () => {
     await waitFor(() => expect(within(card).queryByRole("button", { name: "Remove" })).toBeNull());
     expect(note(card)).toHaveValue("");
     expect(within(card).queryByText(/changed elsewhere|was removed/)).toBeNull();
-    const confirm = vi.fn((_message: string) => false);
-    vi.stubGlobal("confirm", confirm);
+    // The card reports "clean" from an effect; let it run before selecting.
+    await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
-    expect(confirm).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
   });
 });
 
@@ -279,11 +291,8 @@ describe("Inspector notices and discards", () => {
   it("agreeing to discard on Complete resets the dirty form", async () => {
     const { card } = await openPanel();
     fireEvent.change(note(card), { target: { value: "frayed edge" } });
-    vi.stubGlobal(
-      "confirm",
-      vi.fn((_message: string) => true),
-    );
     fireEvent.click(screen.getByRole("button", { name: "Complete visit…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     const again = screen.getByRole("region", { name: /^Carpet panel/ });
     expect(note(again)).toHaveValue("");
@@ -298,12 +307,10 @@ describe("Inspector notices and discards", () => {
     const backrest = await screen.findByRole("region", { name: /^Seat backrest cover/ });
     fireEvent.change(note(cushion), { target: { value: "a" } });
     fireEvent.change(note(backrest), { target: { value: "b" } });
-    const confirm = vi.fn((_message: string) => false);
-    vi.stubGlobal("confirm", confirm);
     fireEvent.click(screen.getByRole("button", { name: "Pick seat 3B" }));
-    const message = confirm.mock.calls[0]?.[0] ?? "";
-    expect(message).toContain("Seat cushion cover");
-    expect(message).toContain("Seat backrest cover");
+    const dialog = screen.getByRole("dialog", { name: "Discard unrecorded changes?" });
+    expect(within(dialog).getByText(/Seat cushion cover/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Seat backrest cover/)).toBeInTheDocument();
   });
 
   it("typed input survives a save of a different card", async () => {

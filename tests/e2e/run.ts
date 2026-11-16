@@ -263,8 +263,10 @@ try {
     await page.waitForSelector("#work-h");
   });
   await check("select seat 3A in the map with arrow keys and record the cushion", async () => {
-    await tabTo(page, "#tab-map");
-    await page.keyboard.press("Enter");
+    // Tabs follow the WAI-ARIA pattern: Tab reaches the selected tab, and the arrow keys move to and show the other one.
+    await tabTo(page, "#tab-3d");
+    await page.keyboard.press("ArrowRight");
+    expect(await page.evaluate(() => document.activeElement?.id === "tab-map"), "ArrowRight moved focus to the map tab");
     await page.waitForSelector(".cabin-map");
     await tabTo(page, "button[data-seat='1A']");
     await page.keyboard.press("ArrowDown");
@@ -314,10 +316,21 @@ try {
   await check("complete requires an explicit confirmation and opens the locked report", async () => {
     await tabTo(page, ".worklist button.primary", 400);
     await page.keyboard.press("Enter");
-    await page.waitForSelector(".confirm[role=alertdialog]");
-    expect(await page.evaluate(() => document.activeElement?.id === "confirm-h"), "focus moved to the confirmation");
+    await page.waitForSelector("dialog.confirm[open]");
+    expect(
+      await page.evaluate(() => document.activeElement?.closest("dialog.confirm") !== null && document.activeElement?.textContent === "Cancel"),
+      "focus moved into the dialog, to Cancel",
+    );
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("dialog.confirm:not([open])", { state: "attached" });
+    expect(await page.evaluate(() => document.activeElement?.textContent === "Complete visit…"), "Escape closed the dialog and returned focus");
+    await page.keyboard.press("Enter");
+    await page.waitForSelector("dialog.confirm[open]");
     equal((await api<{ visit: { status: string } }>(server, "GET", `/api/visits/${visitId}`)).json.visit.status, "DRAFT", "still a draft before confirming");
-    await tabTo(page, ".confirm button.primary");
+    // Cancel is the last button; the confirm button is just before it.
+    await page.keyboard.press("Shift+Tab");
+    const active = await page.evaluate(() => document.activeElement?.outerHTML ?? "none");
+    expect(active.includes("Confirm completion"), `Shift+Tab from Cancel reaches Confirm completion (focus on ${active.slice(0, 120)})`);
     await page.keyboard.press("Enter");
     await page.waitForFunction(() => location.hash.endsWith("/report"));
     await page.waitForSelector("#totals-table");
@@ -1159,11 +1172,18 @@ try {
     expect(facts.seatLabel!.includes("Seat 7C") && facts.seatLabel!.includes("recorded"), `seat label carries state: ${facts.seatLabel}`);
     await page.click("#tab-3d");
     await waitFor3D(page);
-    const canvas = await page.evaluate(() => ({
-      tabindex: document.querySelector("canvas")!.getAttribute("tabindex"),
-      label: document.querySelector("canvas")!.getAttribute("aria-label"),
-    }));
-    expect(canvas.tabindex === "0" && canvas.label!.includes("Map and list"), "canvas is focusable and points keyboard users to the map");
+    const canvas = await page.evaluate(() => {
+      const c = document.querySelector("canvas")!;
+      return {
+        tabindex: c.getAttribute("tabindex"),
+        role: c.getAttribute("role"),
+        keys: document.getElementById(c.getAttribute("aria-describedby") ?? "")?.textContent ?? "",
+      };
+    });
+    expect(
+      canvas.tabindex === "0" && canvas.role === "application" && canvas.keys.includes("Map and list"),
+      "canvas is focusable, has a role, and its description points keyboard users to the map",
+    );
   });
 
   // ---------------------------------------------------------------------------------------

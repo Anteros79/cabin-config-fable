@@ -54,7 +54,7 @@ describe("App routing", () => {
     stubApp((_m, url) => (url === `/api/visits/${ID}` ? { body: { visit: draft } } : undefined));
     render(<App />);
     await screen.findByRole("heading", { name: /Visit #7/ });
-    const skip = screen.getByRole("link", { name: "Skip to content" });
+    const skip = screen.getByRole("button", { name: "Skip to content" });
     fireEvent.click(skip);
     expect(window.location.hash).toBe(`#/visit/${ID}`);
     expect(document.activeElement).toBe(document.getElementById("main"));
