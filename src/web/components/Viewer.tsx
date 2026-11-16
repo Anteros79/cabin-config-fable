@@ -95,7 +95,8 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
       )}
       {/* Both panels stay mounted, so each tab's aria-controls names a panel that exists; the inactive one is hidden. */}
       <div role="tabpanel" id="panel-3d" aria-labelledby="tab-3d" hidden={showing !== "3d"}>
-        {/* A failed scene is unmounted, so it is disposed and no later selection reaches it; Retry mounts a new one. */}
+        {/* The scene stays mounted while the map is shown, paused, so camera, layers, light, family and colours survive a tab switch
+            (WEB-08). A failed scene is unmounted, so it is disposed and no later selection reaches it; Retry mounts a new one. */}
         {!failure && (
           <Cabin3D
             key={attempt}
@@ -105,6 +106,7 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
             onSelect={onSelect}
             visualProfiles={visualProfiles}
             onFailed={setFailure}
+            paused={showing !== "3d"}
           />
         )}
       </div>

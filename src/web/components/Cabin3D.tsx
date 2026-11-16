@@ -10,6 +10,8 @@ interface Props {
   onSelect(locationId: string, componentId: string | null): void;
   visualProfiles: VisualProfile[];
   onFailed(reason: string): void;
+  /** True while the 3D panel is hidden: the scene stays alive (camera, layers, light, family, colours) but stops drawing and listening. */
+  paused?: boolean;
 }
 
 declare global {
@@ -28,7 +30,7 @@ const CAMERA_BUTTONS: { view: CameraView; label: string; hint: string }[] = [
  * The interactive 3D cutaway. The renderer is loaded on demand; any failure (module, WebGL,
  * lost context) is reported upward so the complete map-and-list fallback takes over.
  */
-export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles, onFailed }: Props) {
+export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles, onFailed, paused = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<CabinScene | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -42,6 +44,11 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   const [profile, setProfile] = useState("photo-navy-band");
   const [colourMode, setColourMode] = useState<ColourMode>(workspace.mode === "explore" ? "tier" : "status");
   const hasMaps = workspace.layout.locations.some((l) => l.kind !== "SEAT");
+  // Every save answers with a new layout object for the same revision. The scene follows the revision id, not the object,
+  // so a save never rebuilds the scene or moves the camera (WEB-01): the object changes here only when the id does.
+  const layoutRef = useRef(workspace.layout);
+  if (layoutRef.current.id !== workspace.layout.id) layoutRef.current = workspace.layout;
+  const layout = layoutRef.current;
 
   useEffect(() => {
     let cancelled = false;
@@ -73,19 +80,20 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   useEffect(() => {
     if (!ready || !sceneRef.current) return;
     try {
-      sceneRef.current.setLayout(workspace.layout, hasMaps);
+      sceneRef.current.setLayout(layout, hasMaps);
     } catch (e) {
       onFailedRef.current(e instanceof Error ? e.message : "The 3D scene could not be built.");
     }
-  }, [ready, workspace.layout, hasMaps]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.7
+  }, [ready, layout, hasMaps]);
   useEffect(() => {
     if (ready) sceneRef.current?.setStates(states);
-  }, [ready, states, workspace.layout]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.7
+  }, [ready, states]);
   useEffect(() => {
     if (ready) sceneRef.current?.setSelection(selection);
-  }, [ready, selection, workspace.layout]);
+  }, [ready, selection]);
+  useEffect(() => {
+    if (ready) sceneRef.current?.setPaused(paused);
+  }, [ready, paused]);
   useEffect(() => {
     if (ready) sceneRef.current?.setLayers(layers);
   }, [ready, layers]);
@@ -112,7 +120,8 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     const scene = sceneRef.current;
-    if (!scene) return;
+    // Browser and system shortcuts (zoom with Cmd/Ctrl and plus, history with Alt and an arrow) pass straight through (WEB-12).
+    if (!scene || e.ctrlKey || e.metaKey || e.altKey) return;
     const map: Record<string, Parameters<CabinScene["nudge"]>[0]> = {
       ArrowLeft: "left",
       ArrowRight: "right",

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FORWARD_MARGIN } from "../../domain/geometry.ts";
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
+import { PickGesture, type PointerSample } from "./pickGesture.ts";
 import { buildBinGeometry, buildSeatGeometries, SEAT, type SeatGeometries } from "./seatParts.ts";
 import {
   backFrontTexture,
@@ -21,7 +22,8 @@ export interface LocationState {
 }
 export type ColourMode = "status" | "tier" | "none";
 export type LightMode = "neutral" | "blue";
-export type CameraView = "cutaway" | "overhead" | "aisle" | "focus" | "focus-rear" | "carpet" | "bins";
+/** A preset view, or "free" once the user has moved the camera by hand (orbit, pan, zoom or a nudge). */
+export type CameraView = "cutaway" | "overhead" | "aisle" | "focus" | "focus-rear" | "carpet" | "bins" | "free";
 export interface Layers {
   seats: boolean;
   floor: boolean;
@@ -44,6 +46,7 @@ const TIER_COLOURS: Record<string, THREE.Color> = {
 const SELECT_COLOUR = "#ffc531";
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 const WHITE = new THREE.Color("#ffffff");
+const FULL_CABIN = "FLOOR:FULL-CABIN";
 
 interface SeatEntry {
   location: CabinLocation;
@@ -86,10 +89,13 @@ export class CabinScene {
   private frame = 0;
   private needsRender = true;
   private disposed = false;
-  private pointerDown: { x: number; y: number; t: number } | null = null;
+  private readonly gesture = new PickGesture();
+  private paused = false;
   private hoverPending: PointerEvent | null = null;
   private pickStamp: number | null = null;
   private currentView: CameraView = "cutaway";
+  /** the location a focus view was framed on, so a resize re-frames the same one */
+  private viewLocation: string | null = null;
   private pickableFloorBins = true;
   /** time from a pick to the frame that shows it, most recent first */
   readonly pickLatencies: number[] = [];
@@ -115,6 +121,10 @@ export class CabinScene {
     this.controls.minDistance = 0.4;
     this.controls.maxDistance = 90;
     this.controls.maxPolarAngle = Math.PI * 0.62;
+    // Any orbit, pan or zoom by hand leaves the preset: from then on a resize keeps the camera where the user put it (WEB-09).
+    this.controls.addEventListener("start", () => {
+      this.currentView = "free";
+    });
     this.controls.addEventListener("change", () => {
       this.updateGhosting();
       this.needsRender = true;
@@ -145,6 +155,7 @@ export class CabinScene {
     canvas.addEventListener("pointerdown", this.onPointerDown);
     canvas.addEventListener("pointerup", this.onPointerUp);
     canvas.addEventListener("pointermove", this.onPointerMove);
+    canvas.addEventListener("pointercancel", this.onPointerCancel);
     canvas.addEventListener("pointerleave", this.onPointerLeave);
     canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.applyLight();
@@ -178,11 +189,17 @@ export class CabinScene {
     }
   }
 
+  /**
+   * Show a layout revision. The same revision again (every save answers with a new object for it) changes nothing, so the
+   * camera stays where it is (WEB-01); only a different revision is framed afresh.
+   */
   setLayout(layout: LayoutRevision, pickableFloorBins: boolean): void {
+    const sameRevision = this.layout?.id === layout.id;
+    if (sameRevision && this.pickableFloorBins === pickableFloorBins) return;
     this.layout = layout;
     this.pickableFloorBins = pickableFloorBins;
     this.rebuild();
-    this.setCamera("cutaway");
+    if (!sameRevision) this.setCamera("cutaway");
   }
 
   private rebuild(): void {
@@ -287,7 +304,9 @@ export class CabinScene {
     if (areas.length > 0) for (const a of areas) addFloor(a.placement.x, a.placement.lx, a.id);
     else addFloor(length / 2, length, null);
     carpet.dispose();
-    if (layout.locations.some((l) => l.id === "FLOOR:FULL-CABIN")) {
+    // The aisle strip shows the full-cabin floor's status and is its pick target (WEB-18): the area under it is reached
+    // anywhere else across the cabin width.
+    if (layout.locations.some((l) => l.id === FULL_CABIN)) {
       this.fullCabinOverlay = new THREE.Mesh(
         new THREE.PlaneGeometry(length - 0.1, 0.42),
         new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false }),
@@ -523,7 +542,7 @@ export class CabinScene {
       if (c) (f.overlay.material as THREE.MeshBasicMaterial).color.copy(c);
     }
     if (this.fullCabinOverlay) {
-      const c = this.colourMode === "status" ? colourFor(this.statusOf("FLOOR:FULL-CABIN")) : null;
+      const c = this.colourMode === "status" ? colourFor(this.statusOf(FULL_CABIN)) : null;
       this.fullCabinOverlay.visible = Boolean(c);
       if (c) (this.fullCabinOverlay.material as THREE.MeshBasicMaterial).color.copy(c);
     }
@@ -619,6 +638,7 @@ export class CabinScene {
     this.camera.fov = 36;
     this.currentView = view;
     const location = this.layout.locations.find((l) => l.id === (locationId ?? this.selection));
+    this.viewLocation = location?.id ?? null;
     if (view === "cutaway") {
       // Seen from the forward quarter so the cabin recedes and fills the frame instead of lying as a thin strip.
       const dir = aspect >= 1.15 ? new THREE.Vector3(-0.52, 0.52, 0.68) : new THREE.Vector3(-0.86, 0.72, 0.34);
@@ -689,6 +709,7 @@ export class CabinScene {
     if (action === "down") s.phi = Math.min(this.controls.maxPolarAngle, s.phi + 0.12);
     if (action === "in") s.radius = Math.max(this.controls.minDistance, s.radius * 0.8);
     if (action === "out") s.radius = Math.min(this.controls.maxDistance, s.radius * 1.25);
+    this.currentView = "free";
     this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(s));
     this.controls.update();
     this.updateGhosting();
@@ -697,15 +718,19 @@ export class CabinScene {
 
   // ---- picking --------------------------------------------------------------------------------
 
-  private hit(event: PointerEvent): { location: CabinLocation; component: string | null } | null {
+  private hit(clientX: number, clientY: number): { location: CabinLocation; component: string | null } | null {
     if (!this.layout) return null;
     const rect = this.canvas.getBoundingClientRect();
-    const ndc = new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+    const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
     // Only visible, unghosted, selectable objects take part: a hidden layer can never block a pick.
     const targets: THREE.Object3D[] = [];
     if (this.layers.seats) for (const s of this.seatMeshes) targets.push(s.mesh);
-    if (this.layers.floor && this.pickableFloorBins) for (const f of this.floorMeshes) if (f.locationId) targets.push(f.mesh);
+    if (this.layers.floor && this.pickableFloorBins) {
+      for (const f of this.floorMeshes) if (f.locationId) targets.push(f.mesh);
+      // raycasting ignores visibility, so the strip is a target even while it shows no status
+      if (this.fullCabinOverlay) targets.push(this.fullCabinOverlay);
+    }
     if (this.layers.bins && this.pickableFloorBins)
       for (const b of this.binSides) if (!b.door.userData.ghost && b.locations.length) targets.push(b.door, b.body);
     const hits = this.raycaster.intersectObjects(targets, false);
@@ -715,6 +740,10 @@ export class CabinScene {
     if (seat && first.instanceId !== undefined) {
       const entry = this.seats[first.instanceId];
       return entry ? { location: entry.location, component: seat.component } : null;
+    }
+    if (first.object === this.fullCabinOverlay) {
+      const location = this.layout.locations.find((l) => l.id === FULL_CABIN);
+      return location ? { location, component: null } : null;
     }
     const floor = this.floorMeshes.find((f) => f.mesh === first.object);
     if (floor?.locationId) {
@@ -727,23 +756,33 @@ export class CabinScene {
     return null;
   }
 
+  private static sample(e: PointerEvent): PointerSample {
+    return { pointerId: e.pointerId, button: e.button, isPrimary: e.isPrimary, x: e.clientX, y: e.clientY, time: e.timeStamp };
+  }
+
+  // Only a short, still, primary left press picks; a right click, a drag, a long press or the end of a pinch does not (WEB-12).
   private onPointerDown = (e: PointerEvent) => {
-    this.pointerDown = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (this.paused) return;
+    this.gesture.down(CabinScene.sample(e));
   };
 
   private onPointerUp = (e: PointerEvent) => {
-    const down = this.pointerDown;
-    this.pointerDown = null;
-    if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return; // a drag, not a pick
-    const hit = this.hit(e);
+    const at = this.gesture.up(CabinScene.sample(e));
+    if (!at || this.paused) return;
+    const hit = this.hit(at.x, at.y);
     if (!hit) return;
     this.pickStamp = performance.now();
     this.callbacks.onPick(hit.location.id, hit.component);
   };
 
   private onPointerMove = (e: PointerEvent) => {
-    if (e.pointerType === "touch" || e.buttons !== 0) return;
+    this.gesture.move(CabinScene.sample(e));
+    if (this.paused || e.pointerType === "touch" || e.buttons !== 0) return;
     this.hoverPending = e;
+  };
+
+  private onPointerCancel = () => {
+    this.gesture.cancel();
   };
 
   private onPointerLeave = () => {
@@ -762,7 +801,7 @@ export class CabinScene {
     const e = this.hoverPending;
     if (!e) return;
     this.hoverPending = null;
-    const hit = this.hit(e);
+    const hit = this.hit(e.clientX, e.clientY);
     const was = this.hoverMark.visible;
     if (hit && hit.location.id !== this.selection) {
       const { centre, size } = this.boxOf(hit.location);
@@ -780,19 +819,45 @@ export class CabinScene {
 
   // ---- loop -----------------------------------------------------------------------------------
 
+  /**
+   * Match the canvas size and the screen's pixel ratio (which changes when the window moves between screens or the page is
+   * zoomed). A preset view is re-framed for the new shape; a camera the user moved stays put, so a phone's URL bar
+   * collapsing never snaps it back (WEB-09).
+   */
   resize(): void {
     const w = Math.max(this.canvas.clientWidth, 1);
     const h = Math.max(this.canvas.clientHeight, 1);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(w, h, false);
     const changed = Math.abs(this.camera.aspect - w / h) > 0.001;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    if (changed && this.layout && (this.currentView === "cutaway" || this.currentView === "overhead")) this.setCamera(this.currentView);
+    if (changed && this.layout && this.currentView !== "free") this.setCamera(this.currentView, this.viewLocation);
     this.needsRender = true;
   }
 
+  /**
+   * Stop drawing and listening while the view is hidden; the scene, camera and settings are kept as they are, and drawing
+   * resumes with the next frame when shown again.
+   */
+  setPaused(paused: boolean): void {
+    if (this.disposed || paused === this.paused) return;
+    this.paused = paused;
+    this.controls.enabled = !paused;
+    this.gesture.cancel();
+    this.hoverPending = null;
+    if (paused) {
+      cancelAnimationFrame(this.frame);
+      if (this.hoverMark.visible) this.hoverMark.visible = false;
+      this.callbacks.onHover(null);
+    } else {
+      this.needsRender = true;
+      this.loop();
+    }
+  }
+
   private loop = () => {
-    if (this.disposed) return;
+    if (this.disposed || this.paused) return;
     this.frame = requestAnimationFrame(this.loop);
     this.processHover();
     if (this.controls.update()) this.needsRender = true;
@@ -840,7 +905,8 @@ export class CabinScene {
     const { centre } = this.boxOf(location);
     // the headrest front is visible from the front and from above; the pan only from above
     if (location.kind === "SEAT") centre.set(location.placement.x + (part === "pan" ? -0.1 : 0.255), part === "pan" ? 0.52 : 1.06, location.placement.z);
-    if (location.kind === "FLOOR") centre.set(location.placement.x, 0, 0);
+    // the aisle centreline belongs to the full-cabin strip, so an area is aimed at beside it
+    if (location.kind === "FLOOR") centre.set(location.placement.x, 0, location.id === FULL_CABIN ? 0 : location.placement.lz / 4);
     if (location.kind === "BIN") centre.set(location.placement.x, 1.75, (location.bin?.side === "L" ? 1 : -1) * 0.95);
     const v = centre.project(this.camera);
     const rect = this.canvas.getBoundingClientRect();
@@ -855,6 +921,7 @@ export class CabinScene {
       profile: this.palette.id,
       light: this.light,
       view: this.currentView,
+      paused: this.paused,
       layers: this.layers,
       colourMode: this.colourMode,
       selection: this.selection,
@@ -874,6 +941,7 @@ export class CabinScene {
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.canvas.removeEventListener("pointerup", this.onPointerUp);
     this.canvas.removeEventListener("pointermove", this.onPointerMove);
+    this.canvas.removeEventListener("pointercancel", this.onPointerCancel);
     this.canvas.removeEventListener("pointerleave", this.onPointerLeave);
     this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
     this.controls.dispose();

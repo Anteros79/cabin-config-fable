@@ -154,6 +154,15 @@ async function clickLocation(page: Page, locationId: string, part: "head" | "pan
   await page.mouse.down();
   await page.mouse.up();
 }
+/** Camera position and target, for comparing a camera before and after something that must not move it. */
+async function cameraOf(page: Page): Promise<number[]> {
+  const c = (await sceneInfo(page)).camera as { position: number[]; target: number[] };
+  return [...c.position, ...c.target];
+}
+function sameCamera(actual: number[], expected: number[], when: string): void {
+  const drift = Math.max(...actual.map((v, i) => Math.abs(v - (expected[i] ?? Number.NaN))));
+  expect(drift < 0.02, `camera moved ${when}: ${JSON.stringify(expected)} -> ${JSON.stringify(actual)}`);
+}
 const cam = (page: Page, view: string, id?: string) =>
   page.evaluate(([v, i]) => window.__cabinKit!.scene!.setCamera(v as never, i), [view, id ?? null] as const);
 const sceneSet = (page: Page, fn: string, arg: unknown) =>
@@ -588,6 +597,82 @@ try {
     await page.selectOption(".toolbar label:has-text('Light') select", "neutral");
     await page.selectOption(".toolbar label:has-text('Visual family') select", "photo-navy-band");
     await page.selectOption(".toolbar label:has-text('Colours') select", "status");
+  });
+  await check("a save, a window resize and a tab switch leave a moved camera, the scene and its settings as they were", async () => {
+    await openMap(page);
+    await selectViaGoTo(page, "8A");
+    await page.click("#tab-3d");
+    await waitFor3D(page);
+    await page.evaluate(() => {
+      (window as unknown as { __e2eScene: unknown }).__e2eScene = window.__cabinKit!.scene;
+    });
+    const box = (await page.locator("canvas").boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 140, box.y + box.height / 2 + 30, { steps: 6 });
+    await page.mouse.up();
+    await settle(page, 900);
+    const moved = await cameraOf(page);
+    // two saves: record the cushion, then remove it again so later checks see the same records
+    await recordPrimary(page, "CUSHION");
+    await settle(page, 300);
+    sameCamera(await cameraOf(page), moved, "after recording a part");
+    await page.locator(".component-card[data-component=CUSHION] button.danger").click();
+    await page.waitForFunction(() => !(document.querySelector(".worklist")?.textContent ?? "").includes("Seat 8A"));
+    await settle(page, 300);
+    sameCamera(await cameraOf(page), moved, "after removing a part");
+    await page.setViewportSize({ width: 1180, height: 760 });
+    await settle(page, 500);
+    sameCamera(await cameraOf(page), moved, "after a window resize");
+    equal((await sceneInfo(page)).view, "free", "a drag leaves the preset");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await settle(page, 500);
+    await page.selectOption(".toolbar label:has-text('Light') select", "blue");
+    await page.click(".toolbar [aria-label=Layers] label:has-text('Context') input");
+    await settle(page, 300);
+    await openMap(page);
+    const hidden = await sceneInfo(page);
+    equal(hidden.paused, true, "the hidden scene is paused");
+    await settle(page, 300);
+    equal((await sceneInfo(page)).frames, hidden.frames, "a paused scene draws nothing");
+    await page.click("#tab-3d");
+    await page.waitForFunction(() => (window.__cabinKit?.scene?.describe().paused as boolean | undefined) === false);
+    await settle(page, 300);
+    const shown = await sceneInfo(page);
+    expect((shown.frames as number) > (hidden.frames as number), "the scene draws again when shown");
+    expect(
+      await page.evaluate(() => (window as unknown as { __e2eScene: unknown }).__e2eScene === window.__cabinKit!.scene),
+      "the same scene instance after a tab switch",
+    );
+    equal([shown.light, (shown.layers as { context: boolean }).context], ["blue", true], "light and layers kept");
+    sameCamera(await cameraOf(page), moved, "after a tab switch");
+    await page.selectOption(".toolbar label:has-text('Light') select", "neutral");
+    await page.click(".toolbar [aria-label=Layers] label:has-text('Context') input");
+    await page.click(".toolbar button:has-text('Reset')");
+  });
+  await check("a right click and a long press never pick; the aisle strip picks the full-cabin floor", async () => {
+    await cam(page, "focus", "SEAT:7C");
+    await settle(page);
+    await clickLocation(page, "SEAT:7C", "head");
+    await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 7C");
+    const neighbour = (await page.evaluate(() => window.__cabinKit!.scene!.screenPointOf("SEAT:7B", "head")))!;
+    await page.mouse.move(neighbour.x, neighbour.y);
+    await page.mouse.down({ button: "right" });
+    await page.mouse.up({ button: "right" });
+    await page.mouse.down();
+    await page.waitForTimeout(900);
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    equal(await page.textContent("#inspector-heading"), "Seat 7C", "selection unchanged");
+    await cam(page, "overhead");
+    await sceneSet(page, "setLayers", { seats: false, floor: true, bins: false, context: false });
+    await settle(page);
+    await clickLocation(page, "FLOOR:FULL-CABIN");
+    await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent?.startsWith("Full cabin floor"));
+    await clickLocation(page, "FLOOR:AFT");
+    await page.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent?.startsWith("Aft floor area"));
+    await sceneSet(page, "setLayers", { seats: true, floor: true, bins: true, context: false });
+    await page.click(".toolbar button:has-text('Reset')");
   });
 
   // ---------------------------------------------------------------------------------------
@@ -1224,6 +1309,38 @@ try {
     expect(point !== null, "point");
     await m.touchscreen.tap(point!.x, point!.y);
     await m.waitForFunction(() => document.querySelector("#inspector-heading")?.textContent === "Seat 6D");
+  });
+  await check("mobile: the end of a two-finger gesture selects nothing and a URL-bar resize keeps a moved camera", async () => {
+    const near = (await m.evaluate(() => window.__cabinKit!.scene!.screenPointOf("SEAT:6D", "head")))!;
+    const other = (await m.evaluate(() => window.__cabinKit!.scene!.screenPointOf("SEAT:6E", "head")))!;
+    const cdp = await m.context().newCDPSession(m);
+    const finger = (id: number, p: { x: number; y: number }, dx = 0) => ({ x: p.x + dx, y: p.y, id, radiusX: 4, radiusY: 4, force: 1 });
+    // Two fingers down, then lifted one at a time without moving: a pinch held still, then a two-finger tap on one seat.
+    const gestures: [ReturnType<typeof finger>, ReturnType<typeof finger>][] = [
+      [finger(1, near), finger(2, other)],
+      [finger(1, other), finger(2, other, 3)],
+    ];
+    for (const [a, b] of gestures) {
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [a] });
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [a, b] });
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [b] });
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await settle(m, 300);
+      equal(await m.textContent("#inspector-heading"), "Seat 6D", "a two-finger gesture selected nothing");
+    }
+    await cdp.detach();
+    // from the default view, which a resize re-frames, orbit by hand
+    await m.tap(".toolbar button:has-text('Reset')");
+    await m.tap(".toolbar button[aria-label='Rotate left']");
+    await settle(m, 500);
+    const moved = await cameraOf(m);
+    // the URL bar showing and collapsing changes the viewport height
+    await m.setViewportSize({ width: 390, height: 760 });
+    await settle(m, 400);
+    await m.setViewportSize({ width: 390, height: 844 });
+    await settle(m, 400);
+    sameCamera(await cameraOf(m), moved, "after the viewport height changed");
+    equal((await sceneInfo(m)).view, "free", "a nudge leaves the preset");
   });
   await check("mobile: record through the map with touch-sized targets, complete and read the report", async () => {
     await m.tap("#tab-map");
