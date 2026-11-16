@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { DomainError } from "../domain/visitLogic.ts";
 
 /**
  * Forward-only schema migrations. A migration may add tables, columns, indexes or triggers.
@@ -24,14 +25,20 @@ function storedVersion(db: DatabaseSync): number | null {
  * Applies every migration with `to > current`, in ascending order, inside one BEGIN IMMEDIATE,
  * and records the new version in `meta.schema_version`. Returns the new version (or `current`
  * when nothing is pending). If another connection migrated first, the version stored under the
- * write lock is the starting point, so no step runs twice. Any failure rolls back every step.
+ * write lock is the starting point, so no step runs twice; if that version is newer than every
+ * migration known here (a newer Cabin Kit got there first), it throws VISIT_SCHEMA_NEWER.
+ * Any failure rolls back every step.
  */
 export function migrate(db: DatabaseSync, current: number, migrations: Migration[]): number {
   const newest = Math.max(current, ...migrations.map((m) => m.to));
   if (newest === current) return current;
   db.exec("BEGIN IMMEDIATE");
   try {
-    const from = Math.max(current, storedVersion(db) ?? current);
+    const stored = storedVersion(db);
+    if (stored !== null && stored > newest) {
+      throw new DomainError("VISIT_SCHEMA_NEWER", "This visit store was written by a newer version of Cabin Kit.", 500);
+    }
+    const from = Math.max(current, stored ?? current);
     const pending = migrations.filter((m) => m.to > from).sort((a, b) => a.to - b.to);
     let version = from;
     for (const step of pending) {

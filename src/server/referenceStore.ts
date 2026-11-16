@@ -6,7 +6,7 @@ import { contentHash } from "../domain/hash.ts";
 import type { Finding, ReferenceRelease, ReleaseContent } from "../domain/types.ts";
 import { hasBlockingFindings } from "../domain/validate.ts";
 import { isSameFile } from "./config.ts";
-import { asStorageError } from "./storageError.ts";
+import { asStorageError, STORE_BUSY_TIMEOUT_MS } from "./storageError.ts";
 
 /**
  * Reference store: append-only, versioned releases.
@@ -109,7 +109,8 @@ export function inspectStore(path: string): StoreInspection {
   if (!existsSync(path)) return { exists: false, kind: "absent", tables: [], storeKindMarker: null, visitRows: 0 };
   let db: DatabaseSync;
   try {
-    db = new DatabaseSync(path, { readOnly: true });
+    // The timeout keeps a store locked by another connection from being misread as "not-sqlite".
+    db = new DatabaseSync(path, { readOnly: true, timeout: STORE_BUSY_TIMEOUT_MS });
   } catch {
     return { exists: true, kind: "not-sqlite", tables: [], storeKindMarker: null, visitRows: 0 };
   }

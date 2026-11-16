@@ -8,6 +8,9 @@ export class StorageError extends Error {
   }
 }
 
+/** How long a connection waits for another connection's lock before SQLite reports busy. */
+export const STORE_BUSY_TIMEOUT_MS = 15000;
+
 export function isBusy(e: unknown): boolean {
   const err = e as { code?: string; errcode?: number; message?: string };
   return err?.errcode === 5 || err?.errcode === 6 || /database is locked|SQLITE_BUSY/i.test(err?.message ?? "");
@@ -18,6 +21,14 @@ export function isStorageFailure(e: unknown): boolean {
   if (e instanceof DomainError || e instanceof StorageError) return false;
   const code = (e as { code?: unknown })?.code;
   return (typeof code === "string" && code.startsWith("ERR_SQLITE")) || isBusy(e);
+}
+
+/** True for SQLITE_CORRUPT (11) or SQLITE_NOTADB (26), including their extended codes: the file itself is damaged. */
+export function isCorruption(e: unknown): boolean {
+  const err = e as { code?: unknown; errcode?: unknown };
+  if (typeof err?.code !== "string" || !err.code.startsWith("ERR_SQLITE") || typeof err.errcode !== "number") return false;
+  const primary = err.errcode & 0xff;
+  return primary === 11 || primary === 26;
 }
 
 /** Wraps a SQLite fault in StorageError; anything else is returned unchanged. */

@@ -176,6 +176,32 @@ describe("visit stores written by 5d6679d", () => {
     bytes[(root - 1) * pageSize] = 0xff;
     writeFileSync(copy.path, bytes);
     expect(domainError(() => VisitStore.open(copy.path, copy.referencePath)).code).toBe("VISIT_STORE_CORRUPT");
+    // Refused before the WAL switch: not one byte of the damaged file was rewritten.
+    expect(readFileSync(copy.path).equals(bytes)).toBe(true);
+    expect(existsSync(`${copy.path}-wal`)).toBe(false);
+    expect(existsSync(`${copy.path}-shm`)).toBe(false);
+  });
+
+  it("a SQLite corruption error raised while opening is VISIT_STORE_CORRUPT, not a storage fault", () => {
+    const copy = copyOfFixture();
+    const { pageSize, root } = raw(copy.path, (db) => ({
+      pageSize: Number((db.prepare("PRAGMA page_size").get() as { page_size: number }).page_size),
+      root: Number((db.prepare("SELECT rootpage FROM sqlite_master WHERE name = 'meta'").get() as { rootpage: number }).rootpage),
+    }));
+    const bytes = readFileSync(copy.path);
+    // The version check reads `meta`; a damaged meta page makes SQLite raise SQLITE_CORRUPT there.
+    bytes[(root - 1) * pageSize] = 0xff;
+    writeFileSync(copy.path, bytes);
+    const error = domainError(() => VisitStore.open(copy.path, copy.referencePath));
+    expect(error).toMatchObject({ code: "VISIT_STORE_CORRUPT", status: 500 });
+    expect(readFileSync(copy.path).equals(bytes)).toBe(true);
+  });
+
+  it("read-only mode refuses an absent store and creates nothing", () => {
+    const dir = tempDir();
+    const path = join(dir, "missing", "visits.sqlite");
+    expect(domainError(() => VisitStore.open(path, join(dir, "reference.sqlite"), { readOnly: true })).code).toBe("VISIT_STORE_MISSING");
+    expect(existsSync(join(dir, "missing"))).toBe(false);
   });
 });
 
@@ -223,6 +249,18 @@ describe("visit store migrations", () => {
     expect(() => migrate(db, 1, [...steps, { to: 4, description: "broken", sql: "INSERT INTO missing VALUES (1);" }])).toThrow(/missing/);
     expect(db.prepare("SELECT count(*) AS n FROM log").get()).toMatchObject({ n: 0 });
     expect(db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get()).toMatchObject({ value: "1" });
+    expect(db.isTransaction).toBe(false);
+    db.close();
+  });
+
+  it("refuses when the version re-read under the write lock is newer than any migration it knows", () => {
+    const db = scratch();
+    // Another (newer) process migrated after this one read version 1.
+    db.exec("UPDATE meta SET value = '5' WHERE key = 'schema_version'");
+    const error = domainError(() => migrate(db, 1, steps));
+    expect(error).toMatchObject({ code: "VISIT_SCHEMA_NEWER", status: 500 });
+    expect(db.prepare("SELECT count(*) AS n FROM log").get()).toMatchObject({ n: 0 });
+    expect(db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get()).toMatchObject({ value: "5" });
     expect(db.isTransaction).toBe(false);
     db.close();
   });

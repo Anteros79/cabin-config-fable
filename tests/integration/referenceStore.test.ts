@@ -1,4 +1,4 @@
-import { existsSync, linkSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, linkSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, expect, it } from "vitest";
@@ -270,6 +270,26 @@ describe("store guards", () => {
     const stores = makeStores();
     expect(() => VisitStore.open(stores.referencePath, join(stores.dir, "other.sqlite"))).toThrow(/reference database/);
     expect(() => VisitStore.open(stores.referencePath, stores.referencePath)).toThrow(/same file/);
+  });
+
+  it("a SQLite fault while opening the reference store is a StorageError", () => {
+    const stores = makeStores();
+    const db = new DatabaseSync(stores.referencePath);
+    db.exec("PRAGMA journal_mode=DELETE");
+    db.close();
+    chmodSync(stores.referencePath, 0o444); // read-write open falls back to read-only; the WAL switch then fails
+    try {
+      let caught: unknown;
+      try {
+        ReferenceStore.open(stores.referencePath, stores.visitsPath).close();
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught).toBeInstanceOf(StorageError);
+      expect((caught as StorageError).message).toMatch(/readonly/);
+    } finally {
+      chmodSync(stores.referencePath, 0o644);
+    }
   });
 });
 

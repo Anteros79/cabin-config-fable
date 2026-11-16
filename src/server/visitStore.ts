@@ -10,7 +10,7 @@ import { DomainError, deriveRecord } from "../domain/visitLogic.ts";
 import { isSameFile } from "./config.ts";
 import { migrate, VISIT_MIGRATIONS } from "./migrations.ts";
 import { inspectStore } from "./referenceStore.ts";
-import { asStorageError, isBusy, isStorageFailure, StorageError } from "./storageError.ts";
+import { asStorageError, isBusy, isCorruption, isStorageFailure, STORE_BUSY_TIMEOUT_MS, StorageError } from "./storageError.ts";
 
 export { StorageError };
 
@@ -160,10 +160,10 @@ function supportedVersion(path: string): number {
   let raw: string | undefined;
   let db: DatabaseSync | undefined;
   try {
-    db = new DatabaseSync(path, { readOnly: true });
+    db = new DatabaseSync(path, { readOnly: true, timeout: STORE_BUSY_TIMEOUT_MS });
     raw = (db.prepare("SELECT value FROM meta WHERE key='schema_version'").get() as { value: string } | undefined)?.value;
   } catch (e) {
-    throw asStorageError(e);
+    throw asOpenError(e);
   } finally {
     db?.close();
   }
@@ -177,13 +177,17 @@ function supportedVersion(path: string): number {
   return version;
 }
 
+const corrupt = (problems: string[]): DomainError =>
+  new DomainError("VISIT_STORE_CORRUPT", "The visit store file is damaged. It will not be used; restore it from a backup.", 500, { problems });
+
+/** While opening: SQLite corruption (SQLITE_CORRUPT, SQLITE_NOTADB) is VISIT_STORE_CORRUPT, other SQLite faults are StorageError. */
+function asOpenError(e: unknown): unknown {
+  return isCorruption(e) ? corrupt([(e as Error).message]) : asStorageError(e);
+}
+
 function assertIntact(db: DatabaseSync): void {
   const rows = db.prepare("PRAGMA quick_check").all() as { quick_check: string }[];
-  if (rows.length !== 1 || rows[0]?.quick_check !== "ok") {
-    throw new DomainError("VISIT_STORE_CORRUPT", "The visit store file is damaged. It will not be used; restore it from a backup.", 500, {
-      problems: rows.slice(0, 5).map((r) => r.quick_check),
-    });
-  }
+  if (rows.length !== 1 || rows[0]?.quick_check !== "ok") throw corrupt(rows.slice(0, 5).map((r) => r.quick_check));
 }
 
 /** Base schema (version 1, identical to 5d6679d). Migrations bring it to the newest version. */
@@ -218,7 +222,8 @@ export class VisitStore {
    * Open the visit store, creating it only when the file does not exist. Never resets anything.
    * The schema version is read through a read-only connection before anything is written, so a
    * store from a newer Cabin Kit is refused byte-for-byte untouched. Then the store is checked
-   * (PRAGMA quick_check), migrated to the newest schema and old retry keys are pruned.
+   * (PRAGMA quick_check) before the WAL switch or any other write, migrated to the newest schema
+   * and old retry keys are pruned. SQLite corruption raised while opening is VISIT_STORE_CORRUPT.
    * `readOnly` opens an existing store without migrating or pruning (for backups).
    */
   static open(path: string, referencePath: string, options: { readOnly?: boolean } = {}): VisitStore {
@@ -235,23 +240,21 @@ export class VisitStore {
     if (!options.readOnly) mkdirSync(dirname(path), { recursive: true });
     let db: DatabaseSync;
     try {
-      db = new DatabaseSync(path, { timeout: 15000, readOnly: options.readOnly ?? false });
+      db = new DatabaseSync(path, { timeout: STORE_BUSY_TIMEOUT_MS, readOnly: options.readOnly ?? false });
     } catch (e) {
-      throw asStorageError(e);
+      throw asOpenError(e);
     }
     try {
-      if (options.readOnly) {
-        db.exec("PRAGMA foreign_keys=ON;");
-        assertIntact(db);
-        return new VisitStore(path, db);
-      }
-      db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON;");
+      db.exec("PRAGMA foreign_keys=ON;");
+      // Checked before the WAL switch, which rewrites header bytes: a damaged store is refused untouched.
       assertIntact(db);
+      if (options.readOnly) return new VisitStore(path, db);
+      db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
       if (current === null) createSchema(db);
       migrate(db, current ?? BASE_SCHEMA_VERSION, VISIT_MIGRATIONS);
     } catch (e) {
       db.close();
-      throw asStorageError(e);
+      throw asOpenError(e);
     }
     const store = new VisitStore(path, db);
     store.pruneIdempotency(new Date(Date.now() - IDEMPOTENCY_RETENTION_DAYS * 86_400_000).toISOString());
