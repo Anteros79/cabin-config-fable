@@ -6,7 +6,7 @@
 // manifest entries. Exit code 1 if the manifest is empty, a file is missing, an original is not in the manifest or a
 // file differs; 64 for a command line that cannot be used.
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint, parseCliArgs, UsageError } from "../src/importer/args.ts";
@@ -73,10 +73,13 @@ export function writeOriginalsManifest(paths: VerifyPaths, { force }: { force: b
     return 1;
   }
   mkdirSync(dirname(paths.manifestPath), { recursive: true });
+  // Write beside the manifest, then rename: a failed write never leaves a truncated manifest.
+  const temporary = `${paths.manifestPath}.tmp-${process.pid}`;
   writeFileSync(
-    paths.manifestPath,
+    temporary,
     `${JSON.stringify({ sourceRoot: "../.. (development folder root)", recordedAt: new Date().toISOString(), files: hashed }, null, 2)}\n`,
   );
+  renameSync(temporary, paths.manifestPath);
   log(`manifest written: ${hashed.length} files`);
   return 0;
 }
@@ -119,7 +122,8 @@ export function verifyOriginals(paths: VerifyPaths, log: Log, logError: Log): nu
     const isImage = IMAGE_ORIGINALS.includes(path);
     const places: [string, Hashed][] = [];
     if (isData) places.push(["vendored", hashFile(paths.vendoredRoot, path)]);
-    if (sourcePresent) places.push(["source  ", hashFile(paths.sourceRoot, path)]);
+    // When the source root is the vendored folder, the vendored pass already covered it.
+    if (sourcePresent && (!isData || hasImageFolder)) places.push(["source  ", hashFile(paths.sourceRoot, path)]);
     // An image is optional while no folder that holds images is present (the folder is absent, or is the vendored
     // data folder); everything else must be on disk.
     if (isImage && !hasImageFolder) {

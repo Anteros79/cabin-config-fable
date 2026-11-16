@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test, vi } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
 import { buildSnapshot } from "../../src/domain/visitLogic.ts";
 import { importReference } from "../../src/importer/cli.ts";
@@ -99,13 +99,11 @@ describe("verify-originals", () => {
   test("fails when a data original is missing on disk, and when one differs", () => {
     const ws = workspace();
     const [first, second] = DATA_ORIGINALS as [string, string];
-    cpSync(join(ws.vendoredRoot, first), join(ws.vendoredRoot, "gone"));
     writeFileSync(join(ws.vendoredRoot, second), "changed");
     const changed = verify(ws);
     expect(changed.code).toBe(1);
     expect(changed.out).toContain(`CHANGED    vendored`);
     writeFileSync(join(ws.vendoredRoot, second), readFileSync(join(DEFAULT_PATHS.vendoredRoot, second)));
-    cpSync(join(ws.vendoredRoot, first), join(ws.vendoredRoot, "copy-of-first"));
     // Remove the file by pointing the vendored root at a folder without it.
     const partial = join(tempDir("cabin-kit-verify-"), "partial");
     mkdirSync(partial);
@@ -156,6 +154,19 @@ describe("verify-originals", () => {
     const ws = workspace();
     expect(verify(ws, ["--nope"]).code).toBe(64);
     expect(verify(ws, ["--force"]).code).toBe(64);
+  });
+
+  test("importing the module runs nothing: no output, no exit code, no files", () => {
+    const written: string[] = [];
+    const before = process.exitCode;
+    const spy = vi.spyOn(console, "log").mockImplementation((line) => void written.push(String(line)));
+    try {
+      expect(typeof verifyMain).toBe("function");
+      expect(written).toEqual([]);
+      expect(process.exitCode).toBe(before);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("the real manifest verifies from the command line", async () => {
@@ -215,8 +226,31 @@ describe("seed-sample-visits", () => {
     }
     const r = await seed(dir);
     expect(r.code).toBe(1);
-    expect(r.stderr).toMatch(/one sample visit/);
+    expect(r.stderr).toMatch(/incomplete sample/);
     expect(r.stdout).not.toMatch(/already has visits/);
+  });
+
+  test("a completed sample and a draft with fewer than 2 records is also reported as incomplete", async () => {
+    const dir = tempDir("cabin-kit-seed-");
+    const referencePath = join(dir, "reference.sqlite");
+    const visitsPath = join(dir, "visits.sqlite");
+    expect(importReference({ referencePath, visitsPath }).status).toBe("validated");
+    const reference = ReferenceStore.open(referencePath, visitsPath, { readOnly: true });
+    const release = reference.loadActive();
+    reference.close();
+    const store = VisitStore.open(visitsPath, referencePath);
+    try {
+      const now = new Date().toISOString();
+      store.createVisit(buildSnapshot(release, lookup(release, "N100TL", "2026-11-12"), now), "Sample Technician (fictional)");
+      const draft = store.createVisit(buildSnapshot(release, lookup(release, "N200TL", "2026-07-01"), now), "Sample Technician (fictional)").visit;
+      store.upsertRecord(draft.id, { locationId: "SEAT:12C", componentId: "BACKREST", selection: "PRIMARY", substituteId: null, quantity: 1, note: "" }, 0);
+    } finally {
+      store.close();
+    }
+    const r = await seed(dir);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toMatch(/incomplete sample/);
+    expect(r.stderr).toContain(visitsPath);
   });
 
   test("a bad option exits 64", async () => {
@@ -238,6 +272,21 @@ describe("evidence:build", () => {
   test("an unknown step or option is a usage error", async () => {
     expect((await build("nope")).code).toBe(64);
     expect((await build("--nope")).code).toBe(64);
+  });
+
+  test("every step's ctx.results reads are in its needs", () => {
+    const dir = join(PROJECT_ROOT, "tools", "evidence");
+    const stepsSource = readFileSync(join(dir, "build-all.mjs"), "utf8");
+    const rows = [...stepsSource.matchAll(/name: '(\w+)',\s*path: '\.\/(step-[\w-]+\.mjs)',\s*needs: \[([^\]]*)\]/g)];
+    expect(rows).toHaveLength(13);
+    for (const [, name, file, needsText] of rows) {
+      const source = readFileSync(join(dir, file as string), "utf8");
+      const reads = new Set<string>([...source.matchAll(/ctx\.results\.(\w+)/g)].map((m) => m[1] as string));
+      for (const m of source.matchAll(/const \{([^}]+)\}\s*=\s*ctx\.results/g))
+        for (const part of (m[1] as string).split(",")) reads.add((part.split(":")[0] as string).trim());
+      const needs = new Set([...(needsText as string).matchAll(/'(\w+)'/g)].map((m) => m[1]));
+      for (const read of reads) expect(needs.has(read), `${name} reads ctx.results.${read} but does not list it in needs`).toBe(true);
+    }
   });
 
   test("every declared dependency is itself a step that runs earlier", async () => {

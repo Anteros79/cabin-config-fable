@@ -291,6 +291,7 @@ export function Inspector({ workspace, location, focusComponent, saveState, onRe
           </button>
         </p>
       )}
+      {views.length === 0 && <p className="notice">{workspace.unresolvedReason ?? "No components are defined for this location."}</p>}
       {views.map((view) => (
         <ComponentCard
           key={`${location.id}|${view.componentId}`}

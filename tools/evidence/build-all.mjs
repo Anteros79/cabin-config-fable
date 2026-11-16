@@ -4,9 +4,8 @@
 // With step names, only those steps run; a step that needs the result of another one fails fast, naming it.
 // Source root: ../../ relative to the working project, or env CABIN_KIT_SOURCE_ROOT.
 // Network access is off unless --online is passed (then the public-hyperlink reachability check runs).
-import { realpathSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { isEntryPoint } from '../../src/importer/args.ts';
 import { SOURCE_ROOT, EVIDENCE_DIR, ORIGINALS, sha256OfFileOnDisk } from './lib/common.mjs';
 
 /** Each step names the steps whose results it reads (`needs`); dependencies run first, in this order. */
@@ -21,7 +20,7 @@ export const STEPS = [
   { name: 'seatSets', path: './step-seat-sets.mjs', needs: [] },
   { name: 'crosswalk', path: './step-crosswalk.mjs', needs: [] },
   { name: 'images', path: './step-images.mjs', needs: [] },
-  { name: 'conflicts', path: './step-conflicts.mjs', needs: ['jsonCompare', 'crossFormat', 'crosswalk', 'hyperlinks', 'docx'] },
+  { name: 'conflicts', path: './step-conflicts.mjs', needs: ['jsonCompare', 'crossFormat', 'crosswalk', 'hyperlinks', 'docx', 'images'] },
   { name: 'inventory', path: './step-inventory.mjs', needs: ['jsonCompare', 'csv', 'workbook', 'rtf', 'docx', 'crossFormat', 'images'] },
   {
     name: 'expectations',
@@ -96,8 +95,7 @@ async function main() {
   }
 }
 
-const isEntryPoint = process.argv[1] !== undefined && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isEntryPoint) {
+if (isEntryPoint(import.meta.url, import.meta.main)) {
   main().catch((e) => {
     console.error(e);
     process.exitCode = 1;

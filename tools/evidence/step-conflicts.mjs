@@ -59,7 +59,7 @@ export function run(ctx) {
   const xf = ctx.results.crossFormat;
   const cw = ctx.results.crosswalk;
   const hl = ctx.results.hyperlinks;
-  const images = ctx.results.images ?? {};
+  const images = ctx.results.images;
   const absence = Object.fromEntries(cw.absence_checks.checks.map((a) => [a.topic, a.total_matching_text_units]));
   const totals = reg.lopa_configurations.map((c) => c.total_seats);
   const bulkheadPartial = perLopa((id) => rowsOf(id).filter((r) => r.row_exists).map((r) => {

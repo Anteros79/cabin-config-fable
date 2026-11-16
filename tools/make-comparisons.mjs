@@ -146,7 +146,17 @@ try {
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
   }
-  renameSync(staging, out);
+  try {
+    renameSync(staging, out);
+  } catch (e) {
+    // Put the earlier output back before reporting the failure.
+    try {
+      renameSync(previous, out);
+    } catch {
+      // nothing to restore when there was no earlier output
+    }
+    throw e;
+  }
   rmSync(previous, { recursive: true, force: true });
 } catch (e) {
   rmSync(staging, { recursive: true, force: true });

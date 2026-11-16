@@ -49,9 +49,12 @@ function main(argv: string[]): number {
   const visits = VisitStore.open(stores.visitsPath, stores.referencePath);
   try {
     const existing = visits.listVisits({ limit: 2 });
-    if (existing.total === 1 && existing.items[0]?.technician === TECHNICIAN) {
+    const sampleVisits = existing.items.filter((v) => v.technician === TECHNICIAN);
+    const partial =
+      existing.total === 1 || (existing.total === 2 && sampleVisits.length === 2 && sampleVisits.some((v) => v.status === "DRAFT" && v.recordCount < 2));
+    if (partial && sampleVisits.length === existing.total) {
       throw new SeedError(
-        `The visit store holds one sample visit (#${existing.items[0].number}) and not the pair: an earlier seeding stopped part-way. Remove it (or use a fresh data directory) and run this again.`,
+        `The visit store holds an incomplete sample (${existing.total === 1 ? "one visit" : "a draft with fewer than 2 records"}): an earlier seeding stopped part-way. Delete ${stores.visitsPath} (or use a fresh --data-dir) and run this again.`,
       );
     }
     if (existing.total > 0) {
