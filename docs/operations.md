@@ -113,7 +113,7 @@ The store uses SQLite write-ahead logging. If `visits.sqlite-wal` or `visits.sql
 
 Restore: stop the server, replace `data/visits.sqlite` with the backup (remove any `-wal`/`-shm` files), start the server. A visit store does not need the reference store it was created with; reports for existing visits are produced from the visit's own snapshot.
 
-The reference store can always be rebuilt with `npm run reference:import`, provided the originals and `fixtures/fixture-data.json` are unchanged. `npm run originals:verify` checks the originals against the recorded SHA-256 values.
+The reference store can always be rebuilt with `npm run reference:import`, provided the originals and `fixtures/fixture-data.json` are unchanged. `npm run originals:verify` checks the originals against the recorded SHA-256 values: the vendored data originals always, and the source root (`CABIN_KIT_SOURCE_ROOT`, else `../../`) when it was named or holds at least one original. A source root that is checked must hold all 23 originals; each missing one is named and the exit code is 1. Where no original is in `../../` (a clone outside the development folder, CI), the 14 images are reported `skipped (not present)` and the command exits 0.
 
 ## Upgrading and store errors
 

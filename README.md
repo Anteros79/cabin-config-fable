@@ -16,7 +16,7 @@ Cabin Kit helps an aircraft appearance technician bring only the replacement par
 
 ## Quick start
 
-Requires Node.js 24 or later (uses the built-in `node:sqlite` and runs TypeScript directly; no native modules to compile). Network access is needed once, for `npm ci`. The nine data originals the import reads are vendored in `fixtures/originals/`, so a fresh clone sets up and starts with nothing from outside the repository. The 14 images are not vendored; see Known limits for what that breaks.
+Requires Node.js 24 or later (uses the built-in `node:sqlite` and runs TypeScript directly; no native modules to compile). Network access is needed once, for `npm ci`. The nine data originals the import reads are vendored in `fixtures/originals/`, so a fresh clone sets up, starts and passes `npm run verify:clean` with nothing from outside the repository. The 14 images are not vendored: where they are not present, `originals:verify` skips them and the comparison sheets are not made.
 
 ```bash
 git clone <this repository> cabin-kit && cd cabin-kit
@@ -64,7 +64,7 @@ Try: `N100TL` on `2026-11-12` → Start visit → Map and list → `3A` → Reco
 | `npm run verify:clean` | `verify`, then fails if the working tree changed (CI runs the same) |
 | `npm run evidence:capture` | Renders, sample visits and reports, performance and axe results into `verification/out/` (git-ignored). `-- --promote` copies the curated subset into `verification/` to be committed by hand; `-- --assert-perf` also checks the frame-rate and pick targets |
 | `npm run comparisons` | Comparison sheets from the captures in `verification/out/` and the image originals; skipped when the images are not present |
-| `npm run originals:verify` | Re-hash the supplied originals against the manifest (the 14 images only where they are present) |
+| `npm run originals:verify` | Re-hash the supplied originals against the manifest. The source root (`CABIN_KIT_SOURCE_ROOT`, else `../../`) is checked when it was named or holds any original, and must then hold all of them; otherwise the 14 images are skipped |
 | `npm run evidence:build` | Regenerate the evidence inventory, extracts and registers from the originals. Offline by default; `-- --online` adds the public-hyperlink reachability check. Step names run a subset, with the steps it needs |
 
 Test counts are not listed here because they change; see the CI run (`.github/workflows/ci.yml`) or run `npm run check`.
@@ -144,5 +144,4 @@ What is true at 2.0.0:
 - The browser tests run on the Chromium bundled with Playwright. WebKit was run once on the workflow and accessibility specs and three of its checks fail; Firefox could not be started on the reference machine. See "Not verified" in [verification/README.md](verification/README.md).
 - The CI workflow (Linux, WebGL in software) has never run: nothing has been pushed. Every result here comes from one machine (Apple M4 Pro, macOS).
 - The scene stays within the budgets in `budgets.json` (32 draw calls and 525,000 triangles on the 176-seat layout, checked by the browser tests); frame rate was measured only on that machine.
-- **A clean clone outside the development folder fails one test.** `originals:verify` looks for the 14 images in `../../` whenever that folder exists, so in such a clone (CI included) `npm test`, `npm run check`, `npm run verify` and `npm run originals:verify` report the images missing. Setting `CABIN_KIT_SOURCE_ROOT` to the folder with the originals fixes `npm run originals:verify`, but not the test, which clears every `CABIN_KIT_` variable before it runs the tool; `check` and `verify` pass only in the development folder. Setup, import, start and the browser tests are not affected (a clean clone ran all 119 browser tests green).
 - An import accepts a large workbook only up to its caps (4 MiB per XML part, 100,000 elements); a legitimate larger workbook is refused with a message, and an accepted one near the caps can use about 300 MB.

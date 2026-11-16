@@ -129,7 +129,7 @@ Summary (re-judged in Task 6.2 against the committed sheets): 8 PASS, 13 PARTIAL
 
 ## Other records
 
-- Originals unchanged: `npm run originals:verify` checks the 23 SHA-256 values in `../evidence/originals-manifest.json` (the 14 images only where `../../` is present).
+- Originals unchanged: `npm run originals:verify` checks the 23 SHA-256 values in `../evidence/originals-manifest.json` (the source root is checked only when `CABIN_KIT_SOURCE_ROOT` names it or it holds an original, and must then hold all 23; otherwise the 14 images are skipped).
 - Baseline tests (isolated copy): see `../inspection/baseline-run-record.md` and `../inspection/logs/`.
 
 ## Not verified
@@ -143,7 +143,7 @@ Written for 2.0.0 (Task 6.6). Each item says what was and was not done.
 - **The PDFs in a desktop viewer.** The server PDF and the Chromium-printed report were opened with pdfjs (text, page count, the six totals); neither has been opened in Preview or Acrobat by a person, so layout, tagging and reading order in a real viewer are unchecked.
 - **Linux, and WebGL without a GPU.** The CI workflow (`.github/workflows/ci.yml`, Ubuntu with SwiftShader) has never run: nothing was pushed and no container was available. Everything here ran on one Mac with a GPU.
 - **Hardware other than the reference machine** (named in `PROVENANCE.json`). Frame rate on weaker hardware, integrated graphics or a real phone is unknown; the mobile project is Chromium emulating a 390x844 touch viewport.
-- **A clean clone outside the development folder.** Setup, import and start work there, and the browser tests do not need the images. But `originals:verify`, and the vitest test that runs it, treat `../../` as the image folder whenever it exists, so in such a clone (and on a CI runner) they report the 14 images missing and `npm run check` and `npm run verify` fail. `CABIN_KIT_SOURCE_ROOT` does not help the test, which clears every `CABIN_KIT_` variable. For 2.0.0, `npm run verify:clean` passed in place in the development folder; in a clean clone everything else passed (1,049 of 1,050 vitest tests, all browser tests, budgets, audit) with this one test failing.
+- **The images outside the development folder.** A clean clone (and CI) checks the nine vendored data originals only: with no `CABIN_KIT_SOURCE_ROOT` and no original in `../../`, `originals:verify` skips the 14 images. They were checked (32/32) only in the development folder. For 2.0.0 the full gate (`setup`, `verify:clean`, `budgets`, `npm audit`) passed in a clean clone outside the development folder.
 - **Long-running use.** No soak test: a server left running for days, visit stores far beyond the 100-plus visits in the tests, or more than two concurrent writers.
 - **The baseline in a browser.** Its tests and linter were run in an isolated copy; its pages were not exercised.
 - **Live web links cited in the DOCX** (only with `evidence:build -- --online`, not run for this release).
