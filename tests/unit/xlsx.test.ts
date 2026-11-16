@@ -97,13 +97,13 @@ describe("readXlsx on synthetic workbooks (IMP-05, IMP-06)", () => {
   });
 
   test("a tiny archive of many empty rows is refused before it is parsed", () => {
-    const bytes = xlsx(sheetXml("<row/>".repeat(300_000)));
+    const bytes = xlsx(sheetXml("<row/>".repeat(120_000)));
     expect(bytes.length).toBeLessThan(100_000);
-    expect(() => readXlsx(bytes)).toThrow(new OoxmlError("XML part has more than 250000 elements"));
+    expect(() => readXlsx(bytes)).toThrow(new OoxmlError("XML part has more than 100000 elements"));
   });
 
-  test("an XML part above 8 MiB is refused before inflation", () => {
-    const bytes = declareSize(xlsx(sheetXml("")), "xl/worksheets/sheet1.xml", 8 * 1024 * 1024 + 1);
+  test("an XML part above 4 MiB is refused before inflation", () => {
+    const bytes = declareSize(xlsx(sheetXml("")), "xl/worksheets/sheet1.xml", 4 * 1024 * 1024 + 1);
     expect(() => readXlsx(bytes)).toThrow(new OoxmlError("entry too large: xl/worksheets/sheet1.xml"));
   });
 
@@ -126,17 +126,17 @@ describe("readXlsx on synthetic workbooks (IMP-05, IMP-06)", () => {
   });
 
   test("wanted entries above the archive total are refused", () => {
-    // nine sheet parts, each at the XML part cap, together above the total cap
+    // seventeen sheet parts, each at the XML part cap, together above the total cap
     const main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     const rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-    const ids = Array.from({ length: 9 }, (_, i) => i + 1);
+    const ids = Array.from({ length: 17 }, (_, i) => i + 1);
     let bytes = zip({
       "xl/workbook.xml": `<workbook xmlns="${main}" xmlns:r="${rel}"><sheets>${ids.map((i) => `<sheet name="S${i}" sheetId="${i}" r:id="rId${i}"/>`).join("")}</sheets></workbook>`,
       "xl/_rels/workbook.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${ids.map((i) => `<Relationship Id="rId${i}" Type="${rel}/worksheet" Target="worksheets/s${i}.xml"/>`).join("")}</Relationships>`,
       ...Object.fromEntries(ids.map((i) => [`xl/worksheets/s${i}.xml`, sheetXml("")])),
     });
-    for (const i of ids) bytes = declareSize(bytes, `xl/worksheets/s${i}.xml`, 8 * 1024 * 1024);
-    expect(() => readXlsx(bytes)).toThrow(/^entry too large: xl\/worksheets\/s8\.xml \(wanted entries exceed/);
+    for (const i of ids) bytes = declareSize(bytes, `xl/worksheets/s${i}.xml`, 4 * 1024 * 1024);
+    expect(() => readXlsx(bytes)).toThrow(/^entry too large: xl\/worksheets\/s16\.xml \(wanted entries exceed/);
   });
 
   test("rows and cells without r take the next position", () => {

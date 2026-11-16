@@ -9,10 +9,10 @@ import { unzipSync } from "fflate";
 export const OOXML_LIMITS = {
   entryBytes: 32 * 1024 * 1024,
   /** Inflated size of one XML part (`.xml`, `.rels`); the parse tree, not the bytes, is what costs memory. */
-  xmlEntryBytes: 8 * 1024 * 1024,
+  xmlEntryBytes: 4 * 1024 * 1024,
   totalBytes: 64 * 1024 * 1024,
   /** Element starts in one XML part, counted before it is parsed. */
-  maxXmlElements: 250_000,
+  maxXmlElements: 100_000,
   rows: 1_048_576,
   columns: 16_384,
   cells: 2_000_000,
