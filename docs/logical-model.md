@@ -51,7 +51,7 @@ One layout serves several variants (fixture `FX-L-S176-800@1` serves V04–V08);
 | UNKNOWN_TAIL | Tail not in the release |
 | UNCONFIGURED | Known tail with no assignment (`NO_ASSIGNMENTS`) or none covering the date (`DATE_GAP`) |
 | OVERLAP | More than one released assignment covers the date. None is selected |
-| PLANNED | Only a planned assignment, variant or layout covers the date |
+| PLANNED | Only a planned assignment, an unreleased variant or a planned or candidate layout revision covers the date |
 | SOURCE_INVALID | Configuration source missing, unreleased, not yet effective or expired; or aircraft/variant/layout disagree |
 | PARTIAL | Configuration resolved; some components have no single applicable part |
 | RESOLVED | Configuration resolved; every component has one applicable part |
@@ -65,7 +65,7 @@ For each location and component, candidate rules are those whose component match
 
 **Specificity is logical implication** (`src/domain/specificity.ts`). A rule's match set is every situation it accepts: (variant, layout revision, location, carpet, seam, upholstery). Rule A beats rule B only if A's match set is a strict subset of B's.
 
-- Variant, subtype and hardware are dependent, so those constraints are reduced to the feasible (variant, layout revision) pairs taken from the release.
+- Variant, subtype and hardware are dependent, so those constraints are reduced to the feasible (variant, layout revision) pairs taken from the release. Pairs come from released variants and usable layout revisions only: the variant lists the revision and the revision is neither planned nor candidate (`isUsablePair`). Unreleased data therefore never changes which of two released rules is more specific, nor the conflicts validation reports.
 - Location selectors are expanded to exact location ids per layout revision.
 - Carpet, seam and upholstery are independent; an unconstrained dimension accepts "unknown", a constrained one does not.
 - Exactly one undominated rule → resolved. Several (equal or incomparable) → AMBIGUOUS, no part selected. None eligible → NO_MATCH.

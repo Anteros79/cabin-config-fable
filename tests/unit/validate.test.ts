@@ -185,6 +185,40 @@ describe("referential findings", () => {
     expect(withCode(findings, "RULES_INCOMPARABLE").filter((f) => f.refs?.includes("X-MOHAWK") && f.refs.includes("X-V01-PRE"))).toEqual([]);
   });
 
+  it("RULES_INCOMPARABLE is raised when the settling rule's source lapses inside the pair's overlap", () => {
+    const pairOf = (f: Finding) => f.refs?.includes("X-MOHAWK") === true && f.refs.includes("X-V01-PRE");
+    const settledBy = (sourceId: string) =>
+      validateRelease(
+        fixtureContent((c) => {
+          c.rules.push(cushionOverAllSeats(c, "X-MOHAWK", { carpet: ["MOHAWK"] }));
+          c.rules.push(cushionOverAllSeats(c, "X-V01-PRE", { variant: ["V01"], seam: ["PRE"] }));
+          c.rules.push({ ...cushionOverAllSeats(c, "X-BOTH", { variant: ["V01"], carpet: ["MOHAWK"], seam: ["PRE"] }), sourceId });
+        }),
+      );
+    // FX-DOC-DEV expires on 2026-12-31 while the pair stays open-ended: from 2027 the pair is ambiguous at lookup
+    expect(withCode(settledBy("FX-DOC-DEV"), "RULES_INCOMPARABLE").filter(pairOf)).toHaveLength(1);
+    // an unreleased source never lets the third rule apply
+    expect(withCode(settledBy("FX-DOC-DRAFT"), "RULES_INCOMPARABLE").filter(pairOf)).toHaveLength(1);
+    // an open-ended released source settles it
+    expect(withCode(settledBy("FX-DOC-B"), "RULES_INCOMPARABLE").filter(pairOf)).toEqual([]);
+  });
+
+  it("an unreleased variant does not turn equal rules into a dominance or raise an incomparable pair", () => {
+    const findings = validateRelease(
+      fixtureContent((c) => {
+        c.rules.push(cushionOverAllSeats(c, "X-HW", { hardware: ["Recaro"], subtype: ["FX-MAX8"] }));
+        c.rules.push(cushionOverAllSeats(c, "X-VAR", { variant: ["V01"] }));
+        const v01 = must(
+          c.variants.find((v) => v.id === "V01"),
+          "V01",
+        );
+        c.variants.push({ ...v01, id: "V99-DRAFT", released: false });
+      }),
+    );
+    const pair = (f: Finding) => f.refs?.includes("X-HW") === true && f.refs.includes("X-VAR");
+    expect(findings.filter(pair).map((f) => f.code)).toEqual(["EQUAL_RULES"]);
+  });
+
   it("RULES_INCOMPARABLE is not raised for rules whose validity does not overlap, or for unreleased rules", () => {
     const findings = validateRelease(
       fixtureContent((c) => {

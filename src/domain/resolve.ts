@@ -1,7 +1,7 @@
 import { isIsoDate, withinInclusive } from "./dates.ts";
 import { expandKit } from "./kits.ts";
 import { compareCodePoints } from "./order.ts";
-import { type AssignmentContext, buildIndex, matchesContext, type ReleaseIndex, undominated } from "./specificity.ts";
+import { type AssignmentContext, buildIndex, isReleasedPair, matchesContext, type ReleaseIndex, undominated } from "./specificity.ts";
 import type {
   Aircraft,
   ApplicabilityRule,
@@ -93,11 +93,21 @@ export function configurationProblems(aircraft: Aircraft, variant: MaintenanceVa
 }
 
 /**
+ * Is this assignment a released configuration (as opposed to a planned one)? A released assignment
+ * of a released variant and a layout revision that is neither planned nor candidate. Whether the
+ * variant lists the revision is not part of it: a released assignment pairing them wrongly is an
+ * inconsistent configuration (`configurationProblems`), not a planned one. Shared by lookup and by
+ * release validation (`ASSIGNMENT_INCONSISTENT`).
+ */
+export function isReleasedConfiguration(assignment: TailAssignment, variant: MaintenanceVariant | undefined, revision: LayoutRevision | undefined): boolean {
+  return assignment.status === "released" && variant !== undefined && revision !== undefined && isReleasedPair(variant, revision);
+}
+
+/**
  * Resolve the effective configuration and applicable parts for a tail on a date.
  * Never guesses: gaps, overlaps, planned layouts and invalid sources are reported as such.
  */
 export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unknown): LookupResult {
-  const index = buildIndex(release);
   const tail = normalizeTail(rawTail);
   const checkDate = typeof rawDate === "string" ? rawDate.trim() : "";
   const common = base(tail, checkDate, release.id);
@@ -111,6 +121,7 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
     return { ...common, state: "INVALID_INPUT", reasonCode: "DATE_INVALID", message: "The check date must be a real calendar date (YYYY-MM-DD)." };
   }
 
+  const index = buildIndex(release);
   const aircraft = index.aircraft.get(tail);
   if (!aircraft) {
     return { ...common, state: "UNKNOWN_TAIL", reasonCode: "TAIL_NOT_IN_REFERENCE", message: `Tail ${tail} is not in the reference data.` };
@@ -130,8 +141,7 @@ export function lookup(release: ReferenceRelease, rawTail: unknown, rawDate: unk
   }
 
   const covering = all.filter((a) => withinInclusive(checkDate, a.effectiveFrom, a.effectiveTo));
-  const isReleased = (a: TailAssignment) =>
-    a.status === "released" && index.variants.get(a.variantId)?.released === true && index.layoutRevisions.get(a.layoutRevisionId)?.status === "released";
+  const isReleased = (a: TailAssignment) => isReleasedConfiguration(a, index.variants.get(a.variantId), index.layoutRevisions.get(a.layoutRevisionId));
   const released = covering.filter(isReleased);
   const planned = covering.filter((a) => !isReleased(a));
 

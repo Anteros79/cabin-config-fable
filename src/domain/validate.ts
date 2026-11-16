@@ -1,11 +1,10 @@
 import { intervalsOverlap } from "./dates.ts";
 import { validateKits } from "./kits.ts";
 import { compareCodePoints } from "./order.ts";
-import { configurationProblems } from "./resolve.ts";
+import { configurationProblems, isReleasedConfiguration } from "./resolve.ts";
 import { structuralFindings } from "./schema.ts";
 import {
   buildIndex,
-  buildMatchSet,
   intersectMatchSets,
   isStrictlyMoreSpecific,
   isSubset,
@@ -15,7 +14,7 @@ import {
   matchSetsIntersect,
   reachableRevisions,
 } from "./specificity.ts";
-import type { ApplicabilityRule, ContextConstraint, Finding, LocationSelector, ReleaseContent } from "./types.ts";
+import type { ApplicabilityRule, ContextConstraint, Finding, LocationSelector, ReleaseContent, SourceArtifact } from "./types.ts";
 
 function duplicates<T>(items: T[], key: (item: T) => string): string[] {
   const seen = new Set<string>();
@@ -33,11 +32,21 @@ const earlierDate = (a: string, b: string) => (compareCodePoints(a, b) <= 0 ? a 
 
 const NO_MATCH: MatchSet = { pairs: new Map(), carpet: null, seam: null, upholstery: null, empty: true };
 
-/** Does a validity interval cover every date from `from` to `to` (null = open-ended)? */
+/** Does the interval `start`..`end` (null end = open-ended) cover every date from `from` to `to` (null = open-ended)? */
+function intervalCovers(start: string | null, end: string | null, from: string, to: string | null): boolean {
+  if (start !== null && compareCodePoints(start, from) > 0) return false;
+  if (end === null) return true;
+  return to !== null && compareCodePoints(end, to) >= 0;
+}
+
+/** Does a rule's own validity cover every date from `from` to `to`? */
 function validityCovers(rule: ApplicabilityRule, from: string, to: string | null): boolean {
-  if (rule.effectiveFrom > from) return false;
-  if (rule.effectiveTo === null) return true;
-  return to !== null && rule.effectiveTo >= to;
+  return intervalCovers(rule.effectiveFrom, rule.effectiveTo, from, to);
+}
+
+/** Is the source a rule cites released and valid on every date from `from` to `to`? */
+function sourceCovers(source: SourceArtifact | undefined, from: string, to: string | null): boolean {
+  return source !== undefined && source.released && intervalCovers(source.effectiveFrom, source.expiresOn, from, to);
 }
 
 /**
@@ -197,8 +206,8 @@ export function validateRelease(input: unknown): Finding[] {
     if (!revision) err("ORPHAN", `Assignment ${ref} refers to unknown layout revision ${a.layoutRevisionId}.`, [ref]);
     else if (variant && !variant.layoutRevisionIds.includes(a.layoutRevisionId))
       err("ORPHAN", `Assignment ${ref} pairs variant ${a.variantId} with layout revision ${a.layoutRevisionId}, which that variant does not list.`, [ref]);
-    // as in lookup, only a released assignment of a released variant and layout revision is a configuration
-    if (plane && variant && revision && a.status === "released" && variant.released && revision.status === "released") {
+    // as in lookup, only a released configuration is checked; a planned one is never used
+    if (plane && variant && revision && isReleasedConfiguration(a, variant, revision)) {
       const problems = configurationProblems(plane, variant, revision);
       if (problems.length > 0)
         conflict("ASSIGNMENT_INCONSISTENT", `Assignment ${ref} for tail ${a.tail}: ${problems.join(" ")} Lookups for this configuration are refused.`, [
@@ -326,14 +335,21 @@ export function validateRelease(input: unknown): Finding[] {
         const bSet = ruleSet(b.id);
         if (bSet.empty || !intervalsOverlap(a.effectiveFrom, a.effectiveTo, b.effectiveFrom, b.effectiveTo)) continue;
         if (!matchSetsIntersect(aSet, bSet) || isSubset(aSet, bSet) || isSubset(bSet, aSet)) continue;
-        // a third rule more specific than both, covering their whole overlap for the whole shared validity, settles it
+        // a third rule more specific than both, covering their whole overlap for the whole shared validity, settles it,
+        // but only if its source is valid for that whole time too: once the source lapses the pair is ambiguous again
         const shared = intersectMatchSets(aSet, bSet);
         const from = laterDate(a.effectiveFrom, b.effectiveFrom);
         const to = a.effectiveTo === null ? b.effectiveTo : b.effectiveTo === null ? a.effectiveTo : earlierDate(a.effectiveTo, b.effectiveTo);
         const settled = list.some((c) => {
           if (c === a || c === b) return false;
           const cSet = ruleSet(c.id);
-          return isStrictlyMoreSpecific(cSet, aSet) && isStrictlyMoreSpecific(cSet, bSet) && isSubset(shared, cSet) && validityCovers(c, from, to);
+          return (
+            isStrictlyMoreSpecific(cSet, aSet) &&
+            isStrictlyMoreSpecific(cSet, bSet) &&
+            isSubset(shared, cSet) &&
+            validityCovers(c, from, to) &&
+            sourceCovers(index.sources.get(c.sourceId), from, to)
+          );
         });
         if (settled) continue;
         const pair = [a.id, b.id].sort(compareCodePoints);
@@ -365,7 +381,7 @@ export function validateRelease(input: unknown): Finding[] {
       warn("SUBSTITUTE_UNUSED", `${ref} stands in for ${s.primaryPartNo}, which no rule for ${s.componentId} selects.`, [s.id]);
       continue;
     }
-    const subSet = buildMatchSet(content, revisions, s.constraint, s.locations, s.componentId);
+    const subSet = index.substituteMatch.get(s.id) ?? NO_MATCH;
     if (subSet.empty) err("UNREACHABLE_SUBSTITUTE", `${ref} cannot match any location in any configuration.`, [s.id]);
     else if (!content.rules.some((r) => r.componentId === s.componentId && r.partNo === s.primaryPartNo && matchSetsIntersect(ruleSet(r.id), subSet)))
       warn("SUBSTITUTE_UNREACHABLE", `${ref} covers no location where a rule selects ${s.primaryPartNo}, so it can never be offered.`, [s.id]);

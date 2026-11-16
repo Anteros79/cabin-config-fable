@@ -28,8 +28,10 @@ import type {
  *
  * Variant, subtype and hardware are not independent (a variant fixes its subtype and hardware),
  * so those constraints are first reduced to the set of feasible (variant, layout revision) pairs
- * taken from the release. Location selectors are expanded to exact location ids per layout
- * revision. Carpet, seam and upholstery are independent dimensions whose universe is the declared
+ * taken from the release. Only usable pairs count (`isUsablePair`: a released variant and a layout
+ * revision it lists that is neither planned nor candidate), so unreleased data can never change
+ * which of two released rules is more specific (D2). Location selectors are expanded to exact
+ * location ids per layout revision. Carpet, seam and upholstery are independent dimensions whose universe is the declared
  * vocabulary plus "unknown"; an unconstrained dimension accepts unknown, a constrained one does not.
  */
 export interface MatchSet {
@@ -71,7 +73,22 @@ export interface ReleaseIndex {
   dominance: Map<string, boolean>;
 }
 
+/** Indexes of frozen releases only; see `buildIndex`. */
 const indexCache = new WeakMap<ReleaseContent, ReleaseIndex>();
+
+/**
+ * A released variant paired with a layout revision that is neither planned nor candidate, whatever
+ * the variant lists. This is the status half of `isUsablePair`; `lookup` uses it to tell a released
+ * configuration from a planned one, so the two cannot drift.
+ */
+export function isReleasedPair(variant: MaintenanceVariant, revision: LayoutRevision): boolean {
+  return variant.released && revision.status !== "planned" && revision.status !== "candidate";
+}
+
+/** A (variant, layout revision) pair that released data can resolve: released, and listed by the variant (D2). */
+export function isUsablePair(variant: MaintenanceVariant, revision: LayoutRevision): boolean {
+  return isReleasedPair(variant, revision) && variant.layoutRevisionIds.includes(revision.id);
+}
 
 function toMap<T>(items: T[], key: (item: T) => string): Map<string, T> {
   const map = new Map<string, T>();
@@ -128,13 +145,13 @@ function variantSatisfies(constraint: ContextConstraint, variant: MaintenanceVar
   return true;
 }
 
-/** Layout revisions some variant can pair with under this constraint (selectors and components aside). */
+/** Layout revisions some variant can pair with, in a usable pair, under this constraint (selectors and components aside). */
 export function reachableRevisions(release: ReleaseContent, revisions: Map<string, LayoutRevision>, constraint: ContextConstraint): LayoutRevision[] {
   const reached = new Map<string, LayoutRevision>();
   for (const variant of release.variants) {
     for (const revisionId of variant.layoutRevisionIds) {
       const revision = revisions.get(revisionId);
-      if (revision && variantSatisfies(constraint, variant, revisionId)) reached.set(revisionId, revision);
+      if (revision && isUsablePair(variant, revision) && variantSatisfies(constraint, variant, revisionId)) reached.set(revisionId, revision);
     }
   }
   return [...reached.values()];
@@ -152,7 +169,7 @@ export function buildMatchSet(
     for (const revisionId of variant.layoutRevisionIds) {
       if (!variantSatisfies(constraint, variant, revisionId)) continue;
       const revision = revisions.get(revisionId);
-      if (!revision) continue;
+      if (!revision || !isUsablePair(variant, revision)) continue;
       const ids = new Set<string>();
       for (const loc of revision.locations) {
         if (!loc.componentIds.includes(componentId)) continue;
@@ -245,6 +262,12 @@ export function matchesContext(constraint: ContextConstraint, ctx: AssignmentCon
   );
 }
 
+/**
+ * Index a release. The index (match sets, dominance) is derived from the content, so it is cached
+ * only when the release is frozen: content mutated after indexing would otherwise be answered from
+ * a stale index (DOM-22). Releases loaded from the reference store are deep-frozen; anything else
+ * (staged content under validation, test releases) is indexed afresh on every call.
+ */
 export function buildIndex(release: ReleaseContent): ReleaseIndex {
   const cached = indexCache.get(release);
   if (cached) return cached;
@@ -283,7 +306,7 @@ export function buildIndex(release: ReleaseContent): ReleaseIndex {
     substituteMatch,
     dominance: new Map(),
   };
-  indexCache.set(release, index);
+  if (Object.isFrozen(release)) indexCache.set(release, index);
   return index;
 }
 

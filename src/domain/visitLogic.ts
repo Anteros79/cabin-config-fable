@@ -18,6 +18,9 @@ export class DomainError extends Error {
  * pointers to live reference records, so later reference releases cannot change it.
  */
 export function buildSnapshot(release: ReferenceRelease, result: LookupResult, capturedAt: string): VisitSnapshot {
+  if (result.referenceReleaseId !== release.id) {
+    throw new DomainError("RELEASE_MISMATCH", "The lookup result does not belong to this reference release.", 500);
+  }
   if ((result.state !== "RESOLVED" && result.state !== "PARTIAL") || !result.context || !result.resolution) {
     throw new DomainError("CONFIGURATION_NOT_RESOLVED", `A visit needs an unambiguous valid configuration. ${result.message}`, 422, {
       state: result.state,

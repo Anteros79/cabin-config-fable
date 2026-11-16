@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lookup } from "../src/domain/resolve.ts";
-import type { LookupResult, ReferenceRelease, ReleaseContent, Visit, VisitRecord, VisitSnapshot } from "../src/domain/types.ts";
+import type { ApplicabilityRule, LookupResult, ReferenceRelease, ReleaseContent, Visit, VisitRecord, VisitSnapshot } from "../src/domain/types.ts";
 import { validateRelease } from "../src/domain/validate.ts";
 import { buildSnapshot, deriveRecord } from "../src/domain/visitLogic.ts";
 import { buildStagedRelease, contentHash, type StagedBuild } from "../src/importer/assemble.ts";
@@ -34,6 +34,43 @@ export function asRelease(content: ReleaseContent, id = "TEST-REL"): ReferenceRe
 
 export function fixtureRelease(mutate?: (content: ReleaseContent) => void): ReferenceRelease {
   return asRelease(fixtureContent(mutate));
+}
+
+/** A released fixture-namespace CUSHION rule, valid from 2024-01-01, citing FX-DOC-A unless `extra` says otherwise. */
+export function cushionRule(
+  id: string,
+  partNo: string,
+  constraint: ApplicabilityRule["constraint"],
+  locations: ApplicabilityRule["locations"],
+  extra: Partial<ApplicabilityRule> = {},
+): ApplicabilityRule {
+  return {
+    id,
+    namespace: "fixture",
+    componentId: "CUSHION",
+    partNo,
+    qtyPerReplacement: 1,
+    unit: "EA",
+    constraint,
+    locations,
+    released: true,
+    effectiveFrom: "2024-01-01",
+    effectiveTo: null,
+    sourceId: "FX-DOC-A",
+    ...extra,
+  };
+}
+
+/** The fixture release with its V01 CUSHION rules replaced by `rules` (parts added as needed). */
+export function withCushionRules(rules: ApplicabilityRule[], more?: (c: ReleaseContent) => void): ReferenceRelease {
+  return fixtureRelease((c) => {
+    c.rules = c.rules.filter((r) => !(r.componentId === "CUSHION" && r.constraint.variant?.includes("V01")));
+    for (const r of rules) {
+      if (!c.parts.some((p) => p.partNo === r.partNo)) c.parts.push({ partNo: r.partNo, namespace: "fixture", description: r.partNo });
+      c.rules.push(r);
+    }
+    more?.(c);
+  });
 }
 
 export function errorsOf(content: ReleaseContent): string[] {

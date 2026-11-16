@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
 import { buildIndex, isStrictlyMoreSpecific, isSubset } from "../../src/domain/specificity.ts";
 import type { ApplicabilityRule, ReleaseContent } from "../../src/domain/types.ts";
-import { asRelease, entry, fixtureContent, fixtureRelease, partAt, resolutionAt } from "../helpers.ts";
+import { asRelease, entry, fixtureContent, fixtureRelease, partAt, resolutionAt, cushionRule as rule, withCushionRules as withRules } from "../helpers.ts";
 
 const release = fixtureRelease();
 
@@ -68,6 +68,27 @@ describe("lookup states", () => {
     const r = lookup(bad, "N100TL", "2026-11-12");
     expect(r.state).toBe("SOURCE_INVALID");
     expect(r.reasonCode).toBe("INCONSISTENT_CONFIGURATION");
+  });
+
+  it("refuses a released pair the variant does not list as inconsistent, not as planned", () => {
+    const bad = fixtureRelease((c) => (c.assignments.find((a) => a.tail === "N100TL")!.layoutRevisionId = "FX-L-S170@1"));
+    const r = lookup(bad, "N100TL", "2026-11-12");
+    expect(r.state).toBe("SOURCE_INVALID");
+    expect(r.reasonCode).toBe("INCONSISTENT_CONFIGURATION");
+    expect(r.message).toMatch(/not valid for variant V01/);
+  });
+
+  it("treats an assignment of an unreleased variant or a candidate layout revision as planned", () => {
+    const draftVariant = fixtureRelease((c) => (c.variants.find((v) => v.id === "V01")!.released = false));
+    expect(lookup(draftVariant, "N100TL", "2026-11-12").state).toBe("PLANNED");
+    const candidateRevision = fixtureRelease((c) => (c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1")!.status = "candidate"));
+    expect(lookup(candidateRevision, "N100TL", "2026-11-12").state).toBe("PLANNED");
+  });
+
+  it("checks the tail and date before it indexes the release", () => {
+    const broken = { ...release, rules: null } as unknown as typeof release;
+    expect(lookup(broken, "", "2026-11-12").reasonCode).toBe("TAIL_MISSING");
+    expect(lookup(broken, "N100TL", "2026-02-30").reasonCode).toBe("DATE_INVALID");
   });
 });
 
@@ -162,39 +183,6 @@ describe("mandatory fixture parts", () => {
 });
 
 // --- synthetic rule sets for specificity -----------------------------------------------------
-function rule(
-  id: string,
-  partNo: string,
-  constraint: ApplicabilityRule["constraint"],
-  locations: ApplicabilityRule["locations"],
-  extra: Partial<ApplicabilityRule> = {},
-): ApplicabilityRule {
-  return {
-    id,
-    namespace: "fixture",
-    componentId: "CUSHION",
-    partNo,
-    qtyPerReplacement: 1,
-    unit: "EA",
-    constraint,
-    locations,
-    released: true,
-    effectiveFrom: "2024-01-01",
-    effectiveTo: null,
-    sourceId: "FX-DOC-A",
-    ...extra,
-  };
-}
-function withRules(rules: ApplicabilityRule[], more?: (c: ReleaseContent) => void) {
-  return fixtureRelease((c) => {
-    c.rules = c.rules.filter((r) => !(r.componentId === "CUSHION" && r.constraint.variant?.includes("V01")));
-    for (const r of rules) {
-      if (!c.parts.some((p) => p.partNo === r.partNo)) c.parts.push({ partNo: r.partNo, namespace: "fixture", description: r.partNo });
-      c.rules.push(r);
-    }
-    more?.(c);
-  });
-}
 const ALL_SEATS = { kind: "SEAT" as const };
 const at3A = (rel: ReturnType<typeof withRules>) => resolutionAt(lookup(rel, "N100TL", "2026-11-12"), "SEAT:3A", "CUSHION");
 
