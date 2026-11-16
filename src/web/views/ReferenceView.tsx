@@ -1,31 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
-import { ApiError, api, type ReferenceInfo } from "../api.ts";
+import { api } from "../api.ts";
+import { useResource } from "../hooks/useResource.ts";
 
 const SEVERITY: Record<string, string> = { error: "Blocking", conflict: "Conflict / unresolved", warning: "Warning", info: "Information" };
 
 /** What the reference data is, where it came from, and what is still missing. */
 export function ReferenceView() {
-  const [info, setInfo] = useState<ReferenceInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setInfo(await api.reference());
-    } catch (e) {
-      setError(e instanceof ApiError && e.kind === "network" ? "The server could not be reached. Retry when the connection is back." : (e as Error).message);
-    }
-  }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+  const res = useResource("reference", (signal) => api.reference({ signal }));
+  const info = res.data ?? null;
+  const error =
+    res.state !== "error" ? null : res.error.kind === "network" ? "The server could not be reached. Retry when the connection is back." : res.error.message;
   if (error) {
     return (
       <section className="panel">
         <h2>Reference data</h2>
         <div className="alert" role="alert">
           <p>{error}</p>
-          <button type="button" onClick={load}>
+          <button type="button" onClick={res.reload}>
             Retry
           </button>
         </div>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
 import type { Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
@@ -61,6 +61,26 @@ describe("CheckView writes", () => {
     expect(creates[1]?.body?.idempotencyKey).toBe(creates[0]?.body?.idempotencyKey);
   });
 
+  it("an empty tail is looked up and reported as invalid input, and the route lookup comes back after it", async () => {
+    const result = lookup(release, "N100TL", "2026-11-12");
+    const invalid = { ...lookup(release, "", "2026-11-12"), state: "INVALID_INPUT" };
+    const sent = stubFetch((_method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      return { body: url.includes("tail=N100TL") ? result : invalid };
+    });
+    const navigate = vi.fn();
+    const { container } = render(<CheckView visitId={null} tail="N100TL" date="2026-11-12" navigate={navigate} visualProfiles={[]} />);
+    await waitFor(() => expect(container.querySelector(".status-card")?.getAttribute("data-state")).toBe(result.state));
+    fireEvent.change(screen.getByLabelText("Tail number"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Look up configuration" }));
+    await waitFor(() => expect(container.querySelector(".status-card")?.getAttribute("data-state")).toBe("INVALID_INPUT"));
+    expect(navigate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Tail number"), { target: { value: "N100TL" } });
+    fireEvent.click(screen.getByRole("button", { name: "Look up configuration" }));
+    await waitFor(() => expect(container.querySelector(".status-card")?.getAttribute("data-state")).toBe(result.state));
+    expect(sent.filter((s) => s.url.startsWith("/api/lookup")).map((s) => s.url.includes("tail=N100TL"))).toEqual([true, false, true]);
+  });
+
   it("Start visit is disabled while the visit is being created", async () => {
     const result = lookup(release, "N100TL", "2026-11-12");
     const answer = deferred<{ status: number; body: unknown }>();
@@ -98,6 +118,53 @@ describe("CheckView writes", () => {
     expect(workCount(document.body)).toContain("(2)");
     fireEvent.click(screen.getByRole("button", { name: removeLabel(kit) }));
     await waitFor(() => expect(workCount(document.body)).toContain("(1)"));
+    expect(screen.queryByRole("button", { name: removeLabel(kit) })).toBeNull();
+  });
+
+  it("navigating from visit A to visit B never shows A under B's URL, and writes go to B", async () => {
+    const other: Visit = { ...base, id: "visit-2", number: 2, records: [cushion] };
+    const slowA = deferred<{ body: unknown }>();
+    const sent = stubFetch((method, url): Answer => {
+      if (method === "GET" && url === `/api/visits/${base.id}`) return slowA.promise;
+      if (method === "GET" && url === `/api/visits/${other.id}`) return { body: { visit: other } };
+      return { body: { visit: stateOf(other, { version: other.version + 1, records: [] }), replayed: false } };
+    });
+    const view = render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    view.rerender(<CheckView visitId={other.id} navigate={vi.fn()} visualProfiles={[]} />);
+    await screen.findByRole("heading", { name: /^Visit #2/ });
+    slowA.resolve({ body: { visit: base } });
+    await act(async () => {});
+    expect(screen.getByRole("heading", { name: /^Visit #2/ })).toBeInTheDocument();
+    expect(workCount(document.body)).toContain("(1)");
+    fireEvent.click(screen.getByRole("button", { name: removeLabel(cushion) }));
+    await waitFor(() => expect(workCount(document.body)).toContain("(0)"));
+    const writes = sent.filter((s) => s.method === "POST");
+    expect(writes.map((s) => s.url)).toEqual([`/api/visits/${other.id}/records/remove`]);
+  });
+
+  it("a conflict reload that answers after a newer write answer does not bring back the older version", async () => {
+    const loaded = { ...base, version: 5 };
+    const reload = deferred<{ body: unknown }>();
+    let gets = 0;
+    stubFetch((method, url, body): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (method === "GET") {
+        gets += 1;
+        return gets === 1 ? { body: { visit: loaded } } : reload.promise;
+      }
+      if (body?.componentId === cushion.componentId)
+        return { status: 409, body: { error: { code: "STALE_RECORD", message: "The record changed since it was read.", details: null } } };
+      return { body: { visit: stateOf(base, { version: 7, records: [cushion] }), replayed: false } };
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: removeLabel(cushion) }));
+    await waitFor(() => expect(gets).toBe(2));
+    // The write answer (version 7) arrives while the conflict reload is still in flight.
+    fireEvent.click(screen.getByRole("button", { name: removeLabel(kit) }));
+    await waitFor(() => expect(workCount(document.body)).toContain("(1)"));
+    reload.resolve({ body: { visit: { ...base, version: 6 } } });
+    await act(async () => {});
+    expect(workCount(document.body)).toContain("(1)");
     expect(screen.queryByRole("button", { name: removeLabel(kit) })).toBeNull();
   });
 

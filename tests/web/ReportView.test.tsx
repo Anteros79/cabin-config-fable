@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildReport } from "../../src/domain/report.ts";
 import { ReportView } from "../../src/web/views/ReportView.tsx";
@@ -30,6 +30,20 @@ describe("ReportView linked notes", () => {
     answer.resolve({ status: 201, body: { visit: state, replayed: false } });
     await screen.findByText(/Linked note added/);
     expect(sent.filter((s) => s.method === "POST")).toHaveLength(1);
+  });
+
+  it("a late report answer for the previous visit is not shown under the next visit", async () => {
+    const other = { ...visit, id: "visit-2", number: 2 };
+    const otherEnvelope = { report: buildReport(other, "DRAFT_PREVIEW", "2026-11-12T12:03:00.000Z"), basisSha256: null, linkedEvents: [] };
+    const slow = deferred<{ body: unknown }>();
+    stubFetch((_method, url): Answer => (url === `/api/visits/${visit.id}/report` ? slow.promise : { body: otherEnvelope }));
+    const view = render(<ReportView visitId={visit.id} />);
+    view.rerender(<ReportView visitId={other.id} />);
+    await screen.findByText("#2");
+    slow.resolve({ body: envelope });
+    await act(async () => {});
+    expect(screen.getByText("#2")).toBeInTheDocument();
+    expect(screen.queryByText("#1")).toBeNull();
   });
 
   it("a lost response on a linked note says the outcome is unknown and offers a safe retry", async () => {

@@ -39,6 +39,12 @@ describe("parseRoute", () => {
     expect(parseRoute("#/visits?status=NOPE&page=-4")).toEqual({ name: "visits", status: null, q: "", page: 1 });
     expect(parseRoute("#/visits?page=abc")).toEqual({ name: "visits", status: null, q: "", page: 1 });
   });
+
+  it("caps the page at 1,000,000 so the offset stays a safe integer", () => {
+    expect(parseRoute("#/visits?page=1e22")).toEqual({ name: "visits", status: null, q: "", page: 1_000_000 });
+    expect(parseRoute("#/visits?page=1000001")).toMatchObject({ page: 1_000_000 });
+    expect(parseRoute("#/visits?page=999999")).toMatchObject({ page: 999_999 });
+  });
 });
 
 describe("formatRoute", () => {

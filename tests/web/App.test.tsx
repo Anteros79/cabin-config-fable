@@ -136,6 +136,38 @@ describe("App routing", () => {
     expect(screen.getByRole("link", { name: "Resume the last draft visit" })).toBeInTheDocument();
   });
 
+  it("the health poll pauses while the page is hidden and checks at once when it is shown again", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let visibility: DocumentVisibilityState = "visible";
+    const restore = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
+    const show = async (next: DocumentVisibilityState) => {
+      visibility = next;
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    };
+    try {
+      const sent = stubApp();
+      const healthChecks = () => sent.filter((s) => s.url.startsWith("/api/health")).length;
+      render(<App />);
+      await waitFor(() => expect(healthChecks()).toBe(1));
+      await act(async () => vi.advanceTimersByTime(15000));
+      expect(healthChecks()).toBe(2);
+      await show("hidden");
+      await act(async () => vi.advanceTimersByTime(60000));
+      expect(healthChecks()).toBe(2);
+      await show("visible");
+      expect(healthChecks()).toBe(3);
+      await act(async () => vi.advanceTimersByTime(15000));
+      expect(healthChecks()).toBe(4);
+    } finally {
+      vi.useRealTimers();
+      if (restore) Object.defineProperty(document, "visibilityState", restore);
+      else delete (document as { visibilityState?: unknown }).visibilityState;
+    }
+  });
+
   it("VisitsView filter and page come from and go to the URL", async () => {
     const items = Array.from({ length: 3 }, (_, i) => ({
       id: ID,

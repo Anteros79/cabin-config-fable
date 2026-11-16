@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { LayoutCategory, VisualProfile } from "../../domain/types.ts";
-import { ApiError, api, type LayoutDetail, type LayoutSummary } from "../api.ts";
+import { useMemo, useState } from "react";
+import type { VisualProfile } from "../../domain/types.ts";
+import { api, type LayoutSummary } from "../api.ts";
 import { Inspector } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
+import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
 
 const STATUS_TEXT: Record<string, string> = {
@@ -13,26 +14,21 @@ const STATUS_TEXT: Record<string, string> = {
 
 /** Explore layouts without a tail. Candidate layouts are shown with their unverified status. */
 export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | null; visualProfiles: VisualProfile[] }) {
-  const [list, setList] = useState<{ layouts: LayoutSummary[]; layoutCategories: LayoutCategory[] } | null>(null);
-  const [detail, setDetail] = useState<LayoutDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [selection, setSelection] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      if (layoutId) {
-        setDetail(null);
-        setSelection(null);
-        setDetail(await api.layout(layoutId));
-      } else setList(await api.layouts());
-    } catch (e) {
-      setError(e instanceof ApiError && e.kind === "network" ? "The server could not be reached. Retry when the connection is back." : (e as Error).message);
-    }
-  }, [layoutId]);
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const listRes = useResource(layoutId ? null : "layouts", (signal) => api.layouts({ signal }));
+  const detailRes = useResource(layoutId ? `layout:${layoutId}` : null, (signal) => api.layout(layoutId ?? "", { signal }));
+  const list = listRes.data;
+  const detail = detailRes.data;
+  const failed = layoutId ? detailRes : listRes;
+  const error =
+    failed.state !== "error"
+      ? null
+      : failed.error.kind === "network"
+        ? "The server could not be reached. Retry when the connection is back."
+        : failed.error.message;
+  // The selection belongs to the layout it was made on; another layout starts with none.
+  const [picked, setPicked] = useState<{ layoutId: string | null; locationId: string } | null>(null);
+  const selection = picked && picked.layoutId === layoutId ? picked.locationId : null;
+  const setSelection = (locationId: string) => setPicked({ layoutId, locationId });
 
   const workspace: Workspace | null = useMemo(() => {
     if (!detail) return null;
@@ -56,7 +52,7 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
         <h2>Layouts</h2>
         <div className="alert" role="alert">
           <p>{error}</p>
-          <button type="button" onClick={load}>
+          <button type="button" onClick={failed.reload}>
             Retry
           </button>
         </div>

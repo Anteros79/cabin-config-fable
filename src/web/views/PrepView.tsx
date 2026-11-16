@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { PrepOverview } from "../../domain/prep.ts";
+import { useMemo, useState } from "react";
 import { rulesNotUsedLine } from "../../domain/report.ts";
-import { ApiError, api } from "../api.ts";
+import { api } from "../api.ts";
+import { useResource } from "../hooks/useResource.ts";
 
 interface Props {
   visitId: string | null;
@@ -14,26 +14,21 @@ interface Props {
  * Coverage is where a part would apply; it is never replacements made.
  */
 export function PrepView({ visitId, tail, date }: Props) {
-  const [prep, setPrep] = useState<PrepOverview | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [component, setComponent] = useState("");
   const [only, setOnly] = useState("");
 
-  const load = useCallback(async () => {
-    setError(null);
-    setPrep(null);
-    try {
-      if (visitId) setPrep(await api.visitPreparation(visitId));
-      else if (tail && date) setPrep(await api.preparation(tail, date));
-      else setError("Look up a tail and date first, then open the preparation list from the result.");
-    } catch (e) {
-      setError(e instanceof ApiError && e.kind === "network" ? "The server could not be reached. Retry when the connection is back." : (e as Error).message);
-    }
-  }, [visitId, tail, date]);
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const key = visitId ? `prep:${visitId}` : tail && date ? `prep:${tail}:${date}` : null;
+  const res = useResource(key, (signal) => (visitId ? api.visitPreparation(visitId, { signal }) : api.preparation(tail ?? "", date ?? "", { signal })));
+  const prep = res.data ?? null;
+  const error =
+    res.state === "idle"
+      ? "Look up a tail and date first, then open the preparation list from the result."
+      : res.state !== "error"
+        ? null
+        : res.error.kind === "network"
+          ? "The server could not be reached. Retry when the connection is back."
+          : res.error.message;
 
   const components = useMemo(() => [...new Map((prep?.lines ?? []).map((l) => [l.componentId, l.componentName])).entries()], [prep]);
   const lines = useMemo(() => {
@@ -69,9 +64,13 @@ export function PrepView({ visitId, tail, date }: Props) {
       {error && (
         <div className="alert" role="alert">
           <p>{error}</p>
-          <button type="button" onClick={load}>
-            Retry
-          </button>{" "}
+          {res.state === "error" && (
+            <>
+              <button type="button" onClick={res.reload}>
+                Retry
+              </button>{" "}
+            </>
+          )}
           <a href="#/check">Go to the appearance check</a>
         </div>
       )}

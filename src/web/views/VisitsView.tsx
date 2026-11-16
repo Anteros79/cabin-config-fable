@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import type { VisitSummary } from "../../domain/types.ts";
-import { ApiError, api } from "../api.ts";
+import { useEffect, useState } from "react";
+import { api } from "../api.ts";
+import { useResource } from "../hooks/useResource.ts";
 import { formatRoute, type Route } from "../routes.ts";
 
 const PAGE = 25;
@@ -25,32 +25,26 @@ export function VisitsView({
     setQuery(routeQ);
   }, [routeStatus, routeQ]);
   const offset = (page - 1) * PAGE;
-  const [data, setData] = useState<{ items: VisitSummary[]; total: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const list = useResource(`visits:${routeStatus ?? ""}:${routeQ}:${page}`, (signal) =>
+    api.visits({ status: routeStatus ?? undefined, q: routeQ || undefined, limit: PAGE, offset }, { signal }),
+  );
+  const data = list.data;
+  const busy = list.state === "loading";
+  const error =
+    list.state !== "error"
+      ? null
+      : list.error.kind === "network"
+        ? "The server could not be reached. Saved visits are still stored; retry when the connection is back."
+        : list.error.message;
   const go = (next: Partial<Extract<Route, { name: "visits" }>>) => navigate(formatRoute({ name: "visits", status: routeStatus, q: routeQ, page, ...next }));
-
-  const load = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      setData(await api.visits({ status: routeStatus ?? undefined, q: routeQ || undefined, limit: PAGE, offset }));
-    } catch (e) {
-      setError(
-        e instanceof ApiError && e.kind === "network"
-          ? "The server could not be reached. Saved visits are still stored; retry when the connection is back."
-          : (e as Error).message,
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, [routeStatus, routeQ, offset]);
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
+  // A page past the end (an old link, or visits removed since) is replaced by the last page.
+  const outOfRange = list.state === "ready" && page > pages;
+  useEffect(() => {
+    if (outOfRange) navigate(formatRoute({ name: "visits", status: routeStatus, q: routeQ, page: pages }));
+  }, [outOfRange, navigate, routeStatus, routeQ, pages]);
 
   return (
     <section className="panel" aria-labelledby="visits-h">
@@ -74,12 +68,14 @@ export function VisitsView({
           <span>Search tail, technician, date, variant or visit number</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <button type="submit">Apply</button>
+        <button type="submit" disabled={busy}>
+          Apply
+        </button>
       </form>
       {error && (
         <div className="alert" role="alert">
           <p>{error}</p>
-          <button type="button" onClick={load}>
+          <button type="button" onClick={list.reload}>
             Retry
           </button>
         </div>
@@ -126,7 +122,7 @@ export function VisitsView({
           </table>
         </div>
       )}
-      {data && data.items.length === 0 && !busy && <p>No visits match.</p>}
+      {data && data.items.length === 0 && !busy && !outOfRange && <p>No visits match.</p>}
       <nav className="pager" aria-label="Visit pages">
         <button type="button" disabled={page === 1 || busy} onClick={() => go({ page: 1 })}>
           First

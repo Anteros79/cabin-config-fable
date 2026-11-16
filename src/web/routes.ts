@@ -9,6 +9,9 @@ export type Route =
   | { name: "reference" }
   | { name: "notFound"; hash: string };
 
+/** The highest page a route may ask for: keeps the list offset a small safe integer. */
+export const MAX_PAGE = 1_000_000;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** A hash that points at an element on the page ("#main"), not at a route. Routes start with "#/"; an empty hash or "#" is the home route. */
@@ -88,7 +91,7 @@ export function parseRoute(hash: string): Route {
       name: "visits",
       status: status === "DRAFT" || status === "COMPLETED" ? status : null,
       q: params.get("q") ?? "",
-      page: Number.isInteger(page) && page > 1 ? page : 1,
+      page: Number.isInteger(page) && page > 1 ? Math.min(page, MAX_PAGE) : 1,
     };
   }
   if (first === "layouts" && parts.length <= 2) return { name: "layouts", id: second ?? null };

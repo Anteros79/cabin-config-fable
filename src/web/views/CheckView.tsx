@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
-import type { LookupResult, RecordInput, Visit, VisitRecord, VisualProfile } from "../../domain/types.ts";
+import type { RecordInput, VisitRecord, VisualProfile } from "../../domain/types.ts";
 import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
 import { Inspector } from "../components/Inspector.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
+import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
 import { formatRoute } from "../routes.ts";
 
@@ -43,6 +44,10 @@ function bannerText(target: "create" | "complete", status: SaveStatus): string {
   if (status.phase === "conflict") return `${refused ?? describeSaveStatus(status)} The current saved work has been reloaded.`;
   return refused ?? describeSaveStatus(status);
 }
+
+/** A visit answer older than the copy on screen (a write answer overtook the read) is not applied. */
+const olderVisit = (incoming: VisitEnvelope, shown: VisitEnvelope): boolean =>
+  incoming.visit.id === shown.visit.id && incoming.visit.version < shown.visit.version;
 
 function today(): string {
   const d = new Date();
@@ -85,20 +90,14 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   const [tail, setTail] = useState("");
   const [date, setDate] = useState(today());
   const [technician, setTechnician] = useState(savedTechnician);
-  const [lookup, setLookup] = useState<LookupResult | null>(null);
-  const [lookupBusy, setLookupBusy] = useState(false);
   const [lookupSeq, setLookupSeq] = useState(0);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [visit, setVisit] = useState<Visit | null>(null);
-  const [referenceChanged, setReferenceChanged] = useState(false);
-  const [visitError, setVisitError] = useState<string | null>(null);
-  const [visitLoading, setVisitLoading] = useState(false);
   const [selection, setSelection] = useState<string | null>(null);
   const [focusComponent, setFocusComponent] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const confirmRef = useRef<HTMLHeadingElement | null>(null);
   const [lastDraft, setLastDraft] = useState<string | null>(recall);
-  const lookupToken = useRef(0);
+  // A lookup the route cannot hold (an empty tail, which the server reports as invalid input), tied to the route it was made on.
+  const [unrouted, setUnrouted] = useState<{ tail: string; date: string; route: string } | null>(null);
 
   // The pointer to the last draft is only offered while that draft still exists and is still a draft.
   useEffect(() => {
@@ -129,31 +128,33 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       .catch(() => setTails([]));
   }, []);
 
-  const loadVisit = useCallback(
-    async (id: string) => {
-      setVisitLoading(true);
-      setVisitError(null);
-      try {
-        const res = await api.visit(id);
-        // A write answer that arrived while this read was in flight may already be newer; keep the newer copy.
-        setVisit((cur) => (cur && cur.id === res.visit.id && cur.version > res.visit.version ? cur : res.visit));
-        setReferenceChanged(res.referenceNow?.changedSinceVisit ?? false);
-        if (res.visit.status === "DRAFT") remember(id);
-        else if (recall() === id) remember(null);
-        onVisit?.({ id, number: res.visit.number, tail: res.visit.tail });
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 404 && recall() === id) remember(null);
-        setVisitError(
-          e instanceof ApiError && e.kind === "network"
-            ? "The server could not be reached. Your saved work is still on the server; retry when the connection is back."
-            : (e as Error).message,
-        );
-      } finally {
-        setVisitLoading(false);
-      }
-    },
-    [onVisit],
-  );
+  // App keys this view by visit, so a new visit is a new component; the key still keeps an answer for one visit off another.
+  const visitRes = useResource(visitId ? `visit:${visitId}` : null, (signal) => api.visit(visitId ?? "", { signal }), { isOlder: olderVisit });
+  const visit = visitRes.data?.visit ?? null;
+  const referenceChanged = visitRes.data?.referenceNow?.changedSinceVisit ?? false;
+  const visitLoading = visitRes.state === "loading";
+  const visitError =
+    visitRes.state !== "error"
+      ? null
+      : visitRes.error.kind === "network"
+        ? "The server could not be reached. Your saved work is still on the server; retry when the connection is back."
+        : visitRes.error.message;
+  const reloadVisit = visitRes.reload;
+  const setVisit = visitRes.set;
+  const loadedId = visit?.id;
+  const loadedStatus = visit?.status;
+  const loadedNumber = visit?.number;
+  const loadedTail = visit?.tail;
+  useEffect(() => {
+    if (!loadedId || loadedNumber === undefined || loadedTail === undefined) return;
+    if (loadedStatus === "DRAFT") remember(loadedId);
+    else if (recall() === loadedId) remember(null);
+    onVisit?.({ id: loadedId, number: loadedNumber, tail: loadedTail });
+  }, [loadedId, loadedStatus, loadedNumber, loadedTail, onVisit]);
+  const visitMissing = visitRes.state === "error" && visitRes.error.status === 404;
+  useEffect(() => {
+    if (visitMissing && visitId && recall() === visitId) remember(null);
+  }, [visitMissing, visitId]);
 
   // Creating a visit has no visit on screen yet, so its answer navigates instead of merging (PF-18).
   const creation = useMutations<VisitEnvelope>((res) => {
@@ -165,16 +166,39 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   // visit is read again instead of trusting it.
   const writes = useMutations<WriteResult>((res) => {
     if (res.replayed) {
-      if (visitId) void loadVisit(visitId);
+      reloadVisit();
       return;
     }
-    setVisit((cur) => (cur && cur.id === res.visit.id && res.visit.version >= cur.version ? { ...res.visit, snapshot: cur.snapshot } : cur));
+    setVisit((cur) =>
+      cur && cur.visit.id === res.visit.id && res.visit.version >= cur.visit.version ? { ...cur, visit: { ...res.visit, snapshot: cur.visit.snapshot } } : cur,
+    );
   });
 
-  // App keys this view by visit, so visitId is fixed for the life of the component.
+  // The route holds the lookup: Back, Forward and reload bring it back. A route without a tail has none.
+  const routeString = formatRoute({ name: "check", tail: routeTail, date: routeDate });
+  const unroutedHere = !visitId && unrouted?.route === routeString ? unrouted : null;
+  // Leaving the route drops it, so coming back with Back shows what the route holds, not the earlier unrouted lookup.
   useEffect(() => {
-    if (visitId) void loadVisit(visitId);
-  }, [visitId, loadVisit]);
+    setUnrouted((u) => (u && u.route !== routeString ? null : u));
+  }, [routeString]);
+  const lookupFor = unroutedHere ?? (!visitId && routeTail ? { tail: routeTail, date: routeDate ?? today() } : null);
+  const lookupKey = lookupFor ? `lookup:${lookupFor.tail}:${lookupFor.date}` : null;
+  const lookupRes = useResource(lookupKey, (signal) => api.lookup(lookupFor?.tail ?? "", lookupFor?.date ?? "", { signal }));
+  // An error clears the result, as before: a stale result must not invite starting a visit from it.
+  const lookup = lookupRes.state === "error" ? null : (lookupRes.data ?? null);
+  const lookupBusy = lookupRes.state === "loading";
+  const lookupError =
+    lookupRes.state !== "error"
+      ? null
+      : lookupRes.error.kind === "network"
+        ? "The server could not be reached. Nothing was looked up; retry when the connection is back."
+        : lookupRes.error.message;
+  const lookupAnswer = lookupRes.state === "ready" ? lookupRes.data : null;
+  useEffect(() => {
+    if (!lookupAnswer) return;
+    setLookupSeq((n) => n + 1);
+    setSelection(null);
+  }, [lookupAnswer]);
 
   const workspace: Workspace | null = useMemo(() => {
     if (visitId) {
@@ -213,57 +237,32 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     setFocusComponent(componentId);
   }, []);
 
-  const runLookup = useCallback(async (forTail: string, forDate: string) => {
-    const token = ++lookupToken.current;
-    setLookupBusy(true);
-    setLookupError(null);
-    try {
-      const result = await api.lookup(forTail, forDate);
-      if (token !== lookupToken.current) return;
-      setLookup(result);
-      setLookupSeq((n) => n + 1);
-      setSelection(null);
-    } catch (err) {
-      if (token !== lookupToken.current) return;
-      setLookup(null);
-      setLookupError(
-        err instanceof ApiError && err.kind === "network"
-          ? "The server could not be reached. Nothing was looked up; retry when the connection is back."
-          : (err as Error).message,
-      );
-    } finally {
-      if (token === lookupToken.current) setLookupBusy(false);
-    }
-  }, []);
-
-  // The route holds the lookup: Back, Forward and reload bring it back. A route without a tail clears the result.
+  // The form follows the route, so a lookup restored by Back or reload shows what it looked up.
   useEffect(() => {
-    if (visitId) return;
-    if (!routeTail) {
-      lookupToken.current += 1;
-      setLookup(null);
-      setLookupError(null);
-      setLookupBusy(false);
-      return;
-    }
-    const forDate = routeDate ?? today();
+    if (visitId || !routeTail) return;
     setTail(routeTail);
-    setDate(forDate);
-    void runLookup(routeTail, forDate);
-  }, [visitId, routeTail, routeDate, runLookup]);
+    setDate(routeDate ?? today());
+  }, [visitId, routeTail, routeDate]);
 
-  /** Submitting writes the lookup into the URL; the route effect runs it. The same lookup again runs directly, as the URL does not change. */
+  /** Submitting writes the lookup into the URL, which runs it. The same lookup again reloads it, as the URL does not change. */
   const doLookup = (e?: React.FormEvent) => {
     e?.preventDefault();
-    const wanted = tail.trim() ? formatRoute({ name: "check", tail: tail.trim(), date: date || null }) : null;
-    const current = formatRoute({ name: "check", tail: routeTail, date: routeDate });
-    if (wanted && wanted !== current) navigate(wanted);
-    else void runLookup(tail, date);
+    const trimmed = tail.trim();
+    if (trimmed) {
+      const wanted = formatRoute({ name: "check", tail: trimmed, date: date || null });
+      setUnrouted(null);
+      if (wanted !== routeString) navigate(wanted);
+      else if (!unroutedHere) lookupRes.reload();
+      return;
+    }
+    const next = { tail, date, route: routeString };
+    if (unroutedHere && unroutedHere.tail === tail && unroutedHere.date === date) lookupRes.reload();
+    else setUnrouted(next);
   };
 
   /** After a conflict the saved state changed elsewhere: reload it so the person sees what is stored now. */
   const reloadOnConflict = (target: string) => {
-    if (visitId && writes.statusOf(target).phase === "conflict") void loadVisit(visitId);
+    if (visitId && writes.statusOf(target).phase === "conflict") reloadVisit();
   };
   const startVisit = () => {
     if (!lookup) return;
@@ -442,7 +441,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
           {visitError && (
             <div className="alert" role="alert">
               <p>{visitError}</p>
-              <button type="button" onClick={() => loadVisit(visitId)}>
+              <button type="button" onClick={reloadVisit}>
                 Retry
               </button>
             </div>

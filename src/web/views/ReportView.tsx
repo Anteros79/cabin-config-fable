@@ -1,41 +1,36 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
 import { rulesNotUsedLine } from "../../domain/report.ts";
-import { ApiError, api, type ReportEnvelope } from "../api.ts";
+import { api } from "../api.ts";
 import { canRetry, describeSaveStatus, useMutations } from "../hooks/useMutations.ts";
+import { useResource } from "../hooks/useResource.ts";
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
 /** After-action report. Printable (browser print / save as PDF), server PDF, and structured JSON. */
 export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (meta: { id: string; number: number; tail: string }) => void }) {
-  const [data, setData] = useState<ReportEnvelope | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("ADVISORY");
   const [author, setAuthor] = useState("");
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const res = await api.report(visitId);
-      setData(res);
-      onVisit?.({ id: visitId, number: res.report.visit.number, tail: res.report.visit.tail });
-    } catch (e) {
-      setError(
-        e instanceof ApiError && e.kind === "network"
-          ? "The server could not be reached. The saved report is unchanged; retry when the connection is back."
-          : (e as Error).message,
-      );
-    }
-  }, [visitId, onVisit]);
+  const res = useResource(`report:${visitId}`, (signal) => api.report(visitId, { signal }));
+  const data = res.data ?? null;
+  const error =
+    res.state !== "error"
+      ? null
+      : res.error.kind === "network"
+        ? "The server could not be reached. The saved report is unchanged; retry when the connection is back."
+        : res.error.message;
+  const number = data?.report.visit.number;
+  const tail = data?.report.visit.tail;
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (number !== undefined && tail !== undefined) onVisit?.({ id: visitId, number, tail });
+  }, [visitId, number, tail, onVisit]);
 
   // One write at a time; after a dropped answer the same note is re-sent with the same key, so it is appended once.
   const notes = useMutations<Awaited<ReturnType<typeof api.addEvent>>>(() => {
     setNote("");
-    void load();
+    res.reload();
   });
   const noteStatus = notes.statusOf("note");
   const noteState =
@@ -54,7 +49,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
         <h2>Report</h2>
         <div className="alert" role="alert">
           <p>{error}</p>
-          <button type="button" onClick={load}>
+          <button type="button" onClick={res.reload}>
             Retry
           </button>
         </div>

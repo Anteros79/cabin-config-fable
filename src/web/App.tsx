@@ -1,6 +1,7 @@
-import { Component, type ReactNode, useEffect, useRef, useState } from "react";
+import { Component, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../domain/types.ts";
-import { api, type Health } from "./api.ts";
+import { ApiError, api, type Health } from "./api.ts";
+import { useResource } from "./hooks/useResource.ts";
 import { isInPageAnchor, parseRoute, type Route } from "./routes.ts";
 import { CheckView } from "./views/CheckView.tsx";
 import { LayoutsView } from "./views/LayoutsView.tsx";
@@ -78,38 +79,56 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // The health poll runs only while the page is visible; showing the page again checks at once.
   useEffect(() => {
-    let stopped = false;
+    let inFlight: AbortController | null = null;
+    let timer: ReturnType<typeof setInterval> | undefined;
     const check = async () => {
+      if (document.visibilityState === "hidden") return;
+      inFlight?.abort();
+      const controller = new AbortController();
+      inFlight = controller;
       try {
-        const h = await api.health();
-        if (!stopped) {
+        const h = await api.health({ signal: controller.signal });
+        if (inFlight === controller) {
           setHealth(h);
           setOffline(false);
         }
-      } catch {
-        if (!stopped) setOffline(true);
+      } catch (e) {
+        if (inFlight === controller && !(e instanceof ApiError && e.kind === "aborted")) setOffline(true);
       }
     };
-    void check();
-    const timer = setInterval(check, 15000);
+    const pause = () => {
+      clearInterval(timer);
+      timer = undefined;
+      inFlight?.abort();
+      inFlight = null;
+    };
+    const resume = () => {
+      if (timer !== undefined) return;
+      void check();
+      timer = setInterval(check, 15000);
+    };
+    const onVisibility = () => (document.visibilityState === "hidden" ? pause() : resume());
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("online", check);
     window.addEventListener("offline", check);
     return () => {
-      stopped = true;
-      clearInterval(timer);
+      pause();
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("online", check);
       window.removeEventListener("offline", check);
     };
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dependency list kept as authored to preserve behaviour; fixed in Task 4.4
+  // Visual profiles come with the layouts; a change of active release reads them again.
+  const releaseId = health?.reference.releaseId;
+  const layouts = useResource(`layouts:${releaseId ?? ""}`, (signal) => api.layouts({ signal }));
+  const loadedProfiles = layouts.data?.visualProfiles;
   useEffect(() => {
-    api
-      .layouts()
-      .then((r) => r.visualProfiles.length && setProfiles(r.visualProfiles))
-      .catch(() => undefined);
-  }, [health?.reference.releaseId]);
+    if (loadedProfiles?.length) setProfiles(loadedProfiles);
+  }, [loadedProfiles]);
 
   const routeId = route.name === "visit" || route.name === "report" ? route.id : null;
   const meta = routeId && visitMeta?.id === routeId ? visitMeta : null;
@@ -118,9 +137,9 @@ export function App() {
     document.title = `${label} · Cabin Kit`;
   }, [route.name, meta]);
 
-  const navigate = (next: string) => {
+  const navigate = useCallback((next: string) => {
     window.location.hash = next;
-  };
+  }, []);
   const nav: [string, string, boolean][] = [
     ["#/check", "Check", route.name === "check" || route.name === "visit" || (route.name === "prep" && !route.visitId)],
     ["#/visits", "Saved visits", route.name === "visits" || route.name === "report" || (route.name === "prep" && !!route.visitId)],
