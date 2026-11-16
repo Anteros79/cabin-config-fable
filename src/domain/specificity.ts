@@ -37,7 +37,7 @@ import type {
  */
 export interface MatchSet {
   /** key "variant|layoutRevision" -> accepted location ids in that revision */
-  pairs: Map<string, Set<string>>;
+  pairs: Map<string, ReadonlySet<string>>;
   carpet: Set<string> | null;
   seam: Set<string> | null;
   upholstery: Set<string> | null;
@@ -212,10 +212,10 @@ export function buildMatchSet(
   componentId: string,
   scope: PairScope = "usable",
 ): MatchSet {
-  const pairs = new Map<string, Set<string>>();
+  const pairs = new Map<string, ReadonlySet<string>>();
   const matches = selector ? compileSelector(selector) : null;
   // several variants may share a layout revision: its selected locations are computed once (and the set shared, never mutated)
-  const selected = new Map<string, Set<string>>();
+  const selected = new Map<string, ReadonlySet<string>>();
   for (const variant of source.release.variants) {
     for (const revisionId of variant.layoutRevisionIds) {
       if (!variantSatisfies(constraint, variant, revisionId)) continue;
@@ -223,8 +223,9 @@ export function buildMatchSet(
       if (!revision || (scope === "usable" && !isUsablePair(variant, revision))) continue;
       let ids = selected.get(revisionId);
       if (!ids) {
-        ids = new Set<string>();
-        for (const loc of source.locationsByComponent.get(revisionId)?.get(componentId) ?? []) if (!matches || matches(loc)) ids.add(loc.id);
+        const found = new Set<string>();
+        for (const loc of source.locationsByComponent.get(revisionId)?.get(componentId) ?? []) if (!matches || matches(loc)) found.add(loc.id);
+        ids = found;
         selected.set(revisionId, ids);
       }
       if (ids.size > 0) pairs.set(`${variant.id}|${revisionId}`, ids);
@@ -275,7 +276,7 @@ function dimIntersection(a: Set<string> | null, b: Set<string> | null): Set<stri
 
 /** Every situation accepted by both a and b. */
 export function intersectMatchSets(a: MatchSet, b: MatchSet): MatchSet {
-  const pairs = new Map<string, Set<string>>();
+  const pairs = new Map<string, ReadonlySet<string>>();
   for (const [pair, ids] of a.pairs) {
     const other = b.pairs.get(pair);
     if (!other) continue;
@@ -395,7 +396,9 @@ export function substituteKey(componentId: string, primaryPartNo: string): strin
 /**
  * Is `index` an index of exactly this content: built from the same object, or from a copy that shares
  * every entity array and the vocabulary (a `ReferenceRelease` spread from its content)? Callers that
- * accept an index to share (`validateRelease`, `lookup`) refuse any other.
+ * accept an index to share (`validateRelease`, `lookup`) refuse any other. This checks object identity
+ * only: it cannot detect content mutated in place after the index was built, so an index must not
+ * outlive changes to the content it was built from.
  */
 export function isIndexOf(index: ReleaseIndex, content: ReleaseContent): boolean {
   if (index.release === content) return true;

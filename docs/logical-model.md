@@ -113,6 +113,7 @@ Not findings, but codes added in the same phase:
 | `KIT_INVALID` | exclusion reason | The kit below the part cannot be expanded (cycle, too deep, quantity too large) |
 | `VARIANT_SOURCE_INVALID`, `LAYOUT_SOURCE_INVALID` | lookup reason (`SOURCE_INVALID`) | The variant's or layout revision's source is not valid on the check date |
 | `QUANTITY_TOO_LARGE` | record refusal (HTTP 422) | A computed line quantity is not a safe integer or exceeds `MAX_DERIVED_QTY` |
+| `RELEASE_MISMATCH` | error response (HTTP 500) | A visit snapshot was asked to freeze a lookup result taken from a different reference release than the one given |
 | `SNAPSHOT_INCONSISTENT` | error response (HTTP 500) | A record or gap refers to a location absent from the frozen layout, or a location has an unknown kind |
 
 ## Numeric limits

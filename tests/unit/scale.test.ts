@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildKitIndex } from "../../src/domain/kits.ts";
 import { MAX_KIT_DEPTH } from "../../src/domain/limits.ts";
+import { buildPreparation } from "../../src/domain/prep.ts";
 import { lookup } from "../../src/domain/resolve.ts";
 import { buildIndex } from "../../src/domain/specificity.ts";
 import type { ApplicabilityRule, CabinLocation, KitChild, LayoutRevision, MaintenanceVariant, Part, ReleaseContent } from "../../src/domain/types.ts";
 import { validateRelease } from "../../src/domain/validate.ts";
-import { asRelease, fixtureContent } from "../helpers.ts";
+import { asRelease, fixtureContent, snapshotFor } from "../helpers.ts";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
 const SYNTHETIC_REVISION = "SYN-L@1";
@@ -143,13 +144,13 @@ function syntheticRelease({ rows, variants, rules }: { rows: number; variants: n
 
 const SHAPE = { rows: 60, variants: 12, rules: 400 };
 /**
- * Bounds: twice the slowest best-of-runs time measured after Task 2.8 under the CI gate (`npm run
- * coverage`, whole suite in parallel, V8 coverage on), rounded up to the next 50 ms: validate 138 ms
- * -> 300 ms, lookup 36 ms -> 100 ms. Uninstrumented and alone they take about 40 ms and 16 ms. The
- * brief's ceilings were 1,500 ms and 400 ms.
+ * CI-hardware ceilings from the brief, deliberately loose: to be tightened later from CI logs. On the
+ * development machine (Task 2.8) these take about 40 ms and 16 ms alone, and up to 138 ms and 36 ms
+ * under `npm run coverage` with the whole suite running. At this scale no absolute bound separates
+ * linear from quadratic work; the ratio test below does that.
  */
-const VALIDATE_BOUND_MS = 300;
-const LOOKUP_BOUND_MS = 100;
+const VALIDATE_BOUND_MS = 1500;
+const LOOKUP_BOUND_MS = 400;
 /** Well under the brief's 400 ms lookup bound; measured at about 1 ms. */
 const KIT_DAG_BOUND_MS = 100;
 /** Each timing is the best of this many cold runs, so one scheduler stall cannot fail it. */
@@ -207,6 +208,47 @@ describe("scale (synthetic release: 60 rows, 12 variants, 400 rules)", () => {
     expect(() => validateRelease(42, index)).toThrow(/different release/);
     expect(() => lookup(asRelease(structuredClone(base)), "NSYN3", "2026-11-12", index)).toThrow(/different release/);
   });
+});
+
+describe("grouping is linear", () => {
+  /**
+   * Best-of-`runs` milliseconds for `repeat` calls of each of `a` and `b`, measured alternately so a
+   * burst of load from other test workers hits both sides alike.
+   */
+  const timedPair = (a: () => void, b: () => void, repeat: number, runs: number): [number, number] => {
+    const best: [number, number] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+    for (let i = 0; i < runs; i += 1) {
+      [a, b].forEach((fn, side) => {
+        const start = performance.now();
+        for (let j = 0; j < repeat; j += 1) fn();
+        best[side] = Math.min(best[side] ?? Number.POSITIVE_INFINITY, performance.now() - start);
+      });
+    }
+    return best;
+  };
+
+  it("doubling the seats at most doubles (well under quadruples) the preparation overview's cost", () => {
+    // One catch-all rule per variant and component, so each preparation line groups every seat of the
+    // cabin (6 x rows locations). Appending by copying the list (`[...(map.get(k) ?? []), x]`) makes
+    // that quadratic (4x per doubling, more with the garbage it makes); get-or-create then push keeps it
+    // near 2. Rows past 999 are fine here: catch-all rules use no row range.
+    const ROWS = 1200;
+    const shape = (rows: number) => ({ rows, variants: 12, rules: 24 });
+    const prepare = (rows: number) => {
+      const snap = snapshotFor(asRelease(syntheticRelease(shape(rows))), "NSYN0", "2026-11-12");
+      expect(snap.resolution.counts.resolved).toBe(rows * LETTERS.length * 2);
+      return () => buildPreparation(snap);
+    };
+    const small = prepare(ROWS);
+    const large = prepare(2 * ROWS);
+    small(); // warm up both paths before timing
+    large();
+    const [smallMs, largeMs] = timedPair(small, large, 2, 9);
+    const ratio = largeMs / smallMs;
+    // linear measures about 1.8-2.2 (once 2.8 under the full coverage run); with a spread-append in
+    // prep's coverage grouping it measures about 6, so 3.5 separates them with room on both sides
+    expect(ratio).toBeLessThan(3.5);
+  }, 20_000); // passes in about 1 s; the allowance lets a quadratic regression fail on the ratio, not on time
 });
 
 describe("kit expansion on valid data is linear", () => {

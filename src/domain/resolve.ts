@@ -367,7 +367,7 @@ export function resolveComponents(index: ReleaseIndex, context: ResolvedContext,
   // kit cannot be expanded (DOM-08); those reasons are always listed, beside any other.
   // Each component's rules are kept in id order, so every list built from them (exclusions, candidates,
   // dominated rules) is the same whatever the order of the release's rules.
-  const inContext = new Map<string, { rule: ApplicabilityRule; locations: Set<string>; exclusions: ExclusionReason[]; kitSourceIds: string[] }[]>();
+  const inContext = new Map<string, { rule: ApplicabilityRule; locations: ReadonlySet<string>; exclusions: ExclusionReason[]; kitSourceIds: string[] }[]>();
   for (const rule of index.release.rules) {
     if (!matchesContext(rule.constraint, ctx)) continue;
     const locations = index.ruleMatch.get(rule.id)?.pairs.get(pairKey);

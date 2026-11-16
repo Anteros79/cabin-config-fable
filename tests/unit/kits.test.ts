@@ -140,6 +140,15 @@ describe("kit expansion", () => {
     expect(messages(lines)).toEqual([[`${canonical}.`, ["B", "M", "Z", "B"]]]);
     expect(messages([...lines].reverse())).toEqual(messages(lines));
     expect(canonicalCycle(["Z", "B", "Z"])).toEqual(["B", "Z", "B"]);
+    // two cycles sharing a part: which cycles are reported, and how, does not depend on input order
+    const overlapping = [line("A", "B"), line("B", "A"), line("B", "C"), line("C", "B"), line("C", "D"), line("D", "A")];
+    const overlapParts = partsOf(overlapping);
+    const cycles = (kitLines: KitChild[]) =>
+      validateKits(kitLines, overlapParts, ["EA"], new Set(["S"]))
+        .filter((f) => f.code === "KIT_CYCLE")
+        .map((f) => f.message);
+    expect(cycles(overlapping).length).toBeGreaterThan(0);
+    expect(cycles([...overlapping].reverse())).toEqual(cycles(overlapping));
     expect(canonicalCycle([])).toEqual([]);
   });
 

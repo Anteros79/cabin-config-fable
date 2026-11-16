@@ -269,6 +269,8 @@ export function validateKits(
     if (next) next.push(k.childPartNo);
     else graph.set(k.parentPartNo, [k.childPartNo]);
   }
+  // walked in a fixed order (as in buildKitIndex), so which overlapping cycles are reported does not depend on input order
+  for (const next of graph.values()) next.sort(compareCodePoints);
   const state = new Map<string, 1 | 2>();
   const reported = new Set<string>();
   const visit = (node: string, trail: string[]) => {
@@ -286,7 +288,7 @@ export function validateKits(
     for (const next of graph.get(node) ?? []) visit(next, [...trail, node]);
     state.set(node, 2);
   };
-  for (const node of graph.keys()) visit(node, []);
+  for (const node of [...graph.keys()].sort(compareCodePoints)) visit(node, []);
   // depth and quantity bounds, from the same expansion lookup uses; a failure shared by several kits is reported once
   const failures = new Set<KitError>();
   for (const parent of parents) {
