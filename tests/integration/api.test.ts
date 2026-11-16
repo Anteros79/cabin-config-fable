@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import type { Report } from "../../src/domain/types.ts";
+import { csvCell } from "../../src/server/app.ts";
 import { CUSHION_3A, cleanupTempDirs, KIT_ALTERNATE, makeApp, makeStores, SIX_LINE_TOTALS } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
@@ -397,6 +398,24 @@ describe("reports: PDF and JSON agree with persisted work", () => {
   });
 });
 
+describe("csvCell", () => {
+  it.each([
+    ["=1+1", "'=1+1"],
+    ["+1", "'+1"],
+    ["-cmd", "'-cmd"],
+    ["@x", "'@x"],
+    ["\tx", "'\tx"],
+    ["plain", "plain"],
+    ['a"b', '"a""b"'],
+    ["=a,b", '"\'=a,b"'],
+  ])("csvCell(%j) = %j", (input, output) => {
+    expect(csvCell(input)).toBe(output);
+  });
+  it("numbers are never prefixed", () => {
+    expect(csvCell(-1)).toBe("-1");
+  });
+});
+
 describe("preparation and reference endpoints", () => {
   it("serves the pre-work overview as JSON and CSV", async () => {
     const app = makeApp();
@@ -407,6 +426,9 @@ describe("preparation and reference endpoints", () => {
     expect(csv.headers["content-type"]).toMatch(/text\/csv/);
     const lines = csv.body.trim().split("\r\n");
     expect(lines[0]?.split(",")[0]).toBe("line_type");
+    expect(csv.headers["content-disposition"]).toContain("cabin-kit-preparation-N100TL-2026-11-12.csv");
+    // no unquoted field starts with a formula character
+    expect(lines.some((l) => l.split(",").some((f) => /^[=+@]/.test(f)))).toBe(false);
     expect(lines.filter((l) => l.startsWith("ALTERNATE,FAKE-CK-2000"))).toHaveLength(1);
     expect(lines.filter((l) => l.startsWith("REQUIRED_SUPPLEMENT,FAKE-P-"))).toHaveLength(4);
     expect(lines.find((l) => l.startsWith("PRIMARY,FAKE-SC-1001"))).toContain("Seat A rows 1-5 (5 locations)");

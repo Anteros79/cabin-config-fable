@@ -263,7 +263,11 @@ export class ReferenceStore {
       put.run("created_at", new Date().toISOString());
       db.exec("COMMIT");
     } catch (e) {
-      db.exec("ROLLBACK");
+      try {
+        db.exec("ROLLBACK");
+      } catch {
+        /* keep the original error */
+      }
       db.close();
       throw e;
     }
@@ -338,7 +342,7 @@ export class ReferenceStore {
       this.db.exec("COMMIT");
       return { id, status };
     } catch (e) {
-      this.db.exec("ROLLBACK");
+      this.rollbackQuietly();
       throw e;
     }
   }
@@ -368,7 +372,7 @@ export class ReferenceStore {
       this.event(releaseId, "ACTIVATED", { previous }, now);
       this.db.exec("COMMIT");
     } catch (e) {
-      this.db.exec("ROLLBACK");
+      this.rollbackQuietly();
       throw e;
     }
   }

@@ -31,8 +31,12 @@ export interface AppHandle {
   close(): Promise<void>;
 }
 
-function csvCell(value: unknown): string {
-  const text = String(value ?? "");
+/** Spreadsheet applications run cells that start with these characters as formulas; a leading quote makes them text. */
+const FORMULA_LEAD = /^[=+\-@\t\r]/;
+
+export function csvCell(value: unknown): string {
+  const raw = String(value ?? "");
+  const text = typeof value === "string" && FORMULA_LEAD.test(raw) ? `'${raw}` : raw;
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

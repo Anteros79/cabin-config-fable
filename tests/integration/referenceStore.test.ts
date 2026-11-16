@@ -60,6 +60,24 @@ describe("staged import and atomic activation", () => {
     store.close();
   });
 
+  it("stage keeps the original error when rollback also fails", () => {
+    const stores = makeStores();
+    const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
+    const bad = buildStagedRelease({ includeCandidate: false });
+    const db = (store as unknown as { db: DatabaseSync }).db;
+    const realExec = db.exec.bind(db);
+    db.exec = (sql: string) => {
+      if (sql === "ROLLBACK") throw new Error("rollback failed");
+      return realExec(sql);
+    };
+    // a BigInt in the findings makes JSON.stringify throw inside the transaction
+    const poisoned = [{ severity: "error" as const, code: "X", message: "m", n: 1n }] as never;
+    expect(() => store.stage(bad.content, poisoned, {})).toThrow(/BigInt/);
+    db.exec = realExec;
+    realExec("ROLLBACK");
+    store.close();
+  });
+
   it("a release with blocking findings is stored as rejected and never becomes active", () => {
     const stores = makeStores();
     const store = ReferenceStore.open(stores.referencePath, stores.visitsPath);
