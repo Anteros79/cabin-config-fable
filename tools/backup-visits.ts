@@ -3,7 +3,8 @@
  *
  * Writes a consistent copy of the visit store (SQLite VACUUM INTO), then opens the copy read-only,
  * runs PRAGMA quick_check and prints the path, the byte size and the visit count. Safe while the
- * server is running. Never writes to the source store or beside it, and never overwrites a file.
+ * server is running. Never writes to the source store or its write-ahead log, and never overwrites a file.
+ * A copy that fails its check is deleted.
  * Default destination: backups/visits-<YYYYMMDD-HHMMSS>Z.sqlite under the project folder.
  * Exit codes: 0 done, 1 refused or failed, 2 bad arguments.
  */
@@ -86,7 +87,13 @@ function run(argv: string[]): number {
         store.close();
       }
     });
-    const visits = verify(destination);
+    let visits: number;
+    try {
+      visits = verify(destination);
+    } catch (e) {
+      rmSync(destination, { force: true }); // a copy that fails its check is not a backup
+      throw e;
+    }
     console.log(`Backup written: ${destination}`);
     console.log(`Size          : ${statSync(destination).size} bytes`);
     console.log(`Visits        : ${visits} visits`);

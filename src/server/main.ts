@@ -8,10 +8,10 @@ const SHUTDOWN_TIMEOUT_MS = 5000;
 
 let handle: AppHandle | null = null;
 
-/** Log at fatal through the server logger when there is one, otherwise on stderr; then exit 1. */
+/** Log at fatal through the server logger when there is one, always also one line on stderr; then exit 1. */
 function fatal(message: string, error: unknown): never {
-  if (handle) handle.app.log.fatal({ err: error }, message);
-  else console.error(`${message}: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
+  handle?.app.log.fatal({ err: error }, message);
+  console.error(`${message}: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }
 

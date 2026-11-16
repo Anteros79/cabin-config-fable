@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { copyFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { VisitStore } from "../../src/server/visitStore.ts";
+import { supportedVersion, VisitStore } from "../../src/server/visitStore.ts";
 import { cleanupTempDirs, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
@@ -37,6 +37,18 @@ function holdExclusiveLock(path: string, holdMs: number): Promise<{ released: Pr
 }
 
 describe("opening a store another process has locked", () => {
+  it("the schema-version read waits for the lock instead of failing", async () => {
+    const dir = tempDir("cabin-kit-busy-");
+    const path = join(dir, "visits.sqlite");
+    copyFileSync(FIXTURE, path);
+    const { released } = await holdExclusiveLock(path, 1500);
+    const started = Date.now();
+    // Called directly, so no earlier step (inspectStore) can absorb the wait.
+    expect(supportedVersion(path)).toBe(1);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
+    await released;
+  });
+
   it("waits for the lock instead of failing (schema version read included)", async () => {
     const dir = tempDir("cabin-kit-busy-");
     const path = join(dir, "visits.sqlite");

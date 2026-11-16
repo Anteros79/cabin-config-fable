@@ -559,13 +559,18 @@ export function createApp(config: ServerConfig): AppHandle {
     });
   });
 
+  /** Set on the first call; later calls get the same promise, so the stores are closed once. */
+  let closed: Promise<void> | null = null;
   return {
     app,
     visits,
-    async close() {
-      await app.close();
-      closeReference();
-      visits.close();
+    close() {
+      closed ??= (async () => {
+        await app.close();
+        closeReference();
+        visits.close();
+      })();
+      return closed;
     },
   };
 }

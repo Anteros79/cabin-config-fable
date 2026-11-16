@@ -156,7 +156,7 @@ type Row = Record<string, string | number | null>;
  * Reads meta.schema_version through a read-only connection (no pragma, no write) and returns it
  * when this code can open it. Newer → VISIT_SCHEMA_NEWER; missing or non-numeric → VISIT_SCHEMA_MISMATCH.
  */
-function supportedVersion(path: string): number {
+export function supportedVersion(path: string): number {
   let raw: string | undefined;
   let db: DatabaseSync | undefined;
   try {

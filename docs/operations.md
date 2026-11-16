@@ -65,7 +65,7 @@ npm run visits:backup                        # writes backups/visits-<YYYYMMDD-H
 npm run visits:backup -- --out /path/to/visits-copy.sqlite
 ```
 
-The command takes a consistent copy with SQLite `VACUUM INTO`, opens the copy read-only, runs `PRAGMA quick_check`, and prints the path, the size in bytes and the number of visits. It refuses to overwrite an existing file. It reads the store named by `CABIN_KIT_VISITS_DB` / `CABIN_KIT_DATA_DIR` and never writes to it or beside it: the store is opened read-only, without migration or pruning. If the store is in write-ahead-log mode and its `-shm` file is missing (no server has it open), the store and any `-wal` file are first copied to a private temporary folder and the backup is taken from there. The `backups/` folder is git-ignored.
+The command takes a consistent copy with SQLite `VACUUM INTO`, opens the copy read-only, runs `PRAGMA quick_check`, and prints the path, the size in bytes and the number of visits. It refuses to overwrite an existing file. It reads the store named by `CABIN_KIT_VISITS_DB` / `CABIN_KIT_DATA_DIR` and never writes to the store or its write-ahead log: the store is opened read-only, without migration or pruning. If the store is in write-ahead-log mode and its `-shm` file is missing (no server has it open), the store and any `-wal` file are first copied to a private temporary folder and the backup is taken from there. The `backups/` folder is git-ignored.
 
 Fallback, with the server stopped:
 

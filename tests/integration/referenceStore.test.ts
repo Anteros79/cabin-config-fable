@@ -272,7 +272,8 @@ describe("store guards", () => {
     expect(() => VisitStore.open(stores.referencePath, stores.referencePath)).toThrow(/same file/);
   });
 
-  it("a SQLite fault while opening the reference store is a StorageError", () => {
+  // chmod does not stop root from writing, so the fault cannot be provoked that way as root.
+  it.skipIf(process.getuid?.() === 0)("a SQLite fault while opening the reference store is a StorageError", () => {
     const stores = makeStores();
     const db = new DatabaseSync(stores.referencePath);
     db.exec("PRAGMA journal_mode=DELETE");

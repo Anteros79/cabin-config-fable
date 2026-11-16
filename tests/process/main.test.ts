@@ -223,6 +223,32 @@ describe("visits:backup", () => {
     expect(readFileSync(`${visitsPath}-wal`).equals(wal)).toBe(true);
   });
 
+  it("backs up a store a running server has open, reading it in place without changing it", async () => {
+    const { dataDir, visitsPath } = storeWithVisits();
+    const open = VisitStore.open(visitsPath, join(dataDir, "reference.sqlite")); // as a running server would
+    try {
+      open.rawExec("PRAGMA wal_autocheckpoint=0");
+      const ref = ReferenceStore.open(join(dataDir, "reference.sqlite"), visitsPath, { readOnly: true });
+      const release = ref.loadActive();
+      ref.close();
+      open.createVisit(snapshotFor(release, "N100TL", "2026-11-12"), "Backup three"); // lives only in -wal
+      expect(existsSync(`${visitsPath}-shm`)).toBe(true);
+      const before = listing(dataDir);
+      const bytes = readFileSync(visitsPath);
+
+      const out = join(tempDir("cabin-kit-backup-"), "live.sqlite");
+      const made = await runTool(["--out", out], dataDir);
+      expect(made.stderr).toBe("");
+      expect(made.code).toBe(0);
+      expect(made.stdout).toContain("3 visits");
+      expect(listing(dataDir)).toEqual(before);
+      expect(readFileSync(visitsPath).equals(bytes)).toBe(true);
+      expect(open.counts().visits).toBe(3);
+    } finally {
+      open.close();
+    }
+  });
+
   it("refuses a missing store and unknown arguments", async () => {
     const empty = tempDir("cabin-kit-backup-");
     const missing = await runTool(["--out", join(empty, "x.sqlite")], empty);

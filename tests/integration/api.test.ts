@@ -489,3 +489,11 @@ describe("preparation and reference endpoints", () => {
     await app.close();
   });
 });
+
+describe("app handle", () => {
+  it("close can be called more than once, also concurrently", async () => {
+    const app = makeApp();
+    await Promise.all([app.close(), app.close()]);
+    await expect(app.close()).resolves.toBeUndefined();
+  });
+});
