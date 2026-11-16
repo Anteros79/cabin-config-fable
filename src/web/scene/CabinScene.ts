@@ -53,6 +53,49 @@ interface SeatEntry {
   matrix: THREE.Matrix4;
 }
 
+/** Set only by the e2e build (`npm run build:e2e`): the hooks below, and the drawing buffer they read, are absent from the shipped bundle. */
+const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
+
+/** Test-only access to the scene, attached to the instance and to `window.__cabinKit` only when TEST_HOOKS is set. */
+export interface SceneTestHooks {
+  measure(durationMs: number): Promise<{ fps: number; frames: number; durationMs: number; worstFrameMs: number }>;
+  screenPointOf(locationId: string, part?: "head" | "pan"): { x: number; y: number } | null;
+  describe(): Record<string, unknown>;
+  /** Times the next frame from now, for a selection made outside the canvas. */
+  markInteraction(): void;
+  /** time from a pick to the frame that shows it, most recent first */
+  pickLatencies: number[];
+}
+
+type Disposable = { dispose(): void };
+
+/** Owns GPU resources (geometries, materials, textures, render targets, instanced meshes) until disposeAll(), which releases each exactly once. */
+export class ResourceTracker {
+  private items = new Set<Disposable>();
+
+  track<T extends Disposable>(resource: T): T {
+    this.items.add(resource);
+    return resource;
+  }
+
+  /** Disposes every tracked resource once and forgets them. A resource that throws does not stop the rest; the first error is rethrown after. */
+  disposeAll(): void {
+    const items = [...this.items];
+    this.items.clear();
+    let failure: unknown;
+    let failed = false;
+    for (const item of items) {
+      try {
+        item.dispose();
+      } catch (e) {
+        if (!failed) failure = e;
+        failed = true;
+      }
+    }
+    if (failed) throw failure;
+  }
+}
+
 /**
  * Interactive 3D cutaway of floors, seats and overhead bins.
  * Identities come straight from the layout revision: one instance per seat location, one mesh per
@@ -85,7 +128,12 @@ export class CabinScene {
   private selectionFill: THREE.Mesh;
   private hoverMark: THREE.LineSegments;
   private lights: { hemi: THREE.HemisphereLight; key: THREE.DirectionalLight; fill: THREE.DirectionalLight; wash: THREE.PointLight[] };
-  private disposables: { dispose(): void }[] = [];
+  /** everything the current layout built; released at the start of every rebuild */
+  private layoutResources = new ResourceTracker();
+  /** everything that lives as long as the scene; released in dispose() */
+  private sceneResources = new ResourceTracker();
+  /** set by the test hooks to record the frame that follows a pick */
+  private onFrameRendered: (() => void) | null = null;
   private frame = 0;
   private needsRender = true;
   private disposed = false;
@@ -97,8 +145,6 @@ export class CabinScene {
   /** the location a focus view was framed on, so a resize re-frames the same one */
   private viewLocation: string | null = null;
   private pickableFloorBins = true;
-  /** time from a pick to the frame that shows it, most recent first */
-  readonly pickLatencies: number[] = [];
   frameCount = 0;
   private canvas: HTMLCanvasElement;
   private callbacks: SceneCallbacks;
@@ -106,13 +152,13 @@ export class CabinScene {
   constructor(canvas: HTMLCanvasElement, callbacks: SceneCallbacks) {
     this.canvas = canvas;
     this.callbacks = callbacks;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: TEST_HOOKS });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.geoms = buildSeatGeometries();
     Object.values(this.geoms).forEach((g) => {
-      this.disposables.push(g);
+      this.sceneResources.track(g);
     });
 
     this.controls = new OrbitControls(this.camera, canvas);
@@ -139,15 +185,17 @@ export class CabinScene {
     this.scene.add(hemi, key, fill);
     for (const g of Object.values(this.groups)) this.scene.add(g);
 
-    const edge = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
-    this.selectionMark = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: SELECT_COLOUR, depthTest: false, transparent: true }));
+    const keep = <T extends Disposable>(resource: T): T => this.sceneResources.track(resource);
+    const unitBox = keep(new THREE.BoxGeometry(1, 1, 1));
+    const edge = keep(new THREE.EdgesGeometry(unitBox));
+    this.selectionMark = new THREE.LineSegments(edge, keep(new THREE.LineBasicMaterial({ color: SELECT_COLOUR, depthTest: false, transparent: true })));
     this.selectionMark.renderOrder = 20;
     this.selectionFill = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial({ color: SELECT_COLOUR, transparent: true, opacity: 0.2, depthWrite: false }),
+      unitBox,
+      keep(new THREE.MeshBasicMaterial({ color: SELECT_COLOUR, transparent: true, opacity: 0.2, depthWrite: false })),
     );
     this.selectionFill.renderOrder = 19;
-    this.hoverMark = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: "#ffffff", depthTest: false, transparent: true, opacity: 0.85 }));
+    this.hoverMark = new THREE.LineSegments(edge, keep(new THREE.LineBasicMaterial({ color: "#ffffff", depthTest: false, transparent: true, opacity: 0.85 })));
     this.hoverMark.renderOrder = 18;
     this.selectionMark.visible = this.selectionFill.visible = this.hoverMark.visible = false;
     this.groups.marks.add(this.selectionFill, this.selectionMark, this.hoverMark);
@@ -160,33 +208,88 @@ export class CabinScene {
     canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.applyLight();
     this.resize();
+    if (TEST_HOOKS) {
+      const pickLatencies: number[] = [];
+      this.onFrameRendered = () => {
+        if (this.pickStamp === null) return;
+        pickLatencies.unshift(performance.now() - this.pickStamp);
+        pickLatencies.length = Math.min(pickLatencies.length, 50);
+        this.pickStamp = null;
+      };
+      const hooks: SceneTestHooks = {
+        pickLatencies,
+        markInteraction: () => {
+          this.pickStamp = performance.now();
+        },
+        /** Orbit continuously for a while and report the measured frame rate. */
+        measure: (durationMs) =>
+          new Promise((resolve) => {
+            const start = performance.now();
+            let frames = 0;
+            let last = start;
+            let worst = 0;
+            const step = () => {
+              const now = performance.now();
+              worst = Math.max(worst, now - last);
+              last = now;
+              frames += 1;
+              this.nudge(frames % 240 < 120 ? "left" : "right");
+              this.renderer.render(this.scene, this.camera);
+              if (now - start < durationMs && !this.disposed) requestAnimationFrame(step);
+              else resolve({ fps: (frames * 1000) / (now - start), frames, durationMs: now - start, worstFrameMs: worst });
+            };
+            requestAnimationFrame(step);
+          }),
+        /** Screen position of a location, used by tests to pick it with a real pointer event. */
+        screenPointOf: (locationId, part = "head") => {
+          const location = this.layout?.locations.find((l) => l.id === locationId);
+          if (!location) return null;
+          const { centre } = this.boxOf(location);
+          // the headrest front is visible from the front and from above; the pan only from above
+          if (location.kind === "SEAT") centre.set(location.placement.x + (part === "pan" ? -0.1 : 0.255), part === "pan" ? 0.52 : 1.06, location.placement.z);
+          // the aisle centreline belongs to the full-cabin strip, so an area is aimed at beside it
+          if (location.kind === "FLOOR") centre.set(location.placement.x, 0, location.id === FULL_CABIN ? 0 : location.placement.lz / 4);
+          if (location.kind === "BIN") centre.set(location.placement.x, 1.75, (location.bin?.side === "L" ? 1 : -1) * 0.95);
+          const v = centre.project(this.camera);
+          const rect = this.canvas.getBoundingClientRect();
+          return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
+        },
+        describe: () => ({
+          seats: this.seats.length,
+          floorAreas: this.floorMeshes.filter((f) => f.locationId).length,
+          binModules: this.binSides.reduce((n, b) => n + b.locations.length, 0),
+          profile: this.palette.id,
+          light: this.light,
+          view: this.currentView,
+          paused: this.paused,
+          layers: this.layers,
+          colourMode: this.colourMode,
+          selection: this.selection,
+          camera: {
+            position: this.camera.position.toArray().map((v) => Number(v.toFixed(3))),
+            target: this.controls.target.toArray().map((v) => Number(v.toFixed(3))),
+            fov: this.camera.fov,
+          },
+          renderer: {
+            drawCalls: this.renderer.info.render.calls,
+            triangles: this.renderer.info.render.triangles,
+            pixelRatio: this.renderer.getPixelRatio(),
+            geometries: this.renderer.info.memory.geometries,
+            textures: this.renderer.info.memory.textures,
+          },
+          frames: this.frameCount,
+        }),
+      };
+      Object.assign(this, hooks);
+    }
     this.loop();
   }
 
   // ---- construction ---------------------------------------------------------------------------
 
-  private track<T extends { dispose(): void }>(item: T): T {
-    this.disposables.push(item);
-    return item;
-  }
-
+  /** Remove a layout group's children from the scene. Their GPU resources belong to layoutResources, which rebuild() releases. */
   private clearGroup(group: THREE.Group): void {
-    for (const child of [...group.children]) {
-      group.remove(child);
-      child.traverse((o) => {
-        const mesh = o as THREE.Mesh;
-        if (mesh.isMesh) {
-          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-          mats.forEach((m) => {
-            const map = (m as THREE.MeshStandardMaterial).map;
-            if (map) map.dispose();
-            m.dispose();
-          });
-          if ((o as THREE.InstancedMesh).isInstancedMesh) (o as THREE.InstancedMesh).dispose();
-          else mesh.geometry.dispose(); // instanced meshes share tracked geometries; plain meshes own theirs
-        }
-      });
-    }
+    for (const child of [...group.children]) group.remove(child);
   }
 
   /**
@@ -205,6 +308,7 @@ export class CabinScene {
   private rebuild(): void {
     const layout = this.layout;
     if (!layout) return;
+    this.layoutResources.disposeAll();
     this.clearGroup(this.groups.seats);
     this.clearGroup(this.groups.floor);
     this.clearGroup(this.groups.bins);
@@ -217,6 +321,7 @@ export class CabinScene {
       this.scene.remove(l);
     });
     this.lights.wash = [];
+    const own = <T extends Disposable>(resource: T): T => this.layoutResources.track(resource);
     const p = this.palette;
     const length = layout.geometry.cabinLength;
     const halfW = layout.geometry.cabinHalfWidth;
@@ -228,10 +333,10 @@ export class CabinScene {
       .map((location) => ({ location, matrix: new THREE.Matrix4().makeTranslation(location.placement.x, 0, location.placement.z) }));
     const n = this.seats.length;
     const std = (color: string, roughness: number, metalness = 0, extra: THREE.MeshStandardMaterialParameters = {}) =>
-      new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
+      own(new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra }));
     const addSeatMesh = (geometry: THREE.BufferGeometry, material: THREE.Material, component: string | null, matrices?: (THREE.Matrix4 | null)[]) => {
       if (n === 0) return null;
-      const mesh = new THREE.InstancedMesh(geometry, material, n);
+      const mesh = own(new THREE.InstancedMesh(geometry, material, n));
       this.seats.forEach((seat, i) => {
         mesh.setMatrixAt(i, matrices ? (matrices[i] ?? ZERO) : seat.matrix);
       });
@@ -245,8 +350,8 @@ export class CabinScene {
     addSeatMesh(this.geoms.legs, std(p.metal, 0.35, 0.75), null);
     addSeatMesh(this.geoms.pan, std(p.upholstery, leather.roughness), "CUSHION");
     addSeatMesh(this.geoms.backCore, std(p.upholsteryDark, leather.roughness), "BACKREST");
-    addSeatMesh(this.geoms.backFront, new THREE.MeshStandardMaterial({ map: backFrontTexture(p), roughness: leather.roughness }), "BACKREST");
-    addSeatMesh(this.geoms.rearShell, new THREE.MeshStandardMaterial({ map: rearShellTexture(p, true), roughness: 0.6 }), "BACKREST");
+    addSeatMesh(this.geoms.backFront, own(new THREE.MeshStandardMaterial({ map: own(backFrontTexture(p)), roughness: leather.roughness })), "BACKREST");
+    addSeatMesh(this.geoms.rearShell, own(new THREE.MeshStandardMaterial({ map: own(rearShellTexture(p, true)), roughness: 0.6 })), "BACKREST");
     addSeatMesh(this.geoms.rearRelief, std(p.shell, 0.6), "BACKREST");
     addSeatMesh(this.geoms.headrest, std(p.headrest, 0.46), "BACKREST");
     addSeatMesh(this.geoms.arms, std(p.arm, 0.55), null);
@@ -258,13 +363,13 @@ export class CabinScene {
     addSeatMesh(this.geoms.wingFace, pale, "BACKREST", aisleSide);
     if (p.paleBothWings) {
       const windowSide = this.seats.map((s) => (s.location.placement.z > 0 ? s.matrix : s.matrix.clone().multiply(mirror)));
-      addSeatMesh(this.geoms.wingFace, pale.clone(), "BACKREST", windowSide);
+      addSeatMesh(this.geoms.wingFace, own(pale.clone()), "BACKREST", windowSide);
     }
     // (the pale surround of the banded family is the upper-back band itself, drawn in the texture)
 
-    const overlayMaterial = () => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false, color: "#ffffff" });
-    this.panOverlay = n ? new THREE.InstancedMesh(this.geoms.panOverlay, overlayMaterial(), n) : null;
-    this.backOverlay = n ? new THREE.InstancedMesh(this.geoms.backOverlay, overlayMaterial(), n) : null;
+    const overlayMaterial = () => own(new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false, color: "#ffffff" }));
+    this.panOverlay = n ? own(new THREE.InstancedMesh(this.geoms.panOverlay, overlayMaterial(), n)) : null;
+    this.backOverlay = n ? own(new THREE.InstancedMesh(this.geoms.backOverlay, overlayMaterial(), n)) : null;
     for (const o of [this.panOverlay, this.backOverlay]) {
       if (!o) continue;
       o.renderOrder = 5;
@@ -273,24 +378,24 @@ export class CabinScene {
     }
 
     // floor ------------------------------------------------------------------------------------
-    const carpet = carpetTexture(p);
+    const carpet = own(carpetTexture(p));
     const floorMaterial = (lx: number, lz: number, offsetX: number) => {
-      const map = carpet.clone();
+      const map = own(carpet.clone());
       map.needsUpdate = true;
       map.repeat.set(lx / 1.3, lz / 1.3);
       map.offset.set(offsetX / 1.3, 0);
-      return new THREE.MeshStandardMaterial({ map, roughness: 0.95 });
+      return own(new THREE.MeshStandardMaterial({ map, roughness: 0.95 }));
     };
     const addFloor = (x: number, lx: number, locationId: string | null) => {
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(lx, halfW * 2), floorMaterial(lx, halfW * 2, x - lx / 2));
+      const mesh = new THREE.Mesh(own(new THREE.PlaneGeometry(lx, halfW * 2)), floorMaterial(lx, halfW * 2, x - lx / 2));
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(x, 0, 0);
       this.groups.floor.add(mesh);
       let overlay: THREE.Mesh | null = null;
       if (locationId) {
         overlay = new THREE.Mesh(
-          new THREE.PlaneGeometry(lx - 0.06, halfW * 2 - 0.06),
-          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.34, depthWrite: false }),
+          own(new THREE.PlaneGeometry(lx - 0.06, halfW * 2 - 0.06)),
+          own(new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.34, depthWrite: false })),
         );
         overlay.rotation.x = -Math.PI / 2;
         overlay.position.set(x, 0.006, 0);
@@ -303,13 +408,12 @@ export class CabinScene {
     const areas = layout.locations.filter((l) => l.kind === "FLOOR" && l.floor?.areaType === "AREA");
     if (areas.length > 0) for (const a of areas) addFloor(a.placement.x, a.placement.lx, a.id);
     else addFloor(length / 2, length, null);
-    carpet.dispose();
     // The aisle strip shows the full-cabin floor's status and is its pick target (WEB-18): the area under it is reached
     // anywhere else across the cabin width.
     if (layout.locations.some((l) => l.id === FULL_CABIN)) {
       this.fullCabinOverlay = new THREE.Mesh(
-        new THREE.PlaneGeometry(length - 0.1, 0.42),
-        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false }),
+        own(new THREE.PlaneGeometry(length - 0.1, 0.42)),
+        own(new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false })),
       );
       this.fullCabinOverlay.rotation.x = -Math.PI / 2;
       this.fullCabinOverlay.position.set(length / 2, 0.009, 0);
@@ -319,17 +423,19 @@ export class CabinScene {
     } else this.fullCabinOverlay = null;
     // narrow aisle borders
     for (const sign of [1, -1]) {
-      const strip = new THREE.Mesh(new THREE.BoxGeometry(length, 0.008, 0.022), std(p.aisleBorder, 0.35, 0.6));
+      const strip = new THREE.Mesh(own(new THREE.BoxGeometry(length, 0.008, 0.022)), std(p.aisleBorder, 0.35, 0.6));
       strip.position.set(length / 2, 0.004, sign * 0.262);
       this.groups.floor.add(strip);
     }
 
     // bins -------------------------------------------------------------------------------------
     const binLocations = layout.locations.filter((l) => l.kind === "BIN");
-    const service = serviceUnitTexture();
+    const service = own(serviceUnitTexture());
     for (const side of ["L", "R"] as const) {
       const sign = side === "L" ? 1 : -1;
       const { door, body } = buildBinGeometry(sign);
+      own(door);
+      own(body);
       // Without a supplied bin map the run is drawn as illustrative, unpickable three-row modules.
       const mine = binLocations.filter((l) => l.bin?.side === side);
       const spans: { x: number; lx: number }[] =
@@ -343,8 +449,10 @@ export class CabinScene {
               return { x: (x0 + x1) / 2, lx: x1 - x0 };
             });
       const count = Math.max(spans.length, 1);
-      const doorMesh = new THREE.InstancedMesh(door, new THREE.MeshStandardMaterial({ map: binDoorTexture(), roughness: 0.42, side: THREE.DoubleSide }), count);
-      const bodyMesh = new THREE.InstancedMesh(body, std("#d5d8df", 0.6, 0, { side: THREE.DoubleSide }), count);
+      const doorMesh = own(
+        new THREE.InstancedMesh(door, own(new THREE.MeshStandardMaterial({ map: own(binDoorTexture()), roughness: 0.42, side: THREE.DoubleSide })), count),
+      );
+      const bodyMesh = own(new THREE.InstancedMesh(body, std("#d5d8df", 0.6, 0, { side: THREE.DoubleSide }), count));
       spans.forEach((s, i) => {
         const m = new THREE.Matrix4().makeScale(s.lx, 1, 1).setPosition(s.x, 0, 0);
         doorMesh.setMatrixAt(i, m);
@@ -358,43 +466,39 @@ export class CabinScene {
       doorMesh.instanceMatrix.needsUpdate = true;
       bodyMesh.instanceMatrix.needsUpdate = true;
       doorMesh.computeBoundingSphere();
-      const map = service.clone();
+      const map = own(service.clone());
       map.needsUpdate = true;
       map.repeat.set(rows, 1);
       const psu = new THREE.Mesh(
-        new THREE.PlaneGeometry(rows * layout.geometry.rowPitch, 0.4),
-        new THREE.MeshStandardMaterial({ map, roughness: 0.6, side: THREE.DoubleSide }),
+        own(new THREE.PlaneGeometry(rows * layout.geometry.rowPitch, 0.4)),
+        own(new THREE.MeshStandardMaterial({ map, roughness: 0.6, side: THREE.DoubleSide })),
       );
       psu.rotation.x = Math.PI / 2;
       psu.rotation.z = sign > 0 ? 0 : Math.PI;
       psu.position.set(FORWARD_MARGIN + (rows * layout.geometry.rowPitch) / 2, 1.648, sign * 1.55);
       this.groups.bins.add(doorMesh, bodyMesh, psu);
       this.binSides.push({ side, door: doorMesh, body: bodyMesh, locations: mine, extras: [psu] });
-      this.track(door);
-      this.track(body);
     }
-    service.dispose();
 
     // context (secondary, hidden by default) --------------------------------------------------
-    const wallTexture = sidewallTexture();
+    const wallTexture = own(sidewallTexture());
     for (const side of ["L", "R"] as const) {
       const sign = side === "L" ? 1 : -1;
-      const map = wallTexture.clone();
+      const map = own(wallTexture.clone());
       map.needsUpdate = true;
       map.repeat.set(Math.max(rows, 1), 1);
-      const wallMaterial = new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, transparent: true });
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(length, 1.66), wallMaterial);
+      const wallMaterial = own(new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide, transparent: true }));
+      const wall = new THREE.Mesh(own(new THREE.PlaneGeometry(length, 1.66)), wallMaterial);
       wall.position.set(length / 2, 0.83, sign * (halfW + 0.005));
       wall.rotation.y = sign > 0 ? Math.PI : 0;
-      const strip = new THREE.Mesh(new THREE.BoxGeometry(length, 0.03, 0.03), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
+      const strip = new THREE.Mesh(own(new THREE.BoxGeometry(length, 0.03, 0.03)), own(new THREE.MeshBasicMaterial({ color: "#ffffff" })));
       strip.position.set(length / 2, 1.63, sign * (halfW - 0.03));
       strip.userData.wash = true;
       this.groups.context.add(wall, strip);
       this.contextSides.push({ side, wallMaterial });
     }
-    wallTexture.dispose();
     for (const x of [0.02, length - 0.02]) {
-      const bulkhead = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.25, halfW * 2), std("#e2e4ea", 0.7, 0, { transparent: true, opacity: 0.55 }));
+      const bulkhead = new THREE.Mesh(own(new THREE.BoxGeometry(0.04, 2.25, halfW * 2)), std("#e2e4ea", 0.7, 0, { transparent: true, opacity: 0.55 }));
       bulkhead.position.set(x, 1.125, 0);
       this.groups.context.add(bulkhead);
     }
@@ -771,7 +875,7 @@ export class CabinScene {
     if (!at || this.paused) return;
     const hit = this.hit(at.x, at.y);
     if (!hit) return;
-    this.pickStamp = performance.now();
+    if (this.onFrameRendered) this.pickStamp = performance.now();
     this.callbacks.onPick(hit.location.id, hit.component);
   };
 
@@ -865,75 +969,8 @@ export class CabinScene {
     this.needsRender = false;
     this.renderer.render(this.scene, this.camera);
     this.frameCount += 1;
-    if (this.pickStamp !== null) {
-      this.pickLatencies.unshift(performance.now() - this.pickStamp);
-      this.pickLatencies.length = Math.min(this.pickLatencies.length, 50);
-      this.pickStamp = null;
-    }
+    this.onFrameRendered?.();
   };
-
-  /** Call when a selection made outside the canvas should be timed to its next frame. */
-  markInteraction(): void {
-    this.pickStamp = performance.now();
-  }
-
-  /** Orbit continuously for a while and report the measured frame rate. */
-  measure(durationMs: number): Promise<{ fps: number; frames: number; durationMs: number; worstFrameMs: number }> {
-    return new Promise((resolve) => {
-      const start = performance.now();
-      let frames = 0;
-      let last = start;
-      let worst = 0;
-      const step = () => {
-        const now = performance.now();
-        worst = Math.max(worst, now - last);
-        last = now;
-        frames += 1;
-        this.nudge(frames % 240 < 120 ? "left" : "right");
-        this.renderer.render(this.scene, this.camera);
-        if (now - start < durationMs && !this.disposed) requestAnimationFrame(step);
-        else resolve({ fps: (frames * 1000) / (now - start), frames, durationMs: now - start, worstFrameMs: worst });
-      };
-      requestAnimationFrame(step);
-    });
-  }
-
-  /** Screen position of a location, used by tests to pick it with a real pointer event. */
-  screenPointOf(locationId: string, part: "head" | "pan" = "head"): { x: number; y: number } | null {
-    const location = this.layout?.locations.find((l) => l.id === locationId);
-    if (!location) return null;
-    const { centre } = this.boxOf(location);
-    // the headrest front is visible from the front and from above; the pan only from above
-    if (location.kind === "SEAT") centre.set(location.placement.x + (part === "pan" ? -0.1 : 0.255), part === "pan" ? 0.52 : 1.06, location.placement.z);
-    // the aisle centreline belongs to the full-cabin strip, so an area is aimed at beside it
-    if (location.kind === "FLOOR") centre.set(location.placement.x, 0, location.id === FULL_CABIN ? 0 : location.placement.lz / 4);
-    if (location.kind === "BIN") centre.set(location.placement.x, 1.75, (location.bin?.side === "L" ? 1 : -1) * 0.95);
-    const v = centre.project(this.camera);
-    const rect = this.canvas.getBoundingClientRect();
-    return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
-  }
-
-  describe(): Record<string, unknown> {
-    return {
-      seats: this.seats.length,
-      floorAreas: this.floorMeshes.filter((f) => f.locationId).length,
-      binModules: this.binSides.reduce((n, b) => n + b.locations.length, 0),
-      profile: this.palette.id,
-      light: this.light,
-      view: this.currentView,
-      paused: this.paused,
-      layers: this.layers,
-      colourMode: this.colourMode,
-      selection: this.selection,
-      camera: {
-        position: this.camera.position.toArray().map((v) => Number(v.toFixed(3))),
-        target: this.controls.target.toArray().map((v) => Number(v.toFixed(3))),
-        fov: this.camera.fov,
-      },
-      renderer: { drawCalls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, pixelRatio: this.renderer.getPixelRatio() },
-      frames: this.frameCount,
-    };
-  }
 
   dispose(): void {
     this.disposed = true;
@@ -946,9 +983,12 @@ export class CabinScene {
     this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
     this.controls.dispose();
     for (const g of [this.groups.seats, this.groups.floor, this.groups.bins, this.groups.context]) this.clearGroup(g);
-    this.disposables.forEach((d) => {
-      d.dispose();
-    });
-    this.renderer.dispose();
+    try {
+      this.layoutResources.disposeAll();
+      this.sceneResources.disposeAll();
+    } finally {
+      this.renderer.dispose();
+      this.renderer.forceContextLoss();
+    }
   }
 }

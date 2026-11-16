@@ -1,5 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vitest";
 import { ConfigError, resolveServerConfig, resolveStoreConfig } from "../../src/server/config.ts";
 
 const errorOf = (fn: () => unknown): ConfigError => {
@@ -70,6 +72,49 @@ describe("CABIN_KIT_ALLOWED_HOSTS", () => {
       "10.0.0.5",
       "[fe80::1]",
     ]);
+  });
+});
+
+describe("CABIN_KIT_WEB_ROOT", () => {
+  const dirs: string[] = [];
+  const tempDir = () => {
+    const dir = mkdtempSync(join(tmpdir(), "cabin-kit-webroot-"));
+    dirs.push(dir);
+    return dir;
+  };
+  afterAll(() => {
+    for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("defaults to dist/web", () => {
+    expect(resolveServerConfig({}, {}).webRoot).toBe(resolve("dist", "web"));
+  });
+
+  test("an existing directory is used; surrounding blanks are trimmed", () => {
+    const dir = tempDir();
+    expect(resolveServerConfig({}, { CABIN_KIT_WEB_ROOT: ` ${dir} ` }).webRoot).toBe(dir);
+  });
+
+  test("a relative path resolves against the working directory", () => {
+    expect(resolveServerConfig({}, { CABIN_KIT_WEB_ROOT: "src/web" }).webRoot).toBe(resolve("src/web"));
+  });
+
+  test.each(["", "   "])("empty or blank (%j) means unset", (value) => {
+    expect(resolveServerConfig({}, { CABIN_KIT_WEB_ROOT: value }).webRoot).toBe(resolve("dist", "web"));
+  });
+
+  test("a missing path or a file is rejected, naming the variable", () => {
+    const dir = tempDir();
+    const file = join(dir, "index.html");
+    writeFileSync(file, "x");
+    expect(errorOf(() => resolveServerConfig({}, { CABIN_KIT_WEB_ROOT: join(dir, "nope") })).message).toMatch(
+      /^CABIN_KIT_WEB_ROOT ".*nope" is not a directory\./,
+    );
+    expect(() => resolveServerConfig({}, { CABIN_KIT_WEB_ROOT: file })).toThrow(ConfigError);
+  });
+
+  test("an explicit webRoot override wins and is not checked", () => {
+    expect(resolveServerConfig({ webRoot: "/nowhere" }, { CABIN_KIT_WEB_ROOT: "/also-nowhere" }).webRoot).toBe("/nowhere");
   });
 });
 

@@ -22,6 +22,7 @@ npm start                # http://127.0.0.1:4310
 | `CABIN_KIT_ALLOW_REMOTE` | unset | `1` accepts a non-loopback `CABIN_KIT_HOST`. The server has no authentication; only set it on a network you trust |
 | `CABIN_KIT_PORT` | `4310` | Listen port, a whole number from 0 to 65535 |
 | `CABIN_KIT_ALLOWED_HOSTS` | unset | Comma-separated extra host names accepted in the `Host` header, besides `localhost`, `127.0.0.1`, `::1` and `CABIN_KIT_HOST`. Empty or blank means none. Requests with any other `Host` get 403 `HOST_NOT_ALLOWED` |
+| `CABIN_KIT_WEB_ROOT` | `dist/web` | Directory of the built client the server serves. Must exist. The E2E run points it at `dist/web-e2e` |
 | `CABIN_KIT_TEST_FAULTS` | unset | `1` enables the fault-injection route used by the E2E run. Never set it in normal use |
 | `CABIN_KIT_LOG_LEVEL` | `info` | One of `silent`, `error`, `warn`, `info`, `debug` |
 
@@ -104,7 +105,8 @@ The reference store can always be rebuilt with `npm run reference:import`, provi
 ```
 npm run verify           # typecheck, vitest, build + E2E, comparison sheets, originals check
 npm run test             # vitest only
-npm run test:e2e         # browser run; needs Google Chrome installed
+npm run test:e2e         # browser run; builds dist/web-e2e with test hooks first; needs Google Chrome installed
+npm run build:e2e        # the client with window.__cabinKit test hooks, in dist/web-e2e (never ship this build)
 ```
 
 The E2E run starts its own server on a spare port with temporary stores. It does not touch `./data`. It rewrites the files under `verification/`.

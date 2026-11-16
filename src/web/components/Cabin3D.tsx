@@ -1,7 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { VisualProfile } from "../../domain/types.ts";
 import type { Workspace } from "../model.ts";
-import type { CabinScene, CameraView, ColourMode, Layers, LightMode, LocationState } from "../scene/CabinScene.ts";
+import type { CabinScene, CameraView, ColourMode, Layers, LightMode, LocationState, SceneTestHooks } from "../scene/CabinScene.ts";
+
+/** Only the e2e build (`npm run build:e2e`) exposes the scene on window; the shipped bundle never contains the hook. */
+const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
 
 interface Props {
   workspace: Workspace;
@@ -16,7 +19,7 @@ interface Props {
 
 declare global {
   interface Window {
-    __cabinKit?: { scene: CabinScene | null };
+    __cabinKit?: { scene: (CabinScene & SceneTestHooks) | null };
   }
 }
 
@@ -63,7 +66,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           onContextLost: () => onFailedRef.current("The graphics context was lost."),
         });
         sceneRef.current = scene;
-        window.__cabinKit = { scene };
+        if (TEST_HOOKS) window.__cabinKit = { scene: scene as CabinScene & SceneTestHooks };
         setReady(true);
       } catch (e) {
         if (!cancelled) onFailedRef.current(e instanceof Error ? e.message : "3D could not start.");
@@ -73,7 +76,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
       cancelled = true;
       scene?.dispose();
       sceneRef.current = null;
-      if (window.__cabinKit) window.__cabinKit.scene = null;
+      if (TEST_HOOKS && window.__cabinKit) window.__cabinKit.scene = null;
     };
   }, []);
 

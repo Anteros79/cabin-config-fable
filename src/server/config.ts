@@ -90,6 +90,19 @@ function checkAllowedHosts(hosts: string[]): string[] {
   return hosts;
 }
 
+/** CABIN_KIT_WEB_ROOT: the built client to serve. Relative paths resolve against the working directory; it must be an existing directory. */
+function checkWebRoot(path: string): string {
+  const root = resolve(path);
+  let isDirectory = false;
+  try {
+    isDirectory = statSync(root).isDirectory();
+  } catch {
+    // missing or unreadable: reported below
+  }
+  if (!isDirectory) throw new ConfigError(`CABIN_KIT_WEB_ROOT "${path}" is not a directory. Build the client first, or point it at a built client.`);
+  return root;
+}
+
 function checkLogLevel(value: string | undefined): LogLevel {
   if (value === undefined) return "info";
   const level = LOG_LEVELS.find((l) => l === value);
@@ -103,12 +116,14 @@ export function resolveServerConfig(overrides: Partial<ServerConfig> = {}, env: 
   const port = checkPort(overrides.port ?? setting(env, "CABIN_KIT_PORT") ?? 4310);
   const allowedHosts = checkAllowedHosts(overrides.allowedHosts ?? parseHostList(env.CABIN_KIT_ALLOWED_HOSTS));
   const logLevel = overrides.logLevel ?? checkLogLevel(setting(env, "CABIN_KIT_LOG_LEVEL"));
+  const envWebRoot = setting(env, "CABIN_KIT_WEB_ROOT");
+  const webRoot = overrides.webRoot ?? (envWebRoot === undefined ? join(PROJECT_ROOT, "dist", "web") : checkWebRoot(envWebRoot));
   return {
     ...resolveStoreConfig(overrides, env),
     host,
     allowedHosts,
     port,
-    webRoot: overrides.webRoot ?? join(PROJECT_ROOT, "dist", "web"),
+    webRoot,
     testFaults: overrides.testFaults ?? setting(env, "CABIN_KIT_TEST_FAULTS") === "1",
     logLevel,
   };

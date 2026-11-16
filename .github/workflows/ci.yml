@@ -22,8 +22,10 @@ jobs:
       # biome ci checks lint and formatting, unlike `biome lint`.
       - run: npx biome ci .
       - run: npm run typecheck
-      - run: npm run coverage
+      # Build first so the build outputs exist; the bundle test builds its own copies in a temp directory.
       - run: npm run build
+      - run: npm run build:e2e
+      - run: npm run coverage
       - run: npm audit --omit=dev --audit-level=high
       # Clean-clone import: reads fixtures/originals, never the ../../ originals.
       - name: Import reference data

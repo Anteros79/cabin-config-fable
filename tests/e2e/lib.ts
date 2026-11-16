@@ -49,6 +49,8 @@ export async function startServer(options: { dataDir?: string; testFaults?: bool
           CABIN_KIT_DATA_DIR: dataDir,
           CABIN_KIT_PORT: String(port),
           CABIN_KIT_HOST: "127.0.0.1",
+          // the e2e build carries window.__cabinKit; the normal build does not (PF-14)
+          CABIN_KIT_WEB_ROOT: process.env.CABIN_KIT_WEB_ROOT ?? join(PROJECT_ROOT, "dist", "web-e2e"),
           CABIN_KIT_TEST_FAULTS: options.testFaults === false ? "0" : "1",
         },
         stdio: ["ignore", "pipe", "pipe"],

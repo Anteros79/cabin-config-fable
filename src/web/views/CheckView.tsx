@@ -10,6 +10,9 @@ import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
 import { formatRoute } from "../routes.ts";
 
+/** Only the e2e build (`npm run build:e2e`) sets this; see Cabin3D.tsx. */
+const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
+
 interface Props {
   visitId: string | null;
   /** The lookup the route asks for (check view only). A change runs the lookup. */
@@ -265,7 +268,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   };
   const select = (locationId: string, componentId: string | null) => {
     const apply = () => {
-      window.__cabinKit?.scene?.markInteraction();
+      if (TEST_HOOKS) window.__cabinKit?.scene?.markInteraction();
       setSelection(locationId);
       setFocusComponent(componentId);
     };
