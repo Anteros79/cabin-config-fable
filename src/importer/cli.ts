@@ -1,5 +1,4 @@
-import { existsSync, realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import { canonicalJson } from "../domain/canonical.ts";
 import { contentHash } from "../domain/hash.ts";
 import type { Finding } from "../domain/types.ts";
@@ -7,7 +6,7 @@ import { hasBlockingFindings } from "../domain/validate.ts";
 import { resolveStoreConfig } from "../server/config.ts";
 import { assertSafeReferenceTarget, inspectStore, ReferenceStore, ReferenceStoreError, resetReferenceStore } from "../server/referenceStore.ts";
 import { VisitStore } from "../server/visitStore.ts";
-import { type OptionSpec, parseCliArgs, UsageError } from "./args.ts";
+import { isEntryPoint, type OptionSpec, parseCliArgs, UsageError } from "./args.ts";
 import { buildStagedRelease, defaultSourceRoot } from "./assemble.ts";
 import { assertSourceRoot } from "./originals.ts";
 
@@ -261,13 +260,7 @@ function main(argv: string[]): number {
   return before !== null && before !== after ? 3 : 0;
 }
 
-/** True when this file is the process entry point, also when it was started through a symlinked path. */
-function isEntryPoint(): boolean {
-  if (import.meta.main !== undefined) return import.meta.main;
-  return process.argv[1] !== undefined && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-}
-
-if (isEntryPoint()) {
+if (isEntryPoint(import.meta.url, import.meta.main)) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (e) {
