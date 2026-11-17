@@ -175,7 +175,24 @@ describe("server process", () => {
     const pending = connect(port, "127.0.0.1");
     await new Promise<void>((resolve, reject) => pending.once("connect", resolve).once("error", reject));
     pending.on("error", () => {});
-    pending.write(`POST /api/visits HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{`);
+    // The headers go first with Expect: 100-continue: the server's 100 answer proves it parsed them, so the request is
+    // active before the first SIGTERM. Sending the signal earlier could let close complete (flaky under load).
+    let answered = "";
+    const continued = new Promise<void>((resolve) => {
+      const onData = (chunk: Buffer) => {
+        answered += chunk.toString("latin1");
+        if (answered.includes("HTTP/1.1 100")) {
+          pending.off("data", onData);
+          resolve();
+        }
+      };
+      pending.on("data", onData);
+    });
+    pending.write(
+      `POST /api/visits HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\nContent-Length: 100\r\nExpect: 100-continue\r\n\r\n`,
+    );
+    await continued;
+    pending.write("{");
     server.child.kill("SIGTERM");
     // The first signal was handled once the listener refuses new connections; only then is the second one sent.
     for (;;) {
