@@ -22,6 +22,7 @@ test("README walk-through by keyboard: look up, record, alternate, complete, and
   page,
   api,
   allowConsoleErrors,
+  browserName,
 }, testInfo) => {
   // three.js reports the context it could not create; the app shows its own notice and the map takes over
   if (testInfo.project.name === "no-webgl") allowConsoleErrors(/THREE\.WebGLRenderer: .*WebGL context/);
@@ -30,7 +31,8 @@ test("README walk-through by keyboard: look up, record, alternate, complete, and
   await test.step("the skip link is the first tab stop and keeps the route", async () => {
     await page.goto("/#/check");
     await expect(page.locator("input[name=tail]")).toBeVisible();
-    await page.keyboard.press("Tab");
+    // WebKit's default Tab skips buttons and links; Option-Tab (or Safari's "Press Tab to highlight each item") reaches them.
+    await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
     await expect(page.getByRole("button", { name: "Skip to content" })).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.locator("main#main")).toBeFocused();

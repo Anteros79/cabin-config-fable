@@ -54,6 +54,10 @@ export function makeApi(baseURL: string): Api {
   };
 }
 
+/** The one console error WebKit logs when Playwright screenshots a page under the app's CSP; allowed on WebKit only. */
+const WEBKIT_SCREENSHOT_CSP =
+  /^console: Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy\. \(/;
+
 interface TestFixtures {
   api: Api;
   /** A fresh draft on N100TL / 2026-11-12, created through the API. */
@@ -111,9 +115,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(await api.createVisit("N100TL", "2026-11-12"));
   },
 
-  // biome-ignore lint/correctness/noEmptyPattern: Playwright reads fixture dependencies from this destructuring pattern
-  consoleWatch: async ({}, use) => {
-    const allowed: RegExp[] = [];
+  consoleWatch: async ({ browserName }, use) => {
+    // Playwright's WebKit screenshotter injects a <style> when it takes a screenshot (on a failure, for instance), and
+    // the page's CSP refuses it. The app itself logs nothing; Chromium's screenshotter logs nothing either.
+    const allowed: RegExp[] = browserName === "webkit" ? [WEBKIT_SCREENSHOT_CSP] : [];
     const errors: string[] = [];
     const watched = new WeakSet<Page>();
     await use({
