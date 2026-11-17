@@ -176,7 +176,7 @@ describe("useMutations", () => {
     await act(async () => {
       await m().run("A", () => Promise.reject(refused("STALE_RECORD", 409, { current: { version: 3 } })), "a");
     });
-    expect(m().statusOf("A")).toEqual({ phase: "conflict", message: "STALE_RECORD message", current: { current: { version: 3 } } });
+    expect(m().statusOf("A")).toEqual({ phase: "conflict", code: "STALE_RECORD", message: "STALE_RECORD message", current: { current: { version: 3 } } });
   });
 
   it("reports a replayed answer as saved without duplication", async () => {

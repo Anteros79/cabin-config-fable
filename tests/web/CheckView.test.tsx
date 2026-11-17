@@ -450,3 +450,57 @@ describe("CheckView undo after Remove", () => {
     expect(document.getElementById("inspector-heading")).toHaveTextContent(cushion.locationLabel);
   });
 });
+
+describe("CheckView edit that loses a race with completion (I2)", () => {
+  const locked = { status: 409, body: { error: { code: "VISIT_LOCKED", message: "This visit is completed and locked.", details: null } } };
+  const completed: Visit = { ...base, status: "COMPLETED", version: base.version + 1, completedAt: "2026-11-12T10:00:00.000Z" };
+  const notSaved = (r: VisitRecord) =>
+    `Not saved: ${r.locationLabel} / ${r.componentName}. The visit was completed elsewhere; this change is not in the report.`;
+  /** The server: the draft at first; once a write is refused as locked, the completed visit. */
+  const stubLocked = () => {
+    let refused = false;
+    stubFetch((method, url): Answer => {
+      if (url.startsWith("/api/tails")) return { body: { tails: [] } };
+      if (method === "GET") return { body: { visit: refused ? completed : base } };
+      refused = true;
+      return locked;
+    });
+  };
+  const renderWithToasts = () =>
+    render(
+      <ToastProvider>
+        <CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />
+      </ToastProvider>,
+    );
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("an update refused because the visit was completed says so in a toast that stays after the form is gone", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    stubLocked();
+    renderWithToasts();
+    fireEvent.click(await screen.findByRole("button", { name: "Pick seat 3A" }));
+    const card = await screen.findByRole("region", { name: new RegExp(`^${cushion.componentName}`) });
+    fireEvent.change(within(card).getByLabelText("Note (optional)"), { target: { value: "changed" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Update record" }));
+    await screen.findByText(notSaved(cushion));
+    // The reload shows the completed visit: the form, and its own "Not saved" line, are gone.
+    await screen.findByText("Completed and locked");
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Update record" })).toBeNull());
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(screen.getByText(notSaved(cushion))).toBeInTheDocument();
+  });
+
+  it("a removal refused because the visit was completed says so in a toast that stays, with no Undo", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    stubLocked();
+    renderWithToasts();
+    fireEvent.click(await screen.findByRole("button", { name: removeLabel(cushion) }));
+    await screen.findByText(notSaved(cushion));
+    await screen.findByText("Completed and locked");
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(screen.getByText(notSaved(cushion))).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+});

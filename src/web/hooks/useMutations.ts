@@ -7,7 +7,7 @@ export type SaveStatus =
   | { phase: "saved"; at: string; replayed: boolean }
   | { phase: "failed"; message: string; retryable: boolean } // server answered: not saved; retryable when the refusal was a 5xx
   | { phase: "unknown"; message: string } // no answer: may or may not be saved
-  | { phase: "conflict"; message: string; current: unknown };
+  | { phase: "conflict"; code: string; message: string; current: unknown }; // code: which conflict (VISIT_LOCKED, STALE_RECORD, ...)
 
 export interface Mutations<R> {
   statusOf(target: string): SaveStatus;
@@ -38,7 +38,7 @@ export const recordTarget = (locationId: string, componentId: string): string =>
 function outcomeOf(error: unknown): SaveStatus {
   if (error instanceof ApiError && error.kind === "http") {
     return CONFLICT_CODES.has(error.code)
-      ? { phase: "conflict", message: error.message, current: error.details }
+      ? { phase: "conflict", code: error.code, message: error.message, current: error.details }
       : { phase: "failed", message: error.message, retryable: error.status >= 500 };
   }
   // No answer, a cancelled request, or anything else: the write may have reached the server.

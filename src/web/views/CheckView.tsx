@@ -282,6 +282,9 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       return next;
     });
   }, []);
+  /** "Seat 3A / Seat cushion": a location and component named as the record list and toasts name them. */
+  const nameOf = (locationId: string, componentId: string): string =>
+    `${workspace?.layout.locations.find((l) => l.id === locationId)?.label ?? locationId} / ${workspace?.componentDefs[componentId]?.name ?? componentId}`;
   const [resetKey, setResetKey] = useState(0);
   /** What waits for the person to discard their unrecorded input, and whose input it is. */
   const [pendingDiscard, setPendingDiscard] = useState<{ names: string[]; proceed: () => void } | null>(null);
@@ -293,7 +296,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     }
     const names = [...dirtyTargets].map((target) => {
       const [locationId = "", componentId = ""] = target.slice("record:".length).split("|");
-      return `${workspace.layout.locations.find((l) => l.id === locationId)?.label ?? locationId} / ${workspace.componentDefs[componentId]?.name ?? componentId}`;
+      return nameOf(locationId, componentId);
     });
     setPendingDiscard({
       names,
@@ -356,6 +359,16 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   const reloadOnConflict = (target: string) => {
     if (visitId && writes.statusOf(target).phase === "conflict") reloadVisit();
   };
+  /**
+   * A change refused because the visit was completed elsewhere: the reload shows the locked visit, which drops the form
+   * and its own "Not saved" line, so the person is told in a toast that stays until they dismiss it.
+   */
+  const reportLocked = (target: string, name: string) => {
+    const status = writes.statusOf(target);
+    if (status.phase === "conflict" && status.code === "VISIT_LOCKED") {
+      toast.show(`Not saved: ${name}. The visit was completed elsewhere; this change is not in the report.`, { durationMs: null });
+    }
+  };
   const startVisit = () => {
     if (!lookup) return;
     const request = { tail: lookup.tail, date: lookup.checkDate, technician };
@@ -366,6 +379,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     const id = visit.id;
     const target = recordTarget(input.locationId, input.componentId);
     await writes.run(target, (key) => api.upsertRecord(id, input, expectedRecordVersion, key), canonicalJson({ record: input, expectedRecordVersion }));
+    reportLocked(target, nameOf(input.locationId, input.componentId));
     reloadOnConflict(target);
   };
   const remove = async (r: VisitRecord) => {
@@ -378,6 +392,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       (key) => api.removeRecord(id, request.locationId, request.componentId, request.expectedRecordVersion, key),
       canonicalJson(request),
     );
+    reportLocked(target, recordName(r));
     reloadOnConflict(target);
     // Undo is offered only for a removal the server confirmed; an unknown outcome keeps its own "Retry safely".
     if (removed) toast.show(`Removed ${recordName(r)}.`, { action: { label: "Undo", run: () => void undoRemove(id, r) } });
