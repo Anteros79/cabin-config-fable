@@ -91,6 +91,9 @@ describe("fixture file schema (IMP-04)", () => {
       /V99/,
     ],
     ["omitted seat that does not exist", (d) => firstSeatSpec(d).omit.push("99Z"), /99Z/],
+    ["exit row beyond the layout's rows", (d) => firstSeatSpec(d).exitRows.push(99), /seatSpecs\.\w+\.exitRows: row 99 /],
+    ["ELR row beyond the layout's rows", (d) => firstSeatSpec(d).elrRows.push(99), /seatSpecs\.\w+\.elrRows: row 99 /],
+    ["row that is both an exit row and an ELR row", (d) => firstSeatSpec(d).elrRows.push(at(firstSeatSpec(d).exitRows, 0)), /seatSpecs\.\w+: row 14 is both/],
     [
       "seat spec used by a variant but not defined",
       (d) => {

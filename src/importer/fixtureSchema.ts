@@ -1,6 +1,6 @@
 // Strict schema for fixtures/fixture-data.json (IMP-04). Every object is strict, so an unknown or
 // misspelt key is an error instead of being silently ignored. Cross-references between parts of the
-// file (override keys, omitted seats, seat-spec names) are checked by `fixtureReferenceIssues` in
+// file (override keys, omitted seats, exit and ELR rows, seat-spec names) are checked by `fixtureReferenceIssues` in
 // fixtures.ts, which knows how the builder expands the data.
 import { z } from "zod";
 import { isIsoDate } from "../domain/dates.ts";

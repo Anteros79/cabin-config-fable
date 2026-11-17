@@ -213,6 +213,14 @@ export function fixtureReferenceIssues(data: FixtureData): string[] {
     for (const code of spec.omit) {
       if (!gridHas(spec, code)) issues.push(`seatSpecs.${id}.omit: seat ${code} is not in this ${spec.rows}-row layout (letters ${LETTERS.join("")}).`);
     }
+    for (const list of ["exitRows", "elrRows"] as const) {
+      for (const row of spec[list]) {
+        if (row > spec.rows) issues.push(`seatSpecs.${id}.${list}: row ${row} is not in this ${spec.rows}-row layout.`);
+      }
+    }
+    for (const row of new Set(spec.exitRows.filter((r) => spec.elrRows.includes(r)))) {
+      issues.push(`seatSpecs.${id}: row ${row} is both an exit row and an ELR row; a row has one seat zone.`);
+    }
   }
   data.variants.forEach((v, i) => {
     if (v.seatSpec !== null && !Object.hasOwn(data.seatSpecs, v.seatSpec)) issues.push(`variants.${i}.seatSpec: seat spec ${v.seatSpec} is not defined.`);
