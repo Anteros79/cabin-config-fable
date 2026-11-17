@@ -44,6 +44,6 @@ The populated registry (5 configurations, 837 seats, agreeing across JSON, CSV a
 
 - Agreement of the registry with any real aircraft.
 - Any regulatory statement in the documents.
-- Behaviour with a real screen reader, on devices other than the one named in `verification/PROVENANCE.json`, or in browsers other than Chromium (WebKit was run once and fails three checks; Firefox could not be started).
+- Behaviour with a real screen reader, on devices other than the one named in `verification/PROVENANCE.json`, or in browsers other than Chromium (on WebKit the Enter fix 74cf243 and the screenshotter's CSP message are accounted for; the keyboard walk-through still fails because WebKit's plain Tab skips buttons and links; Firefox could not be started).
 
 See [`verification/README.md`](../verification/README.md) for the full list.
