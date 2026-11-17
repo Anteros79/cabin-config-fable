@@ -103,6 +103,47 @@ describe("Toasts", () => {
     expect(messages()).toEqual(["two", "three", "four"]);
   });
 
+  it("a new toast evicts a plain notice before a toast with an action, oldest first (M4)", () => {
+    setup();
+    const undo = { action: { label: "Undo", run: () => undefined } };
+    act(() => {
+      show("undo one", undo);
+      show("plain one");
+      show("plain two");
+      show("undo two", undo);
+    });
+    expect(messages()).toEqual(["undo one", "plain two", "undo two"]);
+    act(() => show("plain three"));
+    expect(messages()).toEqual(["undo one", "undo two", "plain three"]);
+  });
+
+  it("a notice shown with durationMs null stays until dismissed, and is kept over plain notices", () => {
+    setup();
+    act(() => {
+      show("Not saved: kept", { durationMs: null });
+      show("plain one");
+      show("plain two");
+      show("plain three");
+    });
+    expect(messages()).toEqual(["Not saved: kept", "plain two", "plain three"]);
+    act(() => vi.advanceTimersByTime(10 * 60_000));
+    expect(messages()).toEqual(["Not saved: kept"]);
+  });
+
+  it("with three toasts that stay, a new plain notice is the one dropped; a new toast that stays replaces the oldest", () => {
+    setup();
+    const undo = { action: { label: "Undo", run: () => undefined } };
+    act(() => {
+      show("undo one", undo);
+      show("undo two", undo);
+      show("undo three", undo);
+      show("plain");
+    });
+    expect(messages()).toEqual(["undo one", "undo two", "undo three"]);
+    act(() => show("undo four", undo));
+    expect(messages()).toEqual(["undo two", "undo three", "undo four"]);
+  });
+
   it("pauses while focus is inside, and resumes with the time that was left", () => {
     setup();
     act(() => show("Removed", { durationMs: 8000 }));

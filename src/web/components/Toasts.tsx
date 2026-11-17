@@ -2,7 +2,8 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 
 export interface ToastOptions {
   action?: { label: string; run(): void };
-  durationMs?: number;
+  /** How long a plain notice shows; null keeps it until it is dismissed (a warning the person must not miss). */
+  durationMs?: number | null;
 }
 interface Toast {
   id: number;
@@ -16,10 +17,23 @@ interface ToastApi {
   show(message: string, options?: ToastOptions): () => void;
 }
 
-/** At most this many show at once; a new one replaces the oldest. */
+/** At most this many show at once. Over that, the oldest timed notice goes first, then the oldest of the rest. */
 export const MAX_TOASTS = 3;
 /** How long a plain notice shows. A toast with an action (Undo) has no time limit (WCAG 2.2.1). */
 export const TOAST_MS = 5000;
+
+/**
+ * The toasts to keep when there are too many: timed notices are dropped before toasts that stay (an Undo, or a warning
+ * kept until dismissed), oldest first, so a burst of notices never takes away an Undo. When every toast stays, the oldest goes.
+ */
+function withinLimit(toasts: Toast[]): Toast[] {
+  const kept = [...toasts];
+  while (kept.length > MAX_TOASTS) {
+    const timed = kept.findIndex((t) => t.durationMs !== null);
+    kept.splice(timed === -1 ? 0 : timed, 1);
+  }
+  return kept;
+}
 
 /** Without a provider (a view rendered on its own) a toast goes nowhere. */
 const ToastContext = createContext<ToastApi>({ show: () => () => undefined });
@@ -64,8 +78,8 @@ function ToastItem({ toast, paused, dismiss }: { toast: Toast; paused: boolean; 
 /**
  * Short notes about something that just happened, with an optional action (Undo). They appear in a polite status
  * region, so a screen reader reads them without focus moving. A plain notice goes after 5 s, waiting while a mouse
- * pointer or focus is on the region; one with an action stays until it is used, dismissed (button or Escape) or
- * withdrawn by the view that showed it. No animation: they appear and go.
+ * pointer or focus is on the region; one with an action, or one shown with `durationMs: null`, stays until it is used,
+ * dismissed (button or Escape) or withdrawn by the view that showed it. No animation: they appear and go.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -92,9 +106,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         id: nextId.current++,
         message,
         action: options?.action,
-        durationMs: options?.action ? null : (options?.durationMs ?? TOAST_MS),
+        durationMs: options?.action || options?.durationMs === null ? null : (options?.durationMs ?? TOAST_MS),
       };
-      setToasts((current) => [...current, toast].slice(-MAX_TOASTS));
+      setToasts((current) => withinLimit([...current, toast]));
       return () => dismiss(toast.id);
     },
     [dismiss],
