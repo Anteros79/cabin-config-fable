@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { formatRoute, isInPageAnchor, parseRoute, type Route } from "../../src/web/routes.ts";
+import { MAX_LIST_OFFSET, VISITS_PAGE_SIZE } from "../../src/domain/limits.ts";
+import { ListVisitsQuery } from "../../src/server/http/schemas.ts";
+import { formatRoute, isInPageAnchor, MAX_PAGE, parseRoute, type Route } from "../../src/web/routes.ts";
 
 const ID = "3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b";
 const sampleRoutes: Route[] = [
@@ -40,10 +42,18 @@ describe("parseRoute", () => {
     expect(parseRoute("#/visits?page=abc")).toEqual({ name: "visits", status: null, q: "", page: 1 });
   });
 
-  it("caps the page at 1,000,000 so the offset stays a safe integer", () => {
-    expect(parseRoute("#/visits?page=1e22")).toEqual({ name: "visits", status: null, q: "", page: 1_000_000 });
-    expect(parseRoute("#/visits?page=1000001")).toMatchObject({ page: 1_000_000 });
-    expect(parseRoute("#/visits?page=999999")).toMatchObject({ page: 999_999 });
+  // The last page whose offset the server accepts: the page cap follows from the server's offset cap (M3).
+  it("caps the page at 40,000, the last page whose offset the server's list accepts", () => {
+    expect(MAX_PAGE).toBe(40_000);
+    expect(parseRoute("#/visits?page=1e22")).toEqual({ name: "visits", status: null, q: "", page: 40_000 });
+    expect(parseRoute("#/visits?page=40001")).toMatchObject({ page: 40_000 });
+    expect(parseRoute("#/visits?page=39999")).toMatchObject({ page: 39_999 });
+  });
+
+  it("the offset of the highest page is one the server's list query accepts", () => {
+    const offset = (MAX_PAGE - 1) * VISITS_PAGE_SIZE;
+    expect(ListVisitsQuery.safeParse({ limit: String(VISITS_PAGE_SIZE), offset: String(offset) }).success).toBe(true);
+    expect(MAX_PAGE).toBe(Math.floor(MAX_LIST_OFFSET / VISITS_PAGE_SIZE));
   });
 });
 

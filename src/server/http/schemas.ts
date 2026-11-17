@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_LIST_OFFSET } from "../../domain/limits.ts";
 import { DomainError } from "../../domain/visitLogic.ts";
 
 export const ListVisitsQuery = z
@@ -6,7 +7,7 @@ export const ListVisitsQuery = z
     status: z.enum(["DRAFT", "COMPLETED"]).optional(),
     q: z.string().max(100).optional(),
     limit: z.coerce.number().int().min(1).max(200).default(50),
-    offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
+    offset: z.coerce.number().int().min(0).max(MAX_LIST_OFFSET).default(0),
   })
   .strict();
 

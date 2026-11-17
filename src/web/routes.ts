@@ -1,3 +1,5 @@
+import { MAX_LIST_OFFSET, VISITS_PAGE_SIZE } from "../domain/limits.ts";
+
 /** The hash routes of the app. Parsing never throws; what cannot be read is a `notFound` route that keeps the raw hash. */
 export type Route =
   | { name: "check"; tail: string | null; date: string | null }
@@ -14,8 +16,8 @@ export interface NavigateOptions {
   replace?: boolean;
 }
 
-/** The highest page a route may ask for: keeps the list offset a small safe integer. */
-export const MAX_PAGE = 1_000_000;
+/** The highest page a route may ask for: the last page whose offset the server's visit list accepts. */
+export const MAX_PAGE = Math.floor(MAX_LIST_OFFSET / VISITS_PAGE_SIZE);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

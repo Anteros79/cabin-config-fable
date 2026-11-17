@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { VISITS_PAGE_SIZE } from "../../domain/limits.ts";
 import { api } from "../api.ts";
 import { EmptyState } from "../components/EmptyState.tsx";
 import { ScrollRegion } from "../components/ScrollRegion.tsx";
@@ -7,7 +8,7 @@ import { formatDate, relativeTime } from "../format.ts";
 import { useResource } from "../hooks/useResource.ts";
 import { formatRoute, type NavigateOptions, type Route } from "../routes.ts";
 
-const PAGE = 25;
+const PAGE = VISITS_PAGE_SIZE;
 
 /** Saved history: every draft and completed visit is reachable by paging, filtering or search. */
 export function VisitsView({
