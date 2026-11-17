@@ -152,7 +152,7 @@ export function createApp(config: ServerConfig): AppHandle {
   const visits = VisitStore.open(config.visitsPath, config.referencePath);
   const faults: Faults = { visitWrites: null, remaining: 0, reference: null };
 
-  let reference: { store: ReferenceStore; ino: number; mtimeMs: number } | null = null;
+  let reference: { store: ReferenceStore; ino: number } | null = null;
   const closeReference = () => {
     try {
       reference?.store.close();
@@ -170,8 +170,7 @@ export function createApp(config: ServerConfig): AppHandle {
     }
     const stat = statSync(config.referencePath);
     if (reference && reference.ino !== stat.ino) closeReference();
-    if (!reference)
-      reference = { store: ReferenceStore.open(config.referencePath, config.visitsPath, { readOnly: true }), ino: stat.ino, mtimeMs: stat.mtimeMs };
+    if (!reference) reference = { store: ReferenceStore.open(config.referencePath, config.visitsPath, { readOnly: true }), ino: stat.ino };
     try {
       return reference.store.loadActive();
     } catch (e) {
