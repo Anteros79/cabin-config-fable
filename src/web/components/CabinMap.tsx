@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { CabinLocation } from "../../domain/types.ts";
 import { alternateText, type LocationFlags, STATUS_ENCODING, seatLabelFor, type Workspace } from "../model.ts";
-import { submitOnEnter } from "../submitOnEnter.ts";
+import { forgetSuggestionKeys, submitOnEnter } from "../submitOnEnter.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
 
 interface Props {
@@ -143,6 +143,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
           value={goTo}
           onChange={(e) => setGoTo(e.target.value)}
           onKeyDown={submitOnEnter}
+          onInput={forgetSuggestionKeys}
           placeholder="e.g. 3A, L-01, FWD"
           autoComplete="off"
         />

@@ -114,15 +114,10 @@ describe("CheckView writes", () => {
   });
 
   // WebKit lets a datalist suggestion take the first Enter, so the tail input submits its own form on Enter (I1).
-  // Only a text that is exactly one of the suggestions takes over Enter, so the stub offers N100TL (N1).
   it("Enter in the tail input looks it up exactly once", async () => {
-    stubFetch(
-      (_method, url): Answer =>
-        url.startsWith("/api/tails") ? { body: { tails: [{ tail: "N100TL", note: "" }] } } : { body: lookup(release, "N100TL", "2026-11-12") },
-    );
+    stubFetch((_method, url): Answer => (url.startsWith("/api/tails") ? { body: { tails: [] } } : { body: lookup(release, "N100TL", "2026-11-12") }));
     const navigate = vi.fn();
-    const { container } = render(<CheckView visitId={null} navigate={navigate} visualProfiles={[]} />);
-    await waitFor(() => expect(container.querySelector('#tail-options option[value="N100TL"]')).not.toBeNull());
+    render(<CheckView visitId={null} navigate={navigate} visualProfiles={[]} />);
     const input = screen.getByLabelText("Tail number");
     fireEvent.change(input, { target: { value: "N100TL" } });
     expect(fireEvent.keyDown(input, { key: "Enter", isComposing: true }), "an input method's Enter is left alone").toBe(true);

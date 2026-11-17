@@ -13,7 +13,7 @@ import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatus
 import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
 import { formatRoute } from "../routes.ts";
-import { submitOnEnter } from "../submitOnEnter.ts";
+import { forgetSuggestionKeys, submitOnEnter } from "../submitOnEnter.ts";
 
 /** Only the e2e build (`npm run build:e2e`) sets this; see Cabin3D.tsx. */
 const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
@@ -475,6 +475,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                 value={tail}
                 onChange={(e) => setTail(e.target.value)}
                 onKeyDown={submitOnEnter}
+                onInput={forgetSuggestionKeys}
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}
