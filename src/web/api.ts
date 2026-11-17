@@ -60,8 +60,6 @@ interface ErrorEnvelope {
 }
 const isEnvelope = (p: unknown): p is ErrorEnvelope =>
   typeof p === "object" && p !== null && typeof (p as { error?: { code?: unknown } }).error?.code === "string";
-/** Server answers that prove nothing was saved: the transaction rolled back before it answered. */
-const NOT_SAVED_CODES = new Set(["STORAGE_UNAVAILABLE", "INTERNAL_ERROR"]);
 
 export async function request<T>(method: string, url: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
   const { timeoutMs = 20000, signal } = options;
@@ -105,8 +103,9 @@ export async function request<T>(method: string, url: string, body?: unknown, op
     }
     const p = payload as { state?: string } | null;
     if (!isWrite && readable && p?.state) return payload as T; // lookup answers carry their own state even on 503
-    if (isWrite && response.status >= 500 && !(readable && isEnvelope(payload) && NOT_SAVED_CODES.has(payload.error.code))) {
-      // A 5xx that is not the server's own envelope may come from a proxy after the write was applied.
+    // The server's own error envelope proves nothing was saved: every error it reports is thrown before COMMIT
+    // (VisitStore.write rolls back first). A 5xx without it may come from a proxy after the write was applied.
+    if (isWrite && response.status >= 500 && !(readable && isEnvelope(payload))) {
       throw new ApiError("network", response.status, "OUTCOME_UNKNOWN", "The server answer could not be trusted; the outcome is unknown.");
     }
     const envelope = readable && isEnvelope(payload) ? payload.error : null;

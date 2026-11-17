@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ApiError } from "../../src/web/api.ts";
+import { ApiError, api } from "../../src/web/api.ts";
 import { canRetry, type Mutations, useMutations } from "../../src/web/hooks/useMutations.ts";
 
 /** A promise the test settles by hand, so no network and no timers are involved. */
@@ -207,6 +207,29 @@ describe("useMutations", () => {
     });
     expect(keys).toHaveLength(3);
     expect(keys[2]).toBe(keys[1]);
+  });
+
+  // Through the real request(): an enveloped 5xx is a known refusal (nothing saved), which Retry safely may resend (M1).
+  it.each([
+    ["STORE_BUSY", 503],
+    ["SNAPSHOT_CORRUPT", 500],
+  ])("an enveloped %s answer to a write is failed and retryable, not an unknown outcome", async (code, status) => {
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: { code, message: `${code} message`, details: null } }), { status }));
+    try {
+      const { m } = setup<unknown>();
+      await act(async () => {
+        await m().run(
+          "A",
+          (key) =>
+            api.upsertRecord("v1", { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", substituteId: null, quantity: 1, note: "" }, 0, key),
+          "a",
+        );
+      });
+      expect(m().statusOf("A")).toEqual({ phase: "failed", message: `${code} message`, retryable: true });
+      expect(canRetry(m().statusOf("A"))).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("an onResult that throws neither rejects run nor stalls the queue", async () => {

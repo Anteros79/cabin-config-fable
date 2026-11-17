@@ -90,15 +90,23 @@ describe("request", () => {
     expect((await failure(api.upsertRecord("v1", record, 0, "key-key-key-1"))).kind).toBe("network");
   });
 
-  it.each(["STORAGE_UNAVAILABLE", "INTERNAL_ERROR"])("an enveloped %s on a write means nothing was saved", async (code) => {
-    stubFetch({ status: code === "STORAGE_UNAVAILABLE" ? 503 : 500, body: envelope(code) });
+  // The server answers every error with its envelope before COMMIT (VisitStore.write), so any envelope on a 5xx means
+  // nothing was saved (M1). Only a 5xx without one (a proxy, a crash) leaves the outcome unknown.
+  it.each([
+    ["STORAGE_UNAVAILABLE", 503],
+    ["INTERNAL_ERROR", 500],
+    ["STORE_BUSY", 503],
+    ["SNAPSHOT_CORRUPT", 500],
+    ["VISIT_SCHEMA_MISMATCH", 500],
+  ])("an enveloped %s (%i) on a write means nothing was saved", async (code, status) => {
+    stubFetch({ status, body: envelope(code) });
     const err = await failure(api.upsertRecord("v1", record, 0, "key-key-key-1"));
-    expect(err).toMatchObject({ kind: "http", code });
+    expect(err).toMatchObject({ kind: "http", status, code, message: `${code} message` });
   });
 
-  it("an enveloped 5xx with any other code on a write is still an unknown outcome", async () => {
-    stubFetch({ status: 500, body: envelope("SOMETHING_ELSE") });
-    expect((await failure(api.upsertRecord("v1", record, 0, "key-key-key-1"))).kind).toBe("network");
+  it("a 5xx on a write whose error has no string code is an unknown outcome", async () => {
+    stubFetch({ status: 500, body: { error: { code: 7, message: "odd" } } });
+    expect(await failure(api.upsertRecord("v1", record, 0, "key-key-key-1"))).toMatchObject({ kind: "network", code: "OUTCOME_UNKNOWN" });
   });
 
   it("409 carries the current record", async () => {
