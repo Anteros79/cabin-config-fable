@@ -103,8 +103,9 @@ export async function request<T>(method: string, url: string, body?: unknown, op
     }
     const p = payload as { state?: string } | null;
     if (!isWrite && readable && p?.state) return payload as T; // lookup answers carry their own state even on 503
-    // The server's own error envelope proves nothing was saved: every error it reports is thrown before COMMIT
+    // The server's own error envelope proves this attempt saved nothing: every error it reports is thrown before COMMIT
     // (VisitStore.write rolls back first). A 5xx without it may come from a proxy after the write was applied.
+    // An earlier attempt with the same key may still be stored; useMutations keeps that outcome unknown (N2).
     if (isWrite && response.status >= 500 && !(readable && isEnvelope(payload))) {
       throw new ApiError("network", response.status, "OUTCOME_UNKNOWN", "The server answer could not be trusted; the outcome is unknown.");
     }

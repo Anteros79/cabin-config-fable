@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "../../src/web/api.ts";
-import { canRetry, type Mutations, useMutations } from "../../src/web/hooks/useMutations.ts";
+import { canRetry, describeSaveStatus, type Mutations, useMutations } from "../../src/web/hooks/useMutations.ts";
 
 /** A promise the test settles by hand, so no network and no timers are involved. */
 function deferred<T>() {
@@ -230,6 +230,133 @@ describe("useMutations", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  // N2: once a key's outcome was unknown, the first attempt may be stored. A later refusal of a retry with that key
+  // answers only for the retry, so the status stays unknown and the key is kept; a new key could create a duplicate.
+  describe("after an unknown outcome", () => {
+    const record = { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", substituteId: null, quantity: 1, note: "" } as const;
+
+    /** First attempt lost; every later attempt goes through the real request() against the given answer. */
+    function lostThenAnswer(code: string, status: number) {
+      vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: { code, message: `${code} message`, details: null } }), { status }));
+      const keys: string[] = [];
+      const send = (key: string) => {
+        keys.push(key);
+        return keys.length === 1 ? Promise.reject(lost()) : api.upsertRecord("v1", record, 0, key);
+      };
+      return { keys, send };
+    }
+
+    it("an enveloped STORE_BUSY answer to the retry keeps the outcome unknown and the same key", async () => {
+      try {
+        const { keys, send } = lostThenAnswer("STORE_BUSY", 503);
+        const { m } = setup<unknown>();
+        await act(async () => {
+          await m().run("A", send, "a");
+        });
+        expect(m().statusOf("A").phase).toBe("unknown");
+        await act(async () => {
+          await m().retry("A");
+        });
+        const status = m().statusOf("A");
+        expect(status.phase).toBe("unknown");
+        expect(describeSaveStatus(status)).toMatch(/first attempt may already be stored/);
+        expect(describeSaveStatus(status)).toContain("STORE_BUSY message");
+        expect(m().anyUnknown, "the leave-page guard stays on").toBe(true);
+        expect(canRetry(status)).toBe(true);
+        act(() => m().dismiss("A"));
+        expect(m().statusOf("A").phase, "an unknown outcome is never dismissed").toBe("unknown");
+        await act(async () => {
+          await m().run("A", send, "a");
+        });
+        expect(keys).toHaveLength(3);
+        expect(new Set(keys).size, "every attempt of the same request carries the first key").toBe(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    // The create route runs the reference lookup before the store checks the key, so a 4xx can answer a retry whose
+    // first attempt was stored (see the residual fix report): a 4xx refusal is not taken as "not saved" either.
+    it("a 4xx refusal of the retry keeps the outcome unknown and the same key", async () => {
+      try {
+        const { keys, send } = lostThenAnswer("CONFIGURATION_NOT_RESOLVED", 422);
+        const { m } = setup<unknown>();
+        await act(async () => {
+          await m().run("A", send, "a");
+          await m().retry("A");
+        });
+        expect(m().statusOf("A").phase).toBe("unknown");
+        expect(describeSaveStatus(m().statusOf("A"))).toContain("CONFIGURATION_NOT_RESOLVED message");
+        await act(async () => {
+          await m().run("A", send, "a");
+        });
+        expect(new Set(keys).size).toBe(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it("a conflict answer to the retry is shown as a conflict, and the next request gets a fresh key", async () => {
+      const { m } = setup();
+      const keys: string[] = [];
+      const answers = [lost(), refused("STALE_RECORD", 409, { current: null })];
+      const send = (key: string) => {
+        keys.push(key);
+        const answer = answers.shift();
+        return answer ? Promise.reject(answer) : Promise.resolve("ok");
+      };
+      await act(async () => {
+        await m().run("A", send, "a");
+        await m().retry("A");
+      });
+      expect(m().statusOf("A").phase).toBe("conflict");
+      await act(async () => {
+        await m().run("A", send, "a");
+      });
+      expect(keys[1]).toBe(keys[0]);
+      expect(keys[2]).not.toBe(keys[0]);
+    });
+
+    it("a saved retry clears the mark: a later refusal of a new write is shown as not saved", async () => {
+      const { m } = setup();
+      const keys: string[] = [];
+      const answers: (ApiError | null)[] = [lost(), null, refused("STORE_BUSY", 503)];
+      const send = (key: string) => {
+        keys.push(key);
+        const answer = answers.shift();
+        return answer ? Promise.reject(answer) : Promise.resolve("ok");
+      };
+      await act(async () => {
+        await m().run("A", send, "a");
+        await m().retry("A");
+      });
+      expect(m().statusOf("A").phase).toBe("saved");
+      expect(m().anyUnknown).toBe(false);
+      await act(async () => {
+        await m().run("A", send, "a");
+      });
+      expect(keys[1]).toBe(keys[0]);
+      expect(keys[2]).not.toBe(keys[0]);
+      expect(m().statusOf("A")).toEqual({ phase: "failed", message: "STORE_BUSY message", retryable: true });
+    });
+
+    it("a changed request after an unknown outcome gets a fresh key and no mark", async () => {
+      const { m } = setup();
+      const keys: string[] = [];
+      const answers = [lost(), refused("STORE_BUSY", 503)];
+      const send = (key: string) => {
+        keys.push(key);
+        return Promise.reject(answers.shift());
+      };
+      await act(async () => {
+        await m().run("A", send, '{"note":"x"}');
+        await m().run("A", send, '{"note":"y"}');
+      });
+      expect(keys[1]).not.toBe(keys[0]);
+      expect(m().statusOf("A")).toEqual({ phase: "failed", message: "STORE_BUSY message", retryable: true });
+    });
   });
 
   it("an onResult that throws neither rejects run nor stalls the queue", async () => {

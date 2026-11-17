@@ -9,7 +9,7 @@ import { loadSceneModule } from "../components/sceneModule.ts";
 import { type ToastOptions, useToast } from "../components/Toasts.tsx";
 import { Viewer } from "../components/Viewer.tsx";
 import { formatDate, formatDateTime } from "../format.ts";
-import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, useMutations } from "../hooks/useMutations.ts";
+import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, UNKNOWN_OUTCOME, useMutations } from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
 import type { Workspace } from "../model.ts";
 import { formatRoute } from "../routes.ts";
@@ -47,7 +47,8 @@ type WriteResult = VisitStateEnvelope | Awaited<ReturnType<typeof api.complete>>
 /** The banner line for the visit-level writes (create, complete). */
 function bannerText(target: "create" | "complete", status: SaveStatus): string {
   if (status.phase === "saving") return target === "create" ? "Creating visit…" : "Completing visit…";
-  if (target === "complete" && status.phase === "unknown")
+  // A refused retry after an unknown outcome keeps its own message: the server did answer, but only for the retry.
+  if (target === "complete" && status.phase === "unknown" && status.message === UNKNOWN_OUTCOME)
     return "Outcome unknown: the server did not answer, so the visit may or may not be completed. Retrying is safe: completing twice returns the same report.";
   const refused = target === "complete" && (status.phase === "failed" || status.phase === "conflict") ? `Not completed: ${status.message}` : null;
   if (status.phase === "conflict") return `${refused ?? describeSaveStatus(status)} The current saved work has been reloaded.`;

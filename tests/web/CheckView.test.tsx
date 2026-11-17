@@ -57,7 +57,8 @@ describe("CheckView scene chunk", () => {
 });
 
 describe("CheckView writes", () => {
-  it("Start visit twice after a lost response sends one key", async () => {
+  // N2: a busy store refusing the second attempt says nothing about the first, so the third still sends the first key.
+  it("Start visit after a lost response and then a busy store still sends one key", async () => {
     const result = lookup(release, "N100TL", "2026-11-12");
     let posts = 0;
     const sent = stubFetch((method, url): Answer => {
@@ -65,7 +66,10 @@ describe("CheckView writes", () => {
       if (url.startsWith("/api/lookup")) return { body: result };
       if (method === "POST" && url === "/api/visits") {
         posts += 1;
-        return posts === 1 ? "reject" : { status: 201, body: { visit: base } };
+        if (posts === 1) return "reject";
+        if (posts === 2)
+          return { status: 503, body: { error: { code: "STORE_BUSY", message: "The visit store is busy. Nothing was saved; retry.", details: null } } };
+        return { status: 201, body: { visit: base } };
       }
       throw new Error(`unexpected ${method} ${url}`);
     });
@@ -77,11 +81,16 @@ describe("CheckView writes", () => {
     await screen.findByText(/may or may not have been saved/);
     expect(navigate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Start visit (saves a draft)" }));
+    await screen.findByText(/first attempt may already be stored/);
+    expect(screen.queryByText(/^Not saved/), "the refusal answers only for the retry").toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Start visit (saves a draft)" }));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith(`#/visit/${base.id}`));
     const creates = sent.filter((s) => s.method === "POST");
-    expect(creates).toHaveLength(2);
+    expect(creates).toHaveLength(3);
     expect(creates[0]?.body?.idempotencyKey).toEqual(expect.any(String));
     expect(creates[1]?.body?.idempotencyKey).toBe(creates[0]?.body?.idempotencyKey);
+    expect(creates[2]?.body?.idempotencyKey).toBe(creates[0]?.body?.idempotencyKey);
   });
 
   it("an empty tail is looked up and reported as invalid input, and the route lookup comes back after it", async () => {

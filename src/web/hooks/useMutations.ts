@@ -26,6 +26,8 @@ interface Entry<R> {
   key: string;
   fingerprint: string;
   send: (idempotencyKey: string) => Promise<R>;
+  /** The key once had an unknown outcome, so its first attempt may be stored until an answer settles it (N2). */
+  mayBeStored: boolean;
 }
 
 const IDLE: SaveStatus = { phase: "idle" };
@@ -33,13 +35,20 @@ const IDLE: SaveStatus = { phase: "idle" };
 const CONFLICT_CODES = new Set(["STALE_RECORD", "STALE_VISIT", "VISIT_LOCKED", "RECORD_NOT_FOUND"]);
 export const UNKNOWN_OUTCOME = "Outcome unknown: the server did not answer, so this may or may not have been saved. Retrying is safe and cannot duplicate it.";
 
+/** A retry of a key whose first attempt may be stored was refused: the refusal says nothing about that first attempt. */
+export const retryRefused = (message: string): string =>
+  `Outcome unknown: the first attempt may already be stored, and the server refused the retry (${message}). Retrying is safe and cannot duplicate it.`;
+
 export const recordTarget = (locationId: string, componentId: string): string => `record:${locationId}|${componentId}`;
 
-function outcomeOf(error: unknown): SaveStatus {
+function outcomeOf(error: unknown, mayBeStored: boolean): SaveStatus {
   if (error instanceof ApiError && error.kind === "http") {
-    return CONFLICT_CODES.has(error.code)
-      ? { phase: "conflict", code: error.code, message: error.message, current: error.details }
-      : { phase: "failed", message: error.message, retryable: error.status >= 500 };
+    if (CONFLICT_CODES.has(error.code)) return { phase: "conflict", code: error.code, message: error.message, current: error.details };
+    // After an unknown outcome a refusal answers only for this attempt: a 5xx can come before the key is looked up,
+    // and the create route resolves the configuration (a 4xx) before the store checks the key. So the first attempt
+    // may still be stored, and the same key must be kept. Conflicts are raised only after the key is looked up.
+    if (mayBeStored) return { phase: "unknown", message: retryRefused(error.message) };
+    return { phase: "failed", message: error.message, retryable: error.status >= 500 };
   }
   // No answer, a cancelled request, or anything else: the write may have reached the server.
   return { phase: "unknown", message: UNKNOWN_OUTCOME };
@@ -48,6 +57,7 @@ function outcomeOf(error: unknown): SaveStatus {
 /**
  * Whether "Retry safely" applies: after an unknown outcome (same key, so it is stored at most once), or after a
  * server-side failure (5xx: nothing was stored, so the same key is free). A 4xx refusal would only fail again.
+ * A refusal of a key whose earlier outcome was unknown stays unknown (see outcomeOf), so it keeps the retry.
  */
 export const canRetry = (status: SaveStatus): boolean => status.phase === "unknown" || (status.phase === "failed" && status.retryable);
 
@@ -77,6 +87,8 @@ export const saveStatusClass = (status: SaveStatus): string => (status.phase ===
  * A per-target write queue. Each target keeps its own status, so one target's outcome never touches another's.
  * Writes go out one at a time in call order, so their answers apply in order. After an unknown outcome the same
  * request (same fingerprint) is sent again with the same idempotency key, so the server stores it at most once.
+ * That key stays marked as "may be stored" until a saved or conflict answer settles it; a refusal in between keeps
+ * the outcome unknown (N2), so the leave-page guard stays on and no new key is minted for the same request.
  * State lives in a ref, so a second call in the same tick already sees the first; a counter re-renders the caller.
  */
 export function useMutations<R>(onResult: (result: R) => void): Mutations<R> {
@@ -102,17 +114,24 @@ export function useMutations<R>(onResult: (result: R) => void): Mutations<R> {
   }, []);
 
   const enqueue = useCallback(
-    (target: string, key: string, fingerprint: string, send: Entry<R>["send"]): Promise<R | undefined> => {
-      put(target, { status: { phase: "saving" }, key, fingerprint, send });
+    (target: string, key: string, fingerprint: string, send: Entry<R>["send"], mayBeStored: boolean): Promise<R | undefined> => {
+      put(target, { status: { phase: "saving" }, key, fingerprint, send, mayBeStored });
       const job = queue.current.then(async () => {
         let result: R;
         try {
           result = await send(key);
         } catch (e) {
-          put(target, { status: outcomeOf(e), key, fingerprint, send });
+          const status = outcomeOf(e, mayBeStored);
+          put(target, { status, key, fingerprint, send, mayBeStored: status.phase === "unknown" });
           return undefined;
         }
-        put(target, { status: { phase: "saved", at: new Date().toISOString(), replayed: isReplay(result) }, key, fingerprint, send });
+        put(target, {
+          status: { phase: "saved", at: new Date().toISOString(), replayed: isReplay(result) },
+          key,
+          fingerprint,
+          send,
+          mayBeStored: false,
+        });
         if (mounted.current) {
           try {
             onResultRef.current(result);
@@ -134,7 +153,7 @@ export function useMutations<R>(onResult: (result: R) => void): Mutations<R> {
       const current = entries.current.get(target);
       if (current?.status.phase === "saving") return Promise.resolve(undefined);
       const sameRequestUnknown = current?.status.phase === "unknown" && current.fingerprint === fingerprint;
-      return enqueue(target, sameRequestUnknown ? current.key : newKey(), fingerprint, send);
+      return sameRequestUnknown ? enqueue(target, current.key, fingerprint, send, true) : enqueue(target, newKey(), fingerprint, send, false);
     },
     [enqueue],
   );
@@ -143,7 +162,7 @@ export function useMutations<R>(onResult: (result: R) => void): Mutations<R> {
     (target: string): Promise<R | undefined> => {
       const current = entries.current.get(target);
       if (!current || !canRetry(current.status)) return Promise.resolve(undefined);
-      return enqueue(target, current.key, current.fingerprint, current.send);
+      return enqueue(target, current.key, current.fingerprint, current.send, current.mayBeStored);
     },
     [enqueue],
   );
