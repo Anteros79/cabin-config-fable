@@ -51,12 +51,13 @@ describe("submitOnEnter", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("an input method's Enter is left alone", () => {
+  it("an input method's Enter is left alone, whether it reports isComposing or keyCode 229 (Safari)", () => {
     const onSubmit = vi.fn();
     render(<Form onSubmit={onSubmit} />);
     const input = screen.getByLabelText("Where");
     fireEvent.change(input, { target: { value: "3A" } });
     expect(fireEvent.keyDown(input, { key: "Enter", isComposing: true })).toBe(true);
+    expect(fireEvent.keyDown(input, { key: "Enter", keyCode: 229 })).toBe(true);
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
