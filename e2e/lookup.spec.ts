@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures.ts";
-import { lookup, openMap, recordPrimary, selectLocation, startVisitUi } from "./helpers.ts";
+import { lookup, openMap, recordPrimary, selectLocation, setDate, startVisitUi } from "./helpers.ts";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/#/check");
@@ -94,4 +94,28 @@ test("pending change is an advisory and the rule stays usable", async ({ page })
   await expect(kit).toContainText("FAKE-CK-2002");
   await expect(kit).toContainText("Pending change (advisory)");
   await recordPrimary(page, "CARPET_KIT");
+});
+
+// The tail and "Go to location" inputs submit their own form on Enter (WebKit's datalist takes the first Enter otherwise).
+// In Chromium that must not add a second submit to the browser's own.
+test("Enter in the tail input and in Go to location submits each form exactly once", async ({ page }) => {
+  await page.evaluate(() => {
+    const w = window as unknown as { submits: string[] };
+    w.submits = [];
+    document.addEventListener("submit", (e) => w.submits.push((e.target as HTMLFormElement).className), true);
+  });
+  const submits = () => page.evaluate(() => (window as unknown as { submits: string[] }).submits);
+  await page.locator("input[name=tail]").fill("N100TL");
+  await setDate(page, "2026-11-12");
+  await page.locator("input[name=tail]").press("Enter");
+  await expect(page.locator(".status-card[data-state=RESOLVED]")).toBeVisible();
+  expect(await submits()).toEqual(["lookup-form"]);
+  await page.getByRole("button", { name: "Start visit (saves a draft)" }).click();
+  await expect(page.locator("#work-h")).toBeVisible();
+  await openMap(page);
+  await page.locator("#goto-input").fill("3A");
+  await page.locator("#goto-input").press("Enter");
+  await expect(page.locator("#inspector-heading")).toHaveText(/^Seat 3A/);
+  await expect(page.locator(".goto [role=status]")).toHaveText("Selected Seat 3A.");
+  expect(await submits()).toEqual(["lookup-form", "goto"]);
 });

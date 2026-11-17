@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { CabinLocation } from "../../domain/types.ts";
 import { alternateText, type LocationFlags, STATUS_ENCODING, seatLabelFor, type Workspace } from "../model.ts";
+import { submitOnEnter } from "../submitOnEnter.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
 
 interface Props {
@@ -136,7 +137,15 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
     <div className="cabin-map">
       <form className="goto" onSubmit={submitGoTo}>
         <label htmlFor="goto-input">Go to location</label>
-        <input id="goto-input" list="goto-options" value={goTo} onChange={(e) => setGoTo(e.target.value)} placeholder="e.g. 3A, L-01, FWD" autoComplete="off" />
+        <input
+          id="goto-input"
+          list="goto-options"
+          value={goTo}
+          onChange={(e) => setGoTo(e.target.value)}
+          onKeyDown={submitOnEnter}
+          placeholder="e.g. 3A, L-01, FWD"
+          autoComplete="off"
+        />
         <datalist id="goto-options">
           {layout.locations.map((l) => (
             <option key={l.id} value={l.seat?.code ?? l.id.split(":")[1]}>

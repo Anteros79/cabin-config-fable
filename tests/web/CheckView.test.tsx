@@ -104,6 +104,20 @@ describe("CheckView writes", () => {
     expect(sent.filter((s) => s.url.startsWith("/api/lookup")).map((s) => s.url.includes("tail=N100TL"))).toEqual([true, false, true]);
   });
 
+  // WebKit lets a datalist suggestion take the first Enter, so the tail input submits its own form on Enter (I1).
+  it("Enter in the tail input looks it up exactly once", async () => {
+    stubFetch((_method, url): Answer => (url.startsWith("/api/tails") ? { body: { tails: [] } } : { body: lookup(release, "N100TL", "2026-11-12") }));
+    const navigate = vi.fn();
+    render(<CheckView visitId={null} navigate={navigate} visualProfiles={[]} />);
+    const input = screen.getByLabelText("Tail number");
+    fireEvent.change(input, { target: { value: "N100TL" } });
+    expect(fireEvent.keyDown(input, { key: "Enter", isComposing: true }), "an input method's Enter is left alone").toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(fireEvent.keyDown(input, { key: "Enter" }), "the browser's own Enter handling is cancelled").toBe(false);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate.mock.calls[0]?.[0]).toMatch(/^#\/check\?tail=N100TL/);
+  });
+
   it("a late lookup answer for a previous tail never shows under the next one", async () => {
     const first = lookup(release, "N100TL", "2026-11-12");
     const second = lookup(release, "N200TL", "2026-06-30");
