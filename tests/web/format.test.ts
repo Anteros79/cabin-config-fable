@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
-import type { FindingSeverity, LookupState } from "../../src/domain/types.ts";
+import { melSummary } from "../../src/domain/labels.ts";
+import type { FindingSeverity, LookupState, MelEntry } from "../../src/domain/types.ts";
 import {
   conditionLabel,
   deferLabel,
@@ -165,5 +166,34 @@ describe("problem labels", () => {
     expect(melLabel({ class: "MEL", item: "TECH-RAISED", category: "C", intervalDays: 10, conditions: "Raised by the technician" })).toBe(
       "MEL item (category C, fix within 10 days): Raised by the technician",
     );
+  });
+});
+
+describe("melSummary (Minor 3)", () => {
+  const entry = (componentId: string, condition: MelEntry["condition"], result: MelEntry["result"], extra: Partial<MelEntry> = {}): MelEntry => ({
+    id: `${componentId}-${condition}-${extra.constraint ? "v" : "b"}`,
+    componentId,
+    condition,
+    result,
+    sourceId: "S",
+    ...extra,
+  });
+  const melD = { class: "MEL", item: "FX-1", category: "D", intervalDays: 120, conditions: "c" } as const;
+  const melC = { class: "MEL", item: "FX-2", category: "C", intervalDays: 10, conditions: "c" } as const;
+  const mel: MelEntry[] = [
+    entry("TRAY", "STAINED", { class: "COSMETIC" }),
+    entry("TRAY", "BROKEN", melD),
+    entry("TRAY", "MISSING", melD),
+    entry("TRAY", "BROKEN", melC, { constraint: { variant: ["V09"] } }),
+    entry("PLACARD", "MISSING", { class: "NO_GO", reason: "r" }),
+  ];
+
+  test("names the conditions that are MEL items or no-go, with their interval, in plain words", () => {
+    expect(melSummary(mel, "TRAY", "V01")).toBe("Usually cosmetic; Broken or Missing is an MEL item (fix within 120 days)");
+    // the variant's own entry wins for its condition
+    expect(melSummary(mel, "TRAY", "V09")).toBe("Usually cosmetic; Broken is an MEL item (fix within 10 days); Missing is an MEL item (fix within 120 days)");
+    expect(melSummary(mel, "PLACARD", "V01")).toBe("No-go if Missing");
+    expect(melSummary([entry("NET", "TORN", { class: "COSMETIC" })], "NET", "V01")).toBe("Cosmetic: can wait");
+    expect(melSummary(mel, "NOTHING", "V01")).toBeNull();
   });
 });

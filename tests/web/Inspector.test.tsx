@@ -471,6 +471,15 @@ describe("Inspector piece panel", () => {
     ).toEqual(expect.arrayContaining(["Replace now", "Note a problem", "Defer"]));
   });
 
+  it("each piece says what the MEL means for it in one line, before a condition is chosen (Minor 3)", () => {
+    renderPiece();
+    expect(within(pieceCard(/^Headrest cover/)).getByText("Cosmetic: can wait")).toHaveClass("mel-summary");
+    expect(within(pieceCard(/^Life vest/)).getByText("Usually cosmetic; no-go if Missing (an MEL item while the seat is blocked)")).toBeInTheDocument();
+    expect(within(pieceCard(/^Seat belt/)).getByText("Usually cosmetic; Broken or Missing is an MEL item (fix within 10 days)")).toBeInTheDocument();
+    // no radio is shown yet: the line stands on its own
+    expect(within(pieceCard(/^Seat belt/)).queryByRole("radiogroup", { name: "Condition" })).toBeNull();
+  });
+
   it("a life vest marked Missing offers only Must be fixed", async () => {
     const user = userEvent.setup();
     renderPiece();

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { allowedOutcomes, dueDateFor, isOverdue } from "../../domain/observations.ts";
+import { melSummary } from "../../domain/labels.ts";
 import { excludedOf, rulesNotUsedLine } from "../../domain/report.ts";
 import type {
   CabinLocation,
@@ -461,6 +462,7 @@ function ComponentCard({
 
   const editable = workspace.mode === "visit" && workspace.editable;
   const conditions = conditionsFor(workspace.mel, view.componentId);
+  const summary = melSummary(workspace.mel, view.componentId, workspace.variantId ?? "");
   // Defer is offered only where some condition allows a deferral.
   const canDefer = conditions.some((c) => allowedOutcomes(view.melClass(c)).includes("DEFERRED"));
   const open: { o: Observation; carried: { overdue: boolean; openedCheckDate: string } | null }[] = [
@@ -510,6 +512,9 @@ function ComponentCard({
           <span className="pill unresolved">Unresolved</span>
         )}
       </h4>
+
+      {/* what the MEL says about this piece, before any condition is chosen */}
+      {summary && <p className="fine mel-summary">{summary}</p>}
 
       {view.status === "NOT_SUPPLIED" && <p className="notice">{workspace.unresolvedReason ?? "No applicability is available for this component."}</p>}
 
