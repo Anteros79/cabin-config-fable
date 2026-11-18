@@ -161,8 +161,8 @@ test.describe("N100TL: a deferral found in 3D, carried to the next check and clo
     const carried = page.locator("section[aria-labelledby=carried-h]");
     await expect(carried.locator("#carried-h")).toHaveText("Carried over (2)");
     await expect(carried.locator("li")).toHaveText([
-      /Seat 12A \/ Headrest cover.*Stained · Defer.*From the check on 12 Nov 2026/s,
-      /Overhead bin L-04 .*Bin latch.*Won't latch · Defer · Fix by 22 Nov 2026.*From the check on 12 Nov 2026/s,
+      /Seat 12A \/ Headrest cover.*Stained · Deferred.*From the check on 12 Nov 2026/s,
+      /Overhead bin L-04 .*Bin latch.*Won't latch · Deferred · Fix by 22 Nov 2026.*From the check on 12 Nov 2026/s,
     ]);
     await carried.getByRole("button", { name: "Show Seat 12A Headrest cover" }).click();
     await expectInspector(page, "Seat 12A");
@@ -203,7 +203,7 @@ test("N200TL V05 → V04: a bin assist deferral from the earlier configuration i
   await expect(carried.getByRole("heading", { name: "No longer at this position" })).toBeVisible();
   const item = carried.locator("li", { hasText: "Bin assist spring and damper" });
   await expect(item).toContainText("Overhead bin L-02 (rows 3-5, 4 bags) / Bin assist spring and damper");
-  await expect(item).toContainText("Broken · Defer · Fix by 13 Oct 2026");
+  await expect(item).toContainText("Broken · Deferred · Fix by 13 Oct 2026");
   // it is not on this layout, so it has no Show; it can only be marked fixed
   await expect(item.getByRole("button", { name: /^Show/ })).toHaveCount(0);
   await expect(item.getByRole("button", { name: /^Mark fixed/ })).toBeVisible();
