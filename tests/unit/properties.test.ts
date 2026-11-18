@@ -97,6 +97,7 @@ describe("property: unreleased data is inert", () => {
 });
 
 describe("property: lookup does not depend on input order", () => {
+  // Does many full lookups by design: about 2 s alone and about 5 s under full parallel load. No assertion is loosened.
   it(`shuffling rules, substitutes, kit lines and locations gives the same result (${ITERATIONS} cases)`, () => {
     const random = prng(0x2_8002);
     const content = fixtureContent();
@@ -130,7 +131,7 @@ describe("property: lookup does not depend on input order", () => {
       const tail = random.pick(TAILS);
       expect(JSON.stringify(normalise(lookup(shuffled, tail, DATE)))).toBe(baseline.get(tail));
     }
-  });
+  }, 15_000);
 });
 
 describe("property: report totals add up", () => {
