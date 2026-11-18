@@ -491,12 +491,66 @@ export function createApp(config: ServerConfig): AppHandle {
       return result;
     });
 
+    const requiredVersion = (value: unknown, name: string): number => {
+      const v = optionalVersion(value, name);
+      if (v === undefined) throw new DomainError("INVALID_VERSION", `${name} is required.`, 400);
+      return v;
+    };
+    const onlyKeys = (b: Record<string, unknown>, allowed: string[]) => {
+      for (const k of Object.keys(b)) {
+        if (!allowed.includes(k)) throw new DomainError("UNSUPPORTED_FIELD", `Field "${k}" is not accepted. Allowed: ${allowed.join(", ")}.`, 422);
+      }
+    };
+
+    app.post<{ Params: { id: string } }>("/api/visits/:id/observations", async (request, reply) => {
+      const b = body(request);
+      onlyKeys(b, ["observation", "idempotencyKey"]);
+      const dropAfter = writeFault();
+      const result = visits.addObservation(visitId(request.params.id), b.observation, { idempotencyKey: optionalKey(b.idempotencyKey) });
+      if (dropAfter) return drop(reply);
+      reply.code(result.replayed ? 200 : 201);
+      return result;
+    });
+
+    app.put<{ Params: { id: string; obsId: string } }>("/api/visits/:id/observations/:obsId", async (request, reply) => {
+      const b = body(request);
+      onlyKeys(b, ["observation", "expectedVersion", "idempotencyKey"]);
+      const dropAfter = writeFault();
+      const result = visits.updateObservation(
+        visitId(request.params.id),
+        request.params.obsId,
+        b.observation,
+        requiredVersion(b.expectedVersion, "expectedVersion"),
+        { idempotencyKey: optionalKey(b.idempotencyKey) },
+      );
+      if (dropAfter) return drop(reply);
+      return result;
+    });
+
+    app.post<{ Params: { id: string; obsId: string } }>("/api/visits/:id/observations/:obsId/close", async (request, reply) => {
+      const b = body(request);
+      onlyKeys(b, ["closedAs", "expectedVersion", "idempotencyKey"]);
+      const dropAfter = writeFault();
+      const result = visits.closeObservation(
+        visitId(request.params.id),
+        request.params.obsId,
+        b.closedAs as "REPLACED" | "FIXED",
+        requiredVersion(b.expectedVersion, "expectedVersion"),
+        { idempotencyKey: optionalKey(b.idempotencyKey) },
+      );
+      if (dropAfter) return drop(reply);
+      return result;
+    });
+
     app.post<{ Params: { id: string } }>("/api/visits/:id/complete", async (request, reply) => {
       const b = body(request);
       if (b.confirm !== true) throw new DomainError("CONFIRMATION_REQUIRED", "Completion must be confirmed explicitly (confirm: true).", 400);
+      if (b.aircraftHeld !== undefined && typeof b.aircraftHeld !== "boolean")
+        throw new DomainError("INVALID_BODY", "aircraftHeld must be true or false.", 400);
       const dropAfter = writeFault();
       const result = visits.completeVisit(visitId(request.params.id), optionalVersion(b.expectedVisitVersion, "expectedVisitVersion"), {
         idempotencyKey: optionalKey(b.idempotencyKey),
+        aircraftHeld: b.aircraftHeld === true,
       });
       if (dropAfter) return drop(reply);
       return result;

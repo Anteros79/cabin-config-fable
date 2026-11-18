@@ -172,3 +172,39 @@ describe("request", () => {
     await expect(api.health()).resolves.toEqual({ status: "ok" });
   });
 });
+
+describe("observation client", () => {
+  const obs = { locationId: "SEAT:3A", componentId: "CUSHION", condition: "STAINED", note: "Coffee", outcome: "NOTED" } as const;
+  const sent = () => JSON.parse(String(lastInit?.body));
+
+  it("addObservation POSTs the observation and key", async () => {
+    stubFetch({ status: 201, body: { visit: {} } });
+    await api.addObservation("v 1", obs, "key-key-key-1");
+    expect([lastUrl, lastInit?.method, sent()]).toEqual(["/api/visits/v%201/observations", "POST", { observation: obs, idempotencyKey: "key-key-key-1" }]);
+  });
+  it("updateObservation PUTs the observation, version and key", async () => {
+    stubFetch({ body: { visit: {} } });
+    await api.updateObservation("v1", "o/1", obs, 3, "key-key-key-2");
+    expect([lastUrl, lastInit?.method, sent()]).toEqual([
+      "/api/visits/v1/observations/o%2F1",
+      "PUT",
+      { observation: obs, expectedVersion: 3, idempotencyKey: "key-key-key-2" },
+    ]);
+  });
+  it("closeObservation POSTs closedAs, version and key", async () => {
+    stubFetch({ body: { visit: {} } });
+    await api.closeObservation("v1", "o1", "REPLACED", 2, "key-key-key-3");
+    expect([lastUrl, lastInit?.method, sent()]).toEqual([
+      "/api/visits/v1/observations/o1/close",
+      "POST",
+      { closedAs: "REPLACED", expectedVersion: 2, idempotencyKey: "key-key-key-3" },
+    ]);
+  });
+  it("complete sends aircraftHeld only when given", async () => {
+    stubFetch({ body: { visit: {} } });
+    await api.complete("v1", 4, "key-key-key-4");
+    expect(sent()).toEqual({ confirm: true, expectedVisitVersion: 4, idempotencyKey: "key-key-key-4" });
+    await api.complete("v1", 4, "key-key-key-4", true);
+    expect(sent()).toEqual({ confirm: true, expectedVisitVersion: 4, idempotencyKey: "key-key-key-4", aircraftHeld: true });
+  });
+});

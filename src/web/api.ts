@@ -5,6 +5,7 @@ import type {
   LayoutCategory,
   LayoutRevision,
   LookupResult,
+  ObservationInput,
   RecordInput,
   Report,
   SourceArtifact,
@@ -210,11 +211,22 @@ export const api = {
     request<VisitStateEnvelope>("PUT", visitUrl(id, "/records"), { record, expectedRecordVersion, idempotencyKey }, o),
   removeRecord: (id: string, locationId: string, componentId: string, expectedRecordVersion: number, idempotencyKey: string, o?: RequestOptions) =>
     request<VisitStateEnvelope>("POST", visitUrl(id, "/records/remove"), { locationId, componentId, expectedRecordVersion, idempotencyKey }, o),
-  complete: (id: string, expectedVisitVersion: number, idempotencyKey: string, o?: RequestOptions) =>
+  addObservation: (id: string, observation: ObservationInput, idempotencyKey: string, o?: RequestOptions) =>
+    request<VisitStateEnvelope>("POST", visitUrl(id, "/observations"), { observation, idempotencyKey }, o),
+  updateObservation: (id: string, observationId: string, observation: ObservationInput, expectedVersion: number, idempotencyKey: string, o?: RequestOptions) =>
+    request<VisitStateEnvelope>("PUT", visitUrl(id, `/observations/${encodeURIComponent(observationId)}`), { observation, expectedVersion, idempotencyKey }, o),
+  closeObservation: (id: string, observationId: string, closedAs: "REPLACED" | "FIXED", expectedVersion: number, idempotencyKey: string, o?: RequestOptions) =>
+    request<VisitStateEnvelope>(
+      "POST",
+      visitUrl(id, `/observations/${encodeURIComponent(observationId)}/close`),
+      { closedAs, expectedVersion, idempotencyKey },
+      o,
+    ),
+  complete: (id: string, expectedVisitVersion: number, idempotencyKey: string, aircraftHeld?: boolean, o?: RequestOptions) =>
     request<{ visit: VisitState; report: Report; alreadyCompleted: boolean; replayed?: boolean }>(
       "POST",
       visitUrl(id, "/complete"),
-      { confirm: true, expectedVisitVersion, idempotencyKey },
+      { confirm: true, expectedVisitVersion, idempotencyKey, ...(aircraftHeld === undefined ? {} : { aircraftHeld }) },
       o,
     ),
   report: (id: string, o?: RequestOptions) => request<ReportEnvelope>("GET", visitUrl(id, "/report"), undefined, o),

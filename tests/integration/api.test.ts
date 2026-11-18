@@ -414,3 +414,95 @@ describe("app handle", () => {
     await expect(app.close()).resolves.toBeUndefined();
   });
 });
+
+describe("observation routes", () => {
+  const STAIN = { locationId: "SEAT:3A", componentId: "CUSHION", condition: "STAINED", note: "Coffee on the cushion", outcome: "NOTED" };
+  const LATCH = { locationId: "BIN:L-01", componentId: "BIN_DOOR", condition: "WONT_LATCH", note: "", outcome: "MUST_FIX" };
+  type Obs = { id: string; version: number; status: string; closedAs: string | null };
+
+  it("add 201 then replay 200 with the same body; update and close answer 200", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    const base = `/api/visits/${visit.id}`;
+    const add = { observation: STAIN, idempotencyKey: "obs-add-key1" };
+    const first = await post(app, `${base}/observations`, add);
+    expect(first.statusCode).toBe(201);
+    expect("snapshot" in json(first).visit).toBe(false);
+    expect(first.rawPayload.length).toBeLessThanOrEqual(budgets.api.mutationResponseBytes);
+    const again = await post(app, `${base}/observations`, add);
+    expect(again.statusCode).toBe(200);
+    expect(json(again).visit).toEqual(json(first).visit);
+    expect(json(again).visit.observations).toHaveLength(1);
+    const obs = json(first).visit.observations[0] as Obs;
+
+    const update = { observation: { ...STAIN, note: "Deep stain" }, expectedVersion: obs.version, idempotencyKey: "obs-upd-key1" };
+    const upd = await put(app, `${base}/observations/${obs.id}`, update);
+    expect(upd.statusCode).toBe(200);
+    expect(json(upd).visit.observations[0].note).toBe("Deep stain");
+    const updAgain = await put(app, `${base}/observations/${obs.id}`, update);
+    expect([updAgain.statusCode, json(updAgain).visit]).toEqual([200, json(upd).visit]);
+    const stale = await put(app, `${base}/observations/${obs.id}`, { ...update, idempotencyKey: "obs-upd-key2" });
+    expect([stale.statusCode, json(stale).error.code]).toEqual([409, "STALE_OBSERVATION"]);
+
+    const close = { closedAs: "FIXED", expectedVersion: 2, idempotencyKey: "obs-cls-key1" };
+    const closed = await post(app, `${base}/observations/${obs.id}/close`, close);
+    expect(closed.statusCode).toBe(200);
+    expect(json(closed).visit.observations[0]).toMatchObject({ status: "CLOSED", closedAs: "FIXED" });
+    const closedAgain = await post(app, `${base}/observations/${obs.id}/close`, close);
+    expect([closedAgain.statusCode, json(closedAgain).visit]).toEqual([200, json(closed).visit]);
+    const gone = await post(app, `${base}/observations/${obs.id}/close`, { ...close, idempotencyKey: "obs-cls-key2" });
+    expect([gone.statusCode, json(gone).error.code]).toEqual([404, "OBSERVATION_NOT_FOUND"]);
+    const got = json(await app.app.inject(base));
+    expect(got.visit.observations).toHaveLength(1);
+    expect(got.visit.carried).toEqual([]);
+  });
+
+  it("maps store errors to the envelope with their status", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    const base = `/api/visits/${visit.id}`;
+    const bad = await post(app, `${base}/observations`, { observation: { ...STAIN, condition: "SPILLED" } });
+    expect([bad.statusCode, json(bad).error.code]).toEqual([422, "INVALID_OBSERVATION"]);
+    const noKey = await post(app, `${base}/observations/missing/close`, { closedAs: "FIXED", expectedVersion: 1 });
+    expect([noKey.statusCode, json(noKey).error.code]).toEqual([404, "OBSERVATION_NOT_FOUND"]);
+    const missingVersion = await post(app, `${base}/observations/missing/close`, { closedAs: "FIXED" });
+    expect([missingVersion.statusCode, json(missingVersion).error.code]).toEqual([400, "INVALID_VERSION"]);
+    const added = json(await post(app, `${base}/observations`, { observation: STAIN })).visit.observations[0] as Obs;
+    const noReplacement = await post(app, `${base}/observations/${added.id}/close`, { closedAs: "REPLACED", expectedVersion: 1 });
+    expect([noReplacement.statusCode, json(noReplacement).error.code]).toEqual([422, "REPLACEMENT_MISSING"]);
+    const missing = await post(app, "/api/visits/not-a-visit/observations", { observation: STAIN });
+    expect(missing.statusCode).toBe(404);
+  });
+
+  it("refuses unknown keys with UNSUPPORTED_FIELD", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    const base = `/api/visits/${visit.id}`;
+    const add = await post(app, `${base}/observations`, { observation: STAIN, extra: 1 });
+    expect([add.statusCode, json(add).error.code]).toEqual([422, "UNSUPPORTED_FIELD"]);
+    const obs = json(await post(app, `${base}/observations`, { observation: STAIN })).visit.observations[0] as Obs;
+    const upd = await put(app, `${base}/observations/${obs.id}`, { observation: STAIN, expectedVersion: 1, extra: 1 });
+    expect([upd.statusCode, json(upd).error.code]).toEqual([422, "UNSUPPORTED_FIELD"]);
+    const close = await post(app, `${base}/observations/${obs.id}/close`, { closedAs: "FIXED", expectedVersion: 1, extra: 1 });
+    expect([close.statusCode, json(close).error.code]).toEqual([422, "UNSUPPORTED_FIELD"]);
+    expect(json(await app.app.inject(base)).visit.observations).toHaveLength(1);
+  });
+
+  it("complete answers MUST_FIX_OPEN with the observation ids, then completes with aircraftHeld", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    const base = `/api/visits/${visit.id}`;
+    await put(app, `${base}/records`, { record: CUSHION_3A });
+    const mustFix = json(await post(app, `${base}/observations`, { observation: LATCH })).visit.observations[0] as Obs;
+    const refused = await post(app, `${base}/complete`, { confirm: true });
+    expect(refused.statusCode).toBe(409);
+    expect(json(refused).error).toEqual({ code: "MUST_FIX_OPEN", message: expect.any(String), details: { observationIds: [mustFix.id] } });
+    const badHeld = await post(app, `${base}/complete`, { confirm: true, aircraftHeld: "yes" });
+    expect(badHeld.statusCode).toBe(400);
+    const held = await post(app, `${base}/complete`, { confirm: true, aircraftHeld: true });
+    expect(held.statusCode).toBe(200);
+    expect(json(held).visit.status).toBe("COMPLETED");
+    const locked = await post(app, `${base}/observations`, { observation: STAIN });
+    expect([locked.statusCode, json(locked).error.code]).toEqual([409, "VISIT_LOCKED"]);
+  });
+});
