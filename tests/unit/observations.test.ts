@@ -116,7 +116,8 @@ describe("due dates", () => {
     expect(isOverdue("2026-11-28", "2026-11-29")).toBe(true);
     expect(isOverdue(null, "2999-01-01")).toBe(false);
     expect(effectiveClass(o, "2026-11-28")).toEqual(MEL_C);
-    expect(effectiveClass(o, "2026-11-29")).toEqual({ class: "NO_GO", reason: "MEL deferral expired on 2026-11-28" });
+    // the expiry is a date, kept apart from the words (Minor 5)
+    expect(effectiveClass(o, "2026-11-29")).toEqual({ class: "NO_GO", reason: "MEL deferral expired", expiredOn: "2026-11-28" });
     expect(effectiveClass(obs({ status: "CLOSED" }), "2026-11-29")).toEqual(MEL_C);
     expect(effectiveClass(obs({ outcome: "MUST_FIX" }), "2026-11-29")).toEqual(MEL_C);
   });

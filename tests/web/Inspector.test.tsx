@@ -574,6 +574,8 @@ describe("Inspector piece panel", () => {
     expect(within(card).getByText("Carried over from the check on 20 Oct 2026")).toBeInTheDocument();
     expect(within(card).queryByText(/22 Oct 2026/)).toBeNull();
     expect(within(card).getByText("Overdue since 30 Oct 2026")).toHaveClass("must-fix");
+    // its status in past-tense words, not the form's "Defer" (Minor 4)
+    expect(within(card).getByText(/^: Deferred\. Until the next check/)).toBeInTheDocument();
   });
 
   it("the copy shows no raw codes", async () => {

@@ -31,3 +31,19 @@ export function intervalsOverlap(aFrom: IsoDate, aTo: IsoDate | null, bFrom: Iso
   const bEnd = bTo ?? "9999-12-31";
   return aFrom <= bEnd && bFrom <= aEnd;
 }
+
+/** Fixed three-letter months, so September is "Sep" on every ICU version. */
+export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "12 Nov 2026" from "2026-11-12". Read from the text itself, never through a Date, so no zone can shift it. */
+export function formatDate(isoDate: string): string {
+  const m = ISO.exec(isoDate);
+  const month = m ? MONTHS[Number(m[2]) - 1] : undefined;
+  if (!m || !month) return isoDate;
+  return `${Number(m[3])} ${month} ${m[1]}`;
+}
+
+/** Text with every YYYY-MM-DD date in it written as "12 Nov 2026", for words stored before dates were kept apart. */
+export function formatDatesIn(text: string): string {
+  return text.replace(/\b\d{4}-\d{2}-\d{2}\b/g, (d) => formatDate(d));
+}

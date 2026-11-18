@@ -3,7 +3,7 @@ import { canonicalJson } from "../../domain/canonical.ts";
 import { isOverdue } from "../../domain/observations.ts";
 import { rulesNotUsedLine } from "../../domain/report.ts";
 import { higherStatus } from "../../domain/status.ts";
-import type { CarriedObservation, LookupState, Observation, Report, ReportPieceOutcome, VisitSnapshot, VisualProfile } from "../../domain/types.ts";
+import type { CarriedObservation, LookupState, MelClass, Observation, Report, ReportPieceOutcome, VisitSnapshot, VisualProfile } from "../../domain/types.ts";
 import { api } from "../api.ts";
 // Cabin3D is already in the first download (the visit workspace's viewer); what is heavy is its scene chunk (three.js),
 // which it loads only once mounted, so "View in 3D" fetches it on demand. A React.lazy() import here would make Rolldown
@@ -62,13 +62,24 @@ function pictureWorkspace(snapshot: VisitSnapshot, checkDate: string): Workspace
 }
 
 /** One problem in an outcome list: where it is, then its condition, class, dates and note, in words. */
-function ProblemLine({ o, checkDate, extra = "" }: { o: Observation; checkDate: string; extra?: string }) {
+function ProblemLine({
+  o,
+  checkDate,
+  extra = "",
+  classes,
+}: {
+  o: Observation;
+  checkDate: string;
+  extra?: string;
+  /** the class of each open problem on the check date; a report stored before it was recorded falls back to the stored class */
+  classes: Record<string, MelClass> | undefined;
+}) {
   // A closed problem's class and dates no longer apply: only what it was and how it was closed.
   const open = o.status === "OPEN";
   const due = open && o.dueDate ? `${isOverdue(o.dueDate, checkDate) ? "Overdue since" : "Fix by"} ${formatDate(o.dueDate)}` : "";
   const facts = [
     conditionLabel(o.condition),
-    open && o.outcome !== "NOTED" ? melLabel(o.melClass) : "",
+    open && o.outcome !== "NOTED" ? melLabel(classes?.[o.id] ?? o.melClass) : "",
     open && o.outcome === "DEFERRED" && o.deferUntil ? deferLabel(o.deferUntil) : "",
     due,
     extra,
@@ -285,29 +296,55 @@ export function ReportView({
 
       {observations && (
         <>
-          <OutcomeList id="r-deferred" title="Deferred" items={observations.deferred.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+          <OutcomeList
+            id="r-deferred"
+            title="Deferred"
+            items={observations.deferred.map((o) => <ProblemLine classes={observations.classes} key={o.id} o={o} checkDate={checkDate} />)}
+          />
           <OutcomeList
             id="r-mustfix"
             title="Must be fixed"
             items={observations.mustFix.map((o) => (
               // a carried problem that is must-fix now is listed here, not under "Carried over in" (R43)
-              <ProblemLine key={o.id} o={o} checkDate={checkDate} extra={o.openedInVisitId !== report.visit.id ? "carried over from an earlier check" : ""} />
+              <ProblemLine
+                classes={observations.classes}
+                key={o.id}
+                o={o}
+                checkDate={checkDate}
+                extra={o.openedInVisitId !== report.visit.id ? "carried over from an earlier check" : ""}
+              />
             ))}
           />
-          <OutcomeList id="r-noted" title="Noted" items={observations.noted.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+          <OutcomeList
+            id="r-noted"
+            title="Noted"
+            items={observations.noted.map((o) => <ProblemLine classes={observations.classes} key={o.id} o={o} checkDate={checkDate} />)}
+          />
           <OutcomeList
             id="r-closed"
             title="Closed this check"
             items={observations.closed.map((o) => (
-              <ProblemLine key={o.id} o={o} checkDate={checkDate} extra={o.closedAs === "REPLACED" ? "Closed as replaced" : "Closed as fixed"} />
+              <ProblemLine
+                classes={observations.classes}
+                key={o.id}
+                o={o}
+                checkDate={checkDate}
+                extra={o.closedAs === "REPLACED" ? "Closed as replaced" : "Closed as fixed"}
+              />
             ))}
           />
           <OutcomeList
             id="r-carried"
             title="Carried over in"
-            items={observations.carriedIn.map((c) => <ProblemLine key={c.observation.id} o={c.observation} checkDate={checkDate} extra={carriedExtra(c)} />)}
+            items={observations.carriedIn.map((c) => (
+              <ProblemLine classes={observations.classes} key={c.observation.id} o={c.observation} checkDate={checkDate} extra={carriedExtra(c)} />
+            ))}
           />
-          <OutcomeList id="r-open" title="Still open" items={observations.stillOpen.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+          <OutcomeList
+            id="r-open"
+            title="Still open"
+            items={observations.stillOpen.map((o) => <ProblemLine classes={observations.classes} key={o.id} o={o} checkDate={checkDate} />)}
+          />
         </>
       )}
 

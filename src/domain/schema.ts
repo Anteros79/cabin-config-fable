@@ -314,7 +314,8 @@ const melClass = z.discriminatedUnion("class", [
       blocksSeat: z.literal(true).optional(),
     })
     .strict(),
-  z.object({ class: z.literal("NO_GO"), reason: z.string() }).strict(),
+  // `expiredOn` is written only by the visit store (an overdue deferral); reference MEL entries leave it out
+  z.object({ class: z.literal("NO_GO"), reason: z.string(), expiredOn: z.string().optional() }).strict(),
 ]);
 
 export const MelEntrySchema = z

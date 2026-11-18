@@ -7,6 +7,7 @@ import type {
   CabinLocation,
   ComponentResolution,
   ExcludedRule,
+  MelClass,
   Observation,
   Report,
   ReportGap,
@@ -146,7 +147,10 @@ function buildObservationSection(
   const noted = ownOpen.filter((o) => o.outcome === "NOTED");
   const carriedIn = carried.filter((c) => !mustFixNow(c.observation));
   const needsAction = [...ownOpen.filter((o) => o.outcome !== "NOTED"), ...carried.map((c) => c.observation)];
-  const observations: ReportObservations = { deferred, mustFix, noted, closed, carriedIn, stillOpen: needsAction };
+  // the class each open problem has on the check date, which the lists print (it may be above the class last stored)
+  const classes: Record<string, MelClass> = {};
+  for (const o of open) classes[o.id] = classOf(o);
+  const observations: ReportObservations = { deferred, mustFix, noted, closed, carriedIn, stillOpen: needsAction, classes };
   const summary: ReportSummary = {
     replaced: visit.records.length,
     noted: noted.length,

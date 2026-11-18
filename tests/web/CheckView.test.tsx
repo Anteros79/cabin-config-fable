@@ -578,7 +578,8 @@ describe("CheckView problems, carried over and completion", () => {
     const panel = await screen.findByRole("region", { name: /^Carried over/ });
     const item = within(panel).getByText("Seat 3A / Seat belt").closest("li") as HTMLElement;
     expect(item).toHaveTextContent("Broken");
-    expect(item).toHaveTextContent("Defer");
+    // the status word, not the form's "Defer" (Minor 4)
+    expect(item).toHaveTextContent("Broken · Deferred · Fix by 22 Nov 2026");
     expect(item).toHaveTextContent("Fix by 22 Nov 2026");
     fireEvent.click(within(item).getByRole("button", { name: "Show Seat 3A Seat belt" }));
     expect(await screen.findByRole("heading", { level: 3, name: "Seat 3A" })).toBeInTheDocument();

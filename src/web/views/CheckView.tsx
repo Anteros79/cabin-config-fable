@@ -10,7 +10,7 @@ import { StatusGlyph } from "../components/StatusGlyph.tsx";
 import { loadSceneModule } from "../components/sceneModule.ts";
 import { type ToastOptions, useToast } from "../components/Toasts.tsx";
 import { Viewer } from "../components/Viewer.tsx";
-import { conditionLabel, formatDate, formatDateTime, outcomeLabel } from "../format.ts";
+import { conditionLabel, formatDate, formatDateTime, outcomeStatusLabel } from "../format.ts";
 import {
   canRetry,
   describeSaveStatus,
@@ -550,9 +550,9 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   /** "Seat 3A / Seat belt": a problem named where it sits on this layout, or where it was when it no longer fits. */
   const problemName = (o: Observation, locationId: string | null) =>
     locationId ? nameOf(locationId, o.componentId) : `${o.locationLabel} / ${o.componentName}`;
-  /** Condition, outcome and fix-by date (or since when it is overdue), in words. */
+  /** Condition, status ("Deferred", not the form's "Defer") and fix-by date (or since when it is overdue), in words. */
   const problemFacts = (o: Observation, overdue: boolean) =>
-    [conditionLabel(o.condition), outcomeLabel(o.outcome), o.dueDate ? `${overdue ? "Overdue since" : "Fix by"} ${formatDate(o.dueDate)}` : ""]
+    [conditionLabel(o.condition), outcomeStatusLabel(o.outcome), o.dueDate ? `${overdue ? "Overdue since" : "Fix by"} ${formatDate(o.dueDate)}` : ""]
       .filter((t) => t !== "")
       .join(" · ");
 

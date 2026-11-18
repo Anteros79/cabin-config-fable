@@ -1,4 +1,5 @@
-import type { DeferReason, FindingSeverity, LookupState, ObservationOutcome } from "../domain/types.ts";
+import { MONTHS } from "../domain/dates.ts";
+import type { FindingSeverity, LookupState } from "../domain/types.ts";
 
 /**
  * How the interface writes dates, times, states and counts (WEB-21). One fixed form, en-GB, whatever the browser's
@@ -7,16 +8,8 @@ import type { DeferReason, FindingSeverity, LookupState, ObservationOutcome } fr
  * The machine value stays available: views put a timestamp in `<time dateTime={iso} title={iso}>`.
  */
 
-/** Fixed three-letter months, so September is "Sep" on every ICU version. */
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "12 Nov 2026" from "2026-11-12". Read from the text itself, never through a Date, so no zone can shift it. */
-export function formatDate(isoDate: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  const month = m ? MONTHS[Number(m[2]) - 1] : undefined;
-  if (!m || !month) return isoDate;
-  return `${Number(m[3])} ${month} ${m[1]}`;
-}
+// "12 Nov 2026": shared with the domain's labels and the PDF.
+export { formatDate } from "../domain/dates.ts";
 
 /** "12 Nov 2026, 14:05 UTC": the instant in `timeZone` (UTC by default), with the zone named. */
 export function formatDateTime(iso: string, timeZone = "UTC"): string {
@@ -97,16 +90,4 @@ export function formatCounts(counts: Record<string, number>, labels: Record<stri
   return out.length > 0 ? out.join(", ") : "none";
 }
 
-export { conditionLabel, deferLabel, melLabel } from "../domain/labels.ts";
-
-const OUTCOME_LABEL: Record<ObservationOutcome, string> = {
-  NOTED: "Note only",
-  DEFERRED: "Defer",
-  MUST_FIX: "Must be fixed before flight",
-  REPLACED: "Replaced",
-  FIXED: "Fixed",
-};
-export const outcomeLabel = (o: ObservationOutcome): string => OUTCOME_LABEL[o];
-
-const REASON_LABEL: Record<DeferReason, string> = { NO_STOCK: "No stock on hand", NO_TIME: "No time on this turn", OTHER: "Other" };
-export const reasonLabel = (r: DeferReason): string => REASON_LABEL[r];
+export { conditionLabel, deferLabel, melLabel, outcomeLabel, outcomeStatusLabel, reasonLabel } from "../domain/labels.ts";

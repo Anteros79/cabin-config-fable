@@ -491,7 +491,8 @@ export function renderReportPdf(
           const open = o.status === "OPEN";
           const due = open && o.dueDate ? `${isOverdue(o.dueDate, checkDate) ? "Overdue since" : "Fix by"} ${formatDate(o.dueDate)}` : "";
           const facts = [
-            open && o.outcome !== "NOTED" ? melLabel(o.melClass) : "",
+            // the class on the check date; a report stored before it was recorded falls back to the stored class
+            open && o.outcome !== "NOTED" ? melLabel(report.observations?.classes?.[o.id] ?? o.melClass) : "",
             open && o.outcome === "DEFERRED" && o.deferUntil ? deferLabel(o.deferUntil) : "",
             due,
             extra ?? "",

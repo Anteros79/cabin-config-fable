@@ -14,7 +14,7 @@ import type {
   SourceArtifact,
   VisitRecord,
 } from "../../domain/types.ts";
-import { conditionLabel, deferLabel, formatDate, formatDateTime, melLabel, outcomeLabel, reasonLabel } from "../format.ts";
+import { conditionLabel, deferLabel, formatDate, formatDateTime, melLabel, outcomeLabel, outcomeStatusLabel, reasonLabel } from "../format.ts";
 import { observationTarget, recordTarget, type SaveStatus } from "../hooks/useMutations.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
 import { SaveLine, statusText } from "./SaveLine.tsx";
@@ -323,7 +323,7 @@ function ProblemItem({
   return (
     <li className="problem">
       <p id={`${id}-what`}>
-        <strong>{conditionLabel(o.condition)}</strong>: {[`${outcomeLabel(o.outcome)}.`, ...details].join(" ")}
+        <strong>{conditionLabel(o.condition)}</strong>: {[`${outcomeStatusLabel(o.outcome)}.`, ...details].join(" ")}
       </p>
       {o.note !== "" && <p className="fine">“{o.note}”</p>}
       {carried && <p className="fine">Carried over from the check on {formatDate(carried.openedCheckDate)}</p>}

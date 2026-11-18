@@ -89,7 +89,7 @@ test.describe("N100TL: a deferral found in 3D, carried to the next check and clo
     await card(page, "HEADREST").getByRole("button", { name: "Defer", exact: true }).click();
     await expect(problemForm(page).locator("legend")).toHaveText("Defer a problem");
     await saveProblem(page, ["Stained", "Defer", "Until the next check", "No stock on hand"]);
-    await expect(card(page, "HEADREST").locator(".problems")).toContainText("Stained: Defer. Until the next check, No stock on hand.");
+    await expect(card(page, "HEADREST").locator(".problems")).toContainText("Stained: Deferred. Until the next check, No stock on hand.");
 
     await openMap(page);
     const seat = page.locator("button[data-seat='12A']");
@@ -126,7 +126,9 @@ test.describe("N100TL: a deferral found in 3D, carried to the next check and clo
     await expect(meaning).toContainText("MEL item FX-25-31-01 (category C, fix within 10 days): Bin empty, locked and placarded INOP");
     await expect(meaning).toContainText("Fix by 22 Nov 2026");
     await saveProblem(page, ["Defer", "Until the next check", "No stock on hand"]);
-    await expect(card(page, "BIN_LATCH").locator(".problems")).toContainText("Won't latch: Defer. Until the next check, No stock on hand. Fix by 22 Nov 2026.");
+    await expect(card(page, "BIN_LATCH").locator(".problems")).toContainText(
+      "Won't latch: Deferred. Until the next check, No stock on hand. Fix by 22 Nov 2026.",
+    );
   });
 
   test("complete the check: the report counts 2 deferred, colours 2 places in the cabin picture and lists both in order", async ({ page }) => {
@@ -235,7 +237,7 @@ test("a life vest picked in 3D with Under seat on and marked Missing can only be
   await expect(outcomes.first()).toHaveAccessibleName("Must be fixed before flight");
   await expect(outcomes.first()).toBeChecked();
   await saveProblem(page, []);
-  await expect(lifeVest.locator(".problems")).toContainText("Missing: Must be fixed before flight.");
+  await expect(lifeVest.locator(".problems")).toContainText("Missing: Must be fixed.");
 
   await completeVisit(page, true);
   await openReport(page, visitId);
@@ -268,7 +270,7 @@ test("keyboard only: Go to location 12A life vest, then record a problem without
   await tabTo(page, ".problem-form button[type=submit]");
   await page.keyboard.press("Enter");
   await expect(problemForm(page)).toHaveCount(0);
-  await expect(lifeVest.locator(".problems")).toContainText("Torn: Note only.");
+  await expect(lifeVest.locator(".problems")).toContainText("Torn: Noted.");
   expect(await page.evaluate(() => document.activeElement?.tagName), "the canvas never took focus").not.toBe("CANVAS");
   // the map shows it too
   await expect(page.locator("button[data-seat='12A']")).toHaveAttribute("aria-label", /Noted/);

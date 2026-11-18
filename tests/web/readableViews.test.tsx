@@ -228,6 +228,23 @@ describe("the after-action report sections", () => {
       for (const time of section.querySelectorAll("time")) expect(time.getAttribute("dateTime")).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     }
     expect(sections[2]?.querySelectorAll("time")).toHaveLength(4);
+    // the carried overdue deferral reads with its class on the check date, the expiry date in words (Minor 5)
+    expect(sections[4]).toHaveTextContent("Seat 3B · Tray table · Won't latch · No-go: must be fixed before flight. MEL deferral expired on 1 Nov 2026");
+  });
+
+  it("a no-go class stored with an ISO date in its reason (before 2.1.0's final fix) reads the date in words", async () => {
+    const legacy = problem({ id: "LG", outcome: "MUST_FIX", melClass: { class: "NO_GO", reason: "MEL deferral expired on 2026-11-05" }, dueDate: null });
+    const envelope = {
+      report: buildReport({ ...v3, observations: [legacy], carried: [] }, "FINAL", "2026-11-12T12:07:00.000Z"),
+      basisSha256: null,
+      linkedEvents: [],
+    };
+    stubFetch((method, url) => (url === `/api/visits/${visit.id}/report` ? { body: envelope } : answer(method, url)));
+    const { container } = render(<ReportView visitId={visit.id} />);
+    await screen.findByRole("heading", { name: "Must be fixed" });
+    const mustFix = container.querySelector("#r-mustfix")?.closest("section") as HTMLElement;
+    expect(mustFix).toHaveTextContent("MEL deferral expired on 5 Nov 2026");
+    expect(mustFix.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   });
 });
 

@@ -10,6 +10,7 @@ import {
   LOOKUP_STATE_LABEL,
   melLabel,
   outcomeLabel,
+  outcomeStatusLabel,
   reasonLabel,
   relativeTime,
 } from "../../src/web/format.ts";
@@ -135,6 +136,14 @@ describe("problem labels", () => {
       "Other",
     ]);
     expect((["NOTED", "DEFERRED", "MUST_FIX"] as const).map(outcomeLabel)).toEqual(["Note only", "Defer", "Must be fixed before flight"]);
+    // once written down, a problem's status is a past-tense word, not the form's choice (Minor 4)
+    expect((["NOTED", "DEFERRED", "MUST_FIX", "REPLACED", "FIXED"] as const).map(outcomeStatusLabel)).toEqual([
+      "Noted",
+      "Deferred",
+      "Must be fixed",
+      "Replaced",
+      "Fixed",
+    ]);
     expect((["NEXT_CHECK", "NEXT_STOP"] as const).map(deferLabel)).toEqual(["Until the next check", "Until the next stop"]);
     expect((["NO_STOCK", "NO_TIME", "OTHER"] as const).map(reasonLabel)).toEqual(["No stock on hand", "No time on this turn", "Other"]);
   });
@@ -145,6 +154,13 @@ describe("problem labels", () => {
       "MEL item FX-25-21-01 (category C, fix within 10 days): Seat blocked and placarded INOP",
     );
     expect(melLabel({ class: "NO_GO", reason: "Bin cannot be secured" })).toBe("No-go: must be fixed before flight. Bin cannot be secured");
+    expect(melLabel({ class: "NO_GO", reason: "MEL deferral expired", expiredOn: "2026-11-05" })).toBe(
+      "No-go: must be fixed before flight. MEL deferral expired on 5 Nov 2026",
+    );
+    // a class stored before the date was kept apart still reads in words
+    expect(melLabel({ class: "NO_GO", reason: "MEL deferral expired on 2026-11-05" })).toBe(
+      "No-go: must be fixed before flight. MEL deferral expired on 5 Nov 2026",
+    );
     // a technician's raise names no MEL item, so its placeholder item is not shown
     expect(melLabel({ class: "MEL", item: "TECH-RAISED", category: "C", intervalDays: 10, conditions: "Raised by the technician" })).toBe(
       "MEL item (category C, fix within 10 days): Raised by the technician",

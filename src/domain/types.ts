@@ -346,7 +346,8 @@ export type MelCategory = "A" | "B" | "C" | "D";
 export type MelClass =
   | { class: "COSMETIC" }
   | { class: "MEL"; item: string; category: MelCategory; intervalDays: number; conditions: string; blocksSeat?: true }
-  | { class: "NO_GO"; reason: string };
+  /** `expiredOn` (YYYY-MM-DD): an MEL deferral past its due date. Classes stored before it existed name the date in `reason`. */
+  | { class: "NO_GO"; reason: string; expiredOn?: string };
 
 export interface MelEntry {
   id: string;
@@ -796,6 +797,11 @@ export interface ReportObservations {
   closed: Observation[];
   carriedIn: CarriedObservation[];
   stillOpen: Observation[];
+  /**
+   * The class of each open problem on the check date, by observation id: the shared `currentClass` (seat block and
+   * overdue applied), which may be above the class stored with it. Absent from reports stored before it was added.
+   */
+  classes?: Record<string, MelClass>;
 }
 
 export interface ReportPieceOutcome {

@@ -52,7 +52,8 @@ function isOpenDeferral(o: Observation): boolean {
 /** An open MEL deferral past its due date counts as NO_GO. */
 export function effectiveClass(o: Observation, onDate: string): MelClass {
   if (o.melClass.class === "MEL" && isOpenDeferral(o) && isOverdue(o.dueDate, onDate)) {
-    return { class: "NO_GO", reason: `MEL deferral expired on ${o.dueDate}` };
+    // the date stays a date: the label layer writes it in words (Minor 5)
+    return { class: "NO_GO", reason: "MEL deferral expired", expiredOn: o.dueDate as string };
   }
   return o.melClass;
 }

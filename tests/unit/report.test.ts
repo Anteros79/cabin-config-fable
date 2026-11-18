@@ -496,6 +496,13 @@ describe("report v3", () => {
     expect(summary).toMatchObject({ mustFix: 2, carriedIn: 1, stillOpen: 3 });
   });
 
+  it("records each open problem's class on the check date, which may be above its stored class (Minor 5)", () => {
+    const overdue = obs({ id: "OD", outcome: "DEFERRED", componentId: "TRAY", condition: "BROKEN", melClass: MEL_C, dueDate: "2026-11-10", blocksSeat: false });
+    const noted = obs({ id: "N", outcome: "NOTED", locationId: "SEAT:4A" });
+    const { observations } = buildReport(v3Visit({ observations: [overdue, noted] }), "FINAL", AT);
+    expect(observations?.classes).toEqual({ OD: { class: "NO_GO", reason: "MEL deferral expired", expiredOn: "2026-11-10" }, N: { class: "COSMETIC" } });
+  });
+
   it("an overdue open MEL deferral counts as must-fix, not as deferred", () => {
     const overdue = obs({ id: "OD", outcome: "DEFERRED", componentId: "TRAY", condition: "BROKEN", melClass: MEL_C, dueDate: "2026-11-10", blocksSeat: false });
     const { summary, observations } = buildReport(v3Visit({ observations: [overdue] }), "FINAL", AT);
