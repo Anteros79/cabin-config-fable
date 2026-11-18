@@ -578,6 +578,8 @@ export interface VisitSnapshot {
   resolution: Resolution;
   dateRule: string;
   geometryVersion: string;
+  /** The release's MEL, frozen at creation. Absent in snapshots stored before schema v3: every problem then classifies as COSMETIC. */
+  mel?: MelEntry[];
 }
 
 export type SelectionType = "PRIMARY" | "ALTERNATE";
@@ -620,6 +622,8 @@ export interface VisitSummary {
   lookupState: string;
   variantId: string;
   layoutRevisionId: string;
+  /** The technician confirmed "Aircraft held, reported" at completion. */
+  aircraftHeld: boolean;
 }
 
 export interface VisitEvent {
@@ -634,6 +638,10 @@ export interface Visit extends VisitSummary {
   snapshotSha256: string;
   records: VisitRecord[];
   events: VisitEvent[];
+  /** Observations opened or closed in this visit. */
+  observations: Observation[];
+  /** The tail's other OPEN observations, placed on this visit's layout. */
+  carried: CarriedObservation[];
 }
 
 /** A visit without its frozen snapshot: what write responses carry. */

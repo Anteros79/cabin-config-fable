@@ -40,6 +40,7 @@ export function buildSnapshot(release: ReferenceRelease, result: LookupResult, c
     resolution: result.resolution,
     dateRule: DATE_RULE,
     geometryVersion: result.context.layoutRevision.geometry.version,
+    mel: release.mel ?? [],
   });
 }
 

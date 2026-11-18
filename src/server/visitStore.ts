@@ -4,8 +4,22 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../domain/canonical.ts";
 import { sha256Hex } from "../domain/hash.ts";
+import { allowedOutcomes, classify, dueDateFor, effectiveClass, mapCarried, seatIsBlocked } from "../domain/observations.ts";
 import { buildReport } from "../domain/report.ts";
-import type { Report, Visit, VisitEvent, VisitRecord, VisitSnapshot, VisitState, VisitSummary } from "../domain/types.ts";
+import type {
+  CarriedObservation,
+  Condition,
+  MelClass,
+  Observation,
+  ObservationInput,
+  Report,
+  Visit,
+  VisitEvent,
+  VisitRecord,
+  VisitSnapshot,
+  VisitState,
+  VisitSummary,
+} from "../domain/types.ts";
 import { DomainError, deriveRecord } from "../domain/visitLogic.ts";
 import { isSameFile } from "./config.ts";
 import { migrate, VISIT_MIGRATIONS } from "./migrations.ts";
@@ -22,7 +36,9 @@ export { StorageError };
  */
 export const VISIT_STORE_KIND = "cabin-kit-visits";
 /** The newest schema this code knows: the base schema (1) plus every entry of VISIT_MIGRATIONS. */
-export const VISIT_SCHEMA_VERSION = "2";
+export const VISIT_SCHEMA_VERSION = "3";
+/** The first schema with `visit_observations` and `visits.aircraft_held`. */
+const OBSERVATIONS_SCHEMA_VERSION = 3;
 const BASE_SCHEMA_VERSION = 1;
 
 const SCHEMA = `
@@ -131,6 +147,49 @@ BEGIN SELECT RAISE(ABORT, 'EVENT_IMMUTABLE'); END;
  */
 const HIDDEN_CHARACTER = /[\p{Cc}\p{Zl}\p{Zp}]|(?![\u200C\u200D])\p{Cf}/u;
 
+const CONDITIONS: readonly Condition[] = ["STAINED", "TORN", "WORN", "BROKEN", "MISSING", "WONT_LATCH", "OTHER"];
+const OBSERVATION_FIELDS = new Set(["locationId", "componentId", "condition", "note", "outcome", "deferUntil", "reason", "raisedTo"]);
+const RAISE_RANK = { NONE: 0, MEL: 1, NO_GO: 2 } as const;
+
+const invalidObservation = (message: string): DomainError => new DomainError("INVALID_OBSERVATION", message, 422);
+
+/**
+ * Shape check of what a technician writes about a problem. The piece and the MEL class are checked
+ * against the visit by the store. A field given as `undefined` counts as absent.
+ */
+function parseObservationInput(raw: unknown): ObservationInput {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw invalidObservation("The observation must be an object.");
+  const input = raw as Record<string, unknown>;
+  for (const key of Object.keys(input)) {
+    if (!OBSERVATION_FIELDS.has(key)) {
+      throw new DomainError("UNSUPPORTED_FIELD", `Field "${key}" is not accepted. The class, due date and status are derived by the server.`);
+    }
+  }
+  const { locationId, componentId, condition, outcome, deferUntil, reason, raisedTo } = input;
+  const note = input.note ?? "";
+  if (typeof locationId !== "string" || locationId.length === 0 || locationId.length > 80) throw invalidObservation("A location id is required.");
+  if (typeof componentId !== "string" || componentId.length === 0 || componentId.length > 80) throw invalidObservation("A component id is required.");
+  if (!CONDITIONS.includes(condition as Condition)) throw invalidObservation(`Condition must be one of ${CONDITIONS.join(", ")}.`);
+  if (typeof note !== "string" || note.trim().length > 1000) throw invalidObservation("The note must be text of at most 1000 characters.");
+  if (outcome !== "NOTED" && outcome !== "DEFERRED" && outcome !== "MUST_FIX") throw invalidObservation("Outcome must be NOTED, DEFERRED or MUST_FIX.");
+  if (outcome === "DEFERRED") {
+    if (deferUntil !== "NEXT_CHECK" && deferUntil !== "NEXT_STOP") throw invalidObservation("A deferral needs deferUntil: NEXT_CHECK or NEXT_STOP.");
+    if (reason !== "NO_STOCK" && reason !== "NO_TIME" && reason !== "OTHER") throw invalidObservation("A deferral needs a reason: NO_STOCK, NO_TIME or OTHER.");
+  } else if (deferUntil !== undefined || reason !== undefined) {
+    throw invalidObservation("deferUntil and reason are only given for a deferral.");
+  }
+  if (raisedTo !== undefined && raisedTo !== "MEL" && raisedTo !== "NO_GO") throw invalidObservation("raisedTo must be MEL or NO_GO.");
+  return {
+    locationId,
+    componentId,
+    condition: condition as Condition,
+    note: note.trim(),
+    outcome,
+    ...(outcome === "DEFERRED" ? { deferUntil: deferUntil as ObservationInput["deferUntil"], reason: reason as ObservationInput["reason"] } : {}),
+    ...(raisedTo !== undefined ? { raisedTo } : {}),
+  };
+}
+
 /** Retry keys older than this are pruned when the store opens. */
 export const IDEMPOTENCY_RETENTION_DAYS = 30;
 
@@ -185,6 +244,8 @@ export function supportedVersion(path: string): number {
   return version;
 }
 
+const emptyVisit = (): DomainError => new DomainError("EMPTY_VISIT", "Record at least one replacement or problem before completing the visit.", 409);
+
 const corrupt = (problems: string[]): DomainError =>
   new DomainError("VISIT_STORE_CORRUPT", "The visit store file is damaged. It will not be used; restore it from a backup.", 500, { problems });
 
@@ -220,10 +281,13 @@ function createSchema(db: DatabaseSync): void {
 export class VisitStore {
   readonly path: string;
   private db: DatabaseSync;
+  /** False only for a store opened read-only before migrating to v3: it has no observations and no held flag. */
+  private readonly hasObservations: boolean;
 
-  private constructor(path: string, db: DatabaseSync) {
+  private constructor(path: string, db: DatabaseSync, schemaVersion: number) {
     this.path = path;
     this.db = db;
+    this.hasObservations = schemaVersion >= OBSERVATIONS_SCHEMA_VERSION;
   }
 
   /**
@@ -247,6 +311,7 @@ export class VisitStore {
     const current = fresh ? null : supportedVersion(path);
     if (!options.readOnly) mkdirSync(dirname(path), { recursive: true });
     let db: DatabaseSync;
+    let version: number;
     try {
       db = new DatabaseSync(path, { timeout: STORE_BUSY_TIMEOUT_MS, readOnly: options.readOnly ?? false });
     } catch (e) {
@@ -256,15 +321,15 @@ export class VisitStore {
       db.exec("PRAGMA foreign_keys=ON;");
       // Checked before the WAL switch, which rewrites header bytes: a damaged store is refused untouched.
       assertIntact(db);
-      if (options.readOnly) return new VisitStore(path, db);
+      if (options.readOnly) return new VisitStore(path, db, current ?? BASE_SCHEMA_VERSION);
       db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
       if (current === null) createSchema(db);
-      migrate(db, current ?? BASE_SCHEMA_VERSION, VISIT_MIGRATIONS);
+      version = migrate(db, current ?? BASE_SCHEMA_VERSION, VISIT_MIGRATIONS);
     } catch (e) {
       db.close();
       throw asOpenError(e);
     }
-    const store = new VisitStore(path, db);
+    const store = new VisitStore(path, db, version);
     store.pruneIdempotency(new Date(Date.now() - IDEMPOTENCY_RETENTION_DAYS * 86_400_000).toISOString());
     return store;
   }
@@ -298,7 +363,7 @@ export class VisitStore {
       }
       const message = (e as Error).message ?? "";
       if (/VISIT_LOCKED/.test(message)) throw new DomainError("VISIT_LOCKED", "This visit is completed and locked.", 409);
-      if (/EMPTY_VISIT/.test(message)) throw new DomainError("EMPTY_VISIT", "Record at least one replacement before completing the visit.", 409);
+      if (/EMPTY_VISIT/.test(message)) throw emptyVisit();
       if (isStorageFailure(e)) throw new StorageError(message, { cause: e });
       throw e;
     }
@@ -364,7 +429,54 @@ export class VisitStore {
       lookupState: String(row.lookup_state),
       variantId: String(row.variant_id),
       layoutRevisionId: String(row.layout_revision_id),
+      aircraftHeld: Number(row.aircraft_held ?? 0) === 1,
     };
+  }
+
+  private observationOf(row: Row): Observation {
+    return {
+      id: String(row.id),
+      tail: String(row.tail),
+      locationId: String(row.location_id),
+      componentId: String(row.component_id),
+      condition: row.condition as Condition,
+      note: String(row.note),
+      outcome: row.outcome as ObservationInput["outcome"],
+      ...(row.defer_until !== null ? { deferUntil: row.defer_until as ObservationInput["deferUntil"] } : {}),
+      ...(row.reason !== null ? { reason: row.reason as ObservationInput["reason"] } : {}),
+      ...(row.raised_to !== null ? { raisedTo: row.raised_to as ObservationInput["raisedTo"] } : {}),
+      status: row.status as Observation["status"],
+      version: Number(row.version),
+      melClass: JSON.parse(String(row.mel_class_json)) as MelClass,
+      dueDate: row.due_date === null ? null : String(row.due_date),
+      blocksSeat: Number(row.blocks_seat) === 1,
+      openedInVisitId: String(row.opened_in_visit_id),
+      closedInVisitId: row.closed_in_visit_id === null ? null : String(row.closed_in_visit_id),
+      closedAs: row.closed_as as Observation["closedAs"],
+      locationLabel: String(row.location_label),
+      componentName: String(row.component_name),
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+    };
+  }
+
+  /** Must be called inside a transaction. */
+  private loadObservation(id: string): Observation | null {
+    const row = this.db.prepare("SELECT * FROM visit_observations WHERE id = ?").get(id) as Row | undefined;
+    return row ? this.observationOf(row) : null;
+  }
+
+  /** Every OPEN observation on the tail, whichever visit opened it. Must be called inside a transaction. */
+  private openObservations(tail: string): Observation[] {
+    if (!this.hasObservations) return [];
+    return (this.db.prepare("SELECT * FROM visit_observations WHERE tail = ? AND status = 'OPEN' ORDER BY created_at, id").all(tail) as Row[]).map((r) =>
+      this.observationOf(r),
+    );
+  }
+
+  /** `, <prefix>aircraft_held` when the column exists. */
+  private heldColumn(prefix = ""): string {
+    return this.hasObservations ? `, ${prefix}aircraft_held` : "";
   }
 
   private recordOf(row: Row): VisitRecord {
@@ -390,7 +502,7 @@ export class VisitStore {
   private loadVisitState(id: string): VisitState {
     const row = this.db
       .prepare(
-        "SELECT id, number, tail, check_date, technician, status, version, created_at, updated_at, completed_at, reference_release_id, lookup_state, variant_id, layout_revision_id, snapshot_sha256 FROM visits WHERE id = ?",
+        `SELECT id, number, tail, check_date, technician, status, version, created_at, updated_at, completed_at, reference_release_id, lookup_state, variant_id, layout_revision_id, snapshot_sha256${this.heldColumn()} FROM visits WHERE id = ?`,
       )
       .get(id) as Row | undefined;
     if (!row) throw new DomainError("VISIT_NOT_FOUND", "Visit not found.", 404);
@@ -400,12 +512,31 @@ export class VisitStore {
     const events = (this.db.prepare("SELECT seq, type, at, payload_json FROM visit_events WHERE visit_id = ? ORDER BY seq").all(id) as Row[]).map(
       (e): VisitEvent => ({ seq: Number(e.seq), type: String(e.type), at: String(e.at), payload: JSON.parse(String(e.payload_json)) }),
     );
+    const observations = this.hasObservations
+      ? (
+          this.db
+            .prepare("SELECT * FROM visit_observations WHERE opened_in_visit_id = ? OR closed_in_visit_id = ? ORDER BY created_at, id")
+            .all(id, id) as Row[]
+        ).map((r) => this.observationOf(r))
+      : [];
     return {
       ...this.summaryOf(row, records.length),
       snapshotSha256: String(row.snapshot_sha256),
       records,
       events,
+      observations,
+      carried: this.carriedInto(id, String(row.tail), String(row.check_date)),
     };
+  }
+
+  /**
+   * The tail's OPEN observations that another visit opened, placed on this visit's layout. The snapshot is
+   * read only when there is something to place. Must be called inside a transaction.
+   */
+  private carriedInto(visitId: string, tail: string, checkDate: string): CarriedObservation[] {
+    const others = this.openObservations(tail).filter((o) => o.openedInVisitId !== visitId);
+    if (others.length === 0) return [];
+    return mapCarried(others, this.loadSnapshot(visitId).context.layoutRevision.locations, checkDate);
   }
 
   /** Must be called inside a transaction. */
@@ -496,7 +627,7 @@ export class VisitStore {
       const total = Number((this.db.prepare(`SELECT count(*) AS n FROM visits v ${clause}`).get(...args) as { n: number }).n);
       const rows = this.db
         .prepare(
-          `SELECT v.number, v.id, v.tail, v.check_date, v.technician, v.status, v.version, v.created_at, v.updated_at, v.completed_at, v.reference_release_id, v.lookup_state, v.variant_id, v.layout_revision_id,
+          `SELECT v.number, v.id, v.tail, v.check_date, v.technician, v.status, v.version, v.created_at, v.updated_at, v.completed_at, v.reference_release_id, v.lookup_state, v.variant_id, v.layout_revision_id${this.heldColumn("v.")},
                   (SELECT count(*) FROM visit_records r WHERE r.visit_id = v.id) AS record_count
            FROM visits v ${clause} ORDER BY v.number DESC LIMIT ? OFFSET ?`,
         )
@@ -567,6 +698,7 @@ export class VisitStore {
           substituteId: derived.substituteId,
           quantity: derived.quantity,
           recordVersion: version,
+          ...(existing ? { before: existing } : {}),
         },
         now,
       );
@@ -599,8 +731,196 @@ export class VisitStore {
       }
       this.db.prepare("DELETE FROM visit_records WHERE visit_id = ? AND location_id = ? AND component_id = ?").run(visitId, locationId, componentId);
       this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
-      this.event(visitId, "RECORD_REMOVED", { locationId, componentId, recordVersion: existing.version }, now);
+      this.event(visitId, "RECORD_REMOVED", { locationId, componentId, recordVersion: existing.version, before: existing }, now);
       this.remember(options.idempotencyKey, `visit:${visitId}`, requestHash, { ok: true }, now);
+      return { visit: this.loadVisitState(visitId), replayed: false };
+    });
+  }
+
+  /** A DRAFT visit to write an observation through. Must be called inside a transaction. */
+  private draftForObservation(visitId: string): VisitState {
+    const visit = this.loadVisitState(visitId);
+    if (visit.status !== "DRAFT") throw new DomainError("VISIT_LOCKED", "This visit is completed and locked.", 409);
+    return visit;
+  }
+
+  /** An OPEN observation on the visit's tail at the version the caller loaded. Must be called inside a transaction. */
+  private openObservationFor(visit: VisitState, observationId: string, expectedVersion: number): Observation {
+    const existing = this.loadObservation(observationId);
+    if (!existing || existing.tail !== visit.tail || existing.status !== "OPEN") {
+      throw new DomainError("OBSERVATION_NOT_FOUND", "That problem is not open on this aircraft (it may already have been closed).", 404);
+    }
+    if (expectedVersion !== existing.version) {
+      throw new DomainError("STALE_OBSERVATION", "This problem was changed elsewhere since you loaded it. Review it and try again.", 409, {
+        current: existing,
+      });
+    }
+    return existing;
+  }
+
+  /**
+   * The class, due date and seat block of `input` written through `visit`, against the visit's frozen MEL.
+   * The seat is blocked by the tail's other open deferrals. An MEL item whose first deferral is past due is
+   * NO_GO, so it can no longer be deferred. Throws OUTCOME_NOT_ALLOWED when the outcome does not fit the class.
+   */
+  private classifyObservation(
+    visit: VisitState,
+    snapshot: VisitSnapshot,
+    input: ObservationInput,
+    existing: Observation | null,
+  ): { melClass: MelClass; dueDate: string | null; blocksSeat: boolean } {
+    const others = this.openObservations(visit.tail).filter((o) => o.id !== existing?.id);
+    const base = classify({
+      mel: snapshot.mel ?? [],
+      componentId: input.componentId,
+      condition: input.condition,
+      variant: snapshot.context.variant.id,
+      seatBlocked: seatIsBlocked(others, input.locationId),
+      ...(input.raisedTo !== undefined ? { raisedTo: input.raisedTo } : {}),
+    });
+    const firstDue = existing?.dueDate ?? null;
+    // The class an open deferral of it would have on this date (NO_GO once its first due date has passed),
+    // whatever outcome this write gives it. effectiveClass reads only these four fields.
+    const asDeferral = { status: "OPEN", outcome: "DEFERRED", melClass: base, dueDate: firstDue } as Observation;
+    const melClass = effectiveClass(asDeferral, visit.checkDate);
+    const allowed = allowedOutcomes(melClass);
+    if (!allowed.includes(input.outcome)) {
+      throw new DomainError("OUTCOME_NOT_ALLOWED", `This problem cannot be marked ${input.outcome} under its MEL class.`, 422, { allowed, melClass });
+    }
+    const dueDate = firstDue ?? (input.outcome === "DEFERRED" ? dueDateFor(melClass, visit.checkDate) : null);
+    return { melClass, dueDate, blocksSeat: melClass.class === "MEL" && melClass.blocksSeat === true };
+  }
+
+  /**
+   * Record a problem on a piece of this visit's layout. Observations belong to the tail: they stay
+   * OPEN across visits until a later DRAFT visit on the same tail closes them.
+   */
+  addObservation(visitId: string, raw: unknown, options: MutationOptions = {}): VisitMutationResult {
+    const now = options.now ?? new Date().toISOString();
+    const scope = `observation:${visitId}`;
+    const requestHash = sha256Hex(canonicalJson({ op: "observation-add", visitId, input: raw ?? null }));
+    return this.write(() => {
+      if (this.replay(options.idempotencyKey, scope, requestHash)) return { visit: this.loadVisitState(visitId), replayed: true };
+      const visit = this.draftForObservation(visitId);
+      const input = parseObservationInput(raw);
+      const snapshot = this.loadSnapshot(visitId);
+      const location = snapshot.context.layoutRevision.locations.find((l) => l.id === input.locationId);
+      if (!location) throw invalidObservation(`Location ${input.locationId} is not part of this visit's frozen layout.`);
+      if (!location.componentIds.includes(input.componentId)) throw invalidObservation(`Component ${input.componentId} is not a piece of ${location.label}.`);
+      const cls = this.classifyObservation(visit, snapshot, input, null);
+      const id = randomUUID();
+      this.db
+        .prepare(
+          `INSERT INTO visit_observations(id, tail, location_id, component_id, condition, note, outcome, defer_until, reason, raised_to, mel_class_json, due_date, blocks_seat, status, version, opened_in_visit_id, location_label, component_name, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', 1, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          id,
+          visit.tail,
+          input.locationId,
+          input.componentId,
+          input.condition,
+          input.note,
+          input.outcome,
+          input.deferUntil ?? null,
+          input.reason ?? null,
+          input.raisedTo ?? null,
+          JSON.stringify(cls.melClass),
+          cls.dueDate,
+          cls.blocksSeat ? 1 : 0,
+          visitId,
+          location.label,
+          snapshot.resolution.componentDefs[input.componentId]?.name ?? input.componentId,
+          now,
+          now,
+        );
+      this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
+      this.event(visitId, "OBSERVATION_ADDED", { observation: this.loadObservation(id) }, now);
+      this.remember(options.idempotencyKey, scope, requestHash, { ok: true }, now);
+      return { visit: this.loadVisitState(visitId), replayed: false };
+    });
+  }
+
+  /**
+   * Change an OPEN observation on this visit's tail, including one carried from an earlier visit. The piece
+   * cannot change, a raised class cannot be lowered, and the first due date never moves.
+   */
+  updateObservation(visitId: string, observationId: string, raw: unknown, expectedVersion: number, options: MutationOptions = {}): VisitMutationResult {
+    const now = options.now ?? new Date().toISOString();
+    const scope = `observation:${visitId}`;
+    const requestHash = sha256Hex(canonicalJson({ op: "observation-update", visitId, observationId, input: raw ?? null, expectedVersion }));
+    return this.write(() => {
+      if (this.replay(options.idempotencyKey, scope, requestHash)) return { visit: this.loadVisitState(visitId), replayed: true };
+      const visit = this.draftForObservation(visitId);
+      const before = this.openObservationFor(visit, observationId, expectedVersion);
+      const input = parseObservationInput(raw);
+      if (input.locationId !== before.locationId || input.componentId !== before.componentId) {
+        throw invalidObservation("The piece of a recorded problem cannot be changed. Close it and record a new one.");
+      }
+      if (RAISE_RANK[input.raisedTo ?? "NONE"] < RAISE_RANK[before.raisedTo ?? "NONE"]) {
+        throw invalidObservation("A class raised by the technician cannot be lowered.");
+      }
+      const cls = this.classifyObservation(visit, this.loadSnapshot(visitId), input, before);
+      this.db
+        .prepare(
+          `UPDATE visit_observations SET condition = ?, note = ?, outcome = ?, defer_until = ?, reason = ?, raised_to = ?, mel_class_json = ?, due_date = ?, blocks_seat = ?,
+             version = version + 1, updated_at = ? WHERE id = ?`,
+        )
+        .run(
+          input.condition,
+          input.note,
+          input.outcome,
+          input.deferUntil ?? null,
+          input.reason ?? null,
+          input.raisedTo ?? null,
+          JSON.stringify(cls.melClass),
+          cls.dueDate,
+          cls.blocksSeat ? 1 : 0,
+          now,
+          observationId,
+        );
+      this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
+      this.event(visitId, "OBSERVATION_UPDATED", { before, after: this.loadObservation(observationId) }, now);
+      this.remember(options.idempotencyKey, scope, requestHash, { ok: true }, now);
+      return { visit: this.loadVisitState(visitId), replayed: false };
+    });
+  }
+
+  /**
+   * Close an OPEN observation on this visit's tail. REPLACED needs a record in this visit on the piece where
+   * the observation sits on this visit's layout, so one that is no longer at its position can only be FIXED.
+   */
+  closeObservation(
+    visitId: string,
+    observationId: string,
+    closedAs: "REPLACED" | "FIXED",
+    expectedVersion: number,
+    options: MutationOptions = {},
+  ): VisitMutationResult {
+    if (closedAs !== "REPLACED" && closedAs !== "FIXED") throw invalidObservation("A problem is closed as REPLACED or FIXED.");
+    const now = options.now ?? new Date().toISOString();
+    const scope = `observation:${visitId}`;
+    const requestHash = sha256Hex(canonicalJson({ op: "observation-close", visitId, observationId, closedAs, expectedVersion }));
+    return this.write(() => {
+      if (this.replay(options.idempotencyKey, scope, requestHash)) return { visit: this.loadVisitState(visitId), replayed: true };
+      const visit = this.draftForObservation(visitId);
+      const before = this.openObservationFor(visit, observationId, expectedVersion);
+      if (closedAs === "REPLACED") {
+        const [placed] = mapCarried([before], this.loadSnapshot(visitId).context.layoutRevision.locations, visit.checkDate);
+        if (!visit.records.some((r) => r.locationId === placed?.locationId && r.componentId === before.componentId)) {
+          throw new DomainError(
+            "REPLACEMENT_MISSING",
+            `Record the replacement of ${before.componentName} at ${before.locationLabel} in this visit first.`,
+            422,
+          );
+        }
+      }
+      this.db
+        .prepare("UPDATE visit_observations SET status = 'CLOSED', closed_in_visit_id = ?, closed_as = ?, version = version + 1, updated_at = ? WHERE id = ?")
+        .run(visitId, closedAs, now, observationId);
+      this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
+      this.event(visitId, "OBSERVATION_CLOSED", { before, after: this.loadObservation(observationId) }, now);
+      this.remember(options.idempotencyKey, scope, requestHash, { ok: true }, now);
       return { visit: this.loadVisitState(visitId), replayed: false };
     });
   }
@@ -608,12 +928,18 @@ export class VisitStore {
   /**
    * Explicit, non-empty completion. Validation, locking and the report basis are one transaction:
    * an edit from another connection either commits first (and is in the report) or is refused.
-   * Completing an already completed visit returns the stored report unchanged.
+   * Completing an already completed visit returns the stored report unchanged. While any OPEN observation on
+   * the tail is NO_GO on the check date (an overdue MEL deferral included) or marked MUST_FIX, completion
+   * needs `aircraftHeld: true`, which is stored on the visit.
    */
-  completeVisit(visitId: string, expectedVisitVersion: number | undefined, options: MutationOptions = {}): CompletionResult {
+  completeVisit(visitId: string, expectedVisitVersion: number | undefined, options: MutationOptions & { aircraftHeld?: boolean } = {}): CompletionResult {
     const now = options.now ?? new Date().toISOString();
     const scope = `complete:${visitId}`;
-    const requestHash = sha256Hex(canonicalJson({ op: "complete", visitId, expectedVisitVersion: expectedVisitVersion ?? null }));
+    const held = options.aircraftHeld === true;
+    // `aircraftHeld` joins the hash only when set, so retry keys stored before v3 keep their hash.
+    const requestHash = sha256Hex(
+      canonicalJson({ op: "complete", visitId, expectedVisitVersion: expectedVisitVersion ?? null, ...(held ? { aircraftHeld: true } : {}) }),
+    );
     return this.write(() => {
       const replayed = this.replay(options.idempotencyKey, scope, requestHash) !== undefined;
       const visit = this.loadVisitState(visitId);
@@ -625,7 +951,7 @@ export class VisitStore {
           currentVersion: visit.version,
         });
       }
-      if (visit.records.length === 0) throw new DomainError("EMPTY_VISIT", "Record at least one replacement before completing the visit.", 409);
+      if (visit.records.length === 0 && !visit.events.some((e) => e.type.startsWith("OBSERVATION_"))) throw emptyVisit();
       // Re-derive every record from the frozen snapshot: what is locked must be what the rules produce.
       const snapshot = this.loadSnapshot(visitId);
       for (const record of visit.records) {
@@ -645,8 +971,22 @@ export class VisitStore {
           );
         }
       }
-      this.db.prepare("UPDATE visits SET status = 'COMPLETED', completed_at = ?, updated_at = ?, version = version + 1 WHERE id = ?").run(now, now, visitId);
-      this.event(visitId, "COMPLETED", { records: visit.records.length }, now);
+      const mustFix = this.openObservations(visit.tail)
+        .filter((o) => o.outcome === "MUST_FIX" || effectiveClass(o, visit.checkDate).class === "NO_GO")
+        .map((o) => o.id)
+        .sort();
+      if (mustFix.length > 0 && !held) {
+        throw new DomainError(
+          "MUST_FIX_OPEN",
+          "A must-fix problem is still open on this aircraft. Fix it, or confirm the aircraft is held and reported.",
+          409,
+          { observationIds: mustFix },
+        );
+      }
+      this.db
+        .prepare("UPDATE visits SET status = 'COMPLETED', completed_at = ?, updated_at = ?, version = version + 1, aircraft_held = ? WHERE id = ?")
+        .run(now, now, held ? 1 : 0, visitId);
+      this.event(visitId, "COMPLETED", { records: visit.records.length, aircraftHeld: held }, now);
       const completed = this.loadVisitState(visitId);
       const report = buildReport({ ...completed, snapshot }, "FINAL", now);
       const reportJson = canonicalJson(report);
@@ -719,9 +1059,16 @@ export class VisitStore {
   fingerprint(): string {
     return this.read(() => {
       const hash = createHash("sha256");
-      for (const table of ["visits", "visit_records", "visit_events", "reports"]) {
-        const order =
-          table === "visits" ? "number" : table === "reports" ? "visit_id" : table === "visit_events" ? "visit_id, seq" : "visit_id, location_id, component_id";
+      const tables = ["visits", "visit_records", "visit_events", "reports", ...(this.hasObservations ? ["visit_observations"] : [])];
+      const orderBy: Record<string, string> = {
+        visits: "number",
+        visit_records: "visit_id, location_id, component_id",
+        visit_events: "visit_id, seq",
+        reports: "visit_id",
+        visit_observations: "id",
+      };
+      for (const table of tables) {
+        const order = orderBy[table];
         for (const row of this.db.prepare(`SELECT * FROM ${table} ORDER BY ${order}`).all() as Row[]) hash.update(JSON.stringify(row));
       }
       return hash.digest("hex");

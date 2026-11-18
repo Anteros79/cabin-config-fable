@@ -141,10 +141,13 @@ export function visitWith(snap: VisitSnapshot, inputs: unknown[]): Visit {
     lookupState: snap.lookupState,
     variantId: snap.context.variant.id,
     layoutRevisionId: snap.context.layoutRevision.id,
+    aircraftHeld: false,
     snapshot: snap,
     snapshotSha256: "test",
     records,
     events: [],
+    observations: [],
+    carried: [],
   };
 }
 

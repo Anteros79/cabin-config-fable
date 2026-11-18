@@ -19,7 +19,7 @@ import { asStorageError, STORE_BUSY_TIMEOUT_MS } from "./storageError.ts";
 export const REFERENCE_STORE_KIND = "cabin-kit-reference";
 export const REFERENCE_SCHEMA_VERSION = "1";
 const REFERENCE_TABLES = ["meta", "release", "release_entity", "active_release", "release_event"];
-const VISIT_TABLES = ["visits", "visit_records", "visit_events", "reports", "idempotency"];
+const VISIT_TABLES = ["visits", "visit_records", "visit_events", "reports", "idempotency", "visit_observations"];
 
 const ENTITY_TYPES = [
   "vocabulary",

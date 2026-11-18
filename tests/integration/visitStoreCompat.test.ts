@@ -65,8 +65,33 @@ describe("visit stores written by 5d6679d", () => {
       [COMPLETED_ID, "COMPLETED", "N100TL"],
     ]);
     store.close();
-    expect(metaVersion(copy.path)).toBe("2");
+    expect(metaVersion(copy.path)).toBe("3");
     expect(indexNames(copy.path)).toContain("idempotency_created");
+    expect(indexNames(copy.path)).toContain("visit_observations_tail_status");
+  });
+
+  it("the 5d6679d store migrates to v3, its /1 report is byte-identical, and the old draft completes", () => {
+    const pristine = rawReportJson(copyOfFixture().path, COMPLETED_ID);
+    const copy = copyOfFixture();
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
+    expect(metaVersion(copy.path)).toBe("3");
+    expect(canonicalJson(store.getReport(COMPLETED_ID).report)).toBe(pristine);
+    const old = store.getVisit(COMPLETED_ID);
+    expect(old).toMatchObject({ aircraftHeld: false, observations: [], carried: [] });
+    expect(old.snapshot.mel).toBeUndefined();
+    // the old draft's snapshot has no MEL: every problem on it is cosmetic, even one the current MEL calls no-go
+    const draft = store.getVisit(DRAFT_ID);
+    const added = store.addObservation(
+      DRAFT_ID,
+      { locationId: "BIN:L-01", componentId: "BIN_DOOR", condition: "WONT_LATCH", note: "", outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" },
+      { now: "2026-11-18T09:00:00.000Z" },
+    ).visit;
+    expect(added.version).toBe(draft.version + 1);
+    expect(at(added.observations, 0)).toMatchObject({ tail: "N200TL", melClass: { class: "COSMETIC" }, dueDate: null, blocksSeat: false });
+    const done = store.completeVisit(DRAFT_ID, added.version);
+    expect(done.visit).toMatchObject({ status: "COMPLETED", aircraftHeld: false });
+    expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
+    expect(canonicalJson(store.getReport(COMPLETED_ID).report)).toBe(pristine);
   });
 
   it("a stored /1 report is served byte-identical", () => {
@@ -82,13 +107,20 @@ describe("visit stores written by 5d6679d", () => {
 
   it("migration leaves every stored visit, record, event and report row unchanged", () => {
     const copy = copyOfFixture();
+    // The columns 5d6679d wrote; v3 adds `aircraft_held`, which every old row reads as 0.
+    const visitColumns = (path: string) => raw(path, (db) => (db.prepare("PRAGMA table_info(visits)").all() as { name: string }[]).map((c) => c.name));
+    const original = visitColumns(copy.path);
     const dump = (path: string) =>
       raw(path, (db) =>
-        ["visits", "visit_records", "visit_events", "reports"].map((table) => JSON.stringify(db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all())),
+        [`SELECT ${original.join(", ")} FROM visits`, "SELECT * FROM visit_records", "SELECT * FROM visit_events", "SELECT * FROM reports"].map((sql) =>
+          JSON.stringify(db.prepare(`${sql} ORDER BY rowid`).all()),
+        ),
       );
     const before = dump(copy.path);
     VisitStore.open(copy.path, copy.referencePath).close();
     expect(dump(copy.path)).toEqual(before);
+    expect(visitColumns(copy.path)).toEqual([...original, "aircraft_held"]);
+    expect(raw(copy.path, (db) => db.prepare("SELECT DISTINCT aircraft_held AS held FROM visits").all())).toEqual([{ held: 0 }]);
   });
 
   it("snapshots without `excluded` fields render and the stored /1 report is served unchanged", async () => {
@@ -213,6 +245,10 @@ describe("visit stores written by 5d6679d", () => {
     const store = track(VisitStore.open(copy.path, copy.referencePath, { readOnly: true }));
     expect(store.counts()).toMatchObject({ visits: 2, drafts: 1, completed: 1 });
     expect(store.getReport(COMPLETED_ID).report.schema).toBe("cabin-kit.report/1");
+    // the unmigrated store has no observations table and no held flag: they read as none
+    expect(store.getVisit(DRAFT_ID)).toMatchObject({ aircraftHeld: false, observations: [], carried: [] });
+    expect(store.listVisits().items.map((v) => v.aircraftHeld)).toEqual([false, false]);
+    expect(store.fingerprint()).toMatch(/^[0-9a-f]{64}$/);
     store.close();
     expect(metaVersion(copy.path)).toBe("1");
     expect(readFileSync(copy.path).equals(bytes)).toBe(true);
@@ -273,6 +309,9 @@ describe("visit store migrations", () => {
       description: "index retry keys by age",
       sql: "CREATE INDEX IF NOT EXISTS idempotency_created ON idempotency(created_at);",
     });
+    expect(at(VISIT_MIGRATIONS, 1)).toMatchObject({ to: 3, description: "per-tail observations, aircraft held flag, completion with observations" });
+    expect(VISIT_MIGRATIONS).toHaveLength(2);
+    expect(VISIT_SCHEMA_VERSION).toBe("3");
     expect(String(at(VISIT_MIGRATIONS, VISIT_MIGRATIONS.length - 1).to)).toBe(VISIT_SCHEMA_VERSION);
   });
 

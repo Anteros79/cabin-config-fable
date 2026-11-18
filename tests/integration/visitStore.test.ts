@@ -7,7 +7,7 @@ import { DomainError } from "../../src/domain/visitLogic.ts";
 import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { ReferenceStore } from "../../src/server/referenceStore.ts";
 import { IDEMPOTENCY_RETENTION_DAYS } from "../../src/server/visitStore.ts";
-import { CUSHION_3A, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, makeStores, openVisits, SIX_LINE_TOTALS, snapshotFor, track } from "../helpers.ts";
+import { at, CUSHION_3A, fixtureRelease, KIT_ALTERNATE, KIT_PRIMARY, makeStores, openVisits, SIX_LINE_TOTALS, snapshotFor, track } from "../helpers.ts";
 
 const release = fixtureRelease();
 const snap = () => snapshotFor(release, "N100TL", "2026-11-12");
@@ -492,5 +492,316 @@ describe("store edge cases (TST-09)", () => {
     expect(done.gaps).toEqual(preview.gaps);
     expect(done.gaps.reduce((n, g) => n + g.locationIds.length, 0)).toBe(partial.resolution.counts.noMatch + partial.resolution.counts.ambiguous);
     expect(store.getReport(visit.id).report).toEqual(done);
+  });
+});
+
+const STAIN_3A = { locationId: "SEAT:3A", componentId: "CUSHION", condition: "STAINED", note: "Coffee on the cushion", outcome: "NOTED" } as const;
+const BELT_3A = {
+  locationId: "SEAT:3A",
+  componentId: "SEATBELT",
+  condition: "BROKEN",
+  note: "Buckle cracked",
+  outcome: "DEFERRED",
+  deferUntil: "NEXT_CHECK",
+  reason: "NO_STOCK",
+} as const;
+const errorOf = (fn: () => unknown): DomainError => {
+  try {
+    fn();
+  } catch (e) {
+    if (e instanceof DomainError) return e;
+    throw e;
+  }
+  throw new Error("expected a DomainError");
+};
+
+describe("observations", () => {
+  it("add, update, close an observation appends ADDED/UPDATED/CLOSED with before/after", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const before = store.fingerprint();
+    const added = store.addObservation(visit.id, STAIN_3A).visit;
+    expect(store.fingerprint()).not.toBe(before);
+    expect(added.version).toBe(2);
+    expect(added.carried).toEqual([]);
+    const first = at(added.observations, 0);
+    expect(first).toMatchObject({
+      ...STAIN_3A,
+      tail: "N100TL",
+      status: "OPEN",
+      version: 1,
+      melClass: { class: "COSMETIC" },
+      dueDate: null,
+      blocksSeat: false,
+      openedInVisitId: visit.id,
+      closedInVisitId: null,
+      closedAs: null,
+      locationLabel: "Seat 3A",
+    });
+    expect(at(added.events, added.events.length - 1)).toMatchObject({ type: "OBSERVATION_ADDED", payload: { observation: first } });
+
+    const deferred = { ...STAIN_3A, outcome: "DEFERRED", deferUntil: "NEXT_STOP", reason: "NO_TIME", note: "  Deep stain  " };
+    const updated = store.updateObservation(visit.id, first.id, deferred, 1).visit;
+    const second = at(updated.observations, 0);
+    expect(second).toMatchObject({
+      id: first.id,
+      version: 2,
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_STOP",
+      reason: "NO_TIME",
+      note: "Deep stain",
+      dueDate: null,
+    });
+    expect(updated.version).toBe(3);
+    expect(at(updated.events, updated.events.length - 1)).toMatchObject({ type: "OBSERVATION_UPDATED", payload: { before: first, after: second } });
+
+    const closed = store.closeObservation(visit.id, first.id, "FIXED", 2).visit;
+    const third = at(closed.observations, 0);
+    expect(third).toMatchObject({ id: first.id, version: 3, status: "CLOSED", closedAs: "FIXED", closedInVisitId: visit.id });
+    expect(at(closed.events, closed.events.length - 1)).toMatchObject({ type: "OBSERVATION_CLOSED", payload: { before: second, after: third } });
+
+    // a closed observation is no longer open for change: OBSERVATION_NOT_FOUND
+    expect(errorOf(() => store.updateObservation(visit.id, first.id, STAIN_3A, 3))).toMatchObject({ code: "OBSERVATION_NOT_FOUND", status: 404 });
+    expect(codeOf(() => store.closeObservation(visit.id, first.id, "FIXED", 3))).toBe("OBSERVATION_NOT_FOUND");
+    expect(codeOf(() => store.updateObservation(visit.id, "no-such-observation", STAIN_3A, 1))).toBe("OBSERVATION_NOT_FOUND");
+    expect(store.getVisit(visit.id).version).toBe(4);
+  });
+
+  it("record updates and removals carry the previous record", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const v1 = at(store.upsertRecord(visit.id, CUSHION_3A, undefined).visit.records, 0);
+    const updated = store.upsertRecord(visit.id, { ...CUSHION_3A, note: "second" }, 1).visit;
+    expect(at(updated.events, updated.events.length - 1)).toMatchObject({ type: "RECORD_UPDATED", payload: { before: v1, recordVersion: 2 } });
+    const v2 = at(updated.records, 0);
+    const removed = store.removeRecord(visit.id, "SEAT:3A", "CUSHION", 2).visit;
+    expect(at(removed.events, removed.events.length - 1)).toMatchObject({ type: "RECORD_REMOVED", payload: { before: v2, recordVersion: 2 } });
+  });
+
+  it("rejects an invalid observation and leaves the draft untouched", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    for (const bad of [
+      { ...STAIN_3A, locationId: "SEAT:14B" },
+      { ...STAIN_3A, componentId: "BIN_DOOR" },
+      { ...STAIN_3A, condition: "SCRATCHED" },
+      { ...STAIN_3A, note: "x".repeat(1001) },
+      { ...BELT_3A, deferUntil: undefined },
+      { ...BELT_3A, reason: undefined },
+      { ...STAIN_3A, reason: "NO_STOCK" },
+      { ...STAIN_3A, outcome: "REPLACED" },
+      { ...STAIN_3A, raisedTo: "COSMETIC" },
+      "not an object",
+    ]) {
+      expect(
+        errorOf(() => store.addObservation(visit.id, bad)),
+        JSON.stringify(bad),
+      ).toMatchObject({ code: "INVALID_OBSERVATION", status: 422 });
+    }
+    expect(codeOf(() => store.addObservation(visit.id, { ...STAIN_3A, melClass: { class: "COSMETIC" } }))).toBe("UNSUPPORTED_FIELD");
+    expect(codeOf(() => store.addObservation("no-such-visit", STAIN_3A))).toBe("VISIT_NOT_FOUND");
+    expect(store.getVisit(visit.id)).toMatchObject({ version: 1, observations: [] });
+  });
+
+  it("MUST_FIX on a COSMETIC problem needs raisedTo", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    expect(errorOf(() => store.addObservation(visit.id, { ...STAIN_3A, outcome: "MUST_FIX" }))).toMatchObject({ code: "OUTCOME_NOT_ALLOWED", status: 422 });
+    const raised = at(store.addObservation(visit.id, { ...STAIN_3A, outcome: "MUST_FIX", raisedTo: "NO_GO" }).visit.observations, 0);
+    expect(raised).toMatchObject({ outcome: "MUST_FIX", raisedTo: "NO_GO", melClass: { class: "NO_GO", reason: "Raised by the technician" } });
+    // a raised class is never lowered: dropping or lowering raisedTo is refused
+    expect(codeOf(() => store.updateObservation(visit.id, raised.id, { ...STAIN_3A, outcome: "MUST_FIX" }, 1))).toBe("INVALID_OBSERVATION");
+    expect(codeOf(() => store.updateObservation(visit.id, raised.id, { ...STAIN_3A, outcome: "MUST_FIX", raisedTo: "MEL" }, 1))).toBe("INVALID_OBSERVATION");
+  });
+
+  it("NO_GO cannot be DEFERRED", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const latch = {
+      locationId: "BIN:L-01",
+      componentId: "BIN_DOOR",
+      condition: "WONT_LATCH",
+      note: "",
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_STOP",
+      reason: "NO_TIME",
+    };
+    expect(codeOf(() => store.addObservation(visit.id, latch))).toBe("OUTCOME_NOT_ALLOWED");
+    const mustFix = at(store.addObservation(visit.id, { ...latch, outcome: "MUST_FIX", deferUntil: undefined, reason: undefined }).visit.observations, 0);
+    expect(mustFix.melClass).toEqual({ class: "NO_GO", reason: "Bin cannot be secured" });
+    // a missing life vest is NO_GO, until the seat belt deferral blocks the seat: then it is MEL C
+    const vest = {
+      locationId: "SEAT:3A",
+      componentId: "LIFE_VEST",
+      condition: "MISSING",
+      note: "",
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_CHECK",
+      reason: "NO_STOCK",
+    };
+    expect(codeOf(() => store.addObservation(visit.id, vest))).toBe("OUTCOME_NOT_ALLOWED");
+    const belt = at(store.addObservation(visit.id, BELT_3A).visit.observations, 1);
+    expect(belt).toMatchObject({ blocksSeat: true, dueDate: "2026-11-22", melClass: { class: "MEL", item: "FX-25-21-01", category: "C" } });
+    const blocked = store.addObservation(visit.id, vest).visit.observations.find((o) => o.componentId === "LIFE_VEST");
+    expect(blocked).toMatchObject({ outcome: "DEFERRED", dueDate: "2026-11-22", melClass: { class: "MEL", item: "FX-25-61-01" } });
+  });
+
+  it("closing as REPLACED needs a record on that piece", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const stain = at(store.addObservation(visit.id, STAIN_3A).visit.observations, 0);
+    expect(errorOf(() => store.closeObservation(visit.id, stain.id, "REPLACED", 1))).toMatchObject({ code: "REPLACEMENT_MISSING", status: 422 });
+    store.upsertRecord(visit.id, { ...CUSHION_3A, componentId: "BACKREST" }, undefined);
+    expect(codeOf(() => store.closeObservation(visit.id, stain.id, "REPLACED", 1))).toBe("REPLACEMENT_MISSING");
+    store.upsertRecord(visit.id, CUSHION_3A, undefined);
+    expect(at(store.closeObservation(visit.id, stain.id, "REPLACED", 1).visit.observations, 0)).toMatchObject({ status: "CLOSED", closedAs: "REPLACED" });
+    expect(codeOf(() => store.closeObservation(visit.id, stain.id, "BROKEN" as "FIXED", 2))).toBe("INVALID_OBSERVATION");
+  });
+
+  it("a stale expectedVersion gives STALE_OBSERVATION; the same key replays without a second row", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const a = store.addObservation(visit.id, STAIN_3A, { idempotencyKey: "obs-key-0001" });
+    const b = store.addObservation(visit.id, STAIN_3A, { idempotencyKey: "obs-key-0001" });
+    expect([a.replayed, b.replayed]).toEqual([false, true]);
+    expect(b.visit.observations).toHaveLength(1);
+    expect(b.visit.version).toBe(2);
+    expect(codeOf(() => store.addObservation(visit.id, { ...STAIN_3A, note: "other" }, { idempotencyKey: "obs-key-0001" }))).toBe("IDEMPOTENCY_KEY_REUSED");
+    const id = at(a.visit.observations, 0).id;
+    expect(errorOf(() => store.updateObservation(visit.id, id, { ...STAIN_3A, note: "x" }, 0))).toMatchObject({ code: "STALE_OBSERVATION", status: 409 });
+    const u1 = store.updateObservation(visit.id, id, { ...STAIN_3A, note: "x" }, 1, { idempotencyKey: "obs-key-0002" });
+    const u2 = store.updateObservation(visit.id, id, { ...STAIN_3A, note: "x" }, 1, { idempotencyKey: "obs-key-0002" });
+    expect([u1.replayed, u2.replayed]).toEqual([false, true]);
+    expect(at(u2.visit.observations, 0).version).toBe(2);
+    expect(codeOf(() => store.closeObservation(visit.id, id, "FIXED", 1))).toBe("STALE_OBSERVATION");
+    expect(store.closeObservation(visit.id, id, "FIXED", 2, { idempotencyKey: "obs-key-0003" }).replayed).toBe(false);
+    expect(store.closeObservation(visit.id, id, "FIXED", 2, { idempotencyKey: "obs-key-0003" }).replayed).toBe(true);
+    expect(
+      store
+        .getVisit(visit.id)
+        .events.filter((e) => e.type.startsWith("OBSERVATION_"))
+        .map((e) => e.type),
+    ).toEqual(["OBSERVATION_ADDED", "OBSERVATION_UPDATED", "OBSERVATION_CLOSED"]);
+  });
+
+  it("a deferral carries to the next visit on the tail and is closed there", () => {
+    const store = openVisits(makeStores());
+    const first = store.createVisit(snap(), "Demo").visit;
+    const belt = at(store.addObservation(first.id, BELT_3A).visit.observations, 0);
+    store.addObservation(first.id, { ...STAIN_3A, componentId: "HEADREST" });
+    const done = store.completeVisit(first.id, undefined);
+    expect(done.visit).toMatchObject({ status: "COMPLETED", aircraftHeld: false });
+    const other = store.createVisit(snapshotFor(release, "N200TL", "2026-11-12"), "Demo").visit;
+    expect(other.carried).toEqual([]);
+    expect(codeOf(() => store.updateObservation(other.id, belt.id, BELT_3A, 1))).toBe("OBSERVATION_NOT_FOUND");
+
+    const next = store.createVisit(snapshotFor(release, "N100TL", "2026-11-20"), "Demo").visit;
+    expect(next.observations).toEqual([]);
+    // both sit on SEAT:3A, so they are ordered by id
+    expect(next.carried.map((c) => [c.observation.componentId, c.placement, c.locationId, c.overdue]).sort()).toEqual([
+      ["HEADREST", "SAME", "SEAT:3A", false],
+      ["SEATBELT", "SAME", "SEAT:3A", false],
+    ]);
+    // re-deferred on the later date: the due date stays as first set
+    const redeferred = store.updateObservation(next.id, belt.id, { ...BELT_3A, reason: "OTHER", note: "Still no stock" }, 1).visit;
+    expect(redeferred.carried.find((c) => c.observation.id === belt.id)?.observation).toMatchObject({ version: 2, dueDate: "2026-11-22", reason: "OTHER" });
+    expect(at(redeferred.events, redeferred.events.length - 1).type).toBe("OBSERVATION_UPDATED");
+    const closed = store.closeObservation(next.id, belt.id, "FIXED", 2).visit;
+    expect(closed.observations.map((o) => [o.id, o.status, o.openedInVisitId, o.closedInVisitId])).toEqual([[belt.id, "CLOSED", first.id, next.id]]);
+    expect(closed.carried.map((c) => c.observation.componentId)).toEqual(["HEADREST"]);
+    // the earlier visit's own events are unchanged; its observation list shows the item as closed later
+    expect(store.getVisit(first.id).events).toEqual(done.visit.events);
+    expect(store.completeVisit(next.id, undefined).visit.status).toBe("COMPLETED");
+    // once its closing visit is completed, the observation row is locked in storage too
+    expect(() => store.rawExec(`UPDATE visit_observations SET note = 'x' WHERE id = '${belt.id}'`)).toThrow(/VISIT_LOCKED/);
+    expect(codeOf(() => store.closeObservation(next.id, at(closed.carried, 0).observation.id, "FIXED", 1))).toBe("VISIT_LOCKED");
+    const third = store.createVisit(snapshotFor(release, "N100TL", "2026-11-21"), "Demo").visit;
+    expect(third.carried.map((c) => c.observation.componentId)).toEqual(["HEADREST"]);
+  });
+
+  it("an MEL deferral past its due date blocks completion with MUST_FIX_OPEN until aircraftHeld", () => {
+    const store = openVisits(makeStores());
+    const first = store.createVisit(snap(), "Demo").visit;
+    const belt = at(store.addObservation(first.id, BELT_3A).visit.observations, 0);
+    store.completeVisit(first.id, undefined);
+    const late = store.createVisit(snapshotFor(release, "N100TL", "2026-11-23"), "Demo").visit;
+    expect(late.carried.map((c) => [c.observation.id, c.overdue])).toEqual([[belt.id, true]]);
+    store.upsertRecord(late.id, CUSHION_3A, undefined);
+    const refused = errorOf(() => store.completeVisit(late.id, undefined, { idempotencyKey: "complete-held-1" }));
+    expect(refused).toMatchObject({ code: "MUST_FIX_OPEN", status: 409, details: { observationIds: [belt.id] } });
+    // overdue: it can no longer be deferred, only marked must-fix
+    expect(codeOf(() => store.updateObservation(late.id, belt.id, BELT_3A, 1))).toBe("OUTCOME_NOT_ALLOWED");
+    const mustFix = { ...BELT_3A, outcome: "MUST_FIX", deferUntil: undefined, reason: undefined };
+    const marked = store.updateObservation(late.id, belt.id, mustFix, 1).visit;
+    expect(at(marked.carried, 0).observation).toMatchObject({ outcome: "MUST_FIX", dueDate: "2026-11-22", melClass: { class: "NO_GO" } });
+    expect(codeOf(() => store.updateObservation(late.id, belt.id, BELT_3A, 2))).toBe("OUTCOME_NOT_ALLOWED");
+    expect(codeOf(() => store.completeVisit(late.id, undefined))).toBe("MUST_FIX_OPEN");
+    const held = store.completeVisit(late.id, undefined, { idempotencyKey: "complete-held-1", aircraftHeld: true });
+    expect(held.visit).toMatchObject({ status: "COMPLETED", aircraftHeld: true });
+    expect(store.completeVisit(late.id, undefined, { idempotencyKey: "complete-held-1", aircraftHeld: true }).replayed).toBe(true);
+    expect(codeOf(() => store.completeVisit(late.id, undefined, { idempotencyKey: "complete-held-1" }))).toBe("IDEMPOTENCY_KEY_REUSED");
+    expect(store.listVisits().items.map((v) => [v.id, v.aircraftHeld])).toEqual([
+      [late.id, true],
+      [first.id, false],
+    ]);
+  });
+
+  it("an open MUST_FIX on an MEL item blocks completion too", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const tray = { locationId: "SEAT:3A", componentId: "TRAY", condition: "BROKEN", note: "", outcome: "MUST_FIX" };
+    const id = at(store.addObservation(visit.id, tray).visit.observations, 0).id;
+    expect(errorOf(() => store.completeVisit(visit.id, undefined))).toMatchObject({ code: "MUST_FIX_OPEN", details: { observationIds: [id] } });
+    store.closeObservation(visit.id, id, "FIXED", 1);
+    expect(store.completeVisit(visit.id, undefined).visit.aircraftHeld).toBe(false);
+  });
+
+  it("a visit with only an observation completes", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const v = store.addObservation(visit.id, STAIN_3A).visit;
+    const done = store.completeVisit(visit.id, v.version);
+    expect(done.visit).toMatchObject({ status: "COMPLETED", recordCount: 0, aircraftHeld: false });
+    expect(done.report.reportKind).toBe("FINAL");
+    // storage level: a raw completion of a visit with only an observation event is allowed
+    const raw = store.createVisit(snap(), "Demo").visit;
+    store.addObservation(raw.id, { ...STAIN_3A, componentId: "HEADREST" });
+    store.rawExec(`UPDATE visits SET status = 'COMPLETED', completed_at = 'x' WHERE id = '${raw.id}'`);
+    expect(store.getVisit(raw.id).status).toBe("COMPLETED");
+  });
+
+  it("a visit with nothing still fails with EMPTY_VISIT", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    store.addLinkedEvent(visit.id, "ADVISORY", "Not work.", "Lead");
+    expect(errorOf(() => store.completeVisit(visit.id, undefined))).toMatchObject({ code: "EMPTY_VISIT", status: 409 });
+    expect(() => store.rawExec(`UPDATE visits SET status = 'COMPLETED', completed_at = 'x' WHERE id = '${visit.id}'`)).toThrow(/EMPTY_VISIT/);
+    expect(store.getVisit(visit.id).status).toBe("DRAFT");
+  });
+
+  it("N200TL V05 → V04: a BIN_ASSIST deferral arrives ORPHANED", () => {
+    const store = openVisits(makeStores());
+    const before = store.createVisit(snapshotFor(release, "N200TL", "2026-06-15"), "Demo").visit;
+    const defer = { condition: "BROKEN", note: "Damper weak", outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" };
+    const assist = at(store.addObservation(before.id, { ...defer, locationId: "BIN:L-02", componentId: "BIN_ASSIST" }).visit.observations, 0);
+    expect(assist).toMatchObject({ dueDate: "2026-10-13", melClass: { class: "MEL", item: "FX-25-31-02", category: "D" } });
+    const latch = at(store.addObservation(before.id, { ...defer, locationId: "BIN:L-02", componentId: "BIN_LATCH" }).visit.observations, 1);
+    store.completeVisit(before.id, undefined);
+
+    const late = store.createVisit(snapshotFor(release, "N200TL", "2026-11-12"), "Demo").visit;
+    expect(late.carried.map((c) => [c.observation.id, c.placement, c.locationId, c.overdue])).toEqual([
+      [latch.id, "SAME", "BIN:L-02", true],
+      [assist.id, "ORPHANED", null, true],
+    ]);
+    const after = store.createVisit(snapshotFor(release, "N200TL", "2026-07-02"), "Demo").visit;
+    expect(store.getVisit(after.id).snapshot.context.variant.id).toBe("V04");
+    expect(after.carried.map((c) => [c.observation.id, c.placement, c.locationId, c.overdue])).toEqual([
+      [latch.id, "SAME", "BIN:L-02", true], // MEL C: due 2026-06-25
+      [assist.id, "ORPHANED", null, false], // MEL D: due 2026-10-13
+    ]);
+    expect(at(after.carried, 1).observation.locationLabel).toBe("Overhead bin L-02 (rows 3-5, 4 bags)");
+    // no record can be made on a piece that is not there, so it can only be closed as fixed
+    expect(codeOf(() => store.closeObservation(after.id, assist.id, "REPLACED", 1))).toBe("REPLACEMENT_MISSING");
+    expect(at(store.closeObservation(after.id, assist.id, "FIXED", 1).visit.observations, 0)).toMatchObject({ id: assist.id, status: "CLOSED" });
   });
 });
