@@ -133,6 +133,10 @@ button.loc.partial {
   border-color: var(--danger);
   border-style: dashed;
 }
+/* a problem status: --problem is set inline to its status token, --ink to its text token */
+button.loc.problem {
+  border-color: var(--problem);
+}
 /* selection is drawn inside the button, so the focus outline stays visible on a selected seat;
    the ink ring gives the 3:1 contrast, the select band inside it matches the 3D selection colour */
 button.loc.selected {
@@ -152,6 +156,62 @@ button.loc.alternate {
 button.loc .status-glyph {
   width: 1.05rem;
   height: 1.05rem;
+}
+/* armrests: a narrow button in the gap between two seats of a row; on narrow screens they leave the grid and stay in the seat's piece list */
+.armrest-slot,
+button.loc.armrest {
+  display: none;
+}
+@media (min-width: 721px) {
+  .seat-row {
+    grid-template-columns: 2rem repeat(3, 0.6rem minmax(1.5rem, 1fr)) 0.6rem 0.4rem repeat(3, 0.6rem minmax(1.5rem, 1fr)) 0.6rem;
+  }
+  .seat-row .after-aisle {
+    grid-column-start: auto;
+  }
+  .armrest-slot {
+    display: block;
+  }
+  button.loc.armrest {
+    display: flex;
+    justify-content: center;
+    align-self: center;
+    min-width: 0;
+    min-height: 0;
+    height: 1.6rem;
+    padding: 0;
+  }
+  button.loc.armrest .status-glyph {
+    width: 0.6rem;
+    height: 0.6rem;
+  }
+}
+/* the words of a status or of a blocked seat: ink tokens for the problem statuses, always with the glyph beside them */
+.badge-text {
+  font-weight: 600;
+  color: var(--ink, inherit);
+}
+.loc-detail {
+  display: block;
+  font-weight: 400;
+}
+.pieces {
+  grid-column: 1 / -1;
+}
+.piece-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--step-030);
+  padding: 0;
+  list-style: none;
+}
+.piece-list button.piece {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  text-align: left;
 }
 .loc-list {
   display: flex;

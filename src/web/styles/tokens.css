@@ -78,6 +78,16 @@
   --status-alternate-bg: var(--info-bg);
   --status-alternate-border: var(--info-border);
   --status-alternate-text: var(--info-text);
+  /* problem statuses (VAC-9 placeholders, Task 15 tunes them): the fill is the badge disc and the border, 3:1 on every surface
+     and with the glyph ink on it; the -ink is the badge words, 4.5:1 on every surface. Light and dark values differ. */
+  --status-mustfix: #e00b75;
+  --status-mustfix-ink: #ca0a69;
+  --status-deferred: #d26203;
+  --status-deferred-ink: #a84e02;
+  --status-carried: #9a10ff;
+  --status-carried-ink: #9710fa;
+  --status-noted: #0f6cb4;
+  --status-noted-ink: #0f6cb4;
 
   /* seat tiers: the 3D tints and the legend swatches (TIER_COLOUR); the same in every theme */
   --tier-elr: #19c8b4;
@@ -216,6 +226,14 @@
     --info-bg: #221c40;
     --info-border: #5b4ba0;
     --info-text: #d9cfff;
+    --status-mustfix: #ff6bb0;
+    --status-mustfix-ink: #ff6bb0;
+    --status-deferred: #ff9d45;
+    --status-deferred-ink: #ff9d45;
+    --status-carried: #c29bff;
+    --status-carried-ink: #c29bff;
+    --status-noted: #5fb8ff;
+    --status-noted-ink: #5fb8ff;
     --scene-bg: #1b2030;
     --scene-outline: #e3e7f0;
     --scene-wash: #d5dae6;
@@ -272,6 +290,14 @@
   --info-bg: #221c40;
   --info-border: #5b4ba0;
   --info-text: #d9cfff;
+  --status-mustfix: #ff6bb0;
+  --status-mustfix-ink: #ff6bb0;
+  --status-deferred: #ff9d45;
+  --status-deferred-ink: #ff9d45;
+  --status-carried: #c29bff;
+  --status-carried-ink: #c29bff;
+  --status-noted: #5fb8ff;
+  --status-noted-ink: #5fb8ff;
   --scene-bg: #1b2030;
   --scene-outline: #e3e7f0;
   --scene-wash: #d5dae6;

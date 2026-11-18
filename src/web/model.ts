@@ -23,18 +23,17 @@ import type { LocationState } from "./scene/CabinScene.ts";
  * recorded yet), or none of these. The union is in rank order, highest first (aggregateStatus).
  */
 export type LocationStatus = "mustFix" | "unresolved" | "deferred" | "carried" | "noted" | "recorded" | "alternate" | "none";
-export type StatusGlyph = "tick" | "question" | "alternate" | "none";
+export type StatusGlyph = "tick" | "question" | "alternate" | "alert" | "pause" | "forward" | "note" | "none";
 
 /**
  * How each status is shown, so the 3D badges, the map and the legends cannot disagree (WEB-21). Status never rests on
  * colour alone: every status but "none" has its own glyph, drawn in a disc of its colour token. "none" shows nothing.
  */
 export const STATUS_ENCODING: Record<LocationStatus, { glyph: StatusGlyph; token: string; label: string }> = {
-  // The problem statuses have no glyph or token yet: they show as a 3D tint and as text until their encoding lands.
-  mustFix: { glyph: "none", token: "", label: "Must fix" },
-  deferred: { glyph: "none", token: "", label: "Deferred" },
-  carried: { glyph: "none", token: "", label: "Carried" },
-  noted: { glyph: "none", token: "", label: "Noted" },
+  mustFix: { glyph: "alert", token: "--status-mustfix", label: "Must fix" },
+  deferred: { glyph: "pause", token: "--status-deferred", label: "Deferred" },
+  carried: { glyph: "forward", token: "--status-carried", label: "Carried" },
+  noted: { glyph: "note", token: "--status-noted", label: "Noted" },
   recorded: { glyph: "tick", token: "--status-recorded", label: "Recorded" },
   unresolved: { glyph: "question", token: "--status-unresolved", label: "Unresolved" },
   alternate: { glyph: "alternate", token: "--status-alternate", label: "Has alternate" },
@@ -49,7 +48,17 @@ export const GLYPH_PATHS: Record<Exclude<StatusGlyph, "none">, string> = {
   tick: "M6.5 12.5l3.6 3.6L17.6 8.4",
   question: "M9 9.4a3.1 3.1 0 1 1 4.6 2.7c-1 .55-1.6 1.2-1.6 2.3v.5M12 17.6v.1",
   alternate: "M6 9.5h11M14 6.5l3 3-3 3M18 14.5H7M10 11.5l-3 3 3 3",
+  alert: "M12 6.2v7.4M12 17.6v.1",
+  pause: "M9.4 7v10M14.6 7v10",
+  forward: "M6.5 12h10.5M13 8l4 4-4 4",
+  note: "M7 8.5h10M7 12.5h10M7 16.5h6",
 };
+
+/** The problem statuses: a badge shows their words as well as their glyph, and a button's accessible name carries them. */
+const PROBLEM_STATUSES: readonly LocationStatus[] = ["mustFix", "deferred", "carried", "noted"];
+/** The words a problem status adds to a name ("Must fix"), or "" for any other status. */
+export const problemStatusText = (status: LocationStatus | undefined): string =>
+  status && PROBLEM_STATUSES.includes(status) ? STATUS_ENCODING[status].label : "";
 
 /**
  * The status a whole location shows, the highest-ranked of its pieces: a must-fix problem, an unresolved component (the
@@ -304,6 +313,8 @@ export function seatLabelFor(location: CabinLocation, flags: LocationFlags | und
   if (flags?.recorded) parts.push(`${flags.recorded} replacement${flags.recorded === 1 ? "" : "s"} recorded`);
   if (flags?.unresolved) parts.push(`${flags.unresolved} component${flags.unresolved === 1 ? "" : "s"} unresolved`);
   if (flags?.alternate) parts.push(alternateText(flags.alternate));
+  const problem = problemStatusText(flags?.status);
+  if (problem) parts.push(problem);
   return parts.join(", ");
 }
 

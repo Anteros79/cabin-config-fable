@@ -42,6 +42,14 @@
     --info-bg: #f7f3ff;
     --info-border: #c9b8f5;
     --info-text: #3b2a80;
+    --status-mustfix: #e00b75;
+    --status-mustfix-ink: #ca0a69;
+    --status-deferred: #d26203;
+    --status-deferred-ink: #a84e02;
+    --status-carried: #9a10ff;
+    --status-carried-ink: #9710fa;
+    --status-noted: #0f6cb4;
+    --status-noted-ink: #0f6cb4;
     --scene-bg: #eef0f4;
     --scene-outline: #ffffff;
     --scene-wash: #ffffff;

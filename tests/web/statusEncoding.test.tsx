@@ -1,6 +1,6 @@
 import { render, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
-import type { VisitRecord } from "../../src/domain/types.ts";
+import type { CarriedObservation, Observation, VisitRecord } from "../../src/domain/types.ts";
 import { Cabin3D } from "../../src/web/components/Cabin3D.tsx";
 import { CabinMap } from "../../src/web/components/CabinMap.tsx";
 import { buildStates, type LocationStatus, STATUS_ENCODING, type Workspace } from "../../src/web/model.ts";
@@ -92,6 +92,35 @@ const recordAt = (locationId: string, componentId: string): VisitRecord => ({
   updatedAt: "2026-11-12T12:01:00.000Z",
 });
 
+const problemAt = (locationId: string, componentId: string, over: Partial<Observation>): Observation => ({
+  id: `OBS-${locationId}-${componentId}`,
+  tail: "N100TL",
+  status: "OPEN",
+  version: 1,
+  melClass: { class: "COSMETIC" },
+  dueDate: null,
+  blocksSeat: false,
+  openedInVisitId: "visit-1",
+  closedInVisitId: null,
+  closedAs: null,
+  locationLabel: locationId,
+  componentName: componentId,
+  createdAt: "2026-11-12T12:02:00.000Z",
+  updatedAt: "2026-11-12T12:02:00.000Z",
+  locationId,
+  componentId,
+  condition: "STAINED",
+  note: "",
+  outcome: "NOTED",
+  ...over,
+});
+const carriedProblem: CarriedObservation = {
+  observation: { ...problemAt("SEAT:4C", "CUSHION", { outcome: "DEFERRED" }), openedInVisitId: "visit-0" },
+  placement: "SAME",
+  locationId: "SEAT:4C",
+  overdue: false,
+};
+
 function workspaceWithEveryStatus(): Workspace {
   const components = snap.resolution.components.map((c) =>
     c.locationId === "SEAT:5B" && c.componentId === "CUSHION"
@@ -106,8 +135,12 @@ function workspaceWithEveryStatus(): Workspace {
     records: [recordAt("SEAT:3A", "CUSHION")],
     editable: true,
     unresolvedReason: null,
-    observations: [],
-    carried: [],
+    observations: [
+      problemAt("SEAT:4A", "CUSHION", { outcome: "MUST_FIX" }),
+      problemAt("SEAT:4B", "CUSHION", { outcome: "DEFERRED" }),
+      problemAt("SEAT:4D", "CUSHION", { outcome: "NOTED" }),
+    ],
+    carried: [carriedProblem],
     checkDate: "2026-11-12",
     mel: [],
   };
@@ -127,7 +160,7 @@ describe("STATUS_ENCODING", () => {
 
   test("status token colours are distinguishable under simulated deuteranopia and protanopia", () => {
     const coloured = STATUSES.filter((s) => STATUS_ENCODING[s].token !== "");
-    expect(coloured).toEqual(["recorded", "unresolved", "alternate"]);
+    expect(coloured).toEqual(["mustFix", "deferred", "carried", "noted", "recorded", "unresolved", "alternate"]);
     for (const [kind, matrix] of Object.entries(MACHADO)) {
       for (const [i, a] of coloured.entries()) {
         for (const b of coloured.slice(i + 1)) {
@@ -163,6 +196,7 @@ describe("glyphs in the map and the legend", () => {
     expect(flags.get("SEAT:3A")?.status).toBe("recorded");
     expect(flags.get("SEAT:5B")?.status).toBe("unresolved");
     expect([...flags.values()].some((f) => f.status === "alternate")).toBe(true);
+    expect(["SEAT:4A", "SEAT:4B", "SEAT:4C", "SEAT:4D"].map((id) => flags.get(id)?.status)).toEqual(["mustFix", "deferred", "carried", "noted"]);
   });
 
   test("the legend and the map render the same glyph for a status", () => {

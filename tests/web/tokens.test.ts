@@ -59,6 +59,9 @@ describe("stylesheet files", () => {
     const defined = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
     // set inline by components: StatusGlyph sets --status-colour
     defined.add("--status-colour");
+    // set inline by CabinMap: a problem status's border and words
+    defined.add("--problem");
+    defined.add("--ink");
     const used = new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
     expect([...used].filter((name) => !defined.has(name))).toEqual([]);
   });
@@ -140,6 +143,12 @@ const PAIRS: [string, string, number, string?][] = [
   ["--status-glyph", "--status-recorded", GRAPHIC],
   ["--status-glyph", "--status-unresolved", GRAPHIC],
   ["--status-glyph", "--status-alternate", GRAPHIC],
+  // the problem statuses: the fill is a 3:1 graphic on every surface and under the glyph ink; the -ink is text on every surface
+  ...["mustfix", "deferred", "carried", "noted"].flatMap((n): [string, string, number][] => [
+    ["--status-glyph", `--status-${n}`, GRAPHIC],
+    ...SURFACES.map((s): [string, string, number] => [`--status-${n}`, s, GRAPHIC]),
+    ...SURFACES.map((s): [string, string, number] => [`--status-${n}-ink`, s, TEXT]),
+  ]),
   ["--hint-text", "--hint-bg", TEXT],
   ["--overlay-text", "--overlay-bg", TEXT, "--scene-bg"],
   ["--text-body", "--legend-bg", TEXT, "--scene-bg"],

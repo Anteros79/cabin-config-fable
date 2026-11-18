@@ -100,9 +100,9 @@ export const SERVICE_UNIT_TEXTURE_SIZE: TextureSize = { width: 256, height: 128 
 /** the soft dark patch drawn on the carpet under each seat */
 export const CONTACT_TEXTURE_SIZE: TextureSize = { width: 128, height: 128 };
 /** The status badge atlas: one square cell per glyph, side by side, in BADGE_GLYPHS order. */
-export const BADGE_ATLAS_SIZE: TextureSize = { width: 512, height: 128 };
+export const BADGE_ATLAS_SIZE: TextureSize = { width: 1024, height: 128 };
 /** The atlas cells, left to right. "none" is an empty cell. */
-export const BADGE_GLYPHS: readonly StatusGlyph[] = ["tick", "question", "alternate", "none"];
+export const BADGE_GLYPHS: readonly StatusGlyph[] = ["tick", "question", "alternate", "alert", "pause", "forward", "note", "none"];
 /** The rear shell shows the two-opening panel (appearance only; no availability claim). A factory parameter, so part of the key. */
 export const REAR_SHELL_POWER_PANEL = true;
 /** Strength of the Sobel pass that turns a seat height map into its normal map. A factory parameter, so part of the key. */

@@ -1,17 +1,30 @@
-import { useMemo, useRef, useState } from "react";
-import type { CabinLocation, ComponentDef, LayoutRevision } from "../../domain/types.ts";
-import { alternateText, type LocationFlags, STATUS_ENCODING, seatLabelFor, type Workspace } from "../model.ts";
+import { type CSSProperties, Fragment, useMemo, useRef, useState } from "react";
+import { type BinType, binTypeOf, type CabinLocation, type ComponentDef, type LayoutRevision } from "../../domain/types.ts";
+import {
+  alternateText,
+  componentsAt,
+  type LocationFlags,
+  type LocationStatus,
+  problemStatusText,
+  STATUS_ENCODING,
+  seatLabelFor,
+  type Workspace,
+} from "../model.ts";
 import { forgetSuggestionKeys, submitOnEnter } from "../submitOnEnter.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
 
 interface Props {
   workspace: Workspace;
-  flags: Map<string, LocationFlags>;
+  /** per location; from buildStates it also carries `blocked`, the seats an open deferral blocks */
+  flags: Map<string, LocationFlags> & { blocked?: Set<string> };
   selection: string | null;
   onSelect(locationId: string, componentId: string | null): void;
 }
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+/** The armrest span left of the seat at `index` in LETTERS: A, AB, BC, then D, DE, EF. The last one of a side (C, F) is right of its seat. */
+const armrestBefore = (index: number): string => (index % 3 === 0 ? (LETTERS[index] ?? "") : `${LETTERS[index - 1]}${LETTERS[index]}`);
+const BIN_TYPE_WORDS: Record<BinType, string> = { CLASSIC: "Classic", PIVOT: "Pivot", LARGE_PIVOT: "Large pivot" };
 
 /** Words that name no piece: they say what kind of place it is, or join the other words. */
 const FILLER = new Set(["THE", "A", "AN", "OF", "AT", "ON", "IN", "AND", "TO", "SEAT", "ROW", "BIN", "OVERHEAD", "ARMREST"]);
@@ -67,6 +80,10 @@ function parseGoTo(text: string, layout: LayoutRevision, defs: Record<string, Co
   return { location, componentId: wanted.length > 0 ? componentId : null, unmatched: wanted.length > 0 && componentId === null ? rest.join(" ") : "" };
 }
 
+/** The status token as a custom property, for a problem status's border (--problem) and words (--ink); the tokens are in tokens.css. */
+const tokenStyle = (name: "--problem" | "--ink", status: LocationStatus | undefined): CSSProperties | undefined =>
+  problemStatusText(status) && status ? ({ [name]: `var(${STATUS_ENCODING[status].token}${name === "--ink" ? "-ink" : ""})` } as CSSProperties) : undefined;
+
 function stateClass(flags: LocationFlags | undefined, selected: boolean): string {
   const c = ["loc"];
   if (selected) c.push("selected");
@@ -74,6 +91,7 @@ function stateClass(flags: LocationFlags | undefined, selected: boolean): string
   if (flags && flags.unresolved > 0 && flags.resolved === 0) c.push("unresolved");
   else if (flags?.unresolved) c.push("partial");
   if (flags?.status === "alternate") c.push("alternate");
+  if (problemStatusText(flags?.status)) c.push("problem");
   return c.join(" ");
 }
 
@@ -96,6 +114,8 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
   const [goTo, setGoTo] = useState("");
   const [goToMessage, setGoToMessage] = useState("");
 
+  const armrests = useMemo(() => new Map(layout.locations.filter((l) => l.kind === "ARMREST").map((l) => [l.id, l])), [layout]);
+  const blocked = flags.blocked;
   const existing = rows.filter((r) => r.exists);
   const moveFocus = (code: string, dRow: number, dCol: number) => {
     const seat = seats.get(code)?.seat;
@@ -170,10 +190,11 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
     if (f?.recorded) parts.push(`${f.recorded} replacement${f.recorded === 1 ? "" : "s"} recorded`);
     if (f?.unresolved) parts.push(`${f.unresolved} component${f.unresolved === 1 ? "" : "s"} unresolved`);
     if (f?.alternate) parts.push(alternateText(f.alternate));
+    if (problemStatusText(f?.status)) parts.push(problemStatusText(f?.status));
     return parts.length ? `, ${parts.join(", ")}` : "";
   };
   // The accessible name is the visible text plus hidden prefix and state, so it always contains what is shown.
-  const button = (location: CabinLocation, text: string, hiddenPrefix = "") => {
+  const button = (location: CabinLocation, text: string, hiddenPrefix = "", detail = "") => {
     const f = flags.get(location.id);
     return (
       <button
@@ -181,6 +202,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         type="button"
         className={stateClass(f, selection === location.id)}
         aria-pressed={selection === location.id}
+        style={tokenStyle("--problem", f?.status)}
         data-location={location.id}
         onClick={() => onSelect(location.id, null)}
       >
@@ -188,11 +210,38 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
           {hiddenPrefix && <span className="sr-only">{hiddenPrefix}</span>}
           {text}
           <span className="sr-only">{stateText(f)}</span>
+          {detail && <small className="loc-detail">{detail}</small>}
         </span>
         <StatusGlyph status={f?.status ?? "none"} />
       </button>
     );
   };
+
+  /** A narrow button between two seats of a row; the same armrest is also listed with the seat's pieces, for keys and small screens. */
+  const armrestButton = (row: string, span: string) => {
+    const location = armrests.get(`ARMREST:${row}-${span}`);
+    if (!location) return <span key={`arm-${span}`} className="armrest-slot" aria-hidden="true" />;
+    const f = flags.get(location.id);
+    return (
+      <button
+        key={location.id}
+        type="button"
+        className={`${stateClass(f, selection === location.id)} armrest`}
+        tabIndex={-1}
+        aria-pressed={selection === location.id}
+        aria-label={`${location.label}${stateText(f)}`}
+        style={tokenStyle("--problem", f?.status)}
+        data-location={location.id}
+        onClick={() => onSelect(location.id, null)}
+      >
+        <StatusGlyph status={f?.status ?? "none"} />
+      </button>
+    );
+  };
+
+  const pieces = selected ? componentsAt(workspace, selected) : [];
+  const bin = selected?.bin ? binTypeOf(selected.bin) : null;
+  const seatArmrests = selectedSeat ? [...armrests.values()].filter((a) => a.armrest?.between.includes(selectedSeat.seat?.code ?? "")) : [];
 
   return (
     <div className="cabin-map">
@@ -253,9 +302,12 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
             <div className="seat-row head" aria-hidden="true">
               <span className="row-label">Row</span>
               {LETTERS.map((l, i) => (
-                <span key={l} className={i === 3 ? "letter after-aisle" : "letter"}>
-                  {l}
-                </span>
+                <Fragment key={l}>
+                  {i === 3 && <span className="armrest-slot aisle-gap" />}
+                  <span className="armrest-slot" />
+                  <span className={i === 3 ? "letter after-aisle" : "letter"}>{l}</span>
+                  {(i === 2 || i === 5) && <span className="armrest-slot" />}
+                </Fragment>
               ))}
             </div>
             {rows.map((row, index) => {
@@ -276,17 +328,26 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                       const code = `${row.printedLabel}${letter}`;
                       const location = seats.get(code);
                       const cls = i === 3 ? "cell after-aisle" : "cell";
-                      if (!location) return <span key={code} className={`${cls} empty`} title={`No seat ${code}`} />;
+                      const around = (node: React.ReactNode) => (
+                        <Fragment key={code}>
+                          {i === 3 && <span className="armrest-slot aisle-gap" aria-hidden="true" />}
+                          {armrestButton(row.printedLabel, armrestBefore(i))}
+                          {node}
+                          {(i === 2 || i === 5) && armrestButton(row.printedLabel, letter)}
+                        </Fragment>
+                      );
+                      if (!location) return around(<span className={`${cls} empty`} title={`No seat ${code}`} />);
                       const f = flags.get(location.id);
-                      return (
-                        <span key={code} className={cls}>
+                      return around(
+                        <span className={cls}>
                           <button
                             type="button"
                             data-seat={code}
                             tabIndex={tabStop === code ? 0 : -1}
                             className={`${stateClass(f, selection === location.id)} tier-${(location.seat?.commercialTier ?? location.seat?.maintenanceZone ?? "none").replace(/\s+/g, "-").toLowerCase()}`}
                             aria-pressed={selection === location.id}
-                            aria-label={seatLabelFor(location, f)}
+                            style={tokenStyle("--problem", f?.status)}
+                            aria-label={`${seatLabelFor(location, f)}${blocked?.has(location.id) ? ", Blocked" : ""}`}
                             onClick={() => {
                               setFocusCode(code);
                               onSelect(location.id, null);
@@ -297,7 +358,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                             <span aria-hidden="true">{letter}</span>
                             <StatusGlyph status={f?.status ?? "none"} />
                           </button>
-                        </span>
+                        </span>,
                       );
                     })}
                   </fieldset>
@@ -333,13 +394,71 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                 <div className="loc-list">
                   {bins
                     .filter((l) => l.bin?.side === side)
-                    .map((l) =>
-                      button(l, `${l.bin!.side}-${String(l.bin!.module).padStart(2, "0")} · rows ${l.bin!.rowFrom}-${l.bin!.rowTo}`, "Overhead bin "),
-                    )}
+                    .map((l) => {
+                      const { binType, capacityBags } = binTypeOf(l.bin!);
+                      return button(
+                        l,
+                        `${l.bin!.side}-${String(l.bin!.module).padStart(2, "0")} · rows ${l.bin!.rowFrom}-${l.bin!.rowTo} · ${capacityBags} bags`,
+                        "Overhead bin ",
+                        `${BIN_TYPE_WORDS[binType]} bin`,
+                      );
+                    })}
                 </div>
               </fieldset>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="pieces" aria-labelledby={selected ? "map-pieces" : undefined}>
+        {selected ? (
+          <>
+            <h3 id="map-pieces">Pieces at {selected.label}</h3>
+            <p className="fine">
+              {bin && `${BIN_TYPE_WORDS[bin.binType]} bin, holds ${bin.capacityBags} bags. `}
+              {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}. Choose one to see its parts and problems.
+              {blocked?.has(selected.id) && " "}
+              {blocked?.has(selected.id) && <span className="pill unresolved">Blocked</span>}
+            </p>
+            <ul className="piece-list">
+              {pieces.map((p) => {
+                const word = p.pieceStatus === "none" ? "" : STATUS_ENCODING[p.pieceStatus].label;
+                return (
+                  <li key={p.componentId}>
+                    <button type="button" className="piece" data-component={p.componentId} onClick={() => onSelect(selected.id, p.componentId)}>
+                      <span>{p.name}</span>
+                      {word && (
+                        <span className="badge-text" style={tokenStyle("--ink", p.pieceStatus)}>
+                          <StatusGlyph status={p.pieceStatus} /> {word}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {seatArmrests.length > 0 && (
+              <>
+                <h4>Armrests next to {selectedSeat?.seat?.code}</h4>
+                <div className="loc-list">
+                  {seatArmrests.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className="loc"
+                      aria-label={`${a.label}, next to this seat${stateText(flags.get(a.id))}`}
+                      onClick={() => onSelect(a.id, null)}
+                    >
+                      {a.label}
+                      <StatusGlyph status={flags.get(a.id)?.status ?? "none"} />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <p className="fine">Select a seat, an armrest, a floor area or a bin to list its pieces here.</p>
         )}
       </section>
     </div>
