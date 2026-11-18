@@ -131,11 +131,12 @@ function buildObservationSection(
   const closed = own.filter((o) => o.status === "CLOSED" && o.closedInVisitId === visit.id);
   const seen = new Set(ownOpen.map((o) => o.id));
   const carried = visit.carried.filter((c) => !seen.has(c.observation.id));
-  // Every open problem, each at the location it sits at on this layout (an orphan has none), for the seat-block check.
-  const open: Observation[] = [...ownOpen, ...carried.flatMap((c) => (c.locationId === null ? [] : [{ ...c.observation, locationId: c.locationId }]))];
-  const classOf = (o: Observation) =>
-    currentClass(o, { mel: snapshot.mel ?? [], variant: snapshot.context.variant.id, others: open.filter((x) => x.id !== o.id), onDate: visit.checkDate });
+  // Every open problem on the tail at its stored location id, orphans included: the seat-block is judged there, as the store does (R35).
+  const open: Observation[] = [...ownOpen, ...carried.map((c) => c.observation)];
+  const classOf = (o: Observation) => currentClass(o, { mel: snapshot.mel ?? [], variant: snapshot.context.variant.id, open, onDate: visit.checkDate });
   const mustFixNow = (o: Observation) => isMustFixNow(o, classOf(o));
+  /** What an open problem of this visit shows on its piece. A MUST_FIX outcome is always mustFixNow, so only DEFERRED and NOTED remain after it. */
+  const pieceStatusOf = (o: Observation): LocationStatus => (mustFixNow(o) ? "mustFix" : o.outcome === "DEFERRED" ? "deferred" : "noted");
 
   // Each open problem is in exactly one list: must-fix now (marked so, or an MEL deferral past due), deferred, or noted.
   const mustFix = ownOpen.filter(mustFixNow);
@@ -163,8 +164,7 @@ function buildObservationSection(
     piece.status = higherStatus(piece.status, status);
     pieces.set(key, piece);
   };
-  for (const o of ownOpen)
-    raise(o.locationId, o.componentId, mustFixNow(o) ? "mustFix" : o.outcome === "DEFERRED" ? "deferred" : o.outcome === "NOTED" ? "noted" : "mustFix");
+  for (const o of ownOpen) raise(o.locationId, o.componentId, pieceStatusOf(o));
   for (const c of carried) if (c.locationId !== null) raise(c.locationId, c.observation.componentId, mustFixNow(c.observation) ? "mustFix" : "carried");
   for (const r of visit.records) raise(r.locationId, r.componentId, "recorded");
   const pieceOutcomes = [...pieces.values()].sort(

@@ -99,8 +99,10 @@ interface PlacedProblem {
 }
 interface OpenProblems {
   placed: PlacedProblem[];
-  /** the same observations with `locationId` set to where they sit on this layout, for the seat-block check */
+  /** the same observations with `locationId` set to where they sit on this layout, for the display's seat-block check */
   open: Observation[];
+  /** every open observation on the tail at its STORED location id, orphans included: the class is judged here, as the server does (R35) */
+  stored: Observation[];
 }
 
 /** The observations that are open now, this visit's and carried, each with the location it sits at on this layout. An id appears once; this visit's copy wins. */
@@ -113,38 +115,39 @@ function openPlaced(ws: Workspace): OpenProblems {
     c.locationId === null || seen.has(c.observation.id) ? [] : [{ observation: c.observation, locationId: c.locationId, carried: true }],
   );
   const placed = [...own, ...carried];
-  return { placed, open: placed.map((p) => ({ ...p.observation, locationId: p.locationId })) };
+  const orphaned = ws.carried.filter((c) => c.locationId === null && !seen.has(c.observation.id)).map((c) => c.observation);
+  return { placed, open: placed.map((p) => ({ ...p.observation, locationId: p.locationId })), stored: [...placed.map((p) => p.observation), ...orphaned] };
 }
 
-/** The class of a problem now, judged as the server's completion gate does. `open` carries each problem at the location it sits at on this layout. */
-function currentClass(ws: Workspace, open: Observation[], o: Observation): MelClass {
-  return currentObservationClass(o, { mel: ws.mel, variant: ws.variantId ?? "", others: open.filter((x) => x.id !== o.id), onDate: ws.checkDate });
+/** The class of a problem now, judged as the server's completion gate does. `stored` carries each problem at its stored location id. */
+function currentClass(ws: Workspace, stored: Observation[], o: Observation): MelClass {
+  return currentObservationClass(o, { mel: ws.mel, variant: ws.variantId ?? "", open: stored, onDate: ws.checkDate });
 }
 
 /** A problem that must be fixed before flight: marked so, or no-go now. A noted problem never is. Mirrors the server's completion gate. */
-const isMustFix = (ws: Workspace, open: Observation[], o: Observation): boolean => isMustFixNow(o, currentClass(ws, open, o));
+const isMustFix = (ws: Workspace, stored: Observation[], o: Observation): boolean => isMustFixNow(o, currentClass(ws, stored, o));
 
 /**
  * Every open problem on the tail that must be fixed before flight: this visit's and carried ones, including those no
  * longer at their position (`locationId` null) and MEL deferrals past due. Completing with any needs "Aircraft held".
  */
 export function openMustFix(ws: Workspace): { observation: Observation; locationId: string | null; overdue: boolean }[] {
-  const { placed, open } = openPlaced(ws);
+  const { placed, stored } = openPlaced(ws);
   const orphaned = ws.carried.filter((c) => c.locationId === null && !placed.some((p) => p.observation.id === c.observation.id));
   return [
     ...placed.map((p) => ({ observation: p.observation, locationId: p.locationId })),
     ...orphaned.map((c) => ({ observation: c.observation, locationId: null })),
   ]
-    .filter((p) => isMustFix(ws, open, p.observation))
+    .filter((p) => isMustFix(ws, stored, p.observation))
     .map((p) => ({ ...p, overdue: p.observation.outcome === "DEFERRED" && isOverdue(p.observation.dueDate, ws.checkDate) }));
 }
 
 /** The status a piece's open problems give it, or null when it has none. */
 function problemStatus(ws: Workspace, problems: OpenProblems, locationId: string, componentId: string): LocationStatus | null {
-  const { placed, open } = problems;
+  const { placed, stored } = problems;
   const here = placed.filter((p) => p.locationId === locationId && p.observation.componentId === componentId);
   if (here.length === 0) return null;
-  if (here.some((p) => isMustFix(ws, open, p.observation))) return "mustFix";
+  if (here.some((p) => isMustFix(ws, stored, p.observation))) return "mustFix";
   if (here.some((p) => p.observation.outcome === "DEFERRED" && !p.carried)) return "deferred";
   if (here.some((p) => p.observation.outcome === "DEFERRED")) return "carried";
   return here.some((p) => p.observation.outcome === "NOTED") ? "noted" : null;

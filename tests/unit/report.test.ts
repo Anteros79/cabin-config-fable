@@ -521,17 +521,6 @@ describe("report v3", () => {
     expect(t?.after).toMatchObject({ quantity: 1, recordVersion: 2 });
   });
 
-  it("a /1 stored report still parses and renders its totals", () => {
-    const stored = JSON.parse(JSON.stringify(buildReport(v3Visit({}, [CUSHION_3A]), "FINAL", AT))) as Record<string, unknown>;
-    for (const key of ["summary", "timeline", "observations", "pieceOutcomes", "excludedRules"]) delete stored[key];
-    stored.schema = "cabin-kit.report/1";
-    const old = stored as unknown as ReturnType<typeof buildReport>;
-    expect(old.schema).toBe("cabin-kit.report/1");
-    expect(old.summary).toBeUndefined();
-    expect(old.totals.map((t) => t.quantity)).toEqual(buildReport(v3Visit({}, [CUSHION_3A]), "FINAL", AT).totals.map((t) => t.quantity));
-    expect(old.counts.replacements).toBe(1);
-  });
-
   it("pieceOutcomes ranks mustFix over recorded on the same piece", () => {
     const visit = v3Visit(
       {

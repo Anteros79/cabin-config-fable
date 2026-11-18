@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { classify, currentClass, isMustFixNow } from "../../src/domain/observations.ts";
+import { buildReport } from "../../src/domain/report.ts";
 import type { CabinLocation, CarriedObservation, Condition, MelClass, Observation, VisitRecord } from "../../src/domain/types.ts";
-import { aggregateStatus, buildStates, componentsAt, describeSeat, seatLabelFor, type Workspace } from "../../src/web/model.ts";
-import { at, fixtureRelease, snapshotFor } from "../helpers.ts";
+import { aggregateStatus, buildStates, componentsAt, describeSeat, openMustFix, seatLabelFor, type Workspace } from "../../src/web/model.ts";
+import { at, fixtureRelease, snapshotFor, visitWith } from "../helpers.ts";
 
 const snap = snapshotFor(fixtureRelease(), "N100TL", "2026-11-12");
 const layout = snap.context.layoutRevision;
@@ -368,5 +370,40 @@ describe("piece status from problems", () => {
     expect(cushion?.problems).toEqual([own]);
     expect(cushion?.carried).toBeNull();
     expect(cushion?.pieceStatus).toBe("deferred");
+  });
+});
+
+describe("one class judgement (R35)", () => {
+  it("the gate, releasable and the piece status agree after a layout change maps a seat-blocking deferral elsewhere", () => {
+    const mel = snap.mel ?? [];
+    const variant = snap.context.variant.id;
+    // A seat-blocking deferral stored at SEAT:3A that this layout maps to SEAT:3B, and a missing life vest at SEAT:3A.
+    const blocker = observation("SEAT:3A", "SEATBELT", {
+      id: "BLK",
+      outcome: "DEFERRED",
+      condition: "BROKEN",
+      melClass: { ...MEL_C, blocksSeat: true },
+      dueDate: "2026-11-22",
+      blocksSeat: true,
+      openedInVisitId: "earlier",
+    });
+    const vestClass = classify({ mel, componentId: "LIFE_VEST", condition: "MISSING", variant, seatBlocked: true });
+    expect(vestClass.class).toBe("MEL");
+    const vest = observation("SEAT:3A", "LIFE_VEST", { id: "VEST", outcome: "DEFERRED", condition: "MISSING", melClass: vestClass, dueDate: "2026-11-22" });
+    const mapped: CarriedObservation = { observation: blocker, placement: "MAPPED", locationId: "SEAT:3B", overdue: false };
+
+    // the store's completion gate judges every open observation at its stored location id
+    const open = [vest, blocker];
+    expect(open.filter((o) => isMustFixNow(o, currentClass(o, { mel, variant, open, onDate: "2026-11-12" })))).toEqual([]);
+
+    const visit = { ...visitWith(snap, []), observations: [vest], carried: [mapped] };
+    expect(buildReport(visit, "FINAL", "2026-11-12T12:02:00.000Z").summary).toMatchObject({ releasable: true, mustFix: 0, deferredMel: 1 });
+
+    const ws = { ...workspace(), observations: [vest], carried: [mapped] };
+    expect(openMustFix(ws)).toEqual([]);
+    const states = buildStates(ws).scene;
+    expect(states.get("SEAT:3A")?.components.LIFE_VEST).toBe("deferred");
+    // the display still places the carried deferral where this layout maps it
+    expect(states.get("SEAT:3B")?.components.SEATBELT).toBe("carried");
   });
 });

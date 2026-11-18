@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../domain/canonical.ts";
 import { sha256Hex } from "../domain/hash.ts";
-import { allowedOutcomes, classify, currentClass, dueDateFor, effectiveClass, mapCarried, seatIsBlocked } from "../domain/observations.ts";
+import { allowedOutcomes, classify, currentClass, dueDateFor, effectiveClass, isMustFixNow, mapCarried, seatIsBlocked } from "../domain/observations.ts";
 import { buildReport } from "../domain/report.ts";
 import type {
   CarriedObservation,
@@ -755,7 +755,7 @@ export class VisitStore {
     return currentClass(o, {
       mel: snapshot.mel ?? [],
       variant: snapshot.context.variant.id,
-      others: this.openObservations(tail).filter((x) => x.id !== o.id),
+      open: this.openObservations(tail),
       onDate,
     });
   }
@@ -1018,7 +1018,7 @@ export class VisitStore {
         }
       }
       const mustFix = this.openObservations(visit.tail)
-        .filter((o) => o.outcome !== "NOTED" && (o.outcome === "MUST_FIX" || this.currentClass(o, snapshot, visit.tail, visit.checkDate).class === "NO_GO"))
+        .filter((o) => isMustFixNow(o, this.currentClass(o, snapshot, visit.tail, visit.checkDate)))
         .map((o) => o.id)
         .sort();
       if (mustFix.length > 0 && !held) {

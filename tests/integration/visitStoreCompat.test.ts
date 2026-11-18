@@ -105,6 +105,17 @@ describe("visit stores written by 5d6679d", () => {
     expect(canonicalJson(store.completeVisit(COMPLETED_ID, undefined).report)).toBe(before);
   });
 
+  it("a stored /1 report still parses and renders its totals in the PDF", async () => {
+    const copy = copyOfFixture();
+    const store = track(VisitStore.open(copy.path, copy.referencePath));
+    const { report, basisSha256 } = store.getReport(COMPLETED_ID);
+    expect(report.schema).toBe("cabin-kit.report/1");
+    expect(report.summary).toBeUndefined();
+    expect(report.totals.length).toBeGreaterThan(0);
+    const pdf = await renderReportPdf(report, [], basisSha256);
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+  });
+
   it("migration leaves every stored visit, record, event and report row unchanged", () => {
     const copy = copyOfFixture();
     // The columns 5d6679d wrote; v3 adds `aircraft_held`, which every old row reads as 0.
