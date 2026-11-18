@@ -502,6 +502,8 @@ const DOOR_TOP = arcPoint(DOOR_ARC.from);
 const DOOR_BOTTOM = arcPoint(DOOR_ARC.to);
 /** The fixed housing an open bin shows: its top, its outboard wall and the underside of the closed bin. */
 const HOUSING = { top: BIN_DRAWN_TOP, outboard: 1.74, bottom: 1.652, wall: 0.014 } as const;
+/** The top of the housing's floor: a classic bin's fixed shelf. */
+export const BIN_FLOOR_TOP = HOUSING.bottom + HOUSING.wall;
 /** How far outboard a pivot bin's bucket reaches (its back wall): the large bucket is deeper. Its pivots sit this high. */
 const BUCKET_BACK = { PIVOT: 1.44, LARGE_PIVOT: 1.49 } as const;
 const BUCKET_PIVOT_Y = 2.05;
@@ -517,9 +519,20 @@ function turnAbout(p: ZY, pivot: ZY, a: number): ZY {
   return [pivot[0] + dy * s + dz * c, pivot[1] + dy * c - dz * s];
 }
 
-/** The lowest point of a left-side door turned open by `angleDeg` about `pivot`. */
-function lowestOpen(pivot: ZY, angleDeg: number): number {
-  return Math.min(...arcPoints(DOOR_ARC.r).map((p) => turnAbout(p, pivot, -angleDeg * DEG)[1]));
+/**
+ * A classic bin's door is split (ruling R29): the upper arc, down to this angle, is a fixed fascia; the shorter lower
+ * panel below it swings up about its top edge, inside the housing, so nothing it carries rises above BIN_DRAWN_TOP.
+ */
+const CLASSIC_SPLIT = -38 * DEG;
+const CLASSIC_HINGE = arcPoint(CLASSIC_SPLIT);
+
+/** The arc of the face that turns open: the whole door of a pivot bin's bucket, the lower panel of a classic door. */
+const movingArc = (binType: BinType, r: number = DOOR_ARC.r, segments: number = DOOR_ARC.segments) =>
+  binType === "CLASSIC" ? arcPoints(r, CLASSIC_SPLIT, DOOR_ARC.to, segments) : arcPoints(r, DOOR_ARC.from, DOOR_ARC.to, segments);
+
+/** The lowest point of a left-side face (`arc`) turned open by `angleDeg` about `pivot`. */
+function lowestOpen(pivot: ZY, angleDeg: number, arc: readonly ZY[] = arcPoints(DOOR_ARC.r)): number {
+  return Math.min(...arc.map((p) => turnAbout(p, pivot, -angleDeg * DEG)[1]));
 }
 
 /**
@@ -553,12 +566,13 @@ const LARGE_AXIS: ZY = (() => {
 const BUCKET_PIECES: readonly BinPiece[] = ["BIN_DOOR", "BIN_LATCH", "BIN_LINER", "BIN_SIDE_PANEL"];
 
 /**
- * How each bin type opens (docs/research/2026-11-18-southwest-737-overhead-bins.md). A classic door turns up 75° about its
- * top edge over a fixed shelf (a fictional stand-in: no public source shows it). A pivot bin's whole bucket turns 35°
- * down on its side pivots; a large pivot bin's deeper bucket 38°, its open bottom edge 5 cm lower than a pivot bin's.
+ * How each bin type opens (docs/research/2026-11-18-southwest-737-overhead-bins.md). A classic door's lower panel turns up
+ * 75° about its top edge, under a fixed fascia and over a fixed shelf (a fictional stand-in: no public source shows it;
+ * ruling R29). A pivot bin's whole bucket turns 35° down on its side pivots; a large pivot bin's deeper bucket 38°, its
+ * open bottom edge 5 cm lower than a pivot bin's.
  */
 export const BIN_OPENING: Readonly<Record<BinType, BinMotion>> = {
-  CLASSIC: { angleDeg: 75, pivot: { z: DOOR_TOP[0], y: DOOR_TOP[1] }, moving: ["BIN_DOOR", "BIN_LATCH"] },
+  CLASSIC: { angleDeg: 75, pivot: { z: CLASSIC_HINGE[0], y: CLASSIC_HINGE[1] }, moving: ["BIN_DOOR"] },
   PIVOT: { angleDeg: 35, pivot: { z: PIVOT_AXIS[0], y: PIVOT_AXIS[1] }, moving: BUCKET_PIECES },
   LARGE_PIVOT: { angleDeg: 38, pivot: { z: LARGE_AXIS[0], y: LARGE_AXIS[1] }, moving: BUCKET_PIECES },
 };
@@ -566,7 +580,7 @@ export const BIN_OPENING: Readonly<Record<BinType, BinMotion>> = {
 /** The lowest point of the open door or bucket face, in cabin height. */
 export function openBottomEdge(binType: BinType): number {
   const { pivot, angleDeg } = BIN_OPENING[binType];
-  return lowestOpen([pivot.z, pivot.y], angleDeg);
+  return lowestOpen([pivot.z, pivot.y], angleDeg, movingArc(binType));
 }
 
 /** A bin opens or closes over this long, easing out (none with reduced motion). */
@@ -707,7 +721,13 @@ export interface BinGeometry {
   openBody: THREE.BufferGeometry;
   /** the rest of a pivot bin's bucket (its bottom and back wall), which turns with the face and selects BIN_DOOR; none for a classic bin */
   bucket: THREE.BufferGeometry | null;
-  /** each piece the type has inside, `length` long; BIN_DOOR is the door itself */
+  /**
+   * A classic bin's split door, `length` long, both BIN_DOOR: the fixed upper fascia and the lower panel that swings up.
+   * An open classic bin draws these in place of its instanced door. Null for the pivot types, whose door instance turns.
+   */
+  fascia: THREE.BufferGeometry | null;
+  panel: THREE.BufferGeometry | null;
+  /** each piece the type has inside, `length` long; BIN_DOOR is the door itself (or fascia and panel) */
   interior: Partial<Record<BinPiece, THREE.BufferGeometry>>;
 }
 
@@ -768,28 +788,21 @@ export function buildBinGeometry(side: 1 | -1, binType: BinType, length = 1): Bi
   };
   let openBody: THREE.BufferGeometry;
   let bucket: THREE.BufferGeometry | null = null;
+  let fascia: THREE.BufferGeometry | null = null;
+  let panel: THREE.BufferGeometry | null = null;
   if (binType === "CLASSIC") {
-    // The door lifts into a recess above it, so the roof starts outboard of where it swings; the shelf is fixed.
-    const shelfY = 1.705;
-    openBody = merged([
-      roof(1.45),
-      outboardWall,
-      valance,
-      floor(DOOR_BOTTOM[0]),
-      strip(
-        [
-          [1.13, shelfY],
-          [wallZ - wall / 2, shelfY],
-        ],
-        0.012,
-        -h,
-        h,
-      ),
-    ]);
+    // The fixed shelf is the bin's floor, starting outboard of the circle the panel's free edge sweeps (radius 0.525
+    // about the hinge), so the panel never passes through it; what sits on it is seen through the opening below the
+    // fascia, where the BIN focus view looks in.
+    const shelfFrom = 1.38;
+    const shelfTop = bottom + wall;
+    openBody = merged([roof(DOOR_TOP[0]), outboardWall, valance, floor(shelfFrom)]);
+    fascia = strip(arcPoints(DOOR_ARC.r - 0.006, DOOR_ARC.from, CLASSIC_SPLIT, 6), 0.012, -h, h);
+    panel = strip(movingArc("CLASSIC", DOOR_ARC.r - 0.006, 8), 0.012, x0 + 0.004, x1 - 0.004);
     interior.BIN_LINER = strip(
       [
-        [1.14, shelfY + 0.009],
-        [wallZ - wall / 2 - 0.006, shelfY + 0.009],
+        [1.46, shelfTop + 0.0025],
+        [wallZ - wall / 2 - 0.006, shelfTop + 0.0025],
       ],
       0.005,
       x0,
@@ -797,11 +810,15 @@ export function buildBinGeometry(side: 1 | -1, binType: BinType, length = 1): Bi
     );
     const end = [...arcPoints(DOOR_ARC.r - 0.004), [wallZ - wall / 2, bottom] as ZY, [wallZ - wall / 2, top] as ZY, [DOOR_TOP[0] + 0.004, top] as ZY];
     interior.BIN_SIDE_PANEL = merged([plate(end, x0), plate(end, x1)]);
-    // on the door's inner face at its free edge; the striker under the shelf's front edge
-    interior.BIN_LATCH = block(0.16, 0.03, 0.03, 0, [1.273, 1.671]);
-    interior.BIN_STRIKER = block(0.1, 0.02, 0.03, 0, [1.215, 1.689]);
-    interior.BIN_PIVOT = block(length - 0.06, 0.024, 0.024, 0, [DOOR_TOP[0] + 0.018, DOOR_TOP[1] + 0.008]);
-    interior.BIN_SEAL = block(length - 0.04, 0.014, 0.012, 0, [1.124, shelfY]);
+    // At the shelf's front edge, clear of the panel's sweep: the latch and its striker side by side, the seal behind them.
+    interior.BIN_LATCH = block(0.12, 0.024, 0.025, -0.06, [1.4125, shelfTop + 0.012]);
+    interior.BIN_STRIKER = block(0.1, 0.024, 0.025, 0.06, [1.4125, shelfTop + 0.012]);
+    interior.BIN_SEAL = block(length - 0.04, 0.008, 0.02, 0, [1.44, shelfTop + 0.004]);
+    // the hinge on the face, where the panel meets the fascia
+    interior.BIN_PIVOT = block(length - 0.06, 0.02, 0.02, 0, arcPoint(CLASSIC_SPLIT, DOOR_ARC.r + 0.012));
+    // the placard and the row label lie on the shelf liner, where the opening shows them
+    interior.BIN_PLACARD = block(0.14, 0.003, 0.09, length * 0.15, [1.56, shelfTop + 0.0065]);
+    interior.BIN_LABEL = block(0.12, 0.003, 0.05, -length * 0.15, [1.53, shelfTop + 0.0065]);
   } else {
     const back = BUCKET_BACK[binType];
     const { pivot } = BIN_OPENING[binType];
@@ -835,7 +852,8 @@ export function buildBinGeometry(side: 1 | -1, binType: BinType, length = 1): Bi
     interior.BIN_LATCH = merged([block(0.16, 0.03, 0.03, 0, [0.8, 2.105]), block(0.05, 0.022, 0.012, 0, arcPoint(-12 * DEG, DOOR_ARC.r + 0.006))]);
     interior.BIN_STRIKER = block(0.1, 0.02, 0.03, 0, [0.8, 2.14]);
     interior.BIN_PIVOT = merged([block(0.03, 0.06, 0.06, x0 + 0.015, [pivot.z, pivot.y]), block(0.03, 0.06, 0.06, x1 - 0.015, [pivot.z, pivot.y])]);
-    interior.BIN_BUMPER = block(0.05, 0.035, 0.035, x0 + 0.08, [wallZ - wall / 2 - 0.018, 1.72]);
+    // the stop the bucket's lip comes up against, beside the striker under the valance
+    interior.BIN_BUMPER = block(0.05, 0.02, 0.03, x0 + 0.08, [0.8, 2.14]);
     // the closeout seal along the underside of the housing's front, where the bucket's lip closes against it
     interior.BIN_SEAL = block(length - 0.04, 0.01, 0.022, 0, [DOOR_TOP[0] + 0.01, DOOR_TOP[1] - 0.005]);
     if (binType === "PIVOT")
@@ -854,6 +872,8 @@ export function buildBinGeometry(side: 1 | -1, binType: BinType, length = 1): Bi
     door,
     openBody: onSide(openBody, side),
     bucket: bucket && onSide(bucket, side),
+    fascia: fascia && onSide(fascia, side),
+    panel: panel && onSide(panel, side),
     interior: Object.fromEntries(Object.entries(interior).map(([piece, g]) => [piece, onSide(g, side)])) as Partial<Record<BinPiece, THREE.BufferGeometry>>,
   };
 }
@@ -886,6 +906,8 @@ export interface BinRange {
   /** first triangle and how many */
   start: number;
   count: number;
+  /** a classic door's fascia or panel, drawn in place of the instanced door */
+  face?: boolean;
 }
 
 /**
@@ -922,6 +944,15 @@ export interface BinPick {
   closed: boolean;
 }
 
+/** A geometry with no triangles, carrying the attributes merged() keeps. */
+function emptyGeometry(): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute([], 3));
+  g.setAttribute("normal", new THREE.Float32BufferAttribute([], 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute([], 2));
+  return g;
+}
+
 const WHITE = new THREE.Color("#ffffff");
 const ZERO_SCALE = new THREE.Matrix4().makeScale(0, 0, 0);
 
@@ -944,7 +975,14 @@ export class BinRun {
   private readonly closedGeometries: THREE.BufferGeometry[] = [];
   private openGeometries: THREE.BufferGeometry[] = [];
 
-  constructor(layout: LayoutRevision, materials: { door: THREE.Material; body: THREE.Material; interior: THREE.Material }) {
+  /**
+   * `materials.door` and `materials.body` give each side its own, so one side can be ghosted while the other is solid;
+   * the scene owns them. `materials.interior` is the open bin's.
+   */
+  constructor(
+    layout: LayoutRevision,
+    materials: { door: (side: "L" | "R") => THREE.Material; body: (side: "L" | "R") => THREE.Material; interior: THREE.Material },
+  ) {
     this.interiorMaterial = materials.interior;
     const rows = layout.rows.filter((r) => r.exists).length;
     const bins = layout.locations.filter((l) => l.kind === "BIN");
@@ -965,8 +1003,8 @@ export class BinRun {
               return { x: (x0 + x1) / 2, lx: x1 - x0 };
             });
       const count = Math.max(spans.length, 1);
-      const doorMesh = new THREE.InstancedMesh(door, materials.door, count);
-      const bodyMesh = new THREE.InstancedMesh(closedBody, materials.body, count);
+      const doorMesh = new THREE.InstancedMesh(door, materials.door(side), count);
+      const bodyMesh = new THREE.InstancedMesh(closedBody, materials.body(side), count);
       const matrices = spans.map((s) => new THREE.Matrix4().makeScale(s.lx, 1, 1).setPosition(s.x, 0, 0));
       matrices.forEach((m, i) => {
         doorMesh.setMatrixAt(i, m);
@@ -1054,8 +1092,8 @@ export class BinRun {
       const location = side.locations[hit.instanceId];
       if (!location) return null;
       const opened = open?.location.id === location.id;
-      // an open bin's closed body is not drawn
-      if (opened && hit.object === side.body) continue;
+      // an open bin's closed body is not drawn, nor a classic bin's door instance (its split door is)
+      if (opened && (hit.object === side.body || open?.ranges.some((r) => r.face))) continue;
       return { location, component: location.componentIds.includes("BIN_DOOR") ? "BIN_DOOR" : null, closed: !(opened && this.target !== null) };
     }
     return null;
@@ -1076,24 +1114,47 @@ export class BinRun {
     }
   }
 
-  /** A point on one of the open bin's pieces, in cabin coordinates (the door: the middle of its face), or null if it draws none. */
-  pointOf(piece: string): THREE.Vector3 | null {
+  /**
+   * A point on one of the open bin's pieces, in cabin coordinates, or null if it draws none. With `from` (a camera
+   * position), a point a pick from there reaches: the first triangle centre whose ray from `from` selects this piece, or
+   * null if none does.
+   */
+  pointOf(piece: string, from?: THREE.Vector3): THREE.Vector3 | null {
     const open = this.open;
     if (!open) return null;
-    if (piece === "BIN_DOOR") {
+    const candidates: THREE.Vector3[] = [];
+    const doorInstance = piece === "BIN_DOOR" && !open.ranges.some((r) => r.piece === "BIN_DOOR" && r.face);
+    if (doorInstance) {
+      // the turned door instance: points down the middle of its face
       const m = new THREE.Matrix4();
       open.side.door.getMatrixAt(open.instance, m);
-      const [z, y] = arcPoint(-50 * DEG);
-      return new THREE.Vector3(0, y, open.side.sign * z).applyMatrix4(m);
+      for (let a = -10; a >= -90; a -= 10) {
+        const [z, y] = arcPoint(a * DEG);
+        candidates.push(new THREE.Vector3(0, y, open.side.sign * z).applyMatrix4(m));
+      }
     }
-    const range = open.ranges.find((r) => r.piece === piece);
-    if (!range) return null;
-    // the middle triangle's centre lies on the piece
-    const position = range.mesh.geometry.getAttribute("position");
-    const first = (range.start + Math.floor(range.count / 2)) * 3;
-    const centre = new THREE.Vector3();
-    for (let v = first; v < first + 3; v++) centre.add(new THREE.Vector3().fromBufferAttribute(position, v));
-    return centre.divideScalar(3).applyMatrix4(range.mesh.matrixWorld);
+    const position = new THREE.Vector3();
+    for (const range of open.ranges) {
+      if (range.piece !== piece) continue;
+      const p = range.mesh.geometry.getAttribute("position");
+      // the middle triangle first, then the rest in order
+      const order = Array.from({ length: range.count }, (_, i) => (i + Math.floor(range.count / 2)) % range.count);
+      for (const t of order) {
+        const centre = new THREE.Vector3();
+        for (let v = (range.start + t) * 3; v < (range.start + t) * 3 + 3; v++) centre.add(position.fromBufferAttribute(p, v));
+        candidates.push(centre.divideScalar(3).applyMatrix4(range.mesh.matrixWorld));
+        if (!from) break;
+      }
+      if (!from) break;
+    }
+    if (!from) return candidates[0] ?? null;
+    const ray = new THREE.Raycaster();
+    const targets = this.targets(() => true);
+    for (const c of candidates) {
+      ray.set(from, c.clone().sub(from).normalize());
+      if (this.pick(ray.intersectObjects(targets, false))?.component === piece) return c;
+    }
+    return null;
   }
 
   dispose(): void {
@@ -1127,11 +1188,14 @@ export class BinRun {
     const { binType } = binTypeOf(location.bin as NonNullable<CabinLocation["bin"]>);
     const geometry = buildBinGeometry(side.sign, binType, location.placement.lx);
     const listed = (piece: string) => location.componentIds.includes(piece);
+    const door = listed("BIN_DOOR") ? "BIN_DOOR" : null;
     const moving = new Set<string>(BIN_OPENING[binType].moving);
-    type Part = { piece: string | null; shade: string; geometry: THREE.BufferGeometry };
+    type Part = { piece: string | null; shade: string; geometry: THREE.BufferGeometry; face?: boolean };
     const parts = { moving: [] as Part[], fixed: [] as Part[] };
     parts.fixed.push({ piece: null, shade: BIN_SHADES.housing, geometry: geometry.openBody });
-    if (geometry.bucket) parts.moving.push({ piece: listed("BIN_DOOR") ? "BIN_DOOR" : null, shade: BIN_SHADES.BIN_DOOR, geometry: geometry.bucket });
+    if (geometry.fascia) parts.fixed.push({ piece: door, shade: BIN_SHADES.BIN_DOOR, geometry: geometry.fascia, face: true });
+    if (geometry.panel) parts.moving.push({ piece: door, shade: BIN_SHADES.BIN_DOOR, geometry: geometry.panel, face: true });
+    if (geometry.bucket) parts.moving.push({ piece: door, shade: BIN_SHADES.BIN_DOOR, geometry: geometry.bucket });
     // only the pieces the bin lists are drawn (a bin stored before the pieces lists its door alone)
     for (const [piece, g] of Object.entries(geometry.interior) as [BinPiece, THREE.BufferGeometry][]) {
       if (listed(piece)) (moving.has(piece) ? parts.moving : parts.fixed).push({ piece, shade: BIN_SHADES[piece], geometry: g });
@@ -1140,7 +1204,8 @@ export class BinRun {
     for (const g of [geometry.door, geometry.closedBody]) g.dispose();
     const ranges: BinRange[] = [];
     const meshOf = (list: Part[]) => {
-      const g = merged(list.map((p) => p.geometry));
+      // an empty list draws nothing (mergeGeometries refuses none)
+      const g = list.length > 0 ? merged(list.map((p) => p.geometry)) : emptyGeometry();
       for (const p of list) p.geometry.dispose();
       const vertices = g.getAttribute("position").count;
       const colours = new Float32Array(vertices * 3);
@@ -1152,7 +1217,7 @@ export class BinRun {
         const count = geometryTriangles(p.geometry);
         const c = new THREE.Color(p.shade);
         for (let v = start * 3; v < (start + count) * 3; v++) c.toArray(colours, v * 3);
-        ranges.push({ mesh, piece: p.piece, start, count });
+        ranges.push({ mesh, piece: p.piece, start, count, ...(p.face ? { face: true } : {}) });
         start += count;
       }
       g.setAttribute("color", new THREE.BufferAttribute(colours, 3));
@@ -1160,7 +1225,8 @@ export class BinRun {
       this.group.add(mesh);
       return mesh;
     };
-    return { location, side, instance, binType, moving: meshOf(parts.moving), fixed: meshOf(parts.fixed), ranges };
+    const fixed = meshOf(parts.fixed);
+    return { location, side, instance, binType, moving: meshOf(parts.moving), fixed, ranges };
   }
 
   /** Put the open bin's door, body and interior where `level` has them. */
@@ -1171,7 +1237,9 @@ export class BinRun {
     const closed = side.matrices[instance];
     if (!closed) return;
     const turn = binOpenMatrix(side.sign, open.binType, this.level);
-    side.door.setMatrixAt(instance, closed.clone().multiply(turn));
+    // a classic bin draws its split door (fascia and panel) in the interior instead of its door instance
+    const split = open.ranges.some((r) => r.face);
+    side.door.setMatrixAt(instance, split ? ZERO_SCALE : closed.clone().multiply(turn));
     side.body.setMatrixAt(instance, ZERO_SCALE);
     for (const mesh of [side.door, side.body]) {
       mesh.instanceMatrix.needsUpdate = true;

@@ -6,7 +6,9 @@ import { Viewer } from "../../src/web/components/Viewer.tsx";
 import { buildStates, type Workspace } from "../../src/web/model.ts";
 import type { SceneCallbacks } from "../../src/web/scene/CabinScene.ts";
 import { poseToFrame } from "../../src/web/scene/cameraRig.ts";
+import { setGhosted } from "../../src/web/scene/materials.ts";
 import {
+  BIN_FLOOR_TOP,
   BIN_OPEN_MS,
   BIN_OPENING,
   BinRun,
@@ -472,7 +474,7 @@ describe("the 3D view's pieces", () => {
 });
 
 describe("the overhead bins in 3D", () => {
-  const materials = () => ({ door: new THREE.MeshBasicMaterial(), body: new THREE.MeshBasicMaterial(), interior: new THREE.MeshBasicMaterial() });
+  const materials = () => ({ door: () => new THREE.MeshBasicMaterial(), body: () => new THREE.MeshBasicMaterial(), interior: new THREE.MeshBasicMaterial() });
   const ALL_BIN_PIECES = [
     "BIN_DOOR",
     "BIN_LATCH",
@@ -503,9 +505,11 @@ describe("the overhead bins in 3D", () => {
     return found;
   };
   const bounds = { length: layout.geometry.cabinLength, halfWidth: layout.geometry.cabinHalfWidth, height: 2.3 };
+  /** Where the "focus" view of a bin puts the camera. */
+  const focusCamera = (l: typeof layout, id: string) => poseToFrame(bin(l, id).placement, "BIN", bounds).position;
   /** A ray from where the "focus" view of the bin puts the camera, through a point. */
   const fromFocus = (l: typeof layout, id: string, point: THREE.Vector3) => {
-    const camera = poseToFrame(bin(l, id).placement, "BIN", bounds).position;
+    const camera = focusCamera(l, id);
     return new THREE.Raycaster(camera, point.clone().sub(camera).normalize());
   };
   /** A ray from the aisle at standing height at the middle of a closed bin's face. */
@@ -540,7 +544,7 @@ describe("the overhead bins in 3D", () => {
     expect(run.open?.location.id).toBe("BIN:L-04");
     expect(run.level).toBe(1);
     // the open door or bucket face still selects BIN_DOOR, and does not open anything else
-    const face = run.pointOf("BIN_DOOR");
+    const face = run.pointOf("BIN_DOOR", focusCamera(layout, "BIN:L-04"));
     if (!face) throw new Error("no door point");
     expect(tap(run, fromFocus(layout, "BIN:L-04", face))).toEqual({ location: "BIN:L-04", component: "BIN_DOOR" });
     expect(run.target).toBe("BIN:L-04");
@@ -564,8 +568,8 @@ describe("the overhead bins in 3D", () => {
       const l = withBins(binType);
       const run = new BinRun(l, materials());
       run.openBin("BIN:L-04", 0, true);
-      const latch = run.pointOf("BIN_LATCH");
-      if (!latch) throw new Error(`${binType}: no latch drawn`);
+      const latch = run.pointOf("BIN_LATCH", focusCamera(l, "BIN:L-04"));
+      if (!latch) throw new Error(`${binType}: no latch that can be tapped`);
       const ray = fromFocus(l, "BIN:L-04", latch);
       expect(pickWith(run, ray), binType).toEqual({ location: "BIN:L-04", component: "BIN_LATCH", closed: false });
       run.openBin(null, 0, true);
@@ -575,19 +579,72 @@ describe("the overhead bins in 3D", () => {
     }
   });
 
-  test("every piece a bin lists is drawn inside it, and tapped there selects that piece", () => {
+  test("every piece every bin type lists can be tapped from the bin's focus view, on both sides, and selects that piece", () => {
+    for (const binType of ["CLASSIC", "PIVOT", "LARGE_PIVOT"] as const) {
+      const l = withBins(binType);
+      for (const id of ["BIN:L-04", "BIN:R-03"]) {
+        const run = new BinRun(l, materials());
+        run.openBin(id, 0, true);
+        const camera = focusCamera(l, id);
+        for (const piece of bin(l, id).componentIds) {
+          const point = run.pointOf(piece, camera);
+          expect(point, `${binType} ${id} ${piece}: a point the focus view reaches`).not.toBeNull();
+          if (point) expect(pickWith(run, fromFocus(l, id, point)), `${binType} ${id} ${piece}`).toEqual({ location: id, component: piece, closed: false });
+        }
+        run.dispose();
+      }
+    }
+  });
+
+  test("each side's closed bins have their own materials, so one side ghosts while the other stays solid", () => {
     const run = new BinRun(layout, materials());
-    run.openBin("BIN:R-03", 0, true);
-    const listed = bin(layout, "BIN:R-03").componentIds;
-    for (const piece of listed) {
-      const point = run.pointOf(piece);
-      expect(point, piece).not.toBeNull();
+    const [left, right] = run.sides;
+    if (!left || !right) throw new Error("two sides");
+    expect(left.door.material).not.toBe(right.door.material);
+    expect(left.body.material).not.toBe(right.body.material);
+    // the scene ghosts a side by its materials (setGhosted), as an outside view does to the side nearest the camera
+    for (const m of [left.door.material, left.body.material] as THREE.Material[]) setGhosted(m, true, 0.16);
+    for (const m of [right.door.material, right.body.material] as THREE.Material[]) setGhosted(m, false, 0.16);
+    const look = (m: THREE.Material | THREE.Material[]) => ({ transparent: (m as THREE.Material).transparent, opacity: (m as THREE.Material).opacity });
+    expect([look(left.door.material), look(left.body.material)]).toEqual([
+      { transparent: true, opacity: 0.16 },
+      { transparent: true, opacity: 0.16 },
+    ]);
+    expect([look(right.door.material), look(right.body.material)]).toEqual([
+      { transparent: false, opacity: 1 },
+      { transparent: false, opacity: 1 },
+    ]);
+    run.dispose();
+  });
+
+  test("a classic door's lower panel swings up inside the housing: it never passes through the fixed shelf or what sits on it", () => {
+    const g = buildBinGeometry(1, "CLASSIC", 2.4);
+    if (!g.panel || !g.fascia) throw new Error("a classic bin's split door");
+    const fixedBoxes = [g.openBody, g.interior.BIN_LATCH, g.interior.BIN_STRIKER, g.interior.BIN_SEAL, g.interior.BIN_LINER].map((part) => {
+      if (!part) throw new Error("a fixed part");
+      part.computeBoundingBox();
+      return part.boundingBox as THREE.Box3;
+    });
+    // the shelf is the housing's floor: the open body's lowest slab
+    const position = g.panel.getAttribute("position");
+    for (let level = 0; level <= 1.0001; level += 0.05) {
+      const m = binOpenMatrix(1, "CLASSIC", level);
+      for (let v = 0; v < position.count; v++) {
+        const p = new THREE.Vector3().fromBufferAttribute(position, v).applyMatrix4(m);
+        // the floor slab (below 1.67) and every fixed piece on it
+        const inShelf = p.y < BIN_FLOOR_TOP - 1e-4 && p.z > 1.38 - 1e-4;
+        expect(inShelf, `level ${level.toFixed(2)}: (${p.z.toFixed(3)}, ${p.y.toFixed(3)})`).toBe(false);
+        for (const box of fixedBoxes.slice(1)) expect(box.containsPoint(p), `level ${level.toFixed(2)} in a fixed piece`).toBe(false);
+      }
     }
-    for (const piece of ["BIN_LINER", "BIN_STRIKER", "BIN_SEAL", "BIN_PLACARD"]) {
-      const point = run.pointOf(piece);
-      if (!point) throw new Error(`no ${piece}`);
-      expect(pickWith(run, fromFocus(layout, "BIN:R-03", point))?.component, piece).toBe(piece);
-    }
+    // the open classic bin draws no door instance: its fascia and panel are in the interior, both BIN_DOOR
+    const run = new BinRun(withBins("CLASSIC"), materials());
+    run.openBin("BIN:L-04", 0, true);
+    const faces = run.open?.ranges.filter((r) => r.face) ?? [];
+    expect(faces.map((r) => [r.mesh === run.open?.fixed ? "fixed" : "moving", r.piece])).toEqual([
+      ["fixed", "BIN_DOOR"],
+      ["moving", "BIN_DOOR"],
+    ]);
     run.dispose();
   });
 
@@ -619,10 +676,10 @@ describe("the overhead bins in 3D", () => {
     expect(BIN_OPENING.PIVOT.angleDeg).toBe(35);
     expect(BIN_OPENING.LARGE_PIVOT.angleDeg).toBe(38);
     const door = buildBinGeometry(1, "PIVOT").door;
+    // the face that turns: a pivot bin's whole door, a classic bin's lower panel
     const lowest = (binType: "CLASSIC" | "PIVOT" | "LARGE_PIVOT", side: 1 | -1) => {
-      const g = buildBinGeometry(side, binType)
-        .door.clone()
-        .applyMatrix4(binOpenMatrix(side, binType, 1));
+      const geometry = buildBinGeometry(side, binType);
+      const g = (binType === "CLASSIC" ? (geometry.panel as THREE.BufferGeometry) : geometry.door).clone().applyMatrix4(binOpenMatrix(side, binType, 1));
       g.computeBoundingBox();
       return (g.boundingBox as THREE.Box3).min.y;
     };
@@ -636,8 +693,11 @@ describe("the overhead bins in 3D", () => {
       expect(lowest("LARGE_PIVOT", side)).toBeCloseTo(lowest("PIVOT", side) - 0.05, 4);
       expect(openBottomEdge("LARGE_PIVOT")).toBeCloseTo(openBottomEdge("PIVOT") - 0.05, 6);
     }
-    // the hinge line stays put: the classic door turns about its top edge
-    const top = new THREE.Vector3(0, 2.152, 0.762);
+    // the hinge line stays put: the classic panel turns about its top edge, where it meets the fixed fascia (R29),
+    // 38 degrees down the door's arc
+    const split = (38 * Math.PI) / 180;
+    const top = new THREE.Vector3(0, 2.2 - 0.55 * Math.sin(split), 1.31 - 0.55 * Math.cos(split));
+    expect([BIN_OPENING.CLASSIC.pivot.z, BIN_OPENING.CLASSIC.pivot.y]).toEqual([expect.closeTo(0.87659, 5), expect.closeTo(1.86139, 5)]);
     expect(
       top
         .clone()
@@ -698,6 +758,19 @@ describe("the overhead bins in 3D", () => {
     for (const piece of ["BIN_LATCH", "BIN_LINER", "BIN_ASSIST", "BIN_PLACARD"]) expect(run.pointOf(piece), piece).toBeNull();
     for (const range of run.open?.ranges ?? []) if (range.piece !== null) expect(["BIN_DOOR"]).toContain(range.piece);
     run.dispose();
+    // a classic bin listing its door alone opens too: its split door is all it draws inside
+    const oldClassic = structuredClone(old);
+    for (const l of oldClassic.locations) if (l.bin) l.bin.binType = "CLASSIC";
+    const classic = new BinRun(oldClassic, materials());
+    expect(classic.openBin("BIN:L-04", 0, true)).toBe(true);
+    expect(new Set(classic.open?.ranges.map((r) => r.piece))).toEqual(new Set([null, "BIN_DOOR"]));
+    classic.dispose();
+    // and a bin with nothing at all that moves (no door listed, no type) still opens without failing
+    const bare = structuredClone(old);
+    for (const l of bare.locations) if (l.kind === "BIN") l.componentIds = [];
+    const empty = new BinRun(bare, materials());
+    expect(empty.openBin("BIN:L-04", 0, true)).toBe(true);
+    empty.dispose();
   });
 
   test("a layout without a bin map draws illustrative modules that never open", () => {

@@ -404,6 +404,33 @@ test("open a bin, select the latch: the inspector shows Bin latch and release bu
   });
 });
 
+test("in an outside view only the near side's bins are ghosted: each side has its own materials (VAC-11)", async ({ page, visit }) => {
+  await openScene(page, visit.id);
+  // the cutaway looks in from the left (+z): the left bins are ghosted, the right ones solid
+  await setCamera(page, "cutaway");
+  const ghost = (await scene(page)).binGhost as Record<"L" | "R", { transparent: boolean; opacity: number; bodyOpacity: number }>;
+  expect(ghost.L, "the near side is ghosted").toEqual({ transparent: true, opacity: expect.closeTo(0.16, 5), bodyOpacity: expect.closeTo(0.16, 5) });
+  expect(ghost.R, "the far side is solid").toEqual({ transparent: false, opacity: 1, bodyOpacity: 1 });
+  // and picking agrees with the look: only the solid side's bins are pick targets
+  expect(ghost.L.transparent).not.toBe(ghost.R.transparent);
+});
+
+test("a new layout reports the open bin closed: the Close bin button goes (VAC-11)", async ({ page, visit }) => {
+  await openScene(page, visit.id);
+  await sceneCall(page, "openBin", "BIN:L-04");
+  await settle(page);
+  expect((await scene(page)).openBin).toBe("BIN:L-04");
+  await expect(page.getByRole("button", { name: "Close bin" })).toBeVisible();
+  // another revision of the layout: the scene rebuilds, and the bin it had open is gone with it
+  await page.evaluate(() => {
+    const s = window.__cabinKit?.scene as unknown as { layout: { id: string }; setLayout(layout: unknown, pickable: boolean): void };
+    s.setLayout({ ...s.layout, id: `${s.layout.id}-other` }, true);
+  });
+  await settle(page);
+  expect((await scene(page)).openBin, "no bin open on the new layout").toBeNull();
+  await expect(page.getByRole("button", { name: "Close bin" })).toHaveCount(0);
+});
+
 test("a hidden layer never blocks a pick: the seat behind a hidden bin is selected", async ({ page, visit }) => {
   await openScene(page, visit.id);
   const layer = (name: string) => page.getByRole("group", { name: "Layers" }).getByRole("button", { name });

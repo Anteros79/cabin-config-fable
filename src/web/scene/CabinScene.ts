@@ -178,7 +178,7 @@ const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
 export interface SceneTestHooks {
   measure(durationMs: number): Promise<{ fps: number; frames: number; durationMs: number; worstFrameMs: number }>;
   screenPointOf(locationId: string, part?: "head" | "pan"): { x: number; y: number } | null;
-  /** Screen position of a piece inside the open bin, or null if that bin is not open or draws no such piece. */
+  /** Screen position of a piece inside the open bin that a pick from the camera reaches, or null if none (or the bin is not open). */
   screenPointOfPiece(locationId: string, componentId: string): { x: number; y: number } | null;
   describeScene(): Record<string, unknown>;
   /** Times the next frame from now, for a selection made outside the canvas. */
@@ -541,7 +541,8 @@ export class CabinScene {
           return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
         },
         screenPointOfPiece: (locationId, componentId) => {
-          const point = this.bins?.open?.location.id === locationId ? this.bins.pointOf(componentId) : null;
+          // a point of the piece that a pick from the camera reaches
+          const point = this.bins?.open?.location.id === locationId ? this.bins.pointOf(componentId, this.camera.position.clone()) : null;
           if (!point) return null;
           const v = point.project(this.camera);
           const rect = this.canvas.getBoundingClientRect();
@@ -555,6 +556,14 @@ export class CabinScene {
           openBin: this.bins?.target ?? null,
           binLevel: this.bins?.level ?? 0,
           binAnimating: this.bins?.animating ?? false,
+          /** each side's closed door and body materials as drawn: ghosted (transparent) or solid, and their opacity */
+          binGhost: Object.fromEntries(
+            this.binSides.map((b) => {
+              const door = b.door.material as THREE.Material;
+              const body = b.body.material as THREE.Material;
+              return [b.side, { transparent: door.transparent && body.transparent, opacity: door.opacity, bodyOpacity: body.opacity }];
+            }),
+          ),
           profile: this.palette.id,
           light: this.light,
           background: `#${(this.scene.background as THREE.Color).getHexString()}`,
@@ -825,9 +834,10 @@ export class CabinScene {
     // An open bin's inside is two meshes with one material: a shade and a status tint per vertex (seatParts.ts BinRun).
     this.binInterior = withStatusTint(std("#ffffff", 0.6, 0, { vertexColors: true, ...singlePass }));
     const bins = own(
+      // each side its own door and body material: one side is ghosted while the other is solid (updateGhosting)
       new BinRun(layout, {
-        door: own(new THREE.MeshStandardMaterial({ map: doorTexture, roughness: 0.42, ...singlePass })),
-        body: std("#d5d8df", 0.6, 0, singlePass),
+        door: () => own(new THREE.MeshStandardMaterial({ map: doorTexture, roughness: 0.42, ...singlePass })),
+        body: () => std("#d5d8df", 0.6, 0, singlePass),
         interior: this.binInterior,
       }),
     );
@@ -1226,8 +1236,9 @@ export class CabinScene {
       this.floorTint.instanceMatrix.needsUpdate = true;
       if (this.floorTint.instanceColor) this.floorTint.instanceColor.needsUpdate = true;
     }
-    // A shut bin's door shows the bin's status, an open bin's face its door's own, and its inside each piece's own.
-    const open = this.bins?.target ?? null;
+    // A shut bin's door shows the bin's status, an open bin's face its door's own, and its inside each piece's own. A
+    // bin is open here for as long as it is drawn open, closing included.
+    const open = this.drawnOpenBin();
     for (const b of this.binSides) {
       b.locations.forEach((l, i) => {
         const s = !status ? "none" : l.id === open ? (this.states.get(l.id)?.components.BIN_DOOR ?? "none") : this.statusOf(l.id);
@@ -1270,8 +1281,8 @@ export class CabinScene {
     let shown = 0;
     for (const b of this.badgeEntries) {
       if (this.colourMode === "none" || !this.layers[b.layer]) continue;
-      // an open bin shows its pieces' own tints instead
-      if (b.layer === "bins" && b.locationId === this.bins?.target) continue;
+      // an open bin, closing included, shows its pieces' own tints instead
+      if (b.layer === "bins" && b.locationId === this.drawnOpenBin()) continue;
       // a blocked seat shows "Blocked" in grey, over whatever status it has
       const blocked = b.seat && this.blocked.has(b.locationId);
       const s = blocked ? "none" : this.statusOf(b.locationId);
@@ -1360,8 +1371,8 @@ export class CabinScene {
       marks.hull.geometry = pad;
       marks.hull.matrix.makeTranslation(p.x, 0, p.z);
     } else {
-      // an open bin is not outlined: its shut shape is not where its door or bucket is
-      if (this.bins?.target === location.id) return;
+      // an open bin (closing included) is not outlined: its shut shape is not where its door or bucket is
+      if (this.drawnOpenBin() === location.id) return;
       const side = location.bin?.side === "L" ? "L" : "R";
       const hull = this.binHulls[side];
       if (!hull) return;
@@ -1593,7 +1604,9 @@ export class CabinScene {
     if (reduced) {
       this.updateGhosting(true);
       // a bin opening or closing gets there at once
+      const drawn = this.drawnOpenBin();
       this.bins?.finish();
+      if (this.drawnOpenBin() !== drawn) this.binDrawnChanged();
     }
     this.invalidate();
   }
@@ -1679,12 +1692,24 @@ export class CabinScene {
    */
   openBin(locationId: string | null): void {
     const bins = this.bins;
-    if (!bins || this.disposed || !bins.openBin(locationId, performance.now(), this.reducedMotion || this.paused)) return;
+    // a layout whose bins are not pickable (no bin map) opens none
+    if (!bins || this.disposed || (locationId !== null && !this.pickableFloorBins)) return;
+    if (!bins.openBin(locationId, performance.now(), this.reducedMotion || this.paused)) return;
+    this.binDrawnChanged();
+    this.callbacks.onBinOpenChange?.(bins.target);
+  }
+
+  /** The bin drawn open: opening, open or still closing. */
+  private drawnOpenBin(): string | null {
+    return this.bins?.open?.location.id ?? null;
+  }
+
+  /** Show what follows from which bin is drawn open: its ghosting, the tints, badges and markers, and the outlines. */
+  private binDrawnChanged(): void {
     this.applyGhostLevels();
     this.applyStates();
     this.applySelection();
     if (this.hoverMarks.location) this.placeMarks(this.hoverMarks, this.hoverMarks.location, "hover", this.hoverMarks.piece);
-    this.callbacks.onBinOpenChange?.(bins.target);
     this.invalidate();
   }
 
@@ -1901,7 +1926,10 @@ export class CabinScene {
       }
       // a bin opening or closing moves a step each frame
       if (this.bins?.animating) {
+        const drawn = this.drawnOpenBin();
         this.bins.step(now);
+        // a bin that has finished closing is shut: its badge, marker, door tint and outline come back
+        if (this.drawnOpenBin() !== drawn) this.binDrawnChanged();
         this.needsRender = true;
       }
       if (animating)

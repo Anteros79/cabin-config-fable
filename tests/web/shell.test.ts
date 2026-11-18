@@ -10,7 +10,7 @@ import {
   ROW_PITCH,
   shellProfile,
 } from "../../src/domain/geometry.ts";
-import { buildBinGeometry } from "../../src/web/scene/seatParts.ts";
+import { BIN_OPENING, binOpenMatrix, buildBinGeometry } from "../../src/web/scene/seatParts.ts";
 import { buildShellGeometries, WINDOW } from "../../src/web/scene/shell.ts";
 
 // the 176-seat layout: 30 physical rows, 26 m
@@ -57,6 +57,42 @@ describe("cabin shell geometry (WEB-21)", () => {
     for (const p of shellProfile()) {
       const inside = p.y >= box.min.y && p.y <= box.max.y && p.z >= box.min.z && p.z <= box.max.z;
       expect(inside, `y ${p.y.toFixed(3)}, z ${p.z.toFixed(3)}`).toBe(false);
+    }
+  });
+
+  it("open, every bin type's moving parts stay under BIN_DRAWN_TOP, inboard of nothing past BIN_DRAWN_INNER_Z, and inside the shell", () => {
+    // the cabin's half cross-section: the shell profile from the floor edge to the ceiling's middle, closed down the centreline
+    const outline = [...shellProfile(), { y: 0, z: 0 }];
+    const insideCabin = (z: number, y: number) => {
+      let inside = false;
+      for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
+        const a = outline[i] as { y: number; z: number };
+        const b = outline[j] as { y: number; z: number };
+        if (a.y > y !== b.y > y && z < ((b.z - a.z) * (y - a.y)) / (b.y - a.y) + a.z) inside = !inside;
+      }
+      return inside;
+    };
+    for (const binType of ["CLASSIC", "PIVOT", "LARGE_PIVOT"] as const) {
+      for (const side of [1, -1] as const) {
+        const g = buildBinGeometry(side, binType, 2.4);
+        const moving = [
+          ...(binType === "CLASSIC" ? [g.panel] : [g.door.clone().applyMatrix4(new THREE.Matrix4().makeScale(2.4, 1, 1)), g.bucket]),
+          ...BIN_OPENING[binType].moving.map((piece) => g.interior[piece]),
+        ].filter((part): part is THREE.BufferGeometry => part !== null && part !== undefined);
+        expect(moving.length, `${binType}: something turns`).toBeGreaterThan(0);
+        const open = binOpenMatrix(side, binType, 1);
+        const p = new THREE.Vector3();
+        for (const part of moving) {
+          const position = part.getAttribute("position");
+          for (let v = 0; v < position.count; v++) {
+            p.fromBufferAttribute(position, v).applyMatrix4(open);
+            const where = `${binType} side ${side}: (${p.z.toFixed(3)}, ${p.y.toFixed(3)})`;
+            expect(p.y, where).toBeLessThanOrEqual(BIN_DRAWN_TOP + 1e-6);
+            expect(Math.abs(p.z), where).toBeGreaterThanOrEqual(BIN_DRAWN_INNER_Z - 0.001);
+            expect(insideCabin(Math.abs(p.z), p.y), where).toBe(true);
+          }
+        }
+      }
     }
   });
 
