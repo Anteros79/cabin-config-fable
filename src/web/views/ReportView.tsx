@@ -213,7 +213,9 @@ export function ReportView({
       {summary && (
         <section aria-labelledby="r-summary">
           <h3 id="r-summary">Summary</h3>
-          {!summary.releasable && <p className="must-fix">Not releasable: aircraft held</p>}
+          {!summary.releasable && (
+            <p className="must-fix">{summary.aircraftHeld ? "Not releasable: aircraft held" : "Not releasable: items must be fixed before flight"}</p>
+          )}
           <dl className="facts">
             <dt>Replaced</dt>
             <dd>{summary.replaced}</dd>

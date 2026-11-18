@@ -219,12 +219,24 @@ describe("ReportView after-action sections", () => {
     const view = render(<ReportView visitId={held.id} />);
     const line = await screen.findByText("Not releasable: aircraft held");
     expect(line).toHaveClass("must-fix");
+    expect(screen.queryByText("Not releasable: items must be fixed before flight")).toBeNull();
     view.unmount();
     // with no must-fix problem open it is releasable, and the line is gone
     const fine = outcomeVisit({ observations: [obs({ id: "N", outcome: "NOTED" })], carried: [] });
     stubFetch(reportAnswer(outcomeEnvelope(fine), fine));
     render(<ReportView visitId={fine.id} />);
     await screen.findByRole("heading", { name: "Summary" });
+    expect(screen.queryByText("Not releasable: aircraft held")).toBeNull();
+  });
+
+  it("Not releasable on a visit that is not held says the items must be fixed, not that the aircraft is held", async () => {
+    const draft = outcomeVisit({ aircraftHeld: false });
+    const env = outcomeEnvelope(draft);
+    expect(env.report.summary).toMatchObject({ releasable: false, aircraftHeld: false });
+    stubFetch(reportAnswer(env, draft));
+    render(<ReportView visitId={draft.id} />);
+    const line = await screen.findByText("Not releasable: items must be fixed before flight");
+    expect(line).toHaveClass("must-fix");
     expect(screen.queryByText("Not releasable: aircraft held")).toBeNull();
   });
 
