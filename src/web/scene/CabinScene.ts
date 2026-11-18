@@ -33,7 +33,6 @@ import {
   SEAT,
   type SeatGeometries,
   type SeatPart,
-  trayCarriers,
 } from "./seatParts.ts";
 import { buildShellGeometries, lightChannelMask } from "./shell.ts";
 import {
@@ -661,11 +660,10 @@ export class CabinScene {
     }
     this.pieces = [...pieces];
     // The first row's trays and nets sit on a thin panel ahead of it, placed where a seat's back would be.
-    const atBulkhead = trayCarriers(this.seats.map((seat) => seat.location)).bulkhead;
-    if (atBulkhead.length > 0) {
-      const panels = own(new THREE.InstancedMesh(own(buildBulkheadPanel()), unpainted, atBulkhead.length));
-      atBulkhead.forEach((l, i) => {
-        panels.setMatrixAt(i, new THREE.Matrix4().makeTranslation(l.placement.x - layout.geometry.rowPitch, 0, l.placement.z));
+    if (pieces.panels.length > 0) {
+      const panels = own(new THREE.InstancedMesh(own(buildBulkheadPanel()), unpainted, pieces.panels.length));
+      pieces.panels.forEach((m, i) => {
+        panels.setMatrixAt(i, m);
       });
       panels.instanceMatrix.needsUpdate = true;
       panels.computeBoundingSphere();

@@ -312,7 +312,34 @@ describe("picking the pieces of a seat", () => {
     const owners = tray.locations.map((l) => l?.id);
     // every seat with a seat directly aft, plus the row-1 seats on the bulkhead
     expect(owners.filter((id) => id?.match(/^SEAT:1[A-F]$/))).toHaveLength(6);
-    expect(owners).not.toContain("SEAT:14B");
+    // S176 (30 rows, 14B, 14E, 15B and 15E omitted): A, C, D and F carry 29 trays each, B and E 26 each (none on 13,
+    // 14 or 15), plus the six on the bulkhead
+    expect(tray.locations).toHaveLength(4 * 29 + 2 * 26 + 6);
+    // 16B and 16E sit behind omitted seats and are not in the first row: no tray of theirs is drawn
+    expect(owners).not.toContain("SEAT:16B");
+    expect(owners).not.toContain("SEAT:16E");
+    // nothing is drawn on the back of a seat with no seat behind it: the last row, and 13B and 13E ahead of the gap
+    const lastRow = Math.max(...layout.locations.map((l) => l.seat?.physicalRow ?? 0));
+    expect(lastRow).toBe(30);
+    const carriersOf = (part: "tray" | "net") => {
+      const piece = pieces.find((p) => p.part === part);
+      if (!piece) throw new Error(`no ${part} mesh`);
+      const at = piece.matrices.map((m) => new THREE.Vector3().setFromMatrixPosition(m));
+      return layout.locations.filter((l) => l.kind === "SEAT" && at.some((v) => Math.abs(v.x - l.placement.x) < 1e-6 && Math.abs(v.z - l.placement.z) < 1e-6));
+    };
+    for (const part of ["tray", "net"] as const) {
+      const on = carriersOf(part).map((l) => l.id);
+      expect(
+        on.filter((id) => id === "SEAT:13B" || id === "SEAT:13E"),
+        part,
+      ).toEqual([]);
+      expect(
+        carriersOf(part).filter((l) => l.seat?.physicalRow === lastRow),
+        part,
+      ).toEqual([]);
+      expect(on, part).toHaveLength(4 * 29 + 2 * 26);
+    }
+    expect(pieces.panels).toHaveLength(6);
     const ahead = centreOf("tray", "SEAT:1C").sub(new THREE.Vector3(layout.geometry.rowPitch, 0, 0));
     expect(pick(ahead.clone().add(new THREE.Vector3(0.3, 0, 0)), ahead)).toEqual({ location: "SEAT:1C", component: "TRAY" });
   });
@@ -383,6 +410,8 @@ test("on a layout stored before the pieces, a pick only ever selects a piece the
   expect(pads?.locations).toHaveLength(2 * old.locations.filter((l) => l.kind === "SEAT").length);
   expect(new Set(pads?.components)).toEqual(new Set([null]));
   expect(pieces.find((p) => p.part === "tray")?.locations.filter((l) => l.seat?.physicalRow === 1 && l.componentIds.includes("TRAY"))).toEqual([]);
+  // so no empty panel is drawn ahead of the first row to block picks
+  expect(pieces.panels).toEqual([]);
 });
 
 describe("the 3D view's pieces", () => {

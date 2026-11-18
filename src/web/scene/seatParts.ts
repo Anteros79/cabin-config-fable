@@ -363,8 +363,8 @@ export function buildPieceMeshes(
   layout: LayoutRevision,
   geoms: SeatGeometries,
   material: THREE.Material,
-): PieceMesh[] & { geometries: THREE.BufferGeometry[] } {
-  const out = Object.assign([] as PieceMesh[], { geometries: [] as THREE.BufferGeometry[] });
+): PieceMesh[] & { geometries: THREE.BufferGeometry[]; panels: THREE.Matrix4[] } {
+  const out = Object.assign([] as PieceMesh[], { geometries: [] as THREE.BufferGeometry[], panels: [] as THREE.Matrix4[] });
   const seats = layout.locations.filter((l) => l.kind === "SEAT");
   if (seats.length === 0) return out;
   const armrests = layout.locations.filter((l) => l.kind === "ARMREST");
@@ -372,6 +372,10 @@ export function buildPieceMeshes(
   const atSeats: Instance[] = seats.map((s) => ({ location: s, matrix: translation(s) }));
   const { carriers, bulkhead } = trayCarriers(seats);
   const pitch = new THREE.Matrix4().makeTranslation(-layout.geometry.rowPitch, 0, 0);
+  // a bulkhead panel only where it carries a tray or a net (buildBulkheadPanel), in the frame of the seat that would be there
+  out.panels = bulkhead
+    .filter((s) => s.componentIds.includes("TRAY") || s.componentIds.includes("SEATBACK_NET"))
+    .map((s) => pitch.clone().multiply(translation(s)));
   // The tray and net: on the back of the seat ahead, or on the bulkhead panel one row pitch ahead. A seat behind that
   // does not list the piece leaves it to the back it is drawn on, as part of that seat's backrest.
   const behind = (part: "tray" | "net"): Instance[] => {
