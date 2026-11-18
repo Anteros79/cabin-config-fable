@@ -565,8 +565,8 @@ describe("CheckView problems, carried over and completion", () => {
   const withCarried: Visit = {
     ...base,
     carried: [
-      { observation: belt, placement: "SAME", locationId: "SEAT:3A", overdue: false },
-      { observation: assist, placement: "ORPHANED", locationId: null, overdue: false },
+      { observation: belt, placement: "SAME", locationId: "SEAT:3A", overdue: false, openedCheckDate: "2026-11-05" },
+      { observation: assist, placement: "ORPHANED", locationId: null, overdue: false, openedCheckDate: "2026-11-05" },
     ],
   };
   const event = { seq: 1, type: "OBSERVATION_ADDED", at: "2026-11-12T12:02:00.000Z", payload: {} };
@@ -582,6 +582,86 @@ describe("CheckView problems, carried over and completion", () => {
     fireEvent.click(within(item).getByRole("button", { name: "Show Seat 3A Seat belt" }));
     expect(await screen.findByRole("heading", { level: 3, name: "Seat 3A" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /^Seat belt/ })).toHaveClass("highlighted");
+  });
+
+  it("the carried-over panel names the check each item came from, by that visit's check date (R42)", async () => {
+    stubFetch((): Answer => ({ body: { visit: withCarried } }));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const panel = await screen.findByRole("region", { name: /^Carried over/ });
+    const item = within(panel).getByText("Seat 3A / Seat belt").closest("li") as HTMLElement;
+    expect(item).toHaveTextContent("From the check on 5 Nov 2026");
+  });
+
+  // R41: every change in the check is logged together: the visit's own problems sit in the work list with the records
+  it("the work list lists this visit's problems after its replacements, with the map's status words, and Show selects the piece", async () => {
+    const own = { openedInVisitId: base.id, createdAt: "2026-11-12T12:02:00.000Z", updatedAt: "2026-11-12T12:02:00.000Z" };
+    const stained = obs("OBS-HEAD", {
+      ...own,
+      componentId: "HEADREST",
+      componentName: "Headrest cover",
+      condition: "STAINED",
+      melClass: { class: "COSMETIC" },
+      dueDate: null,
+      blocksSeat: false,
+    });
+    const coffee = obs("OBS-NOTE", {
+      ...own,
+      locationId: "SEAT:4C",
+      locationLabel: "Seat 4C",
+      componentId: "CUSHION",
+      componentName: "Seat cushion",
+      condition: "STAINED",
+      outcome: "NOTED",
+      deferUntil: undefined,
+      reason: undefined,
+      melClass: { class: "COSMETIC" },
+      dueDate: null,
+      blocksSeat: false,
+    });
+    const visit: Visit = { ...base, observations: [stained, coffee, { ...tray, openedInVisitId: base.id }], events: [event] };
+    stubFetch((): Answer => ({ body: { visit } }));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const work = await screen.findByRole("region", { name: /^Recorded work/ });
+    expect(workCount(work), "records and problems together").toBe("Recorded work (5)");
+    const rows = within(work).getAllByRole("listitem");
+    // the record rows first, as they were
+    expect(rows.slice(0, 2).map((r) => within(r).getByRole("button", { name: /^Show/ }).getAttribute("aria-label"))).toEqual([
+      `Show ${cushion.locationLabel} ${cushion.componentName}`,
+      `Show ${kit.locationLabel} ${kit.componentName}`,
+    ]);
+    const problemRows = rows.slice(2);
+    expect(problemRows.map((r) => r.querySelector("strong")?.textContent)).toEqual([
+      "Seat 3A / Headrest cover",
+      "Seat 4C / Seat cushion cover",
+      "Seat 3A / Tray table (on the seat in front)",
+    ]);
+    expect(problemRows.map((r) => r.querySelector(".badge-text")?.textContent?.trim())).toEqual(["Deferred", "Noted", "Must fix"]);
+    expect(problemRows.map((r) => r.querySelector(".badge-text .status-glyph")?.getAttribute("data-glyph"))).toEqual(["pause", "note", "alert"]);
+    expect(problemRows[0]).toHaveTextContent("Stained");
+    expect(problemRows[2]).toHaveTextContent("Broken");
+    fireEvent.click(within(problemRows[0] as HTMLElement).getByRole("button", { name: "Show Seat 3A Headrest cover" }));
+    expect(await screen.findByRole("heading", { level: 3, name: "Seat 3A" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /^Headrest cover/ })).toHaveClass("highlighted");
+  });
+
+  it("the work list says Nothing recorded yet only when there are neither replacements nor problems", async () => {
+    const noted = obs("OBS-NOTE", {
+      openedInVisitId: base.id,
+      outcome: "NOTED",
+      deferUntil: undefined,
+      reason: undefined,
+      melClass: { class: "COSMETIC" },
+      dueDate: null,
+      blocksSeat: false,
+      condition: "WORN",
+    });
+    const visit: Visit = { ...base, records: [], observations: [noted], events: [event] };
+    stubFetch((): Answer => ({ body: { visit } }));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const work = await screen.findByRole("region", { name: /^Recorded work/ });
+    expect(workCount(work)).toBe("Recorded work (1)");
+    expect(within(work).queryByText(/Nothing recorded yet/)).toBeNull();
+    expect(within(work).getByText("Seat 3A / Seat belt")).toBeInTheDocument();
   });
 
   it("an orphaned item appears under No longer at this position", async () => {
@@ -656,7 +736,11 @@ describe("CheckView problems, carried over and completion", () => {
   });
 
   it("an overdue carried MEL deferral is listed as must-fix in the completion dialog", async () => {
-    const overdue: Visit = { ...base, checkDate: "2026-11-23", carried: [{ observation: belt, placement: "SAME", locationId: "SEAT:3A", overdue: true }] };
+    const overdue: Visit = {
+      ...base,
+      checkDate: "2026-11-23",
+      carried: [{ observation: belt, placement: "SAME", locationId: "SEAT:3A", overdue: true, openedCheckDate: "2026-11-05" }],
+    };
     stubFetch((): Answer => ({ body: { visit: overdue } }));
     render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Complete visit…" }));
@@ -671,7 +755,11 @@ describe("CheckView problems, carried over and completion", () => {
     const sent = stubFetch((method, url): Answer => {
       if (method === "GET")
         return {
-          body: { visit: refused ? { ...base, carried: [{ observation: lateTray, placement: "SAME", locationId: "SEAT:3A", overdue: false }] } : base },
+          body: {
+            visit: refused
+              ? { ...base, carried: [{ observation: lateTray, placement: "SAME", locationId: "SEAT:3A", overdue: false, openedCheckDate: "2026-11-05" }] }
+              : base,
+          },
         };
       if (url.endsWith("/complete") && !refused) {
         refused = true;

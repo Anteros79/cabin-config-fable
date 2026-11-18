@@ -566,11 +566,13 @@ describe("Inspector piece panel", () => {
     expect(onCloseObservation).toHaveBeenCalledWith(o, "REPLACED");
   });
 
-  it("a carried problem says where it came from and when it ran out", () => {
-    const earlier = { ...beltDeferral, id: "OBS-OLD", openedInVisitId: "visit-0", createdAt: "2026-10-20T09:00:00.000Z", dueDate: "2026-10-30" };
-    renderPiece({ carried: [{ observation: earlier, placement: "SAME", locationId: "SEAT:3A", overdue: true }] });
+  it("a carried problem says which check it came from (that visit's check date, R42) and when it ran out", () => {
+    const earlier = { ...beltDeferral, id: "OBS-OLD", openedInVisitId: "visit-0", createdAt: "2026-10-22T09:00:00.000Z", dueDate: "2026-10-30" };
+    renderPiece({ carried: [{ observation: earlier, placement: "SAME", locationId: "SEAT:3A", overdue: true, openedCheckDate: "2026-10-20" }] });
     const card = pieceCard(/^Seat belt/);
+    // the check date of the opening visit, not the day the problem was written down
     expect(within(card).getByText("Carried over from the check on 20 Oct 2026")).toBeInTheDocument();
+    expect(within(card).queryByText(/22 Oct 2026/)).toBeNull();
     expect(within(card).getByText("Overdue since 30 Oct 2026")).toHaveClass("must-fix");
   });
 

@@ -133,6 +133,22 @@ export function openMustFix(ws: Workspace): { observation: Observation; location
     .map((p) => ({ ...p, overdue: p.observation.outcome === "DEFERRED" && isOverdue(p.observation.dueDate, ws.checkDate) }));
 }
 
+/**
+ * This visit's open problems for the work list (R41), in the order they were written down, each with the status word
+ * the map gives its piece: Must fix (marked so, or no-go now), Deferred, Carried (one opened in an earlier check and
+ * changed in this one) or Noted.
+ */
+export function workListProblems(ws: Workspace): { observation: Observation; status: LocationStatus }[] {
+  const { placed, stored } = openPlaced(ws);
+  const carried = new Set(ws.carried.map((c) => c.observation.id));
+  return placed
+    .filter((p) => !p.carried)
+    .map(({ observation: o }) => ({
+      observation: o,
+      status: isMustFix(ws, stored, o) ? "mustFix" : o.outcome === "NOTED" ? "noted" : carried.has(o.id) ? "carried" : "deferred",
+    }));
+}
+
 /** The status a piece's open problems give it, or null when it has none. */
 function problemStatus(ws: Workspace, problems: OpenProblems, locationId: string, componentId: string): LocationStatus | null {
   const { placed, stored } = problems;

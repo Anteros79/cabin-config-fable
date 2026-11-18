@@ -304,7 +304,7 @@ function ProblemItem({
   onRetry,
 }: {
   o: Observation;
-  carried: { overdue: boolean } | null;
+  carried: { overdue: boolean; openedCheckDate: string } | null;
   record: VisitRecord | null;
   actionable: boolean;
   /** The problem form is open to change this problem. */
@@ -326,7 +326,7 @@ function ProblemItem({
         <strong>{conditionLabel(o.condition)}</strong>: {[`${outcomeLabel(o.outcome)}.`, ...details].join(" ")}
       </p>
       {o.note !== "" && <p className="fine">“{o.note}”</p>}
-      {carried && <p className="fine">Carried over from the check on {formatDate(o.createdAt.slice(0, 10))}</p>}
+      {carried && <p className="fine">Carried over from the check on {formatDate(carried.openedCheckDate)}</p>}
       {carried?.overdue && o.dueDate && <p className="must-fix">Overdue since {formatDate(o.dueDate)}</p>}
       {actionable && (
         <div className="actions">
@@ -463,9 +463,9 @@ function ComponentCard({
   const conditions = conditionsFor(workspace.mel, view.componentId);
   // Defer is offered only where some condition allows a deferral.
   const canDefer = conditions.some((c) => allowedOutcomes(view.melClass(c)).includes("DEFERRED"));
-  const open: { o: Observation; carried: { overdue: boolean } | null }[] = [
+  const open: { o: Observation; carried: { overdue: boolean; openedCheckDate: string } | null }[] = [
     ...view.problems.map((o) => ({ o, carried: null })),
-    ...(view.carried ? [{ o: view.carried.observation, carried: { overdue: view.carried.overdue } }] : []),
+    ...(view.carried ? [{ o: view.carried.observation, carried: { overdue: view.carried.overdue, openedCheckDate: view.carried.openedCheckDate } }] : []),
   ];
   const problemTarget = observationTarget(problemPanel?.editing ?? { locationId: location.id, componentId: view.componentId });
   const openProblem = (button: HTMLButtonElement, panel: ProblemPanel) => {

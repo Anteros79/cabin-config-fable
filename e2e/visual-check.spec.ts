@@ -98,6 +98,13 @@ test.describe("N100TL: a deferral found in 3D, carried to the next check and clo
     await expect(seat.locator(".status-glyph"), "the deferred glyph on the seat").toHaveAttribute("data-glyph", "pause");
     const pieces = page.getByRole("region", { name: "Pieces at Seat 12A" });
     await expect(pieces.locator("button.piece[data-component=HEADREST] .badge-text"), "the piece row says Deferred").toHaveText("Deferred");
+    // the work list logs the problem with the replacements (R41): its piece, condition and status word
+    const work = page.locator("section[aria-labelledby=work-h]");
+    await expect(work.locator("#work-h")).toHaveText("Recorded work (1)");
+    const row = work.locator("li", { hasText: "Seat 12A / Headrest cover" });
+    await expect(row).toContainText("Stained");
+    await expect(row.locator(".badge-text"), "the work list says Deferred").toHaveText("Deferred");
+    await expect(work).not.toContainText("Nothing recorded yet");
   });
 
   test("open bin L-04, select the latch, choose Won't latch: MEL item category C with a fix-by date, and defer it", async ({ page }) => {
@@ -152,15 +159,15 @@ test.describe("N100TL: a deferral found in 3D, carried to the next check and clo
     const carried = page.locator("section[aria-labelledby=carried-h]");
     await expect(carried.locator("#carried-h")).toHaveText("Carried over (2)");
     await expect(carried.locator("li")).toHaveText([
-      /Seat 12A \/ Headrest cover.*Stained · Defer/s,
-      /Overhead bin L-04 .*Bin latch.*Won't latch · Defer · Fix by 22 Nov 2026/s,
+      /Seat 12A \/ Headrest cover.*Stained · Defer.*From the check on 12 Nov 2026/s,
+      /Overhead bin L-04 .*Bin latch.*Won't latch · Defer · Fix by 22 Nov 2026.*From the check on 12 Nov 2026/s,
     ]);
     await carried.getByRole("button", { name: "Show Seat 12A Headrest cover" }).click();
     await expectInspector(page, "Seat 12A");
     const headrest = card(page, "HEADREST");
     await expect(headrest).toHaveClass(/highlighted/);
-    // (the date is when the problem was written down, not the check date)
-    await expect(headrest.locator(".problems")).toContainText(/Carried over from the check on \d{1,2} \w{3} \d{4}/);
+    // the check that opened it, by its check date (R42)
+    await expect(headrest.locator(".problems")).toContainText("Carried over from the check on 12 Nov 2026");
     const replaced = headrest.getByRole("button", { name: "Mark replaced" });
     await expect(replaced, "a replacement must be recorded first").toBeDisabled();
     await recordPrimary(page, "HEADREST");

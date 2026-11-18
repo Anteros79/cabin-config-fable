@@ -6,6 +6,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { Inspector } from "../components/Inspector.tsx";
 import { SaveLine } from "../components/SaveLine.tsx";
 import { Skeleton } from "../components/Skeleton.tsx";
+import { StatusGlyph } from "../components/StatusGlyph.tsx";
 import { loadSceneModule } from "../components/sceneModule.ts";
 import { type ToastOptions, useToast } from "../components/Toasts.tsx";
 import { Viewer } from "../components/Viewer.tsx";
@@ -21,7 +22,7 @@ import {
   useMutations,
 } from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
-import { openMustFix, type Workspace } from "../model.ts";
+import { openMustFix, STATUS_ENCODING, type Workspace, workListProblems } from "../model.ts";
 import { formatRoute } from "../routes.ts";
 import { forgetSuggestionKeys, submitOnEnter } from "../submitOnEnter.ts";
 
@@ -519,6 +520,8 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       reloadOnConflict("complete");
     }
   };
+  /** this visit's open problems, listed in the work list after its replacements (R41) */
+  const problems = useMemo(() => (workspace && visitId ? workListProblems(workspace) : []), [workspace, visitId]);
   const unlisted = (serverMustFix ?? []).filter((id) => !mustFix.some((m) => m.observation.id === id)).length;
   /** "Seat 3A / Seat belt": a problem named where it sits on this layout, or where it was when it no longer fits. */
   const problemName = (o: Observation, locationId: string | null) =>
@@ -782,7 +785,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                       <div key={String(orphaned)}>
                         {orphaned && <h4>No longer at this position</h4>}
                         <ul className="records">
-                          {items.map(({ observation: o, locationId, overdue }) => {
+                          {items.map(({ observation: o, locationId, overdue, openedCheckDate }) => {
                             const name = problemName(o, locationId);
                             const saving = writes.statusOf(observationTarget(o));
                             return (
@@ -791,6 +794,8 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                                   <strong>{name}</strong>
                                   <br />
                                   <span className={overdue ? "must-fix" : "fine"}>{problemFacts(o, overdue)}</span>
+                                  <br />
+                                  <span className="fine">From the check on {formatDate(openedCheckDate)}</span>
                                   {/* a placed item shows its saves on its piece; one no longer at its position shows them here */}
                                   {!locationId && saving.phase !== "idle" && <SaveLine status={saving} onRetry={() => void retry(observationTarget(o))} />}
                                 </div>
@@ -824,9 +829,9 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
               {visit && visitId && (
                 <section className="worklist" aria-labelledby="work-h">
                   <h3 id="work-h">
-                    Recorded work <span className="count">({visit.records.length})</span>
+                    Recorded work <span className="count">({visit.records.length + problems.length})</span>
                   </h3>
-                  {visit.records.length === 0 ? (
+                  {visit.records.length === 0 && problems.length === 0 ? (
                     <p>Nothing recorded yet. A visit can only be completed with at least one replacement or one problem written down.</p>
                   ) : (
                     <ul className="records">
@@ -858,6 +863,28 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                           </div>
                         </li>
                       ))}
+                      {/* the visit's own problems, after its replacements (R41), with the map's status words */}
+                      {problems.map(({ observation: o, status }) => {
+                        const name = nameOf(o.locationId, o.componentId);
+                        const { token, label } = STATUS_ENCODING[status];
+                        return (
+                          <li key={o.id}>
+                            <div>
+                              <strong>{name}</strong>
+                              <br />
+                              <span className="fine">{conditionLabel(o.condition)}</span> ·{" "}
+                              <span className="badge-text" style={{ "--ink": `var(${token}-ink)` } as React.CSSProperties}>
+                                <StatusGlyph status={status} /> {label}
+                              </span>
+                            </div>
+                            <div className="row-actions">
+                              <button type="button" onClick={() => select(o.locationId, o.componentId)} aria-label={`Show ${name.replace(" / ", " ")}`}>
+                                Show
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                   {visit.status === "DRAFT" && (
