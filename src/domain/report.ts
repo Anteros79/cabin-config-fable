@@ -137,13 +137,14 @@ function buildObservationSection(
     currentClass(o, { mel: snapshot.mel ?? [], variant: snapshot.context.variant.id, others: open.filter((x) => x.id !== o.id), onDate: visit.checkDate });
   const mustFixNow = (o: Observation) => isMustFixNow(o, classOf(o));
 
-  const deferred = ownOpen.filter((o) => o.outcome === "DEFERRED");
-  const mustFix = ownOpen.filter((o) => o.outcome === "MUST_FIX");
+  // Each open problem is in exactly one list: must-fix now (marked so, or an MEL deferral past due), deferred, or noted.
+  const mustFix = ownOpen.filter(mustFixNow);
+  const deferred = ownOpen.filter((o) => o.outcome === "DEFERRED" && !mustFixNow(o));
   const noted = ownOpen.filter((o) => o.outcome === "NOTED");
   const needsAction = [...ownOpen.filter((o) => o.outcome !== "NOTED"), ...carried.map((c) => c.observation)];
   const observations: ReportObservations = { deferred, mustFix, noted, closed, carriedIn: carried, stillOpen: needsAction };
   const summary: ReportSummary = {
-    replaced: closed.filter((o) => o.closedAs === "REPLACED").length,
+    replaced: visit.records.length,
     noted: noted.length,
     deferredCosmetic: deferred.filter((o) => classOf(o).class === "COSMETIC").length,
     deferredMel: deferred.filter((o) => classOf(o).class !== "COSMETIC").length,

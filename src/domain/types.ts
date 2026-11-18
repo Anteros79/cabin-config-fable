@@ -754,7 +754,7 @@ export interface Report {
 }
 
 export interface ReportSummary {
-  /** problems closed as replaced in this visit */
+  /** replacement records made in this visit */
   replaced: number;
   /** problems noted in this visit and still open */
   noted: number;
