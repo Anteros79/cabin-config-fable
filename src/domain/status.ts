@@ -20,3 +20,10 @@ export const STATUS_RANK: Readonly<Record<LocationStatus, number>> = {
 export function higherStatus(a: LocationStatus, b: LocationStatus): LocationStatus {
   return STATUS_RANK[b] > STATUS_RANK[a] ? b : a;
 }
+
+/** The status a whole location shows: the highest-ranked of its pieces. */
+export function aggregateStatus(statuses: Iterable<LocationStatus>): LocationStatus {
+  let out: LocationStatus = "none";
+  for (const s of statuses) out = higherStatus(out, s);
+  return out;
+}

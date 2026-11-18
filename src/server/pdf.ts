@@ -1,6 +1,9 @@
 import PDFDocument from "pdfkit";
+import { conditionLabel, deferLabel, melLabel } from "../domain/labels.ts";
+import { isOverdue } from "../domain/observations.ts";
 import { rulesNotUsedLine } from "../domain/report.ts";
-import type { Report, VisitEvent } from "../domain/types.ts";
+import { aggregateStatus, type LocationStatus } from "../domain/status.ts";
+import type { CabinLocation, CarriedObservation, Observation, Report, VisitEvent } from "../domain/types.ts";
 import { formatDate, formatDateTime } from "../web/format.ts";
 
 interface Column {
@@ -33,6 +36,55 @@ function safe(text: unknown): string {
   );
 }
 
+/**
+ * The cabin picture's fixed light colours and legend words, one per status a piece can show. The PDF stays light whatever
+ * the screen theme, so these are not the screen's tokens. They differ in lightness as well as hue, and the legend and
+ * the lists after the picture say the same in words.
+ */
+const PDF_STATUS: Readonly<Record<Exclude<LocationStatus, "alternate">, { fill: string; label: string }>> = {
+  mustFix: { fill: "#c4005f", label: "Must be fixed before flight" },
+  unresolved: { fill: "#1f2937", label: "Part not resolved" },
+  deferred: { fill: "#e07000", label: "Deferred" },
+  carried: { fill: "#7e22ce", label: "Carried over from an earlier visit" },
+  noted: { fill: "#1d6fb8", label: "Noted only" },
+  recorded: { fill: "#2e9e5b", label: "Replaced" },
+  none: { fill: "#e8ebf2", label: "No change" },
+};
+const LEGEND_ORDER = ["mustFix", "unresolved", "deferred", "carried", "noted", "recorded", "none"] as const;
+/** The picture's alt text counts pieces by these words, highest status first. */
+const ALT_PHRASE: Partial<Record<LocationStatus, (n: number) => string>> = {
+  mustFix: (n) => `${n} must be fixed`,
+  unresolved: (n) => `${n} ${n === 1 ? "piece" : "pieces"} not resolved`,
+  deferred: (n) => `${n} ${n === 1 ? "piece" : "pieces"} deferred`,
+  carried: (n) => `${n} ${n === 1 ? "piece" : "pieces"} carried over`,
+  noted: (n) => `${n} ${n === 1 ? "piece" : "pieces"} noted`,
+  recorded: (n) => `${n} ${n === 1 ? "piece" : "pieces"} replaced`,
+};
+const FIGURE_ORDER: LocationStatus[] = ["mustFix", "unresolved", "deferred", "carried", "noted", "recorded"];
+
+/** The pieces with a status, from the report's outcomes plus its unresolved components (as the screen does), highest status per piece. */
+function pictureOutcomes(report: Report): { locationId: string; componentId: string; status: LocationStatus }[] {
+  const byPiece = new Map<string, { locationId: string; componentId: string; status: LocationStatus }>();
+  const add = (locationId: string, componentId: string, status: LocationStatus) => {
+    const key = `${locationId}\u0000${componentId}`;
+    const prior = byPiece.get(key);
+    byPiece.set(key, { locationId, componentId, status: prior ? aggregateStatus([prior.status, status]) : status });
+  };
+  for (const g of report.gaps) for (const id of g.locationIds) add(id, g.componentId, "unresolved");
+  for (const o of report.pieceOutcomes ?? []) add(o.locationId, o.componentId, o.status);
+  return [...byPiece.values()];
+}
+
+/** "Cabin picture: 3 pieces deferred, 1 must be fixed", in the order of FIGURE_ORDER. */
+function pictureAlt(outcomes: { status: LocationStatus }[]): string {
+  const parts = FIGURE_ORDER.flatMap((status) => {
+    const n = outcomes.filter((o) => o.status === status).length;
+    const phrase = ALT_PHRASE[status];
+    return n > 0 && phrase ? [phrase(n)] : [];
+  });
+  return parts.length > 0 ? `Cabin picture: ${parts.join(", ")}` : "Cabin picture: no piece has an outcome in this check";
+}
+
 function sourceLabel(report: Report, id: string): string {
   const s = report.sources.find((x) => x.id === id);
   return s ? `${s.id} rev ${s.revision}` : id;
@@ -42,7 +94,13 @@ function sourceLabel(report: Report, id: string): string {
  * Render a report to PDF. The PDF is produced only from the report JSON (the frozen basis),
  * so the printable and structured forms cannot drift apart.
  */
-export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [], basisSha256: string | null = null): Promise<Buffer> {
+export function renderReportPdf(
+  report: Report,
+  linkedEvents: VisitEvent[] = [],
+  basisSha256: string | null = null,
+  /** The frozen snapshot's layout locations, which a report does not carry. Without them a v3 report prints no picture, only a notice. */
+  layoutLocations: readonly CabinLocation[] | null = null,
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "LETTER",
@@ -284,6 +342,216 @@ export function renderReportPdf(report: Report, linkedEvents: VisitEvent[] = [],
       ["Report generated", formatDateTime(report.generatedAt)],
     ]);
     para(`Visit id: ${report.visit.id}`, 8);
+
+    // After-action sections (report schema 3). A /1 or /2 report has none of these fields and prints as before.
+    if (report.summary) {
+      const sm = report.summary;
+      heading("Summary");
+      if (!sm.releasable) {
+        tagged("P", () => {
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .fillColor("#a11a4a")
+            .text(sm.aircraftHeld ? "Not releasable: aircraft held" : "Not releasable: items must be fixed before flight", MARGIN, doc.y, { width });
+        });
+        doc.fillColor("#000000").moveDown(0.3);
+      }
+      pairs([
+        ["Replaced", String(sm.replaced)],
+        ["Noted", String(sm.noted)],
+        ["Deferred, cosmetic", String(sm.deferredCosmetic)],
+        ["Deferred under the MEL", String(sm.deferredMel)],
+        ["Must be fixed", String(sm.mustFix)],
+        ["Carried over in", String(sm.carriedIn)],
+        ["Still open", String(sm.stillOpen)],
+        ["Releasable", sm.releasable ? "Yes" : "No"],
+        ["Aircraft held", sm.aircraftHeld ? "Yes" : "No"],
+      ]);
+    }
+
+    if (report.pieceOutcomes) {
+      const outcomes = pictureOutcomes(report);
+      const places = layoutLocations ?? [];
+      const seats = places.filter((l) => l.kind === "SEAT");
+      const LABEL_W = 62;
+      const SIDE_BIN_H = 9;
+      const FLOOR_H = 7;
+      const GAP = 4;
+      const floors = places.filter((l) => l.kind === "FLOOR");
+      if (seats.length === 0) {
+        heading("Cabin picture");
+        para("The cabin picture could not be drawn because the cabin layout was not available. The lists below are complete.");
+      } else {
+        const extent = places.filter((l) => l.kind !== "BIN");
+        const minX = Math.min(...places.map((l) => l.placement.x - l.placement.lx / 2));
+        const maxX = Math.max(...places.map((l) => l.placement.x + l.placement.lx / 2));
+        const halfZ = Math.max(...extent.map((l) => Math.abs(l.placement.z) + l.placement.lz / 2));
+        const scale = (width - LABEL_W) / (maxX - minX);
+        const bodyH = halfZ * 2 * scale;
+        const figureH = SIDE_BIN_H + GAP + bodyH + GAP + SIDE_BIN_H + GAP + floors.length * (FLOOR_H + 1);
+        const legendRows = Math.ceil(LEGEND_ORDER.length / 2);
+        // Heading, picture and legend stay together on one page.
+        ensure(40 + figureH + 14 + legendRows * 13 + 24);
+        heading("Cabin picture");
+        para("Each location shows the highest status of its pieces at the end of this check. Left and right are as seen facing forward.", 8);
+        const x0 = MARGIN + LABEL_W;
+        const top = doc.y + 2;
+        const rightBinsY = top;
+        const bodyY = top + SIDE_BIN_H + GAP;
+        const leftBinsY = bodyY + bodyH + GAP;
+        const floorsY = leftBinsY + SIDE_BIN_H + GAP;
+        const statusByLocation = new Map<string, LocationStatus[]>();
+        for (const o of outcomes) statusByLocation.set(o.locationId, [...(statusByLocation.get(o.locationId) ?? []), o.status]);
+        const fillOf = (id: string): string => {
+          const status = aggregateStatus(statusByLocation.get(id) ?? []);
+          return (PDF_STATUS[status as keyof typeof PDF_STATUS] ?? PDF_STATUS.none).fill;
+        };
+        const px = (l: CabinLocation) => x0 + (l.placement.x - l.placement.lx / 2 - minX) * scale;
+        const pw = (l: CabinLocation) => l.placement.lx * scale;
+        const alt = safe(pictureAlt(outcomes));
+        root.add(
+          doc.struct("Figure", { alt }, () => {
+            doc.lineWidth(0.3).strokeColor("#9aa3b5");
+            const draw = (xx: number, yy: number, w: number, h: number, fill: string) => {
+              doc.rect(xx, yy, w, h).fillAndStroke(fill, "#9aa3b5");
+            };
+            // floor areas, one strip each below the cabin
+            floors.forEach((l, i) => {
+              draw(px(l), floorsY + i * (FLOOR_H + 1), pw(l), FLOOR_H, fillOf(l.id));
+            });
+            // bins: a strip each side of the cabin; the left side of the aircraft is at the bottom, facing forward
+            for (const l of places.filter((p) => p.kind === "BIN")) {
+              const left = l.bin?.side ? l.bin.side === "L" : l.placement.z > 0;
+              draw(px(l), left ? leftBinsY : rightBinsY, pw(l), SIDE_BIN_H, fillOf(l.id));
+            }
+            for (const l of seats) {
+              const w = Math.max(l.placement.lz * scale, 2);
+              draw(px(l), bodyY + (halfZ + l.placement.z - l.placement.lz / 2) * scale, pw(l), w, fillOf(l.id));
+            }
+            for (const l of places.filter((p) => p.kind === "ARMREST")) {
+              const h = Math.max(l.placement.lz * scale, 1.6);
+              draw(px(l), bodyY + (halfZ + l.placement.z) * scale - h / 2, pw(l), h, fillOf(l.id));
+            }
+          }),
+        );
+        // side labels are decoration: the alt text and the lists carry the meaning
+        artifact("Layout", () => {
+          doc.font("Helvetica").fontSize(6.5).fillColor("#444444");
+          doc.text("Right bins", MARGIN, rightBinsY + 1, { width: LABEL_W - 6, lineBreak: false });
+          doc.text("Forward", MARGIN, bodyY + bodyH / 2 - 8, { width: LABEL_W - 6, lineBreak: false });
+          doc.text("end is at left", MARGIN, bodyY + bodyH / 2, { width: LABEL_W - 6, lineBreak: false });
+          doc.text("Left bins", MARGIN, leftBinsY + 1, { width: LABEL_W - 6, lineBreak: false });
+          if (floors.length > 0) doc.text("Floor areas", MARGIN, floorsY, { width: LABEL_W - 6, lineBreak: false });
+          doc.fillColor("#000000");
+        });
+        doc.y = floorsY + floors.length * (FLOOR_H + 1) + 6;
+        // legend: a swatch and its words, two columns
+        const colW = width / 2;
+        const legendTop = doc.y;
+        LEGEND_ORDER.forEach((status, i) => {
+          const lx = MARGIN + (i % 2) * colW;
+          const ly = legendTop + Math.floor(i / 2) * 13;
+          artifact("Layout", () => {
+            doc.rect(lx, ly + 1, 9, 9).fillAndStroke(PDF_STATUS[status].fill, "#6b7488");
+          });
+          tagged("P", () => {
+            doc
+              .font("Helvetica")
+              .fontSize(8.5)
+              .fillColor("#000000")
+              .text(safe(PDF_STATUS[status].label), lx + 14, ly + 1, { width: colW - 20, lineBreak: false });
+          });
+        });
+        doc.y = legendTop + legendRows * 13 + 6;
+      }
+    }
+
+    if (report.timeline) {
+      heading("What happened, in order");
+      if (report.timeline.length === 0) para("Nothing was recorded in this visit.");
+      else {
+        table(
+          "what happened, in order",
+          [
+            { header: "When", width: 120 },
+            { header: "What happened", width: width - 120 },
+          ],
+          report.timeline.map((t) => [formatDateTime(t.at), noteCell("T", formatDateTime(t.at), t.label)]),
+        );
+        printNotes("Notes on what happened");
+      }
+    }
+
+    if (report.observations) {
+      const checkDate = report.visit.checkDate;
+      const problemRows = (items: { o: Observation; extra?: string }[], prefix: string): string[][] =>
+        items.map(({ o, extra }) => {
+          // a closed problem's class and dates no longer apply: only what it was and how it was closed
+          const open = o.status === "OPEN";
+          const due = open && o.dueDate ? `${isOverdue(o.dueDate, checkDate) ? "Overdue since" : "Fix by"} ${formatDate(o.dueDate)}` : "";
+          const facts = [
+            open && o.outcome !== "NOTED" ? melLabel(o.melClass) : "",
+            open && o.outcome === "DEFERRED" && o.deferUntil ? deferLabel(o.deferUntil) : "",
+            due,
+            extra ?? "",
+            o.note ? `Note: ${o.note}` : "",
+          ].filter((f) => f !== "");
+          const where = `${o.locationLabel} / ${o.componentName}`;
+          return [o.locationLabel, o.componentName, conditionLabel(o.condition), noteCell(prefix, where, facts.join(". "))];
+        });
+      const list = (title: string, prefix: string, items: { o: Observation; extra?: string }[]) => {
+        heading(`${title} (${items.length})`);
+        if (items.length === 0) {
+          para("None.");
+          return;
+        }
+        table(
+          title.toLowerCase(),
+          [
+            { header: "Location", width: 90 },
+            { header: "Piece", width: 100 },
+            { header: "Condition", width: 62 },
+            { header: "Details", width: width - 252 },
+          ],
+          problemRows(items, prefix),
+        );
+        printNotes(`Notes on ${title.toLowerCase()}`);
+      };
+      const ob = report.observations;
+      const carriedExtra = (c: CarriedObservation) =>
+        `Opened in an earlier visit${c.placement === "ORPHANED" ? "; its position is not in this layout" : c.placement === "MAPPED" ? "; mapped to this layout" : ""}`;
+      list(
+        "Deferred",
+        "D",
+        ob.deferred.map((o) => ({ o })),
+      );
+      list(
+        "Must be fixed",
+        "F",
+        ob.mustFix.map((o) => ({ o })),
+      );
+      list(
+        "Noted",
+        "N",
+        ob.noted.map((o) => ({ o })),
+      );
+      list(
+        "Closed this check",
+        "C",
+        ob.closed.map((o) => ({ o, extra: o.closedAs === "REPLACED" ? "Closed as replaced" : "Closed as fixed" })),
+      );
+      list(
+        "Carried over in",
+        "O",
+        ob.carriedIn.map((c) => ({ o: c.observation, extra: carriedExtra(c) })),
+      );
+      list(
+        "Still open",
+        "S",
+        ob.stillOpen.map((o) => ({ o })),
+      );
+    }
 
     heading("Frozen configuration at visit creation");
     const c = report.configuration;

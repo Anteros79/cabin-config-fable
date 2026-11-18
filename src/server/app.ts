@@ -583,7 +583,9 @@ export function createApp(config: ServerConfig): AppHandle {
 
     app.get<{ Params: { id: string } }>("/api/visits/:id/report.pdf", async (request, reply) => {
       const { report, linkedEvents, basisSha256 } = visits.getReport(visitId(request.params.id));
-      const pdf = await renderReportPdf(report, linkedEvents, basisSha256);
+      // A report does not carry the layout; the cabin picture draws the visit's frozen snapshot of it.
+      const layoutLocations = report.pieceOutcomes ? visits.getVisit(report.visit.id).snapshot.context.layoutRevision.locations : null;
+      const pdf = await renderReportPdf(report, linkedEvents, basisSha256, layoutLocations);
       reply.header("Content-Type", "application/pdf");
       reply.header(
         "Content-Disposition",

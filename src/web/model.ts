@@ -1,5 +1,5 @@
 import { classify, currentClass as currentObservationClass, isMustFixNow, isOverdue, seatIsBlocked } from "../domain/observations.ts";
-import { higherStatus, type LocationStatus } from "../domain/status.ts";
+import { aggregateStatus, type LocationStatus } from "../domain/status.ts";
 import type {
   CabinLocation,
   CarriedObservation,
@@ -58,16 +58,7 @@ const PROBLEM_STATUSES: readonly LocationStatus[] = ["mustFix", "deferred", "car
 export const problemStatusText = (status: LocationStatus | undefined): string =>
   status && PROBLEM_STATUSES.includes(status) ? STATUS_ENCODING[status].label : "";
 
-/**
- * The status a whole location shows, the highest-ranked of its pieces: a must-fix problem, an unresolved component (the
- * location still needs attention, even with other parts recorded), a deferral, a carried deferral, a noted problem, a
- * record, then an eligible alternate.
- */
-export function aggregateStatus(statuses: Iterable<LocationStatus>): LocationStatus {
-  let out: LocationStatus = "none";
-  for (const s of statuses) out = higherStatus(out, s);
-  return out;
-}
+export { aggregateStatus } from "../domain/status.ts";
 
 /** What the viewer, the map, the inspector and the work list all render from. */
 export interface Workspace {

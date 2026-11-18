@@ -1,6 +1,6 @@
 import { deflateSync, inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import type { Report, VisitEvent } from "../../src/domain/types.ts";
+import type { CabinLocation, Report, VisitEvent } from "../../src/domain/types.ts";
 import { renderReportPdf } from "../../src/server/pdf.ts";
 import { CUSHION_3A, KIT_ALTERNATE, makeApp } from "../helpers.ts";
 
@@ -430,5 +430,115 @@ describe("PDF robustness and accessibility", () => {
     // Many part lines make the parts cell taller than any page; that column has no overflow section.
     const tall = { ...report, work: report.work.map((w) => ({ ...w, lines: manyLines(400) })) } as Report;
     await expect(renderReportPdf(tall, [], basisSha256)).rejects.toThrow("pdf: row taller than a page in");
+  });
+});
+
+describe("PDF after-action sections (report schema 3)", () => {
+  const SECTION_HEADINGS = [
+    "Summary",
+    "Cabin picture",
+    "What happened, in order",
+    "Deferred",
+    "Must be fixed",
+    "Noted",
+    "Closed this check",
+    "Carried over in",
+    "Still open",
+  ];
+  /** A completed visit with a deferral, a must-fix problem and a note, so the picture has three statuses. */
+  async function afterAction(app: App) {
+    const visit = await newVisit(app);
+    const base = `/api/visits/${visit.id}`;
+    const add = async (observation: object) =>
+      expect((await post(app, `${base}/observations`, { observation, idempotencyKey: `k-${Math.random()}-abcd` })).statusCode).toBe(201);
+    await put(app, `${base}/records`, { record: CUSHION_3A });
+    await add({ locationId: "SEAT:4A", componentId: "CUSHION", condition: "STAINED", note: "Coffee", outcome: "NOTED" });
+    await add({
+      locationId: "SEAT:5A",
+      componentId: "CUSHION",
+      condition: "TORN",
+      note: "",
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_CHECK",
+      reason: "NO_STOCK",
+    });
+    await add({ locationId: "BIN:L-01", componentId: "BIN_DOOR", condition: "WONT_LATCH", note: "", outcome: "MUST_FIX" });
+    const done = json(await post(app, `${base}/complete`, { confirm: true, aircraftHeld: true }));
+    expect(done.report.schema).toBe("cabin-kit.report/3");
+    const layout = json(await app.app.inject(base)).visit.snapshot.context.layoutRevision.locations as CabinLocation[];
+    return { report: done.report as Report, layout, id: visit.id };
+  }
+
+  it("a v3 report PDF has the Summary, Cabin picture and timeline headings in its text", async () => {
+    const app = makeApp();
+    const { report, layout } = await afterAction(app);
+    const { text } = await pdfText(await renderReportPdf(report, [], null, layout));
+    for (const heading of SECTION_HEADINGS) expect(text).toContain(heading);
+    expect(text).toContain("Not releasable: aircraft held");
+    expect(text).toContain("Seat 4A");
+    expect(text).toContain("Until the next check");
+    // the new sections come right after "Visit" and before the configuration
+    const at = (h: string) => text.indexOf(h);
+    expect(at("Summary")).toBeGreaterThan(at("Visit id:"));
+    expect(at("What happened, in order")).toBeGreaterThan(at("Cabin picture"));
+    expect(at("Frozen configuration")).toBeGreaterThan(at("Still open"));
+    // plain words only: no raw codes in the visible text
+    for (const code of ["WONT_LATCH", "NO_GO", "MUST_FIX", "NEXT_CHECK", "NO_STOCK"]) expect(text).not.toContain(code);
+  });
+
+  it("the report.pdf route draws the picture from the visit's snapshot", async () => {
+    const app = makeApp();
+    const { id } = await afterAction(app);
+    const bytes = (await app.app.inject(`/api/visits/${id}/report.pdf`)).rawPayload;
+    const { text } = await pdfText(bytes);
+    expect(text).toContain("Cabin picture");
+    expect(text).not.toContain("could not be drawn");
+    expect(text).toContain("Must be fixed before flight"); // legend
+  });
+
+  it("the figure has alt text and the picture and legend sit on one page", async () => {
+    const app = makeApp();
+    const { report, layout } = await afterAction(app);
+    const bytes = await renderReportPdf(report, [], null, layout);
+    const raw = bytes.toString("latin1");
+    expect(raw).toContain("/Figure");
+    expect(raw).toContain("/Alt (Cabin picture: 1 must be fixed, 1 piece deferred, 1 piece noted, 1 piece replaced)");
+    const items = await pdfItems(bytes);
+    const pageOf = (str: string) => items.find((i) => i.str.includes(str))?.page;
+    const picturePage = pageOf("Cabin picture");
+    expect(picturePage).toBeDefined();
+    for (const word of ["Must be fixed before flight", "Replaced", "No change", "Noted only"]) {
+      expect(items.filter((i) => i.str.includes(word) && i.page === picturePage).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("a v3 report without its layout says the picture could not be drawn", async () => {
+    const app = makeApp();
+    const { report } = await afterAction(app);
+    const { text } = await pdfText(await renderReportPdf(report));
+    expect(text).toContain("Cabin picture");
+    expect(text).toContain("could not be drawn");
+  });
+
+  it("a /1 report PDF is unchanged in its section list", async () => {
+    const app = makeApp();
+    const { report, basisSha256 } = await completedReport(app);
+    const { summary, timeline, observations, pieceOutcomes, ...rest } = report;
+    void [summary, timeline, observations, pieceOutcomes];
+    const v1 = { ...rest, schema: "cabin-kit.report/1" } as Report;
+    const { text } = await pdfText(await renderReportPdf(v1, [], basisSha256));
+    for (const heading of SECTION_HEADINGS) expect(text).not.toContain(heading === "Noted" ? "Noted (" : heading);
+    expect(text).not.toContain("Cabin picture");
+    const order = [
+      "Visit id:",
+      "Frozen configuration at visit creation",
+      "Aggregate part totals",
+      "Work recorded by location",
+      "Unresolved applicability gaps",
+      "Sources, revisions and validity",
+    ];
+    const positions = order.map((h) => text.indexOf(h));
+    expect(positions.every((p) => p >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 });
