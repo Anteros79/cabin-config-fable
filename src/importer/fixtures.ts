@@ -103,7 +103,11 @@ const BIN_WORDS: Readonly<Record<BinType, string>> = { CLASSIC: "classic", PIVOT
 /** The bin type's code in a layout id. */
 const BIN_CODE: Readonly<Record<BinType, string>> = { CLASSIC: "CL", PIVOT: "PV", LARGE_PIVOT: "LP" };
 
-/** Layout id of a seat set with a bin type, e.g. `FX-L-S176-MAX8-LP`: one layout per seat spec, subtype and bin type. */
+/**
+ * Layout id of a seat set with a bin type: one layout per seat spec, subtype and bin type. `specId` already carries the
+ * subtype infix when the seat spec is used by more than one subtype (`S176-MAX8` gives `FX-L-S176-MAX8-LP`); otherwise it
+ * is the seat spec alone (`S170` gives `FX-L-S170-PV`).
+ */
 function layoutIdOf(specId: string, binType: BinType): string {
   return `FX-L-${specId}-${BIN_CODE[binType]}`;
 }

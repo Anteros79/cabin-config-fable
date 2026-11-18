@@ -157,7 +157,8 @@ test("a selection made while the 3D view is hidden, or already there when it sta
   const props = { workspace, states: buildStates(workspace).scene, onSelect, visualProfiles: [], onFailed: vi.fn() };
   const view = render(<Cabin3D {...props} selection="SEAT:7C" />);
   await ready();
-  expect(calls("setSelection").at(-1)?.args).toEqual(["SEAT:7C"]);
+  // like the first layout, the first selection is applied in an effect that can trail the ready attribute under load
+  await waitFor(() => expect(calls("setSelection").at(-1)?.args).toEqual(["SEAT:7C"]));
   view.rerender(<Cabin3D {...props} selection="SEAT:9D" paused />);
   view.rerender(<Cabin3D {...props} selection="SEAT:9D" />);
   expect(calls("revealLocation")).toHaveLength(0);

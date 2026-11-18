@@ -7,11 +7,6 @@ import { fixtureContent, snapshotFor, visitWith } from "../helpers.ts";
 
 // Property checks as plain loops over a seeded PRNG: no new dependency, the same cases on every run.
 const ITERATIONS = 200;
-/**
- * Each case of the two lookup properties indexes a whole fixture release afresh. Since VAC-2 (seven seat pieces, armrests,
- * eleven bin pieces) that takes about 2.5 s alone and can pass the unit tier's 5 s under a full parallel run.
- */
-const LOOKUP_PROPERTY_TIMEOUT = 20_000;
 const DATE = "2026-11-12";
 /** One released tail per fixture variant V01-V10, each resolving on DATE. */
 const TAILS = ["N010TL", "N020TL", "N030TL", "N040TL", "N050TL", "N060TL", "N070TL", "N080TL", "N090TL", "N101TL"];
@@ -51,10 +46,13 @@ const sortedComponents = (result: LookupResult): ComponentResolution[] =>
     a.locationId === b.locationId ? (a.componentId < b.componentId ? -1 : 1) : a.locationId < b.locationId ? -1 : 1,
   );
 
+/** A copy of an id-keyed record with its keys in code-point order, so insertion order cannot show in its JSON. */
+const byKey = <T>(record: Record<string, T>): Record<string, T> => Object.fromEntries(Object.entries(record).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+
 const key = (c: { locationId: string; componentId: string }) => `${c.locationId}\u0000${c.componentId}`;
 
 describe("property: unreleased data is inert", () => {
-  it(`copying any rule as unreleased changes no outcome and is listed as excluded (${ITERATIONS} cases)`, { timeout: LOOKUP_PROPERTY_TIMEOUT }, () => {
+  it(`copying any rule as unreleased changes no outcome and is listed as excluded (${ITERATIONS} cases)`, () => {
     const random = prng(0x2_8001);
     const content = fixtureContent();
     const base = releaseOf(content);
@@ -76,21 +74,30 @@ describe("property: unreleased data is inert", () => {
       const context = before.context!;
       const pairKey = `${context.variant.id}|${context.layoutRevision.id}`;
       const covered = matchesContext(original.constraint, contextOf(context)) ? baseIndex.ruleMatch.get(original.id)?.pairs.get(pairKey) : undefined;
+      // every component is compared, and the differences are asserted once: an expect per component costs more than the lookup
       const afterByKey = new Map(after.resolution!.components.map((c) => [key(c), c]));
+      const differences: string[] = [];
       for (const c of before.resolution!.components) {
-        const now = afterByKey.get(key(c))!;
-        expect(now.status).toBe(c.status);
-        expect(now.status === "RESOLVED" ? now.ruleId : null).toBe(c.status === "RESOLVED" ? c.ruleId : null);
+        const now = afterByKey.get(key(c));
+        if (!now) {
+          differences.push(`${key(c)}: missing after the copy`);
+          continue;
+        }
+        if (now.status !== c.status) differences.push(`${key(c)}: status ${c.status} -> ${now.status}`);
+        const ruleBefore = c.status === "RESOLVED" ? c.ruleId : null;
+        const ruleAfter = now.status === "RESOLVED" ? now.ruleId : null;
+        if (ruleAfter !== ruleBefore) differences.push(`${key(c)}: rule ${ruleBefore} -> ${ruleAfter}`);
         const wasCandidate = c.componentId === original.componentId && (covered?.has(c.locationId) ?? false);
-        const excludedIds = (now.excluded ?? []).map((e) => e.ruleId);
-        expect(excludedIds.includes(copyId)).toBe(wasCandidate);
+        const listed = (now.excluded ?? []).some((e) => e.ruleId === copyId);
+        if (listed !== wasCandidate) differences.push(`${key(c)}: copy listed as excluded ${listed}, expected ${wasCandidate}`);
       }
+      expect(differences).toEqual([]);
     }
   });
 });
 
 describe("property: lookup does not depend on input order", () => {
-  it(`shuffling rules, substitutes, kit lines and locations gives the same result (${ITERATIONS} cases)`, { timeout: LOOKUP_PROPERTY_TIMEOUT }, () => {
+  it(`shuffling rules, substitutes, kit lines and locations gives the same result (${ITERATIONS} cases)`, () => {
     const random = prng(0x2_8002);
     const content = fixtureContent();
     const base = releaseOf(content);
@@ -101,9 +108,17 @@ describe("property: lookup does not depend on input order", () => {
         ...result.context,
         layoutRevision: { ...result.context.layoutRevision, locations: [...result.context.layoutRevision.locations].sort((a, b) => (a.id < b.id ? -1 : 1)) },
       },
-      resolution: result.resolution && { ...result.resolution, components: sortedComponents(result) },
+      resolution: result.resolution && {
+        ...result.resolution,
+        components: sortedComponents(result),
+        rules: byKey(result.resolution.rules),
+        sources: byKey(result.resolution.sources),
+        componentDefs: byKey(result.resolution.componentDefs),
+      },
     });
-    const baseline = new Map(TAILS.map((tail) => [tail, normalise(lookup(base, tail, DATE, baseIndex))] as const));
+    // Compared as JSON once the id-keyed records are in key order (every other object is built in code, so its key order is
+    // fixed): a deep toEqual of a whole lookup per case costs more than the lookup itself.
+    const baseline = new Map(TAILS.map((tail) => [tail, JSON.stringify(normalise(lookup(base, tail, DATE, baseIndex)))] as const));
     for (let i = 0; i < ITERATIONS; i += 1) {
       const shuffled = releaseOf({
         ...content,
@@ -113,7 +128,7 @@ describe("property: lookup does not depend on input order", () => {
         layoutRevisions: content.layoutRevisions.map((r) => ({ ...r, locations: random.shuffle(r.locations) })),
       });
       const tail = random.pick(TAILS);
-      expect(normalise(lookup(shuffled, tail, DATE))).toEqual(baseline.get(tail));
+      expect(JSON.stringify(normalise(lookup(shuffled, tail, DATE)))).toBe(baseline.get(tail));
     }
   });
 });

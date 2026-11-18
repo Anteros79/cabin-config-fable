@@ -88,6 +88,7 @@ export function validateRelease(input: unknown, shared?: ReleaseIndex): Finding[
   checkDup("substitute", content.substitutes, (s) => s.id);
   checkDup("pending change", content.pendingChanges, (p) => p.id);
   checkDup("layout category", content.layoutCategories, (c) => c.id);
+  checkDup("MEL entry", content.mel, (e) => e.id);
 
   const sources = new Set(content.sources.map((s) => s.id));
   const subtypes = new Set(content.subtypes.map((s) => s.id));
@@ -416,6 +417,20 @@ export function validateRelease(input: unknown, shared?: ReleaseIndex): Finding[
   for (const p of content.pendingChanges) {
     if (!ruleIds.has(p.ruleId)) err("ORPHAN", `Pending change ${p.id} refers to unknown rule ${p.ruleId}.`, [p.id]);
     if (p.sourceId !== null && !sources.has(p.sourceId)) err("ORPHAN", `Pending change ${p.id} cites unknown source ${p.sourceId}.`, [p.id]);
+  }
+  // one entry per component, condition and configuration scope: two would leave the class undecided
+  const melByScope = new Map<string, string>();
+  for (const e of content.mel) {
+    const variants = e.constraint?.variant ? [...e.constraint.variant].sort(compareCodePoints).join(",") : "";
+    const scope = `${e.componentId}|${e.condition}|${variants}`;
+    const first = melByScope.get(scope);
+    if (first === undefined) melByScope.set(scope, e.id);
+    else if (first !== e.id)
+      err(
+        "DUPLICATE_KEY",
+        `MEL entries ${first} and ${e.id} both classify ${e.componentId} ${e.condition} ${variants ? `for variant ${variants}` : "for every configuration"}.`,
+        [first, e.id],
+      );
   }
   for (const e of content.mel) {
     if (!components.has(e.componentId)) err("ORPHAN", `MEL entry ${e.id} refers to unknown component ${e.componentId}.`, [e.id]);

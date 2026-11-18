@@ -357,6 +357,15 @@ describe("fictional pieces, armrests, bin modules and types, MEL (VAC-2)", () =>
     expect(invalid.map((f) => f.message)).toEqual(["seatSpecs.S176.binModules.L: the modules cover 6 rows, but the layout has 30."]);
   });
 
+  test("a variant with a seat spec but no bin type is a reference issue", () => {
+    const invalid = fixtureInvalid(
+      buildWith((d) => {
+        at(d.variants, 0).binType = null;
+      }),
+    );
+    expect(invalid.map((f) => f.message)).toEqual(["variants.0.binType: variant V01 has a seat spec, so it needs a bin type."]);
+  });
+
   test("N100TL, N200TL and N300TL resolve RESOLVED with every component matched", () => {
     // and every generic example tail that resolved before VAC-2 (one per variant V01-V08 and V10)
     for (const tail of ["N100TL", "N200TL", "N300TL", "N010TL", "N020TL", "N030TL", "N040TL", "N050TL", "N060TL", "N070TL", "N080TL", "N101TL"]) {
@@ -381,28 +390,29 @@ describe("fictional pieces, armrests, bin modules and types, MEL (VAC-2)", () =>
   });
 
   test("every component and condition used by the UI has exactly one base MEL entry", () => {
+    // the allowed conditions per component, as ruled in R11
     const covers = ["STAINED", "TORN", "WORN", "MISSING", "OTHER"];
     const expected: Record<string, string[]> = {
       CUSHION: covers,
       BACKREST: covers,
       HEADREST: covers,
       SEATBELT: ["BROKEN", "MISSING", "WORN", "OTHER"],
-      TRAY: [...covers, "BROKEN"],
+      TRAY: ["STAINED", "BROKEN", "MISSING", "OTHER"],
       SEATBACK_NET: covers,
-      LIFE_VEST: covers,
+      LIFE_VEST: ["MISSING", "TORN", "OTHER"],
       ARMREST: covers,
       CARPET_KIT: covers,
       CARPET_PANEL: covers,
-      BIN_DOOR: [...covers, "WONT_LATCH"],
-      BIN_LATCH: [...covers, "BROKEN", "WONT_LATCH"],
-      BIN_STRIKER: [...covers, "BROKEN", "WONT_LATCH"],
-      BIN_PIVOT: [...covers, "BROKEN"],
-      BIN_ASSIST: [...covers, "BROKEN"],
+      BIN_DOOR: ["STAINED", "WORN", "BROKEN", "WONT_LATCH", "OTHER"],
+      BIN_LATCH: ["BROKEN", "MISSING", "WONT_LATCH", "OTHER"],
+      BIN_STRIKER: ["BROKEN", "MISSING", "WONT_LATCH", "OTHER"],
+      BIN_PIVOT: ["BROKEN", "MISSING", "OTHER"],
+      BIN_ASSIST: ["BROKEN", "MISSING", "OTHER"],
       BIN_LINER: covers,
       BIN_SIDE_PANEL: covers,
       BIN_BUMPER: covers,
       BIN_SEAL: covers,
-      BIN_PLACARD: covers,
+      BIN_PLACARD: ["MISSING", "TORN", "WORN"],
       BIN_LABEL: covers,
     };
     const base = release.mel.filter((e) => e.constraint === undefined);
@@ -413,6 +423,9 @@ describe("fictional pieces, armrests, bin modules and types, MEL (VAC-2)", () =>
     expect(new Set(release.components.map((c) => c.id))).toEqual(new Set(Object.keys(expected)));
     expect(new Set(release.mel.map((e) => e.id)).size).toBe(release.mel.length);
     expect(release.mel.every((e) => e.sourceId === "FX-DOC-MEL")).toBe(true);
+    expect(release.mel).toHaveLength(94);
+    // OTHER can always wait
+    expect(base.filter((e) => e.condition === "OTHER").every((e) => e.result.class === "COSMETIC")).toBe(true);
 
     const entry = (componentId: string, condition: string, variant?: string) =>
       release.mel.find((e) => e.componentId === componentId && e.condition === condition && (e.constraint?.variant?.[0] ?? undefined) === variant);
@@ -429,6 +442,10 @@ describe("fictional pieces, armrests, bin modules and types, MEL (VAC-2)", () =>
       whenSeatBlocked: { class: "MEL", item: "FX-25-61-01", category: "C", intervalDays: 10, conditions: "Seat blocked" },
     });
     expect(entry("TRAY", "BROKEN")?.result).toMatchObject({ class: "MEL", item: "FX-25-22-01", category: "D", intervalDays: 120 });
+    expect(entry("TRAY", "MISSING")?.result).toEqual(entry("TRAY", "BROKEN")?.result);
+    expect(entry("BIN_DOOR", "BROKEN")?.result).toEqual({ class: "NO_GO", reason: "Bin cannot be secured" });
+    expect(entry("BIN_ASSIST", "MISSING")?.result).toEqual(entry("BIN_ASSIST", "BROKEN")?.result);
+    expect(entry("BIN_DOOR", "STAINED")?.result).toEqual({ class: "COSMETIC" });
     expect(entry("TRAY", "BROKEN", "V09")?.result).toMatchObject({ class: "MEL", item: "FX-25-22-01", category: "C", intervalDays: 10 });
     expect(release.mel.filter((e) => e.constraint !== undefined)).toHaveLength(1);
     expect(entry("BIN_DOOR", "WONT_LATCH")?.result).toEqual({ class: "NO_GO", reason: "Bin cannot be secured" });

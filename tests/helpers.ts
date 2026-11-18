@@ -16,9 +16,9 @@ import { VisitStore } from "../src/server/visitStore.ts";
  * Content hash of the release the importer stages from the committed fixtures and originals (PF-2).
  * A task that moves it on purpose updates it here and records old → new in CHANGELOG.md and its commit body.
  * VAC-1: 9cf6c6d2 -> 4d969cc9, because every generated bin now carries `binType` and `capacityBags`.
- * VAC-2: 4d969cc9 -> c89ce44d: new seat, armrest and bin pieces and their rules, bin modules and types, and the fictional MEL.
+ * VAC-2: 4d969cc9 -> b5b0a788: new seat, armrest and bin pieces and their rules, bin modules and types, and the fictional MEL.
  */
-export const EXPECTED_CONTENT_HASH = "c89ce44def020b4042cf2ae5f43056eb5e2e0d87d36ce4a9f4b4b7e5d6843003";
+export const EXPECTED_CONTENT_HASH = "b5b0a78894e26890e9e956b17f1c04a4e6763740b81795f189b0d242a8f40a99";
 
 let fullBuild: StagedBuild | null = null;
 let fixtureBuild: StagedBuild | null = null;

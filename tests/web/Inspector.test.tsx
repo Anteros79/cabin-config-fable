@@ -238,7 +238,8 @@ describe("Inspector unrecorded changes", () => {
     const { card } = await openPanel(() => "reject");
     fireEvent.click(within(card).getByRole("button", { name: "Remove" }));
     await within(card).findByText(/may or may not have been saved/);
-    expect(add.mock.calls.filter(([type]) => type === "beforeunload")).toHaveLength(1);
+    // the guard is added by a passive effect, which may run after the message is on screen when the run is loaded
+    await waitFor(() => expect(add.mock.calls.filter(([type]) => type === "beforeunload")).toHaveLength(1));
     add.mockRestore();
     await act(async () => {});
   });

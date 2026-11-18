@@ -176,6 +176,39 @@ describe("referential findings", () => {
     ]);
   });
 
+  it("DUPLICATE_KEY: an MEL id used twice, and two MEL entries for the same component, condition and scope", () => {
+    const findings = validateRelease(
+      fixtureContent((c) => {
+        const base = must(
+          c.mel.find((e) => e.id === "FX-MEL-TRAY-BROKEN"),
+          "the base tray entry",
+        );
+        const override = must(
+          c.mel.find((e) => e.id === "FX-MEL-TRAY-BROKEN-V09"),
+          "the V09 tray override",
+        );
+        c.mel.push({ ...structuredClone(base), id: "FX-MEL-TRAY-BROKEN" });
+        c.mel.push({ ...structuredClone(base), id: "X-MEL-TRAY-BROKEN-AGAIN" });
+        c.mel.push({ ...structuredClone(override), id: "X-MEL-TRAY-BROKEN-V09-AGAIN" });
+        // a different scope is not a duplicate
+        c.mel.push({ ...structuredClone(override), id: "X-MEL-TRAY-BROKEN-V10", constraint: { variant: ["V10"] } });
+      }),
+    );
+    expect(withCode(findings, "DUPLICATE_KEY").map((f) => [f.severity, f.message, f.refs])).toEqual([
+      ["error", 'Duplicate MEL entry key "FX-MEL-TRAY-BROKEN".', ["FX-MEL-TRAY-BROKEN"]],
+      [
+        "error",
+        "MEL entries FX-MEL-TRAY-BROKEN and X-MEL-TRAY-BROKEN-AGAIN both classify TRAY BROKEN for every configuration.",
+        ["FX-MEL-TRAY-BROKEN", "X-MEL-TRAY-BROKEN-AGAIN"],
+      ],
+      [
+        "error",
+        "MEL entries FX-MEL-TRAY-BROKEN-V09 and X-MEL-TRAY-BROKEN-V09-AGAIN both classify TRAY BROKEN for variant V09.",
+        ["FX-MEL-TRAY-BROKEN-V09", "X-MEL-TRAY-BROKEN-V09-AGAIN"],
+      ],
+    ]);
+  });
+
   it("ORPHAN: an MEL entry for an unknown component or citing an unknown source", () => {
     const findings = validateRelease(
       fixtureContent((c) => {
