@@ -286,7 +286,14 @@ export function ReportView({
       {observations && (
         <>
           <OutcomeList id="r-deferred" title="Deferred" items={observations.deferred.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
-          <OutcomeList id="r-mustfix" title="Must be fixed" items={observations.mustFix.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+          <OutcomeList
+            id="r-mustfix"
+            title="Must be fixed"
+            items={observations.mustFix.map((o) => (
+              // a carried problem that is must-fix now is listed here, not under "Carried over in" (R43)
+              <ProblemLine key={o.id} o={o} checkDate={checkDate} extra={o.openedInVisitId !== report.visit.id ? "carried over from an earlier check" : ""} />
+            ))}
+          />
           <OutcomeList id="r-noted" title="Noted" items={observations.noted.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
           <OutcomeList
             id="r-closed"

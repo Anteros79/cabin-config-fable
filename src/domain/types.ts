@@ -760,9 +760,14 @@ export interface ReportSummary {
   noted: number;
   deferredCosmetic: number;
   deferredMel: number;
+  /** open problems that must be fixed before flight now: this visit's and carried ones (R43) */
   mustFix: number;
+  /** carried problems that are not must-fix now; a carried must-fix problem counts in `mustFix` instead */
   carriedIn: number;
-  /** open problems that need action: this visit's deferrals and must-fix problems, plus those carried in */
+  /**
+   * open problems that need action, each once: this visit's deferrals and must-fix problems, plus those carried in.
+   * Always deferredCosmetic + deferredMel + mustFix + carriedIn.
+   */
   stillOpen: number;
   releasable: boolean;
   aircraftHeld: boolean;
@@ -779,6 +784,11 @@ export interface ReportTimelineEntry {
   after: unknown | null;
 }
 
+/**
+ * Each open problem is in exactly one of `deferred`, `mustFix`, `noted` and `carriedIn`; `stillOpen` repeats the action
+ * ones (all but `noted`). `mustFix` holds this visit's must-fix problems first, then carried ones that are must-fix now
+ * (their `openedInVisitId` is another visit's). Reports stored before R43 list carried must-fix problems in `carriedIn`.
+ */
 export interface ReportObservations {
   deferred: Observation[];
   mustFix: Observation[];

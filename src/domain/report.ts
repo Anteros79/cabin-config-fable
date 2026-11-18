@@ -138,19 +138,22 @@ function buildObservationSection(
   /** What an open problem of this visit shows on its piece. A MUST_FIX outcome is always mustFixNow, so only DEFERRED and NOTED remain after it. */
   const pieceStatusOf = (o: Observation): LocationStatus => (mustFixNow(o) ? "mustFix" : o.outcome === "DEFERRED" ? "deferred" : "noted");
 
-  // Each open problem is in exactly one list: must-fix now (marked so, or an MEL deferral past due), deferred, or noted.
-  const mustFix = ownOpen.filter(mustFixNow);
+  // Each open problem is in exactly one list: must-fix now (marked so, or an MEL deferral past due, this visit's or
+  // carried in: R43), deferred, noted, or carried in (the carried ones that are not must-fix now). "Still open" is the
+  // union of the action lists: deferred + must-fix + carried in.
+  const mustFix = [...ownOpen.filter(mustFixNow), ...carried.map((c) => c.observation).filter(mustFixNow)];
   const deferred = ownOpen.filter((o) => o.outcome === "DEFERRED" && !mustFixNow(o));
   const noted = ownOpen.filter((o) => o.outcome === "NOTED");
+  const carriedIn = carried.filter((c) => !mustFixNow(c.observation));
   const needsAction = [...ownOpen.filter((o) => o.outcome !== "NOTED"), ...carried.map((c) => c.observation)];
-  const observations: ReportObservations = { deferred, mustFix, noted, closed, carriedIn: carried, stillOpen: needsAction };
+  const observations: ReportObservations = { deferred, mustFix, noted, closed, carriedIn, stillOpen: needsAction };
   const summary: ReportSummary = {
     replaced: visit.records.length,
     noted: noted.length,
     deferredCosmetic: deferred.filter((o) => classOf(o).class === "COSMETIC").length,
     deferredMel: deferred.filter((o) => classOf(o).class !== "COSMETIC").length,
     mustFix: mustFix.length,
-    carriedIn: carried.length,
+    carriedIn: carriedIn.length,
     stillOpen: needsAction.length,
     releasable: !needsAction.some(mustFixNow),
     aircraftHeld: visit.aircraftHeld,

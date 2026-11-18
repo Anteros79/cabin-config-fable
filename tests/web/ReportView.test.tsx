@@ -213,6 +213,35 @@ describe("ReportView after-action sections", () => {
     expect(shown3d.states?.get("SEAT:3A")?.components).toMatchObject({ CUSHION: "recorded", HEADREST: "noted" });
   });
 
+  it("a held aircraft's next report lists a carried overdue MEL deferral under Must be fixed and counts it (R43)", async () => {
+    const overdue = obs({
+      id: "OD",
+      outcome: "DEFERRED",
+      openedInVisitId: "visit-0",
+      locationId: "SEAT:5A",
+      locationLabel: "Seat 5A",
+      componentId: "TRAY",
+      componentName: "Tray table",
+      condition: "BROKEN",
+      melClass: MEL_C,
+      dueDate: "2026-11-10",
+    });
+    const held = outcomeVisit({
+      aircraftHeld: true,
+      observations: [],
+      carried: [{ observation: overdue, placement: "SAME", locationId: "SEAT:5A", overdue: true, openedCheckDate: "2026-11-01" }],
+    });
+    stubFetch(reportAnswer(outcomeEnvelope(held), held));
+    render(<ReportView visitId={held.id} />);
+    await screen.findByText("Not releasable: aircraft held");
+    const facts = within(screen.getByRole("heading", { name: "Summary" }).closest("section") as HTMLElement);
+    expect(facts.getByText("Must be fixed").nextElementSibling).toHaveTextContent("1");
+    expect(facts.getByText("Carried over in").nextElementSibling).toHaveTextContent("0");
+    const list = (name: string) => within(screen.getByRole("heading", { name, level: 3 }).closest("section") as HTMLElement);
+    expect(list("Must be fixed").getByRole("listitem")).toHaveTextContent(/Seat 5A · Tray table.*carried over from an earlier check/);
+    expect(list("Carried over in").getByText("None.")).toBeInTheDocument();
+  });
+
   it("Not releasable shows when releasable is false", async () => {
     const held = outcomeVisit({ aircraftHeld: true });
     stubFetch(reportAnswer(outcomeEnvelope(held), held));

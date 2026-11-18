@@ -486,6 +486,18 @@ describe("PDF after-action sections (report schema 3)", () => {
     for (const code of ["WONT_LATCH", "NO_GO", "MUST_FIX", "NEXT_CHECK", "NO_STOCK"]) expect(text).not.toContain(code);
   });
 
+  it("a carried problem under Must be fixed is marked as carried over (R43)", async () => {
+    const app = makeApp();
+    const { report, layout } = await afterAction(app);
+    const own = report.observations?.mustFix[0];
+    if (!report.observations || !own) throw new Error("expected a must-fix problem");
+    const carried = { ...report, observations: { ...report.observations, mustFix: [{ ...own, openedInVisitId: "an-earlier-visit" }] } };
+    const flat = (await pdfText(await renderReportPdf(carried, [], null, layout))).text.replace(/\s+/g, "");
+    expect(flat).toContain("Carriedoverfromanearliercheck");
+    const plain = (await pdfText(await renderReportPdf(report, [], null, layout))).text.replace(/\s+/g, "");
+    expect(plain).not.toContain("Carriedoverfromanearliercheck");
+  });
+
   it("release wording (R38): a must-fix open and not held says the items must be fixed; a releasable visit has no line", async () => {
     const app = makeApp();
     // a draft preview with a must-fix problem open: not releasable, and nobody has held the aircraft

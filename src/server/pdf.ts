@@ -519,6 +519,7 @@ export function renderReportPdf(
         printNotes(`Notes on ${title.toLowerCase()}`);
       };
       const ob = report.observations;
+      const CARRIED_MUST_FIX = "Carried over from an earlier check";
       const carriedExtra = (c: CarriedObservation) =>
         `Opened in an earlier visit${c.placement === "ORPHANED" ? "; its position is not in this layout" : c.placement === "MAPPED" ? "; mapped to this layout" : ""}`;
       list(
@@ -529,7 +530,8 @@ export function renderReportPdf(
       list(
         "Must be fixed",
         "F",
-        ob.mustFix.map((o) => ({ o })),
+        // a carried problem that is must-fix now is listed here, not under "Carried over in" (R43)
+        ob.mustFix.map((o) => ({ o, ...(o.openedInVisitId !== report.visit.id ? { extra: CARRIED_MUST_FIX } : {}) })),
       );
       list(
         "Noted",

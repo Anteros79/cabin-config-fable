@@ -462,11 +462,38 @@ describe("report v3", () => {
       openedInVisitId: "earlier",
     });
     const report = buildReport(v3Visit({ aircraftHeld: true, carried: [carriedOf(overdue, true)] }), "FINAL", AT);
-    expect(report.summary).toMatchObject({ releasable: false, aircraftHeld: true, carriedIn: 1, stillOpen: 1 });
+    // R43: a carried problem that is must-fix now counts once, under "Must be fixed", not under "Carried over in"
+    expect(report.summary).toMatchObject({ releasable: false, aircraftHeld: true, mustFix: 1, carriedIn: 0, stillOpen: 1 });
+    expect(report.observations?.mustFix.map((o) => o.id)).toEqual(["OD"]);
+    expect(report.observations?.carriedIn).toEqual([]);
     // due today is still allowed
     const dueToday = obs({ id: "DT", outcome: "DEFERRED", melClass: MEL_C, dueDate: "2026-11-12", openedInVisitId: "earlier", blocksSeat: false });
     expect(buildReport(v3Visit({ carried: [carriedOf(dueToday)] }), "FINAL", AT).summary?.releasable).toBe(true);
     expect(buildReport(v3Visit({}), "FINAL", AT).summary).toMatchObject({ releasable: true, stillOpen: 0 });
+  });
+
+  it("each open problem is in one action list, and stillOpen is their union (R43)", () => {
+    const overdue = obs({
+      id: "OD",
+      outcome: "DEFERRED",
+      componentId: "TRAY",
+      condition: "BROKEN",
+      melClass: MEL_C,
+      dueDate: "2026-11-10",
+      openedInVisitId: "earlier",
+      blocksSeat: false,
+    });
+    const later = obs({ id: "C2", outcome: "DEFERRED", locationId: "SEAT:5A", dueDate: null, openedInVisitId: "earlier" });
+    const own = obs({ id: "MF", outcome: "MUST_FIX", locationId: "SEAT:4A", condition: "BROKEN" });
+    const { summary, observations } = buildReport(v3Visit({ observations: [own], carried: [carriedOf(overdue, true), carriedOf(later)] }), "FINAL", AT);
+    if (!summary || !observations) throw new Error("v3 sections missing");
+    expect(observations.mustFix.map((o) => o.id)).toEqual(["MF", "OD"]);
+    expect(observations.carriedIn.map((c) => c.observation.id)).toEqual(["C2"]);
+    const lists = [...observations.deferred, ...observations.mustFix, ...observations.carriedIn.map((c) => c.observation)].map((o) => o.id);
+    expect(new Set(lists).size).toBe(lists.length);
+    expect(observations.stillOpen.map((o) => o.id).sort()).toEqual([...lists].sort());
+    expect(summary.stillOpen).toBe(summary.deferredCosmetic + summary.deferredMel + summary.mustFix + summary.carriedIn);
+    expect(summary).toMatchObject({ mustFix: 2, carriedIn: 1, stillOpen: 3 });
   });
 
   it("an overdue open MEL deferral counts as must-fix, not as deferred", () => {
