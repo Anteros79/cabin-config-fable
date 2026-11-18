@@ -32,7 +32,7 @@ interface Entry<R> {
 
 const IDLE: SaveStatus = { phase: "idle" };
 /** Answers that mean someone else changed the visit first: the caller reloads and shows the current state. */
-const CONFLICT_CODES = new Set(["STALE_RECORD", "STALE_VISIT", "VISIT_LOCKED", "RECORD_NOT_FOUND"]);
+const CONFLICT_CODES = new Set(["STALE_RECORD", "STALE_VISIT", "VISIT_LOCKED", "RECORD_NOT_FOUND", "STALE_OBSERVATION", "OBSERVATION_NOT_FOUND"]);
 export const UNKNOWN_OUTCOME = "Outcome unknown: the server did not answer, so this may or may not have been saved. Retrying is safe and cannot duplicate it.";
 
 /** A retry of a key whose first attempt may be stored was refused: the refusal says nothing about that first attempt. */
@@ -40,6 +40,9 @@ export const retryRefused = (message: string): string =>
   `Outcome unknown: the first attempt may already be stored, and the server refused the retry (${message}). Retrying is safe and cannot duplicate it.`;
 
 export const recordTarget = (locationId: string, componentId: string): string => `record:${locationId}|${componentId}`;
+/** A new problem on a piece, or (with `id`) a change to or close of one problem. */
+export const observationTarget = (p: { id: string } | { locationId: string; componentId: string }): string =>
+  "id" in p ? `observation:${p.id}` : `observation:${p.locationId}:${p.componentId}`;
 
 function outcomeOf(error: unknown, mayBeStored: boolean): SaveStatus {
   if (error instanceof ApiError && error.kind === "http") {

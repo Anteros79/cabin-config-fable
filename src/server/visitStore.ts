@@ -805,8 +805,9 @@ export class VisitStore {
   /**
    * The class, due date and seat block of `input` written through `visit`, against the visit's frozen MEL.
    * The seat is blocked by the tail's other open deferrals. An MEL item whose first deferral is past due is
-   * NO_GO, so it can no longer be deferred. Throws OUTCOME_NOT_ALLOWED when the outcome does not fit the class,
-   * or when an update would rank below the observation's current class.
+   * NO_GO, so it can no longer be deferred. An update keeps at least the observation's current class (R22), so
+   * rewording an MEL deferral as a cosmetic condition keeps the MEL class. Throws OUTCOME_NOT_ALLOWED when the
+   * outcome does not fit the class.
    */
   private classifyObservation(
     visit: VisitState,
@@ -827,13 +828,15 @@ export class VisitStore {
     // The class an open deferral of it would have on this date (NO_GO once its first due date has passed),
     // whatever outcome this write gives it. effectiveClass reads only these four fields.
     const asDeferral = { status: "OPEN", outcome: "DEFERRED", melClass: base, dueDate: firstDue } as Observation;
-    const melClass = effectiveClass(asDeferral, visit.checkDate);
-    if (existing && CLASS_RANK[melClass.class] < CLASS_RANK[this.currentClass(existing, snapshot, visit.tail, visit.checkDate).class]) {
-      throw new DomainError("OUTCOME_NOT_ALLOWED", "This problem can't be made less serious", 422, { allowed: [], melClass });
-    }
+    const asWritten = effectiveClass(asDeferral, visit.checkDate);
+    // R22: an update never ranks below the problem's current class; the outcome is then checked against that floor.
+    const floor = existing ? this.currentClass(existing, snapshot, visit.tail, visit.checkDate) : null;
+    const floored = floor !== null && CLASS_RANK[asWritten.class] < CLASS_RANK[floor.class];
+    const melClass = floored ? floor : asWritten;
     const allowed = allowedOutcomes(melClass);
     if (!allowed.includes(input.outcome)) {
-      throw new DomainError("OUTCOME_NOT_ALLOWED", `This problem cannot be marked ${input.outcome} under its MEL class.`, 422, { allowed, melClass });
+      const message = floored ? "This problem can't be made less serious" : `This problem cannot be marked ${input.outcome} under its MEL class.`;
+      throw new DomainError("OUTCOME_NOT_ALLOWED", message, 422, { allowed, melClass });
     }
     const dueDate = firstDue ?? (input.outcome === "DEFERRED" ? dueDateFor(melClass, visit.checkDate) : null);
     return { melClass, dueDate, blocksSeat: melClass.class === "MEL" && melClass.blocksSeat === true };

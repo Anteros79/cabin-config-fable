@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CabinLocation, MelClass, Observation, Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
 import { Inspector } from "../../src/web/components/Inspector.tsx";
+import { recordTarget, type SaveStatus, UNKNOWN_OUTCOME } from "../../src/web/hooks/useMutations.ts";
 import type { Workspace } from "../../src/web/model.ts";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
 import { CUSHION_3A, fixtureRelease, KIT_PRIMARY, snapshotFor, visitWith } from "../helpers.ts";
@@ -430,7 +432,7 @@ const pieceWorkspace = (over: Partial<Workspace> = {}): Workspace => ({
   variantId: snap.context.variant.id,
   ...over,
 });
-function renderPiece(over: Partial<Workspace> = {}) {
+function renderPiece(over: Partial<Workspace> = {}, props: Partial<ComponentProps<typeof Inspector>> = {}) {
   const calls = { onObserve: vi.fn(), onUpdateObservation: vi.fn(), onCloseObservation: vi.fn() };
   const view = render(
     <Inspector
@@ -444,6 +446,7 @@ function renderPiece(over: Partial<Workspace> = {}) {
       onSelect={vi.fn()}
       onDirtyChange={vi.fn()}
       {...calls}
+      {...props}
     />,
   );
   return { ...calls, ...view };
@@ -619,5 +622,62 @@ describe("Inspector piece panel", () => {
       outcome: "MUST_FIX",
       raisedTo: "MEL",
     });
+  });
+
+  /** The cushion card's last dirty report (every card reports its own target). */
+  const dirtyNow = (spy: ReturnType<typeof vi.fn>) => spy.mock.calls.filter(([t]) => t === recordTarget("SEAT:3A", "CUSHION")).at(-1)?.[1];
+
+  it("a disabled Mark replaced says why", () => {
+    renderPiece({ observations: [problem("HEADREST")] });
+    const card = pieceCard(/^Headrest cover/);
+    expect(within(card).getByRole("button", { name: "Mark replaced" })).toHaveAccessibleDescription(/Record the replacement first\./);
+  });
+
+  it("the record save status and Retry safely stay visible while the problem form is open", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    const unknown: SaveStatus = { phase: "unknown", message: UNKNOWN_OUTCOME };
+    const target = recordTarget("SEAT:3A", "CUSHION");
+    renderPiece({}, { statusOf: (t) => (t === target ? unknown : { phase: "idle" }), onRetry });
+    const card = pieceCard(/^Seat cushion cover/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    expect(within(card).getByRole("group", { name: "Note a problem" })).toBeInTheDocument();
+    expect(within(card).getByText(UNKNOWN_OUTCOME)).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "Retry safely" }));
+    expect(onRetry).toHaveBeenCalledWith(target);
+  });
+
+  it("a failed problem save keeps the form and its input, and counts as unsaved input", async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    const failed: SaveStatus = { phase: "failed", message: "The store refused it.", retryable: false };
+    const onObserve = vi.fn(async () => false);
+    renderPiece({}, { onObserve, onDirtyChange, statusOf: (t) => (t === "observation:SEAT:3A:CUSHION" ? failed : { phase: "idle" }) });
+    const card = pieceCard(/^Seat cushion cover/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Stained" }));
+    await user.click(within(card).getByRole("radio", { name: "Note only" }));
+    await user.type(within(card).getByLabelText(/^Note about the problem/), "coffee");
+    expect(dirtyNow(onDirtyChange)).toBe(true);
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    expect(onObserve).toHaveBeenCalledTimes(1);
+    expect(within(card).getByLabelText(/^Note about the problem/)).toHaveValue("coffee");
+    expect(within(card).getByRole("radio", { name: "Stained" })).toBeChecked();
+    expect(within(card).getByText("Not saved: The store refused it.")).toBeInTheDocument();
+    expect(dirtyNow(onDirtyChange)).toBe(true);
+  });
+
+  it("the problem form closes once its save succeeds", async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    renderPiece({}, { onObserve: vi.fn(async () => true), onDirtyChange });
+    const card = pieceCard(/^Seat cushion cover/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Stained" }));
+    await user.click(within(card).getByRole("radio", { name: "Note only" }));
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    await waitFor(() => expect(within(card).queryByRole("group", { name: "Note a problem" })).toBeNull());
+    // the closed form's unsaved state is withdrawn in the render after it unmounts
+    await waitFor(() => expect(dirtyNow(onDirtyChange)).toBe(false));
   });
 });

@@ -1,4 +1,4 @@
-import { classify, effectiveClass, seatIsBlocked } from "../domain/observations.ts";
+import { classify, effectiveClass, isOverdue, seatIsBlocked } from "../domain/observations.ts";
 import type {
   CabinLocation,
   CarriedObservation,
@@ -128,13 +128,31 @@ function currentClass(ws: Workspace, open: Observation[], o: Observation): MelCl
   return effectiveClass({ ...o, melClass }, ws.checkDate);
 }
 
+/** A problem that must be fixed before flight: marked so, or no-go now. A noted problem never is. Mirrors the server's completion gate. */
+const isMustFix = (ws: Workspace, open: Observation[], o: Observation): boolean =>
+  o.outcome !== "NOTED" && (o.outcome === "MUST_FIX" || currentClass(ws, open, o).class === "NO_GO");
+
+/**
+ * Every open problem on the tail that must be fixed before flight: this visit's and carried ones, including those no
+ * longer at their position (`locationId` null) and MEL deferrals past due. Completing with any needs "Aircraft held".
+ */
+export function openMustFix(ws: Workspace): { observation: Observation; locationId: string | null; overdue: boolean }[] {
+  const { placed, open } = openPlaced(ws);
+  const orphaned = ws.carried.filter((c) => c.locationId === null && !placed.some((p) => p.observation.id === c.observation.id));
+  return [
+    ...placed.map((p) => ({ observation: p.observation, locationId: p.locationId })),
+    ...orphaned.map((c) => ({ observation: c.observation, locationId: null })),
+  ]
+    .filter((p) => isMustFix(ws, open, p.observation))
+    .map((p) => ({ ...p, overdue: p.observation.outcome === "DEFERRED" && isOverdue(p.observation.dueDate, ws.checkDate) }));
+}
+
 /** The status a piece's open problems give it, or null when it has none. */
 function problemStatus(ws: Workspace, problems: OpenProblems, locationId: string, componentId: string): LocationStatus | null {
   const { placed, open } = problems;
   const here = placed.filter((p) => p.locationId === locationId && p.observation.componentId === componentId);
   if (here.length === 0) return null;
-  if (here.some((p) => p.observation.outcome !== "NOTED" && (p.observation.outcome === "MUST_FIX" || currentClass(ws, open, p.observation).class === "NO_GO")))
-    return "mustFix";
+  if (here.some((p) => isMustFix(ws, open, p.observation))) return "mustFix";
   if (here.some((p) => p.observation.outcome === "DEFERRED" && !p.carried)) return "deferred";
   if (here.some((p) => p.observation.outcome === "DEFERRED")) return "carried";
   return here.some((p) => p.observation.outcome === "NOTED") ? "noted" : null;

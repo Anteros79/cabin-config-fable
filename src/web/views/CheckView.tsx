@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
-import type { RecordInput, VisitRecord, VisualProfile } from "../../domain/types.ts";
+import type { Observation, ObservationInput, RecordInput, VisitRecord, VisualProfile } from "../../domain/types.ts";
 import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
 import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { Inspector } from "../components/Inspector.tsx";
@@ -8,10 +8,19 @@ import { Skeleton } from "../components/Skeleton.tsx";
 import { loadSceneModule } from "../components/sceneModule.ts";
 import { type ToastOptions, useToast } from "../components/Toasts.tsx";
 import { Viewer } from "../components/Viewer.tsx";
-import { formatDate, formatDateTime } from "../format.ts";
-import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass, UNKNOWN_OUTCOME, useMutations } from "../hooks/useMutations.ts";
+import { conditionLabel, formatDate, formatDateTime, outcomeLabel } from "../format.ts";
+import {
+  canRetry,
+  describeSaveStatus,
+  observationTarget,
+  recordTarget,
+  type SaveStatus,
+  saveStatusClass,
+  UNKNOWN_OUTCOME,
+  useMutations,
+} from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
-import type { Workspace } from "../model.ts";
+import { openMustFix, type Workspace } from "../model.ts";
 import { formatRoute } from "../routes.ts";
 import { forgetSuggestionKeys, submitOnEnter } from "../submitOnEnter.ts";
 
@@ -107,6 +116,9 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
   const [selection, setSelection] = useState<string | null>(null);
   const [focusComponent, setFocusComponent] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  // Completion: the "Aircraft held" answer, and the problems the server still named as must-fix (a race with another tab).
+  const [held, setHeld] = useState(false);
+  const [serverMustFix, setServerMustFix] = useState<string[] | null>(null);
   const [lastDraft, setLastDraft] = useState<string | null>(recall);
   // A lookup the route cannot hold (an empty tail, which the server reports as invalid input), tied to the route it was made on.
   const [unrouted, setUnrouted] = useState<{ tail: string; date: string; route: string } | null>(null);
@@ -408,6 +420,32 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     // Undo is offered only for a removal the server confirmed; an unknown outcome keeps its own "Retry safely".
     if (removed) toast.show(`Removed ${recordName(r)}.`, { action: { label: "Undo", run: () => void undoRemove(id, r) } });
   };
+  /** A problem write: through the write queue, so an unknown outcome is retried with the same key. True once saved. */
+  const writeObservation = async (target: string, name: string, send: (id: string, key: string) => Promise<WriteResult>, request: unknown) => {
+    if (!visit) return false;
+    const id = visit.id;
+    const saved = await writes.run(target, (key) => send(id, key), canonicalJson(request));
+    reportLocked(target, name);
+    reloadOnConflict(target);
+    return saved !== undefined;
+  };
+  const observe = (input: ObservationInput) =>
+    writeObservation(observationTarget(input), nameOf(input.locationId, input.componentId), (id, key) => api.addObservation(id, input, key), {
+      observation: input,
+    });
+  const updateObservation = (o: Observation, input: ObservationInput) =>
+    writeObservation(observationTarget(o), `${o.locationLabel} / ${o.componentName}`, (id, key) => api.updateObservation(id, o.id, input, o.version, key), {
+      observation: input,
+      expectedVersion: o.version,
+    });
+  const closeObservation = (o: Observation, closedAs: "REPLACED" | "FIXED") =>
+    void writeObservation(
+      observationTarget(o),
+      `${o.locationLabel} / ${o.componentName}`,
+      (id, key) => api.closeObservation(id, o.id, closedAs, o.version, key),
+      { closedAs, expectedVersion: o.version },
+    );
+
   /**
    * Puts a removed record back: the same record sent again through the write queue, as a new record (version 0), so it
    * gets its own idempotency key. Nothing is sent while that record has a save in flight or an outcome that is not known.
@@ -447,18 +485,48 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     const res = await writes.retry(target);
     if (target === "complete" && res) finishCompletion(res);
     reloadOnConflict(target);
+    return res !== undefined;
   };
+  const mustFix = workspace?.mode === "visit" ? openMustFix(workspace) : [];
+  const needsHold = mustFix.length > 0 || serverMustFix !== null;
   const complete = async () => {
-    if (!visit) return;
+    if (!visit || (needsHold && !held)) return;
     const id = visit.id;
     const expectedVisitVersion = visit.version;
-    const res = await writes.run("complete", (key) => api.complete(id, expectedVisitVersion, key), canonicalJson({ confirm: true, expectedVisitVersion }));
+    // sent only as true, and part of the request, so a retry of an unknown outcome repeats exactly this request
+    const aircraftHeld = needsHold ? true : undefined;
+    let mustFixOpen = false;
+    const res = await writes.run(
+      "complete",
+      async (key) => {
+        try {
+          return await api.complete(id, expectedVisitVersion, key, aircraftHeld);
+        } catch (e) {
+          if (e instanceof ApiError && e.code === "MUST_FIX_OPEN") {
+            mustFixOpen = true;
+            setServerMustFix((e.details as { observationIds?: string[] } | null)?.observationIds ?? []);
+          }
+          throw e;
+        }
+      },
+      canonicalJson({ confirm: true, expectedVisitVersion, ...(aircraftHeld ? { aircraftHeld } : {}) }),
+    );
     if (res) finishCompletion(res);
+    else if (mustFixOpen) reloadVisit();
     else {
       setConfirming(false);
       reloadOnConflict("complete");
     }
   };
+  const unlisted = (serverMustFix ?? []).filter((id) => !mustFix.some((m) => m.observation.id === id)).length;
+  /** "Seat 3A / Seat belt": a problem named where it sits on this layout, or where it was when it no longer fits. */
+  const problemName = (o: Observation, locationId: string | null) =>
+    locationId ? nameOf(locationId, o.componentId) : `${o.locationLabel} / ${o.componentName}`;
+  /** Condition, outcome and fix-by date (or since when it is overdue), in words. */
+  const problemFacts = (o: Observation, overdue: boolean) =>
+    [conditionLabel(o.condition), outcomeLabel(o.outcome), o.dueDate ? `${overdue ? "Overdue since" : "Fix by"} ${formatDate(o.dueDate)}` : ""]
+      .filter((t) => t !== "")
+      .join(" · ");
 
   const location = workspace?.layout.locations.find((l) => l.id === selection) ?? null;
   const info = lookup ? (STATE_TEXT[lookup.state] ?? { title: "The lookup could not be completed", tone: "bad" as const }) : null;
@@ -695,19 +763,79 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                 onRemove={remove}
                 onRetry={retry}
                 onDirtyChange={onDirtyChange}
-                onObserve={() => undefined}
-                onUpdateObservation={() => undefined}
-                onCloseObservation={() => undefined}
+                onObserve={observe}
+                onUpdateObservation={updateObservation}
+                onCloseObservation={closeObservation}
                 resetKey={resetKey}
                 onSelect={(id) => select(id, null)}
               />
+              {visit && visitId && visit.carried.length > 0 && (
+                <section className="worklist" aria-labelledby="carried-h">
+                  <h3 id="carried-h">
+                    Carried over <span className="count">({visit.carried.length})</span>
+                  </h3>
+                  {[false, true].map((orphaned) => {
+                    const items = visit.carried.filter((c) => (c.locationId === null) === orphaned);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={String(orphaned)}>
+                        {orphaned && <h4>No longer at this position</h4>}
+                        <ul className="records">
+                          {items.map(({ observation: o, locationId, overdue }) => {
+                            const name = problemName(o, locationId);
+                            const saving = writes.statusOf(observationTarget(o));
+                            return (
+                              <li key={o.id}>
+                                <div>
+                                  <strong>{name}</strong>
+                                  <br />
+                                  <span className={overdue ? "must-fix" : "fine"}>{problemFacts(o, overdue)}</span>
+                                  {/* a placed item shows its saves on its piece; one no longer at its position shows them here */}
+                                  {!locationId && saving.phase !== "idle" && (
+                                    <p role="status" className={`save-state ${saveStatusClass(saving)}`}>
+                                      {describeSaveStatus(saving)}{" "}
+                                      {canRetry(saving) && (
+                                        <button type="button" onClick={() => void retry(observationTarget(o))}>
+                                          Retry safely
+                                        </button>
+                                      )}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="row-actions">
+                                  {locationId ? (
+                                    <button type="button" onClick={() => select(locationId, o.componentId)} aria-label={`Show ${name.replace(" / ", " ")}`}>
+                                      Show
+                                    </button>
+                                  ) : (
+                                    visit.status === "DRAFT" && (
+                                      <button
+                                        type="button"
+                                        disabled={writes.isBusy(observationTarget(o))}
+                                        onClick={() => closeObservation(o, "FIXED")}
+                                        aria-label={`Mark fixed ${name.replace(" / ", " ")}`}
+                                      >
+                                        Mark fixed
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </section>
+              )}
               {visit && visitId && (
                 <section className="worklist" aria-labelledby="work-h">
                   <h3 id="work-h">
                     Recorded work <span className="count">({visit.records.length})</span>
                   </h3>
                   {visit.records.length === 0 ? (
-                    <p>Nothing recorded yet. A visit can only be completed with at least one replacement.</p>
+                    <p>Nothing recorded yet. A visit can only be completed with at least one replacement or one problem written down.</p>
                   ) : (
                     <ul className="records">
                       {visit.records.map((r) => (
@@ -741,16 +869,27 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                     </ul>
                   )}
                   {visit.status === "DRAFT" && (
-                    <button type="button" className="primary" disabled={visit.records.length === 0} onClick={() => afterDiscard(() => setConfirming(true))}>
+                    <button
+                      type="button"
+                      className="primary"
+                      disabled={visit.records.length === 0 && !visit.events.some((e) => e.type.startsWith("OBSERVATION_"))}
+                      onClick={() =>
+                        afterDiscard(() => {
+                          setHeld(false);
+                          setServerMustFix(null);
+                          setConfirming(true);
+                        })
+                      }
+                    >
                       Complete visit…
                     </button>
                   )}
                   <ConfirmDialog
                     open={confirming && visit.status === "DRAFT"}
                     title="Complete and lock this visit?"
-                    confirmLabel="Confirm completion"
+                    confirmLabel={needsHold ? "Complete check" : "Confirm completion"}
                     cancelLabel="Cancel"
-                    busy={writes.anyBusy || writes.anyUnknown}
+                    busy={writes.anyBusy || writes.anyUnknown || (needsHold && !held)}
                     onConfirm={() => void complete()}
                     onCancel={() => setConfirming(false)}
                   >
@@ -759,6 +898,23 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                       {formatDate(visit.checkDate)}. Completed visits cannot be edited.
                       {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved components will be listed as gaps.` : ""}
                     </p>
+                    {needsHold && (
+                      <>
+                        <p className="must-fix">Must be fixed before flight:</p>
+                        <ul>
+                          {mustFix.map(({ observation: o, locationId, overdue }) => (
+                            <li key={o.id}>
+                              <strong>{problemName(o, locationId)}</strong> · {problemFacts(o, overdue)}
+                            </li>
+                          ))}
+                          {unlisted > 0 && <li>{unlisted === 1 ? "1 more problem" : `${unlisted} more problems`} on this aircraft, being reloaded.</li>}
+                        </ul>
+                        <label className="radio">
+                          <input type="checkbox" required checked={held} onChange={(e) => setHeld(e.target.checked)} />
+                          Aircraft held, reported to maintenance
+                        </label>
+                      </>
+                    )}
                     {/* the expected visit version is taken at the click: a queued or unresolved save would make it stale */}
                     {writes.anyBusy && <p className="fine">Waiting for saves in progress to finish before completing.</p>}
                     {!writes.anyBusy && writes.anyUnknown && (

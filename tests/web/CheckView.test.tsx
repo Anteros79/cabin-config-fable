@@ -1,10 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lookup } from "../../src/domain/resolve.ts";
-import type { Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
+import type { Observation, Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
 import { ToastProvider } from "../../src/web/components/Toasts.tsx";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
-import { CUSHION_3A, fixtureRelease, KIT_PRIMARY, snapshotFor, visitWith } from "../helpers.ts";
+import { at, CUSHION_3A, fixtureRelease, KIT_PRIMARY, snapshotFor, visitWith } from "../helpers.ts";
 import { type Answer, deferred, stubFetch } from "./fetchStub.ts";
 
 // The 3D view is not under test here; a stand-in lets a test select a location the way a click in the cabin would.
@@ -511,5 +511,225 @@ describe("CheckView edit that loses a race with completion (I2)", () => {
     act(() => vi.advanceTimersByTime(60_000));
     expect(screen.getByText(notSaved(cushion))).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+});
+
+describe("CheckView problems, carried over and completion", () => {
+  const obs = (id: string, over: Partial<Observation> = {}): Observation => ({
+    id,
+    tail: "N100TL",
+    status: "OPEN",
+    version: 1,
+    locationId: "SEAT:3A",
+    componentId: "SEATBELT",
+    condition: "BROKEN",
+    note: "",
+    outcome: "DEFERRED",
+    deferUntil: "NEXT_CHECK",
+    reason: "NO_STOCK",
+    melClass: { class: "MEL", item: "FX-25-21-01", category: "C", intervalDays: 10, conditions: "Seat blocked and placarded INOP", blocksSeat: true },
+    dueDate: "2026-11-22",
+    blocksSeat: true,
+    openedInVisitId: "visit-0",
+    closedInVisitId: null,
+    closedAs: null,
+    locationLabel: "Seat 3A",
+    componentName: "Seat belt",
+    createdAt: "2026-11-05T09:00:00.000Z",
+    updatedAt: "2026-11-05T09:00:00.000Z",
+    ...over,
+  });
+  const belt = obs("OBS-BELT");
+  const assist = obs("OBS-ASSIST", {
+    locationId: "BIN:L-03",
+    componentId: "BIN_ASSIST",
+    condition: "BROKEN",
+    melClass: { class: "COSMETIC" },
+    dueDate: null,
+    blocksSeat: false,
+    locationLabel: "Overhead bin L-03 (rows 6-8, 6 bags)",
+    componentName: "Bin assist strut",
+  });
+  const tray = obs("OBS-TRAY", {
+    componentId: "TRAY",
+    outcome: "MUST_FIX",
+    deferUntil: undefined,
+    reason: undefined,
+    melClass: { class: "NO_GO", reason: "Raised by the technician" },
+    raisedTo: "NO_GO",
+    dueDate: null,
+    blocksSeat: false,
+    openedInVisitId: base.id,
+    componentName: "Tray table (on the seat in front)",
+  });
+  const withCarried: Visit = {
+    ...base,
+    carried: [
+      { observation: belt, placement: "SAME", locationId: "SEAT:3A", overdue: false },
+      { observation: assist, placement: "ORPHANED", locationId: null, overdue: false },
+    ],
+  };
+  const event = { seq: 1, type: "OBSERVATION_ADDED", at: "2026-11-12T12:02:00.000Z", payload: {} };
+
+  it("carried-over panel lists the deferral and Show selects it", async () => {
+    stubFetch((): Answer => ({ body: { visit: withCarried } }));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const panel = await screen.findByRole("region", { name: /^Carried over/ });
+    const item = within(panel).getByText("Seat 3A / Seat belt").closest("li") as HTMLElement;
+    expect(item).toHaveTextContent("Broken");
+    expect(item).toHaveTextContent("Defer");
+    expect(item).toHaveTextContent("Fix by 22 Nov 2026");
+    fireEvent.click(within(item).getByRole("button", { name: "Show Seat 3A Seat belt" }));
+    expect(await screen.findByRole("heading", { level: 3, name: "Seat 3A" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /^Seat belt/ })).toHaveClass("highlighted");
+  });
+
+  it("an orphaned item appears under No longer at this position", async () => {
+    const sent = stubFetch((method): Answer => {
+      if (method === "GET") return { body: { visit: withCarried } };
+      return { body: { visit: stateOf(withCarried, { version: base.version + 1, carried: [at(withCarried.carried, 0)] }), replayed: false } };
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const panel = await screen.findByRole("region", { name: /^Carried over/ });
+    const heading = within(panel).getByRole("heading", { name: "No longer at this position" });
+    const item = within(heading.nextElementSibling as HTMLElement)
+      .getByText(/Overhead bin L-03 .* \/ Bin assist strut/)
+      .closest("li") as HTMLElement;
+    expect(
+      within(item)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Mark fixed"]);
+    fireEvent.click(within(item).getByRole("button", { name: /^Mark fixed/ }));
+    await waitFor(() => expect(within(panel).queryByRole("heading", { name: "No longer at this position" })).toBeNull());
+    const close = sent.find((s) => s.method === "POST");
+    expect(close?.url).toBe(`/api/visits/${base.id}/observations/OBS-ASSIST/close`);
+    expect(close?.body).toMatchObject({ closedAs: "FIXED", expectedVersion: 1, idempotencyKey: expect.any(String) });
+  });
+
+  it("an orphaned item's close with no answer offers Retry safely with the same key", async () => {
+    let posts = 0;
+    const sent = stubFetch((method): Answer => {
+      if (method === "GET") return { body: { visit: withCarried } };
+      posts += 1;
+      return posts === 1
+        ? "reject"
+        : { body: { visit: stateOf(withCarried, { version: base.version + 1, carried: [at(withCarried.carried, 0)] }), replayed: false } };
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const panel = await screen.findByRole("region", { name: /^Carried over/ });
+    fireEvent.click(within(panel).getByRole("button", { name: /^Mark fixed/ }));
+    fireEvent.click(await within(panel).findByRole("button", { name: "Retry safely" }));
+    await waitFor(() => expect(within(panel).queryByRole("heading", { name: "No longer at this position" })).toBeNull());
+    const closes = sent.filter((s) => s.method === "POST");
+    expect(closes).toHaveLength(2);
+    expect(closes[1]?.body?.idempotencyKey).toBe(closes[0]?.body?.idempotencyKey);
+  });
+
+  it("complete with an open must-fix needs the hold checkbox and sends aircraftHeld", async () => {
+    const visit: Visit = { ...withCarried, observations: [tray], events: [event] };
+    const sent = stubFetch((method): Answer => {
+      if (method === "GET") return { body: { visit } };
+      return { body: { visit: stateOf(visit, { status: "COMPLETED" }), report: {}, alreadyCompleted: false } };
+    });
+    const navigate = vi.fn();
+    render(<CheckView visitId={base.id} navigate={navigate} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Complete visit…" }));
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog)
+        .getByText(/Seat 3A \/ Tray table/)
+        .closest("li"),
+    ).toHaveTextContent("Broken");
+    expect(within(dialog).queryByRole("button", { name: "Confirm completion" })).toBeNull();
+    const confirm = within(dialog).getByRole("button", { name: "Complete check" });
+    const held = within(dialog).getByRole("checkbox", { name: "Aircraft held, reported to maintenance" });
+    expect(held).toBeRequired();
+    expect(confirm).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(confirm);
+    expect(sent.filter((s) => s.method === "POST")).toHaveLength(0);
+    fireEvent.click(held);
+    expect(confirm).toHaveAttribute("aria-disabled", "false");
+    fireEvent.click(confirm);
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(`#/visit/${base.id}/report`));
+    expect(sent.find((s) => s.method === "POST")?.body).toMatchObject({ confirm: true, aircraftHeld: true });
+  });
+
+  it("an overdue carried MEL deferral is listed as must-fix in the completion dialog", async () => {
+    const overdue: Visit = { ...base, checkDate: "2026-11-23", carried: [{ observation: belt, placement: "SAME", locationId: "SEAT:3A", overdue: true }] };
+    stubFetch((): Answer => ({ body: { visit: overdue } }));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Complete visit…" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Seat 3A / Seat belt").closest("li")).toHaveTextContent("Overdue since 22 Nov 2026");
+    expect(within(dialog).getByRole("checkbox", { name: "Aircraft held, reported to maintenance" })).toBeInTheDocument();
+  });
+
+  it("a must-fix the server still reports keeps the dialog open with the hold checkbox", async () => {
+    const lateTray = { ...tray, openedInVisitId: "visit-0" };
+    let refused = false;
+    const sent = stubFetch((method, url): Answer => {
+      if (method === "GET")
+        return {
+          body: { visit: refused ? { ...base, carried: [{ observation: lateTray, placement: "SAME", locationId: "SEAT:3A", overdue: false }] } : base },
+        };
+      if (url.endsWith("/complete") && !refused) {
+        refused = true;
+        return {
+          status: 409,
+          body: { error: { code: "MUST_FIX_OPEN", message: "A must-fix problem is still open on this aircraft.", details: { observationIds: ["OBS-TRAY"] } } },
+        };
+      }
+      return { body: { visit: stateOf(base, { status: "COMPLETED" }), report: {}, alreadyCompleted: false } };
+    });
+    const navigate = vi.fn();
+    render(<CheckView visitId={base.id} navigate={navigate} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Complete visit…" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Confirm completion" }));
+    const held = await screen.findByRole("checkbox", { name: "Aircraft held, reported to maintenance" });
+    const dialog = screen.getByRole("dialog");
+    await within(dialog).findByText(/Seat 3A \/ Tray table/);
+    fireEvent.click(held);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Complete check" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(`#/visit/${base.id}/report`));
+    const completes = sent.filter((s) => s.url.endsWith("/complete"));
+    expect(completes.map((s) => s.body?.aircraftHeld)).toEqual([undefined, true]);
+    expect(completes[1]?.body?.idempotencyKey).not.toBe(completes[0]?.body?.idempotencyKey);
+  });
+
+  it("a visit with only a problem written down can be completed", async () => {
+    stubFetch((): Answer => ({ body: { visit: { ...base, records: [], recordCount: 0, events: [event] } } }));
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    expect(await screen.findByRole("button", { name: "Complete visit…" })).toBeEnabled();
+  });
+
+  it("a problem save with no answer keeps the form and its input, and Retry safely closes it with the same key", async () => {
+    let posts = 0;
+    const saved = stateOf(base, {
+      version: base.version + 1,
+      observations: [obs("OBS-NEW", { componentId: "CUSHION", condition: "STAINED", outcome: "NOTED", openedInVisitId: base.id })],
+    });
+    const sent = stubFetch((method): Answer => {
+      if (method === "GET") return { body: { visit: base } };
+      posts += 1;
+      return posts === 1 ? "reject" : { status: 201, body: { visit: saved, replayed: false } };
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Pick seat 3A" }));
+    const card = await screen.findByRole("region", { name: new RegExp(`^${cushion.componentName}`) });
+    fireEvent.click(within(card).getByRole("button", { name: "Note a problem" }));
+    fireEvent.click(within(card).getByRole("radio", { name: "Stained" }));
+    fireEvent.click(within(card).getByRole("radio", { name: "Note only" }));
+    fireEvent.change(within(card).getByLabelText(/^Note about the problem/), { target: { value: "coffee" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Save problem" }));
+    await within(card).findByText(/may or may not have been saved/);
+    expect(within(card).getByLabelText(/^Note about the problem/)).toHaveValue("coffee");
+    expect(within(card).getByRole("button", { name: "Save problem" })).toBeDisabled();
+    fireEvent.click(within(card).getByRole("button", { name: "Retry safely" }));
+    await waitFor(() => expect(within(card).queryByRole("group", { name: "Note a problem" })).toBeNull());
+    const adds = sent.filter((s) => s.method === "POST");
+    expect(adds.map((s) => s.url)).toEqual([`/api/visits/${base.id}/observations`, `/api/visits/${base.id}/observations`]);
+    expect(adds[1]?.body?.idempotencyKey).toBe(adds[0]?.body?.idempotencyKey);
+    expect(adds[0]?.body?.observation).toStrictEqual({ locationId: "SEAT:3A", componentId: "CUSHION", condition: "STAINED", note: "coffee", outcome: "NOTED" });
   });
 });

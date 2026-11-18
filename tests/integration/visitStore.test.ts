@@ -790,6 +790,30 @@ describe("observations", () => {
     expect(errorOf(() => store.completeVisit(late.id, undefined)).details).toEqual({ observationIds: [belt.id, trayObs?.id].sort() });
   });
 
+  // R22: an update floors the new class at the problem's current class, then checks the outcome against it.
+  it("an MEL deferral edited to a cosmetic condition keeps its MEL class and first due date", () => {
+    const store = openVisits(makeStores());
+    const first = store.createVisit(snap(), "Demo").visit;
+    const belt = at(store.addObservation(first.id, BELT_3A).visit.observations, 0);
+    expect(belt).toMatchObject({ melClass: { class: "MEL", item: "FX-25-21-01" }, dueDate: "2026-11-22", blocksSeat: true });
+    store.completeVisit(first.id, undefined);
+    const next = store.createVisit(snapshotFor(release, "N100TL", "2026-11-20"), "Demo").visit;
+    // a worn belt is cosmetic on its own, but the problem stays an MEL deferral
+    const reworded = store.updateObservation(next.id, belt.id, { ...BELT_3A, condition: "WORN", note: "Only frayed" }, 1).visit;
+    expect(reworded.carried.find((c) => c.observation.id === belt.id)?.observation).toMatchObject({
+      version: 2,
+      condition: "WORN",
+      outcome: "DEFERRED",
+      melClass: { class: "MEL", item: "FX-25-21-01", category: "C" },
+      dueDate: "2026-11-22",
+      blocksSeat: true,
+    });
+    // noted is not an outcome of the floored MEL class
+    expect(
+      codeOf(() => store.updateObservation(next.id, belt.id, { ...BELT_3A, condition: "WORN", outcome: "NOTED", deferUntil: undefined, reason: undefined }, 2)),
+    ).toBe("OUTCOME_NOT_ALLOWED");
+  });
+
   it("closing the seat belt deferral makes a vest deferred under the seat block must-fix again", () => {
     const store = openVisits(makeStores());
     const { visit } = store.createVisit(snap(), "Demo");

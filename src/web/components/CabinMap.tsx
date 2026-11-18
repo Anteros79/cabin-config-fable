@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import type { CabinLocation } from "../../domain/types.ts";
+import type { CabinLocation, ComponentDef, LayoutRevision } from "../../domain/types.ts";
 import { alternateText, type LocationFlags, STATUS_ENCODING, seatLabelFor, type Workspace } from "../model.ts";
 import { forgetSuggestionKeys, submitOnEnter } from "../submitOnEnter.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
@@ -12,6 +12,60 @@ interface Props {
 }
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+
+/** Words that name no piece: they say what kind of place it is, or join the other words. */
+const FILLER = new Set(["THE", "A", "AN", "OF", "AT", "ON", "IN", "AND", "TO", "SEAT", "ROW", "BIN", "OVERHEAD", "ARMREST"]);
+const wordsOf = (text: string): string[] =>
+  text
+    .toUpperCase()
+    .split(/[^A-Z0-9]+/)
+    .filter((w) => w !== "");
+
+/**
+ * "Go to location" with a piece: "12A headrest", "l-04 latch", "12AB", "armrest 12A 12B". Words are split on spaces and
+ * commas, in any case. A seat code ("12A") names a seat; two seats of one row ("12AB", or "12A 12B") name the armrest
+ * between them; one seat with the word "armrest" names its window or aisle armrest ("armrest 12A" is ARMREST:12-A); a
+ * bin code ("L-04", "L4") names a bin; any other location id ending ("FWD", "12-AB") names that location. The other
+ * words pick the piece: each must start a word of the piece's name or id (punctuation dropped, "seat", "bin", "row",
+ * "armrest", "overhead" and joining words ignored), and a tie goes to the location's first such piece. Null when no
+ * single location is named.
+ */
+function parseGoTo(text: string, layout: LayoutRevision, defs: Record<string, ComponentDef>) {
+  const byId = (id: string) => layout.locations.find((l) => l.id === id);
+  const found = new Set<CabinLocation | undefined>();
+  const rest: string[] = [];
+  const seats: [string, string][] = [];
+  for (const token of text.trim().split(/[\s,]+/)) {
+    const t = token.toUpperCase();
+    const seat = /^(\d+)([A-F])([A-F])?$/.exec(t);
+    const bin = /^([LR])-?(\d{1,2})$/.exec(t);
+    if (seat) seats.push(...[seat[2], seat[3]].filter((l) => l !== undefined).map((l): [string, string] => [seat[1] as string, l as string]));
+    else if (bin) found.add(byId(`BIN:${bin[1]}-${bin[2]?.padStart(2, "0")}`));
+    else if (layout.locations.some((l) => l.id.endsWith(`:${t}`))) found.add(layout.locations.find((l) => l.id.endsWith(`:${t}`)));
+    else rest.push(token);
+  }
+  if (seats.length > 0) {
+    const row = seats[0]?.[0];
+    const letters = [...new Set(seats.map(([, l]) => l))].sort().join("");
+    const armrest = letters.length > 1 || rest.some((w) => wordsOf(w).includes("ARMREST"));
+    found.add(
+      seats.some(([r]) => r !== row) || letters.length > 2
+        ? undefined
+        : armrest
+          ? byId(`ARMREST:${row}-${letters}`)
+          : layout.locations.find((l) => l.seat?.code === `${row}${letters}`),
+    );
+  }
+  const [location, ...others] = found;
+  if (!location || others.length > 0) return null;
+  const wanted = rest.flatMap(wordsOf).filter((w) => !FILLER.has(w));
+  const componentId =
+    location.componentIds.find((c) => {
+      const names = wordsOf(`${defs[c]?.name ?? ""} ${c}`);
+      return wanted.every((w) => names.some((n) => n.startsWith(w)));
+    }) ?? null;
+  return { location, componentId: wanted.length > 0 ? componentId : null, unmatched: wanted.length > 0 && componentId === null ? rest.join(" ") : "" };
+}
 
 function stateClass(flags: LocationFlags | undefined, selected: boolean): string {
   const c = ["loc"];
@@ -83,13 +137,20 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
     e.preventDefault();
     const wanted = goTo.trim().toUpperCase();
     if (!wanted) return;
+    // A location's own code, id or label first, as before; then a location with a piece ("12A headrest").
     const match =
       layout.locations.find((l) => l.seat?.code === wanted) ??
       layout.locations.find((l) => l.id.toUpperCase() === wanted || l.id.toUpperCase().endsWith(`:${wanted}`)) ??
       layout.locations.find((l) => l.label.toUpperCase().includes(wanted));
-    if (match) {
-      onSelect(match.id, null);
-      setGoToMessage(`Selected ${match.label}.`);
+    const parsed = match ? { location: match, componentId: null, unmatched: "" } : parseGoTo(goTo, layout, workspace.componentDefs);
+    if (parsed) {
+      const { location, componentId, unmatched } = parsed;
+      onSelect(location.id, componentId);
+      setGoToMessage(
+        unmatched
+          ? `Selected ${location.label}. No piece there matches "${unmatched}".`
+          : `Selected ${location.label}${componentId ? `, ${workspace.componentDefs[componentId]?.name ?? componentId}` : ""}.`,
+      );
       setGoTo("");
     } else setGoToMessage(`No location matches "${goTo.trim()}" in this layout.`);
   };
@@ -153,6 +214,14 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
               {l.label}
             </option>
           ))}
+          {/* the pieces of the selected location only, so the list does not grow with every piece of the cabin */}
+          {selected &&
+            selected.componentIds.length > 1 &&
+            selected.componentIds.map((c) => (
+              <option key={`${selected.id}|${c}`} value={`${selected.seat?.code ?? selected.id.split(":")[1]} ${workspace.componentDefs[c]?.name ?? c}`}>
+                {selected.label}
+              </option>
+            ))}
         </datalist>
         <button type="submit">Select</button>
         <span role="status" className="fine">

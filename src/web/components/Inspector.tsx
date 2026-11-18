@@ -15,7 +15,7 @@ import type {
   VisitRecord,
 } from "../../domain/types.ts";
 import { conditionLabel, deferLabel, formatDate, formatDateTime, melLabel, outcomeLabel, reasonLabel } from "../format.ts";
-import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
+import { canRetry, describeSaveStatus, observationTarget, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
 
 interface Props {
@@ -25,17 +25,17 @@ interface Props {
   /** The save status of one record target (`record:<locationId>|<componentId>`). */
   statusOf(target: string): SaveStatus;
   onRecord(input: RecordInput, expectedRecordVersion: number): void;
-  /** Writes down a new problem on a piece. */
-  onObserve(input: ObservationInput): void;
-  /** Changes an open problem. The input never lowers the problem's class. */
-  onUpdateObservation(o: Observation, input: ObservationInput): void;
+  /** Writes down a new problem on a piece (target `observation:<locationId>:<componentId>`). Resolves true once saved. */
+  onObserve(input: ObservationInput): Promise<boolean>;
+  /** Changes an open problem (target `observation:<id>`). The input never lowers the problem's class. Resolves true once saved. */
+  onUpdateObservation(o: Observation, input: ObservationInput): Promise<boolean>;
   /** Closes an open problem: the piece was replaced, or fixed in place. */
   onCloseObservation(o: Observation, closedAs: "REPLACED" | "FIXED"): void;
   onRemove(record: VisitRecord): void;
-  /** Re-sends the last write of a target with its idempotency key. */
-  onRetry(target: string): void;
+  /** Re-sends the last write of a target with its idempotency key. May resolve true once saved. */
+  onRetry(target: string): unknown;
   onSelect(locationId: string): void;
-  /** A card holds typed input that is not saved (`dirty`), or no longer does. The target is `record:<locationId>|<componentId>`. */
+  /** A card holds typed input that is not saved (`dirty`), or no longer does: its record form or its problem form. The target is `record:<locationId>|<componentId>`. */
   onDirtyChange(target: string, dirty: boolean): void;
   /** A new value discards every card's unsaved input (the person agreed to). */
   resetKey?: number;
@@ -74,6 +74,26 @@ export function conditionsFor(mel: MelEntry[], componentId: string): Condition[]
   return CONDITIONS.filter((c) => mel.some((e) => e.componentId === componentId && e.condition === c && e.constraint?.variant === undefined));
 }
 
+/** The save line under a form: the status in words, and after a conflict that the saved state was reloaded. */
+const statusText = (status: SaveStatus): string =>
+  status.phase === "conflict" ? `${describeSaveStatus(status)} The current saved state has been reloaded.` : describeSaveStatus(status);
+
+/** A save status line and, where it applies, its Retry safely button. */
+function SaveLine({ status, text = statusText(status), onRetry }: { status: SaveStatus; text?: React.ReactNode; onRetry(): void }) {
+  return (
+    <>
+      <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
+        {text}
+      </p>
+      {canRetry(status) && (
+        <button type="button" onClick={onRetry}>
+          Retry safely
+        </button>
+      )}
+    </>
+  );
+}
+
 /** What the problem form is open for: a new problem (Defer presets the outcome), or a change to an open one. */
 type ProblemPanel = { preset: "DEFERRED" | null; editing: Observation | null };
 
@@ -87,7 +107,11 @@ function ProblemForm({
   conditions,
   checkDate,
   panel,
+  status,
   onSave,
+  onRetry,
+  onDirty,
+  onDone,
   onCancel,
 }: {
   view: ComponentView;
@@ -95,7 +119,13 @@ function ProblemForm({
   conditions: Condition[];
   checkDate: string;
   panel: ProblemPanel;
-  onSave(input: ObservationInput): void;
+  /** The save status of this form's target. */
+  status: SaveStatus;
+  /** Resolves true once saved: the form closes only then, so a failed save keeps what was typed. */
+  onSave(input: ObservationInput): Promise<boolean>;
+  onRetry(): unknown;
+  onDirty(dirty: boolean): void;
+  onDone(): void;
   onCancel(): void;
 }) {
   const id = useId();
@@ -107,6 +137,17 @@ function ProblemForm({
   const [note, setNote] = useState(editing?.note ?? "");
   // A raise asked for in this form. The raise the problem already has is kept: it can never be lowered.
   const [raise, setRaise] = useState<Raise | null>(null);
+  // Set by the first save, so a status left by an earlier problem on the same target is not shown as this one's.
+  const [sent, setSent] = useState(false);
+  const dirty =
+    condition !== (editing?.condition ?? null) ||
+    outcome !== (editing?.outcome ?? panel.preset) ||
+    deferUntil !== (editing?.deferUntil ?? null) ||
+    reason !== (editing?.reason ?? null) ||
+    note.trim() !== (editing?.note ?? "").trim() ||
+    raise !== null;
+  useEffect(() => onDirty(dirty), [dirty, onDirty]);
+  useEffect(() => () => onDirty(false), [onDirty]);
   const fieldset = useRef<HTMLFieldSetElement>(null);
   useEffect(() => {
     (fieldset.current?.querySelector<HTMLInputElement>("input:checked") ?? fieldset.current?.querySelector<HTMLInputElement>("input"))?.focus();
@@ -134,11 +175,15 @@ function ProblemForm({
   const due = cls?.class === "MEL" ? (editing?.dueDate ?? dueDateFor(cls, checkDate)) : null;
   const deferring = chosen === "DEFERRED";
   const valid = condition !== null && chosen !== null && (!deferring || (deferUntil !== null && reason !== null));
+  // While the outcome of a save is unknown only Retry safely is offered: a changed request would get a new key and
+  // could store the problem twice.
+  const blocked = status.phase === "saving" || status.phase === "unknown";
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!valid || condition === null || chosen === null) return;
-    onSave({
+    if (!valid || blocked || condition === null || chosen === null) return;
+    setSent(true);
+    const saved = await onSave({
       locationId: editing?.locationId ?? locationId,
       componentId: view.componentId,
       condition,
@@ -147,6 +192,10 @@ function ProblemForm({
       ...(deferring && deferUntil !== null && reason !== null ? { deferUntil, reason } : {}),
       ...(raisedTo !== undefined ? { raisedTo } : {}),
     });
+    if (saved) onDone();
+  };
+  const retry = async () => {
+    if ((await onRetry()) === true) onDone();
   };
 
   return (
@@ -228,7 +277,7 @@ function ProblemForm({
           </label>
         )}
         <div className="actions">
-          <button type="submit" className="primary" disabled={!valid}>
+          <button type="submit" className="primary" disabled={!valid || blocked}>
             Save problem
           </button>
           <button type="button" onClick={onCancel}>
@@ -236,6 +285,7 @@ function ProblemForm({
           </button>
         </div>
       </fieldset>
+      {(sent || status.phase === "unknown") && <SaveLine status={status} onRetry={() => void retry()} />}
     </form>
   );
 }
@@ -246,15 +296,20 @@ function ProblemItem({
   carried,
   record,
   actionable,
+  status,
   onEdit,
   onClose,
+  onRetry,
 }: {
   o: Observation;
   carried: { overdue: boolean } | null;
   record: VisitRecord | null;
   actionable: boolean;
+  /** The save status of this problem's own writes (`observation:<id>`). */
+  status: SaveStatus;
   onEdit(button: HTMLButtonElement): void;
   onClose(closedAs: "REPLACED" | "FIXED"): void;
+  onRetry(): void;
 }) {
   const id = useId();
   const details = [
@@ -274,14 +329,25 @@ function ProblemItem({
           <button type="button" aria-describedby={`${id}-what`} onClick={(e) => onEdit(e.currentTarget)}>
             Edit
           </button>
-          <button type="button" aria-describedby={`${id}-what`} disabled={record === null} onClick={() => onClose("REPLACED")}>
+          <button
+            type="button"
+            aria-describedby={record === null ? `${id}-what ${id}-why` : `${id}-what`}
+            disabled={record === null || status.phase === "saving"}
+            onClick={() => onClose("REPLACED")}
+          >
             Mark replaced
           </button>
-          <button type="button" aria-describedby={`${id}-what`} onClick={() => onClose("FIXED")}>
+          <button type="button" aria-describedby={`${id}-what`} disabled={status.phase === "saving"} onClick={() => onClose("FIXED")}>
             Mark fixed
           </button>
+          {record === null && (
+            <span id={`${id}-why`} className="fine">
+              Record the replacement first.
+            </span>
+          )}
         </div>
       )}
+      {status.phase !== "idle" && <SaveLine status={status} onRetry={onRetry} />}
     </li>
   );
 }
@@ -318,6 +384,7 @@ function ComponentCard({
   const id = useId();
   // Which form is open below the buttons: the record fieldset (the default), or the problem form.
   const [problemPanel, setProblemPanel] = useState<ProblemPanel | null>(null);
+  const [problemDirty, setProblemDirty] = useState(false);
   const opener = useRef<HTMLButtonElement | null>(null);
   const recordForm = useRef<HTMLFormElement>(null);
   const [focusRecord, setFocusRecord] = useState(0);
@@ -356,9 +423,9 @@ function ComponentCard({
 
   const target = recordTarget(location.id, view.componentId);
   useEffect(() => {
-    onDirtyChange(target, dirty);
+    onDirtyChange(target, dirty || problemDirty);
     return () => onDirtyChange(target, false);
-  }, [target, dirty, onDirtyChange]);
+  }, [target, dirty, problemDirty, onDirtyChange]);
 
   const status = statusOf(target);
   const writePhase = status.phase;
@@ -366,7 +433,7 @@ function ComponentCard({
     if (writePhase === "failed" || writePhase === "conflict") setRemoving(false);
   }, [writePhase]);
   const busy = status.phase === "saving";
-  const message = status.phase === "conflict" ? `${describeSaveStatus(status)} The current saved state has been reloaded.` : describeSaveStatus(status);
+  const message = statusText(status);
   const savedText = `${saved.selection === "PRIMARY" ? "Primary" : `Alternate ${alternates.find((s) => s.id === saved.substituteId)?.altPartNo ?? saved.substituteId}`}, ${saved.quantityText}, note ${saved.note === "" ? "none" : `“${saved.note}”`}`;
   const choose = (substituteId: string | null) => setDraft((d) => ({ ...d, selection: substituteId === null ? "PRIMARY" : "ALTERNATE", substituteId }));
   const submit = (e: React.FormEvent) => {
@@ -395,10 +462,31 @@ function ComponentCard({
     ...view.problems.map((o) => ({ o, carried: null })),
     ...(view.carried ? [{ o: view.carried.observation, carried: { overdue: view.carried.overdue } }] : []),
   ];
+  const problemTarget = observationTarget(problemPanel?.editing ?? { locationId: location.id, componentId: view.componentId });
   const openProblem = (button: HTMLButtonElement, panel: ProblemPanel) => {
     opener.current = button;
     setProblemPanel(panel);
   };
+  const recordLine = (
+    <SaveLine
+      status={status}
+      text={
+        message ||
+        (record && !dirty ? (
+          <>
+            Saved. Record version {record.version}, last changed{" "}
+            <time dateTime={record.updatedAt} title={record.updatedAt}>
+              {formatDateTime(record.updatedAt)}
+            </time>
+            .
+          </>
+        ) : (
+          ""
+        ))
+      }
+      onRetry={() => onRetry(target)}
+    />
+  );
   const closeProblem = () => {
     setProblemPanel(null);
     // focus goes back to the button that opened the form
@@ -650,27 +738,11 @@ function ComponentCard({
               )}
             </div>
           </fieldset>
-          <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
-            {message ||
-              (record && !dirty ? (
-                <>
-                  Saved. Record version {record.version}, last changed{" "}
-                  <time dateTime={record.updatedAt} title={record.updatedAt}>
-                    {formatDateTime(record.updatedAt)}
-                  </time>
-                  .
-                </>
-              ) : (
-                ""
-              ))}
-          </p>
-          {canRetry(status) && (
-            <button type="button" onClick={() => onRetry(target)}>
-              Retry safely
-            </button>
-          )}
+          {recordLine}
         </form>
       )}
+      {/* the record's own save line stays in view while the problem form is open */}
+      {rule && editable && problemPanel !== null && status.phase !== "idle" && recordLine}
       {editable && problemPanel !== null && (
         <ProblemForm
           key={`${problemPanel.preset ?? ""}|${problemPanel.editing?.id ?? ""}`}
@@ -679,11 +751,15 @@ function ComponentCard({
           conditions={conditions}
           checkDate={workspace.checkDate}
           panel={problemPanel}
+          status={statusOf(problemTarget)}
           onSave={(input) => {
-            if (problemPanel.editing) onUpdateObservation(problemPanel.editing, input);
-            else onObserve(input);
-            closeProblem();
+            const { editing } = problemPanel;
+            // the version on screen now: after a conflict reload the next save builds on what is stored
+            return editing ? onUpdateObservation(open.find((p) => p.o.id === editing.id)?.o ?? editing, input) : onObserve(input);
           }}
+          onRetry={() => onRetry(problemTarget)}
+          onDirty={setProblemDirty}
+          onDone={closeProblem}
           onCancel={closeProblem}
         />
       )}
@@ -698,8 +774,10 @@ function ComponentCard({
                 carried={carried}
                 record={record}
                 actionable={editable}
+                status={statusOf(observationTarget(o))}
                 onEdit={(button) => openProblem(button, { preset: null, editing: o })}
                 onClose={(closedAs) => onCloseObservation(o, closedAs)}
+                onRetry={() => void onRetry(observationTarget(o))}
               />
             ))}
           </ul>

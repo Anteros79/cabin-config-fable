@@ -135,8 +135,8 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
               onRemove={() => undefined}
               onRetry={() => undefined}
               onDirtyChange={() => undefined}
-              onObserve={() => undefined}
-              onUpdateObservation={() => undefined}
+              onObserve={async () => false}
+              onUpdateObservation={async () => false}
               onCloseObservation={() => undefined}
               onSelect={(id) => setSelection(id)}
             />
