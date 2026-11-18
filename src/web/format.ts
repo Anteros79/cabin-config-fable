@@ -1,4 +1,4 @@
-import type { FindingSeverity, LookupState } from "../domain/types.ts";
+import type { Condition, DeferReason, DeferUntil, FindingSeverity, LookupState, MelClass, ObservationOutcome } from "../domain/types.ts";
 
 /**
  * How the interface writes dates, times, states and counts (WEB-21). One fixed form, en-GB, whatever the browser's
@@ -96,3 +96,41 @@ export function formatCounts(counts: Record<string, number>, labels: Record<stri
   });
   return out.length > 0 ? out.join(", ") : "none";
 }
+
+/** A problem's condition in words; the code stays in the data. */
+const CONDITION_LABEL: Record<Condition, string> = {
+  STAINED: "Stained",
+  TORN: "Torn",
+  WORN: "Worn",
+  BROKEN: "Broken",
+  MISSING: "Missing",
+  WONT_LATCH: "Won't latch",
+  OTHER: "Other",
+};
+export const conditionLabel = (c: Condition): string => CONDITION_LABEL[c];
+
+/** The item the class takes when a technician raises a problem to MEL: it names no MEL item of its own. */
+const TECH_RAISED_ITEM = "TECH-RAISED";
+
+/** What a class means for the aircraft, in words. */
+export function melLabel(cls: MelClass): string {
+  if (cls.class === "COSMETIC") return "Cosmetic: can wait";
+  if (cls.class === "NO_GO") return `No-go: must be fixed before flight. ${cls.reason}`;
+  const item = cls.item === TECH_RAISED_ITEM ? "MEL item" : `MEL item ${cls.item}`;
+  return `${item} (category ${cls.category}, fix within ${cls.intervalDays} days): ${cls.conditions}`;
+}
+
+const OUTCOME_LABEL: Record<ObservationOutcome, string> = {
+  NOTED: "Note only",
+  DEFERRED: "Defer",
+  MUST_FIX: "Must be fixed before flight",
+  REPLACED: "Replaced",
+  FIXED: "Fixed",
+};
+export const outcomeLabel = (o: ObservationOutcome): string => OUTCOME_LABEL[o];
+
+const DEFER_LABEL: Record<DeferUntil, string> = { NEXT_CHECK: "Until the next check", NEXT_STOP: "Until the next stop" };
+export const deferLabel = (d: DeferUntil): string => DEFER_LABEL[d];
+
+const REASON_LABEL: Record<DeferReason, string> = { NO_STOCK: "No stock on hand", NO_TIME: "No time on this turn", OTHER: "Other" };
+export const reasonLabel = (r: DeferReason): string => REASON_LABEL[r];

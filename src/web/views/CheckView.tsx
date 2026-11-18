@@ -695,6 +695,9 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                 onRemove={remove}
                 onRetry={retry}
                 onDirtyChange={onDirtyChange}
+                onObserve={() => undefined}
+                onUpdateObservation={() => undefined}
+                onCloseObservation={() => undefined}
                 resetKey={resetKey}
                 onSelect={(id) => select(id, null)}
               />

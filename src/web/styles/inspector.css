@@ -30,7 +30,8 @@
 .excluded {
   color: var(--danger);
 }
-.record-form fieldset {
+.record-form fieldset,
+.problem-form fieldset {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-2);
   padding: var(--space-4) var(--space-5);
@@ -40,9 +41,38 @@
   gap: var(--step-045);
   min-width: 0;
 }
-.record-form legend {
+.record-form legend,
+.problem-form legend {
   font-weight: 700;
   padding: 0 var(--step-030);
+}
+/* The piece's three actions and its problem form under the MEL. */
+.piece-actions {
+  margin-top: var(--space-4);
+}
+.group-label {
+  font-weight: 600;
+  margin: 0;
+}
+.meaning p {
+  margin: var(--step-010) 0;
+}
+.problems {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0;
+}
+.problem {
+  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-3) 0;
+}
+.problem p {
+  margin: var(--step-010) 0;
+}
+/* No-go wording and an overdue deferral: the danger colour, and bold so it never rests on colour alone. */
+.must-fix {
+  color: var(--danger);
+  font-weight: 700;
 }
 .choices {
   display: flex;

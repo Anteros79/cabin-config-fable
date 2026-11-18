@@ -153,8 +153,8 @@ export interface ComponentView {
   problems: Observation[];
   /** a problem carried over from an earlier visit onto this piece, if any */
   carried: CarriedObservation | null;
-  /** the class a problem with this condition would have on this piece now, given the seat-blocked state */
-  melClass: (condition: Condition) => MelClass;
+  /** the class a problem with this condition (and the technician's raise, if any) would have on this piece now, given the seat-blocked state */
+  melClass: (condition: Condition, raisedTo?: "MEL" | "NO_GO") => MelClass;
   /** what the piece shows: its problems first, then the record-based status */
   pieceStatus: LocationStatus;
 }
@@ -183,7 +183,8 @@ export function componentsAt(ws: Workspace, location: CabinLocation): ComponentV
         (problems.placed.some((p) => p.carried && p.locationId === location.id && p.observation.componentId === componentId)
           ? ws.carried.find((c) => c.locationId === location.id && c.observation.componentId === componentId)
           : undefined) ?? null,
-      melClass: (condition) => classify({ mel: ws.mel, componentId, condition, variant: ws.variantId ?? "", seatBlocked }),
+      melClass: (condition, raisedTo) =>
+        classify({ mel: ws.mel, componentId, condition, variant: ws.variantId ?? "", seatBlocked, ...(raisedTo !== undefined ? { raisedTo } : {}) }),
       pieceStatus: problemStatus(ws, problems, location.id, componentId) ?? recordStatus,
     };
   });

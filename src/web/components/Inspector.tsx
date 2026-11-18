@@ -1,7 +1,20 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { allowedOutcomes, dueDateFor, isOverdue } from "../../domain/observations.ts";
 import { excludedOf, rulesNotUsedLine } from "../../domain/report.ts";
-import type { CabinLocation, RecordInput, SourceArtifact, VisitRecord } from "../../domain/types.ts";
-import { formatDateTime } from "../format.ts";
+import type {
+  CabinLocation,
+  Condition,
+  DeferReason,
+  DeferUntil,
+  MelClass,
+  MelEntry,
+  Observation,
+  ObservationInput,
+  RecordInput,
+  SourceArtifact,
+  VisitRecord,
+} from "../../domain/types.ts";
+import { conditionLabel, deferLabel, formatDate, formatDateTime, melLabel, outcomeLabel, reasonLabel } from "../format.ts";
 import { canRetry, describeSaveStatus, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
 
@@ -12,6 +25,12 @@ interface Props {
   /** The save status of one record target (`record:<locationId>|<componentId>`). */
   statusOf(target: string): SaveStatus;
   onRecord(input: RecordInput, expectedRecordVersion: number): void;
+  /** Writes down a new problem on a piece. */
+  onObserve(input: ObservationInput): void;
+  /** Changes an open problem. The input never lowers the problem's class. */
+  onUpdateObservation(o: Observation, input: ObservationInput): void;
+  /** Closes an open problem: the piece was replaced, or fixed in place. */
+  onCloseObservation(o: Observation, closedAs: "REPLACED" | "FIXED"): void;
   onRemove(record: VisitRecord): void;
   /** Re-sends the last write of a target with its idempotency key. */
   onRetry(target: string): void;
@@ -40,6 +59,233 @@ const sameDraft = (a: Draft, b: Draft): boolean =>
   a.selection === b.selection && a.substituteId === b.substituteId && a.quantityText.trim() === b.quantityText.trim() && a.note.trim() === b.note.trim();
 const quantityValid = (text: string, limit: number): boolean => /^[1-9]\d*$/.test(text) && Number(text) <= limit;
 
+type Outcome = ObservationInput["outcome"];
+type Raise = "MEL" | "NO_GO";
+
+const CONDITIONS: Condition[] = ["STAINED", "TORN", "WORN", "BROKEN", "MISSING", "WONT_LATCH", "OTHER"];
+const DEFER_UNTIL: DeferUntil[] = ["NEXT_CHECK", "NEXT_STOP"];
+const REASONS: DeferReason[] = ["NO_STOCK", "NO_TIME", "OTHER"];
+const RAISES: Raise[] = ["MEL", "NO_GO"];
+const RAISE_LABEL: Record<Raise, string> = { MEL: "MEL item", NO_GO: "No-go" };
+const CLASS_RANK: Record<MelClass["class"], number> = { COSMETIC: 0, MEL: 1, NO_GO: 2 };
+
+/** The conditions the MEL lists for a piece (its base entries, which name no variant), in the fixed order. */
+export function conditionsFor(mel: MelEntry[], componentId: string): Condition[] {
+  return CONDITIONS.filter((c) => mel.some((e) => e.componentId === componentId && e.condition === c && e.constraint?.variant === undefined));
+}
+
+/** What the problem form is open for: a new problem (Defer presets the outcome), or a change to an open one. */
+type ProblemPanel = { preset: "DEFERRED" | null; editing: Observation | null };
+
+/**
+ * The "Note a problem" form under the MEL. One class drives it: the piece's class for the chosen condition and raise,
+ * never below the stored class of the problem being changed, and no-go once its MEL deferral has run out.
+ */
+function ProblemForm({
+  view,
+  locationId,
+  conditions,
+  checkDate,
+  panel,
+  onSave,
+  onCancel,
+}: {
+  view: ComponentView;
+  locationId: string;
+  conditions: Condition[];
+  checkDate: string;
+  panel: ProblemPanel;
+  onSave(input: ObservationInput): void;
+  onCancel(): void;
+}) {
+  const id = useId();
+  const { editing } = panel;
+  const [condition, setCondition] = useState<Condition | null>(editing?.condition ?? null);
+  const [outcome, setOutcome] = useState<Outcome | null>(editing?.outcome ?? panel.preset);
+  const [deferUntil, setDeferUntil] = useState<DeferUntil | null>(editing?.deferUntil ?? null);
+  const [reason, setReason] = useState<DeferReason | null>(editing?.reason ?? null);
+  const [note, setNote] = useState(editing?.note ?? "");
+  // A raise asked for in this form. The raise the problem already has is kept: it can never be lowered.
+  const [raise, setRaise] = useState<Raise | null>(null);
+  const fieldset = useRef<HTMLFieldSetElement>(null);
+  useEffect(() => {
+    (fieldset.current?.querySelector<HTMLInputElement>("input:checked") ?? fieldset.current?.querySelector<HTMLInputElement>("input"))?.focus();
+  }, []);
+
+  const offered = editing && !conditions.includes(editing.condition) ? [...conditions, editing.condition] : conditions;
+  const kept = editing?.raisedTo;
+  const overdue = editing !== null && isOverdue(editing.dueDate, checkDate);
+  const expired = (): MelClass => ({ class: "NO_GO", reason: `The MEL deferral ran out on ${formatDate(editing?.dueDate ?? "")}.` });
+  const classFor = (c: Condition, raisedTo: Raise | undefined): MelClass => {
+    const now = view.melClass(c, raisedTo);
+    if (!editing) return now;
+    if (now.class === "MEL" && overdue) return expired();
+    if (CLASS_RANK[editing.melClass.class] > CLASS_RANK[now.class]) return overdue && editing.melClass.class === "NO_GO" ? expired() : editing.melClass;
+    return now;
+  };
+  // The levels above the class the problem has without a new raise; a raise that no longer fits is dropped.
+  const floor = condition ? classFor(condition, kept) : null;
+  const stricter = floor ? RAISES.filter((r) => CLASS_RANK[r] > CLASS_RANK[floor.class]) : [];
+  const chosenRaise = raise !== null && stricter.includes(raise) ? raise : null;
+  const raisedTo = chosenRaise ?? kept;
+  const cls = condition ? classFor(condition, raisedTo) : null;
+  const allowed = cls ? allowedOutcomes(cls) : [];
+  const chosen: Outcome | null = outcome !== null && allowed.includes(outcome) ? outcome : allowed.length === 1 ? (allowed[0] ?? null) : null;
+  const due = cls?.class === "MEL" ? (editing?.dueDate ?? dueDateFor(cls, checkDate)) : null;
+  const deferring = chosen === "DEFERRED";
+  const valid = condition !== null && chosen !== null && (!deferring || (deferUntil !== null && reason !== null));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid || condition === null || chosen === null) return;
+    onSave({
+      locationId: editing?.locationId ?? locationId,
+      componentId: view.componentId,
+      condition,
+      note,
+      outcome: chosen,
+      ...(deferring && deferUntil !== null && reason !== null ? { deferUntil, reason } : {}),
+      ...(raisedTo !== undefined ? { raisedTo } : {}),
+    });
+  };
+
+  return (
+    <form className="problem-form" onSubmit={submit}>
+      <fieldset ref={fieldset}>
+        <legend>{editing ? "Change this problem" : panel.preset === "DEFERRED" ? "Defer a problem" : "Note a problem"}</legend>
+        <div className="choices" role="radiogroup" aria-label="Condition">
+          <p className="group-label" aria-hidden="true">
+            Condition
+          </p>
+          {offered.map((c) => (
+            <label key={c} className="radio">
+              <input type="radio" name={`${id}-condition`} value={c} checked={condition === c} onChange={() => setCondition(c)} />
+              {conditionLabel(c)}
+            </label>
+          ))}
+        </div>
+        {cls && (
+          <div className="meaning" role="status" aria-live="polite">
+            <p className="group-label">What this means</p>
+            <p className={cls.class === "NO_GO" ? "must-fix" : undefined}>{melLabel(cls)}</p>
+            {due && <p>Fix by {formatDate(due)}</p>}
+          </div>
+        )}
+        {cls && (
+          <div className="choices" role="radiogroup" aria-label="Outcome">
+            <p className="group-label" aria-hidden="true">
+              Outcome
+            </p>
+            {allowed.map((o) => (
+              <label key={o} className="radio">
+                <input type="radio" name={`${id}-outcome`} value={o} checked={chosen === o} onChange={() => setOutcome(o)} />
+                {outcomeLabel(o)}
+              </label>
+            ))}
+          </div>
+        )}
+        {deferring && (
+          <>
+            <div className="choices" role="radiogroup" aria-label="Until">
+              <p className="group-label" aria-hidden="true">
+                Until
+              </p>
+              {DEFER_UNTIL.map((d) => (
+                <label key={d} className="radio">
+                  <input type="radio" name={`${id}-until`} value={d} checked={deferUntil === d} onChange={() => setDeferUntil(d)} />
+                  {deferLabel(d)}
+                </label>
+              ))}
+            </div>
+            <div className="choices" role="radiogroup" aria-label="Reason">
+              <p className="group-label" aria-hidden="true">
+                Reason
+              </p>
+              {REASONS.map((r) => (
+                <label key={r} className="radio">
+                  <input type="radio" name={`${id}-reason`} value={r} checked={reason === r} onChange={() => setReason(r)} />
+                  {reasonLabel(r)}
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+        <label className="field">
+          <span>Note about the problem (optional)</span>
+          <textarea value={note} maxLength={1000} rows={2} onChange={(e) => setNote(e.target.value)} />
+        </label>
+        {stricter.length > 0 && (
+          <label className="field inline">
+            <span>Make this stricter</span>
+            <select value={chosenRaise ?? ""} onChange={(e) => setRaise(e.target.value === "" ? null : (e.target.value as Raise))}>
+              <option value="">No change</option>
+              {stricter.map((r) => (
+                <option key={r} value={r}>
+                  {RAISE_LABEL[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="actions">
+          <button type="submit" className="primary" disabled={!valid}>
+            Save problem
+          </button>
+          <button type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  );
+}
+
+/** One open problem on a piece, with what can be done about it. */
+function ProblemItem({
+  o,
+  carried,
+  record,
+  actionable,
+  onEdit,
+  onClose,
+}: {
+  o: Observation;
+  carried: { overdue: boolean } | null;
+  record: VisitRecord | null;
+  actionable: boolean;
+  onEdit(button: HTMLButtonElement): void;
+  onClose(closedAs: "REPLACED" | "FIXED"): void;
+}) {
+  const id = useId();
+  const details = [
+    o.outcome === "DEFERRED" && o.deferUntil && o.reason ? `${deferLabel(o.deferUntil)}, ${reasonLabel(o.reason)}.` : "",
+    o.dueDate && !carried?.overdue ? `Fix by ${formatDate(o.dueDate)}.` : "",
+  ].filter((d) => d !== "");
+  return (
+    <li className="problem">
+      <p id={`${id}-what`}>
+        <strong>{conditionLabel(o.condition)}</strong>: {[`${outcomeLabel(o.outcome)}.`, ...details].join(" ")}
+      </p>
+      {o.note !== "" && <p className="fine">“{o.note}”</p>}
+      {carried && <p className="fine">Carried over from the check on {formatDate(o.createdAt.slice(0, 10))}</p>}
+      {carried?.overdue && o.dueDate && <p className="must-fix">Overdue since {formatDate(o.dueDate)}</p>}
+      {actionable && (
+        <div className="actions">
+          <button type="button" aria-describedby={`${id}-what`} onClick={(e) => onEdit(e.currentTarget)}>
+            Edit
+          </button>
+          <button type="button" aria-describedby={`${id}-what`} disabled={record === null} onClick={() => onClose("REPLACED")}>
+            Mark replaced
+          </button>
+          <button type="button" aria-describedby={`${id}-what`} onClick={() => onClose("FIXED")}>
+            Mark fixed
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
 function ComponentCard({
   view,
   workspace,
@@ -51,6 +297,9 @@ function ComponentCard({
   onRemove,
   onRetry,
   onDirtyChange,
+  onObserve,
+  onUpdateObservation,
+  onCloseObservation,
 }: {
   view: ComponentView;
   workspace: Workspace;
@@ -62,8 +311,19 @@ function ComponentCard({
   onRemove: Props["onRemove"];
   onRetry: Props["onRetry"];
   onDirtyChange: Props["onDirtyChange"];
+  onObserve: Props["onObserve"];
+  onUpdateObservation: Props["onUpdateObservation"];
+  onCloseObservation: Props["onCloseObservation"];
 }) {
   const id = useId();
+  // Which form is open below the buttons: the record fieldset (the default), or the problem form.
+  const [problemPanel, setProblemPanel] = useState<ProblemPanel | null>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
+  const recordForm = useRef<HTMLFormElement>(null);
+  const [focusRecord, setFocusRecord] = useState(0);
+  useEffect(() => {
+    if (focusRecord > 0) (recordForm.current?.querySelector<HTMLInputElement>("input:checked") ?? recordForm.current?.querySelector("input"))?.focus();
+  }, [focusRecord]);
   const { rule, record } = view;
   const alternates = (rule?.substitutes ?? []).filter((s) => s.locationIds === null || s.locationIds.includes(location.id));
   const saved = draftOf(record);
@@ -127,10 +387,28 @@ function ComponentCard({
     );
   };
 
+  const editable = workspace.mode === "visit" && workspace.editable;
+  const conditions = conditionsFor(workspace.mel, view.componentId);
+  // Defer is offered only where some condition allows a deferral.
+  const canDefer = conditions.some((c) => allowedOutcomes(view.melClass(c)).includes("DEFERRED"));
+  const open: { o: Observation; carried: { overdue: boolean } | null }[] = [
+    ...view.problems.map((o) => ({ o, carried: null })),
+    ...(view.carried ? [{ o: view.carried.observation, carried: { overdue: view.carried.overdue } }] : []),
+  ];
+  const openProblem = (button: HTMLButtonElement, panel: ProblemPanel) => {
+    opener.current = button;
+    setProblemPanel(panel);
+  };
+  const closeProblem = () => {
+    setProblemPanel(null);
+    // focus goes back to the button that opened the form
+    if (opener.current?.isConnected) opener.current.focus();
+  };
+
   return (
     <section className={`component-card${highlighted ? " highlighted" : ""}`} aria-labelledby={`${id}-h`} data-component={view.componentId}>
-      <h4 id={`${id}-h`}>
-        {view.name}
+      <h4>
+        {location.label} · <span id={`${id}-h`}>{view.name}</span>
         {record ? (
           <span className="pill recorded">Recorded</span>
         ) : view.status === "RESOLVED" ? (
@@ -234,121 +512,6 @@ function ComponentCard({
             </p>
           ))}
 
-          {workspace.mode === "visit" && workspace.editable && (
-            <form className="record-form" onSubmit={submit}>
-              <fieldset disabled={busy}>
-                <legend>{record ? "Recorded replacement" : "Record a replacement"}</legend>
-                <div className="choices" role="radiogroup" aria-label={`Part used for ${view.name}`}>
-                  <label className="radio">
-                    <input type="radio" name={`${id}-choice`} value="PRIMARY" checked={draft.selection === "PRIMARY"} onChange={() => choose(null)} />
-                    Primary <span className="partno">{rule.partNo}</span>
-                  </label>
-                  {alternates.map((s) => (
-                    <label key={s.id} className="radio">
-                      <input type="radio" name={`${id}-choice`} value={s.id} checked={draft.substituteId === s.id} onChange={() => choose(s.id)} />
-                      Alternate <span className="partno">{s.altPartNo}</span>
-                      {s.children.length > 0 && <span className="fine"> + {s.children.length} required supplements</span>}
-                    </label>
-                  ))}
-                </div>
-                {view.maxReplacements > 1 ? (
-                  <>
-                    <label className="field inline">
-                      <span>
-                        Replacements{" "}
-                        <span className="fine">
-                          (1–{view.maxReplacements}; {view.countNote})
-                        </span>
-                      </span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        autoComplete="off"
-                        value={draft.quantityText}
-                        aria-invalid={quantityOk ? undefined : true}
-                        aria-describedby={quantityOk ? undefined : quantityHelp}
-                        onChange={(e) => setDraft((d) => ({ ...d, quantityText: e.target.value }))}
-                      />
-                    </label>
-                    {!quantityOk && (
-                      <p id={quantityHelp} className="field-error">
-                        Enter a whole number from 1 to {limit}.
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="fine">Replacements: 1. {view.countNote}</p>
-                )}
-                <div role="status" aria-live="polite">
-                  {changedElsewhere && (
-                    <div className="notice">
-                      <p>
-                        {removedElsewhere
-                          ? "This replacement was removed. Nothing is saved for it."
-                          : `This replacement changed elsewhere. Saved value: ${savedText}.`}
-                      </p>
-                      <div className="actions">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDraft(saved);
-                            setBase({ record, version: serverVersion });
-                          }}
-                        >
-                          {removedElsewhere ? "Discard mine" : "Use saved value"}
-                        </button>
-                        <button type="button" onClick={() => setBase({ record, version: serverVersion })}>
-                          Keep mine
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <label className="field">
-                  <span>Note (optional)</span>
-                  <textarea value={draft.note} maxLength={1000} rows={2} onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))} />
-                </label>
-                <div className="actions">
-                  <button type="submit" className="primary" disabled={busy || !quantityOk || (!!record && !dirty)}>
-                    {record ? "Update record" : "Record replacement"}
-                  </button>
-                  {record && (
-                    <button
-                      type="button"
-                      className="danger"
-                      disabled={busy}
-                      onClick={() => {
-                        setRemoving(true);
-                        onRemove(record);
-                      }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </fieldset>
-              <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
-                {message ||
-                  (record && !dirty ? (
-                    <>
-                      Saved. Record version {record.version}, last changed{" "}
-                      <time dateTime={record.updatedAt} title={record.updatedAt}>
-                        {formatDateTime(record.updatedAt)}
-                      </time>
-                      .
-                    </>
-                  ) : (
-                    ""
-                  ))}
-              </p>
-              {canRetry(status) && (
-                <button type="button" onClick={() => onRetry(target)}>
-                  Retry safely
-                </button>
-              )}
-            </form>
-          )}
           {workspace.mode === "visit" && !workspace.editable && (
             <p className="fine">
               {record ? `Recorded: ${record.lines.map((l) => `${l.partNo} ${l.qty} ${l.unit}`).join(", ")}.` : "Not replaced on this visit."} This visit is
@@ -358,12 +521,210 @@ function ComponentCard({
           {workspace.mode === "preview" && <p className="fine">Start a visit to record replacements.</p>}
         </>
       )}
+
+      {editable && (rule || conditions.length > 0) && (
+        <div className="actions piece-actions">
+          {rule && (
+            <button
+              type="button"
+              aria-expanded={problemPanel === null}
+              onClick={() => {
+                setProblemPanel(null);
+                setFocusRecord((n) => n + 1);
+              }}
+            >
+              Replace now
+            </button>
+          )}
+          {conditions.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={problemPanel !== null && problemPanel.preset === null && problemPanel.editing === null}
+              onClick={(e) => openProblem(e.currentTarget, { preset: null, editing: null })}
+            >
+              Note a problem
+            </button>
+          )}
+          {canDefer && (
+            <button
+              type="button"
+              aria-expanded={problemPanel?.preset === "DEFERRED"}
+              onClick={(e) => openProblem(e.currentTarget, { preset: "DEFERRED", editing: null })}
+            >
+              Defer
+            </button>
+          )}
+        </div>
+      )}
+      {rule && editable && problemPanel === null && (
+        <form className="record-form" onSubmit={submit} ref={recordForm}>
+          <fieldset disabled={busy}>
+            <legend>{record ? "Recorded replacement" : "Record a replacement"}</legend>
+            <div className="choices" role="radiogroup" aria-label={`Part used for ${view.name}`}>
+              <label className="radio">
+                <input type="radio" name={`${id}-choice`} value="PRIMARY" checked={draft.selection === "PRIMARY"} onChange={() => choose(null)} />
+                Primary <span className="partno">{rule.partNo}</span>
+              </label>
+              {alternates.map((s) => (
+                <label key={s.id} className="radio">
+                  <input type="radio" name={`${id}-choice`} value={s.id} checked={draft.substituteId === s.id} onChange={() => choose(s.id)} />
+                  Alternate <span className="partno">{s.altPartNo}</span>
+                  {s.children.length > 0 && <span className="fine"> + {s.children.length} required supplements</span>}
+                </label>
+              ))}
+            </div>
+            {view.maxReplacements > 1 ? (
+              <>
+                <label className="field inline">
+                  <span>
+                    Replacements{" "}
+                    <span className="fine">
+                      (1–{view.maxReplacements}; {view.countNote})
+                    </span>
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="off"
+                    value={draft.quantityText}
+                    aria-invalid={quantityOk ? undefined : true}
+                    aria-describedby={quantityOk ? undefined : quantityHelp}
+                    onChange={(e) => setDraft((d) => ({ ...d, quantityText: e.target.value }))}
+                  />
+                </label>
+                {!quantityOk && (
+                  <p id={quantityHelp} className="field-error">
+                    Enter a whole number from 1 to {limit}.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="fine">Replacements: 1. {view.countNote}</p>
+            )}
+            <div role="status" aria-live="polite">
+              {changedElsewhere && (
+                <div className="notice">
+                  <p>
+                    {removedElsewhere
+                      ? "This replacement was removed. Nothing is saved for it."
+                      : `This replacement changed elsewhere. Saved value: ${savedText}.`}
+                  </p>
+                  <div className="actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraft(saved);
+                        setBase({ record, version: serverVersion });
+                      }}
+                    >
+                      {removedElsewhere ? "Discard mine" : "Use saved value"}
+                    </button>
+                    <button type="button" onClick={() => setBase({ record, version: serverVersion })}>
+                      Keep mine
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <label className="field">
+              <span>Note (optional)</span>
+              <textarea value={draft.note} maxLength={1000} rows={2} onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))} />
+            </label>
+            <div className="actions">
+              <button type="submit" className="primary" disabled={busy || !quantityOk || (!!record && !dirty)}>
+                {record ? "Update record" : "Record replacement"}
+              </button>
+              {record && (
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={busy}
+                  onClick={() => {
+                    setRemoving(true);
+                    onRemove(record);
+                  }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </fieldset>
+          <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
+            {message ||
+              (record && !dirty ? (
+                <>
+                  Saved. Record version {record.version}, last changed{" "}
+                  <time dateTime={record.updatedAt} title={record.updatedAt}>
+                    {formatDateTime(record.updatedAt)}
+                  </time>
+                  .
+                </>
+              ) : (
+                ""
+              ))}
+          </p>
+          {canRetry(status) && (
+            <button type="button" onClick={() => onRetry(target)}>
+              Retry safely
+            </button>
+          )}
+        </form>
+      )}
+      {editable && problemPanel !== null && (
+        <ProblemForm
+          key={`${problemPanel.preset ?? ""}|${problemPanel.editing?.id ?? ""}`}
+          view={view}
+          locationId={location.id}
+          conditions={conditions}
+          checkDate={workspace.checkDate}
+          panel={problemPanel}
+          onSave={(input) => {
+            if (problemPanel.editing) onUpdateObservation(problemPanel.editing, input);
+            else onObserve(input);
+            closeProblem();
+          }}
+          onCancel={closeProblem}
+        />
+      )}
+      {open.length > 0 && (
+        <>
+          <h5>Open problems</h5>
+          <ul className="problems">
+            {open.map(({ o, carried }) => (
+              <ProblemItem
+                key={o.id}
+                o={o}
+                carried={carried}
+                record={record}
+                actionable={editable}
+                onEdit={(button) => openProblem(button, { preset: null, editing: o })}
+                onClose={(closedAs) => onCloseObservation(o, closedAs)}
+              />
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
 
 /** Component-level parts for the selected location: primary part, separate alternates, record form. */
-export function Inspector({ workspace, location, focusComponent, statusOf, onRecord, onRemove, onRetry, onSelect, onDirtyChange, resetKey = 0 }: Props) {
+export function Inspector({
+  workspace,
+  location,
+  focusComponent,
+  statusOf,
+  onRecord,
+  onRemove,
+  onRetry,
+  onSelect,
+  onDirtyChange,
+  onObserve,
+  onUpdateObservation,
+  onCloseObservation,
+  resetKey = 0,
+}: Props) {
   // A control that selected the location can disappear with the old one (Whole-cabin carpet kit); focus then goes to the new heading, not to the page.
   const locationId = location?.id ?? null;
   useEffect(() => {
@@ -418,6 +779,9 @@ export function Inspector({ workspace, location, focusComponent, statusOf, onRec
           onRemove={onRemove}
           onRetry={onRetry}
           onDirtyChange={onDirtyChange}
+          onObserve={onObserve}
+          onUpdateObservation={onUpdateObservation}
+          onCloseObservation={onCloseObservation}
         />
       ))}
     </div>

@@ -1,6 +1,18 @@
 import { afterEach, describe, expect, test } from "vitest";
 import type { FindingSeverity, LookupState } from "../../src/domain/types.ts";
-import { FINDING_SEVERITY_LABEL, formatCounts, formatDate, formatDateTime, LOOKUP_STATE_LABEL, relativeTime } from "../../src/web/format.ts";
+import {
+  conditionLabel,
+  deferLabel,
+  FINDING_SEVERITY_LABEL,
+  formatCounts,
+  formatDate,
+  formatDateTime,
+  LOOKUP_STATE_LABEL,
+  melLabel,
+  outcomeLabel,
+  reasonLabel,
+  relativeTime,
+} from "../../src/web/format.ts";
 
 const originalTz = process.env.TZ;
 afterEach(() => {
@@ -108,5 +120,34 @@ describe("formatCounts", () => {
 
   test("an English plural for labels ending in y, s, x or ch", () => {
     expect(formatCounts({ a: 2, b: 2, c: 2 }, { a: "category", b: "class", c: "match" })).toBe("2 categories, 2 classes, 2 matches");
+  });
+});
+
+describe("problem labels", () => {
+  test("every condition, outcome, deferral and reason has words", () => {
+    expect((["STAINED", "TORN", "WORN", "BROKEN", "MISSING", "WONT_LATCH", "OTHER"] as const).map(conditionLabel)).toEqual([
+      "Stained",
+      "Torn",
+      "Worn",
+      "Broken",
+      "Missing",
+      "Won't latch",
+      "Other",
+    ]);
+    expect((["NOTED", "DEFERRED", "MUST_FIX"] as const).map(outcomeLabel)).toEqual(["Note only", "Defer", "Must be fixed before flight"]);
+    expect((["NEXT_CHECK", "NEXT_STOP"] as const).map(deferLabel)).toEqual(["Until the next check", "Until the next stop"]);
+    expect((["NO_STOCK", "NO_TIME", "OTHER"] as const).map(reasonLabel)).toEqual(["No stock on hand", "No time on this turn", "Other"]);
+  });
+
+  test("melLabel says what each class means", () => {
+    expect(melLabel({ class: "COSMETIC" })).toBe("Cosmetic: can wait");
+    expect(melLabel({ class: "MEL", item: "FX-25-21-01", category: "C", intervalDays: 10, conditions: "Seat blocked and placarded INOP" })).toBe(
+      "MEL item FX-25-21-01 (category C, fix within 10 days): Seat blocked and placarded INOP",
+    );
+    expect(melLabel({ class: "NO_GO", reason: "Bin cannot be secured" })).toBe("No-go: must be fixed before flight. Bin cannot be secured");
+    // a technician's raise names no MEL item, so its placeholder item is not shown
+    expect(melLabel({ class: "MEL", item: "TECH-RAISED", category: "C", intervalDays: 10, conditions: "Raised by the technician" })).toBe(
+      "MEL item (category C, fix within 10 days): Raised by the technician",
+    );
   });
 });

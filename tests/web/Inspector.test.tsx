@@ -1,7 +1,9 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
+import type { CabinLocation, MelClass, Observation, Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
+import { Inspector } from "../../src/web/components/Inspector.tsx";
+import type { Workspace } from "../../src/web/model.ts";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
 import { CUSHION_3A, fixtureRelease, KIT_PRIMARY, snapshotFor, visitWith } from "../helpers.ts";
 import { type Answer, stubFetch } from "./fetchStub.ts";
@@ -369,5 +371,253 @@ describe("Inspector notices and discards", () => {
     await user.paste("4");
     expect(field).not.toHaveAttribute("aria-invalid");
     expect(within(card).getByRole("button", { name: "Update record" })).toBeEnabled();
+  });
+});
+
+// The piece panel on its own: a hand-built workspace over the fixture snapshot, the callbacks as spies.
+const seat3A = snap.context.layoutRevision.locations.find((l) => l.id === "SEAT:3A") as CabinLocation;
+const MEL_BELT: MelClass = {
+  class: "MEL",
+  item: "FX-25-21-01",
+  category: "C",
+  intervalDays: 10,
+  conditions: "Seat blocked and placarded INOP",
+  blocksSeat: true,
+};
+const problem = (componentId: string, over: Partial<Observation> = {}): Observation => ({
+  id: `OBS-${componentId}`,
+  tail: "N100TL",
+  status: "OPEN",
+  version: 1,
+  melClass: { class: "COSMETIC" },
+  dueDate: null,
+  blocksSeat: false,
+  openedInVisitId: base.id,
+  closedInVisitId: null,
+  closedAs: null,
+  locationLabel: "Seat 3A",
+  componentName: componentId,
+  createdAt: "2026-11-12T12:02:00.000Z",
+  updatedAt: "2026-11-12T12:02:00.000Z",
+  locationId: "SEAT:3A",
+  componentId,
+  condition: "STAINED",
+  note: "",
+  outcome: "NOTED",
+  ...over,
+});
+const beltDeferral = problem("SEATBELT", {
+  condition: "BROKEN",
+  outcome: "DEFERRED",
+  deferUntil: "NEXT_CHECK",
+  reason: "NO_STOCK",
+  melClass: MEL_BELT,
+  dueDate: "2026-11-22",
+  blocksSeat: true,
+});
+const pieceWorkspace = (over: Partial<Workspace> = {}): Workspace => ({
+  mode: "visit",
+  layout: snap.context.layoutRevision,
+  resolution: snap.resolution,
+  componentDefs: snap.resolution.componentDefs,
+  records: [],
+  editable: true,
+  unresolvedReason: null,
+  observations: [],
+  carried: [],
+  checkDate: "2026-11-12",
+  mel: snap.mel ?? [],
+  variantId: snap.context.variant.id,
+  ...over,
+});
+function renderPiece(over: Partial<Workspace> = {}) {
+  const calls = { onObserve: vi.fn(), onUpdateObservation: vi.fn(), onCloseObservation: vi.fn() };
+  const view = render(
+    <Inspector
+      workspace={pieceWorkspace(over)}
+      location={seat3A}
+      focusComponent={null}
+      statusOf={() => ({ phase: "idle" })}
+      onRecord={vi.fn()}
+      onRemove={vi.fn()}
+      onRetry={vi.fn()}
+      onSelect={vi.fn()}
+      onDirtyChange={vi.fn()}
+      {...calls}
+    />,
+  );
+  return { ...calls, ...view };
+}
+const pieceCard = (name: RegExp) => screen.getByRole("region", { name });
+const outcomeNames = (card: HTMLElement) =>
+  within(within(card).getByRole("radiogroup", { name: "Outcome" }))
+    .getAllByRole("radio")
+    .map((r) => r.closest("label")?.textContent?.trim());
+
+describe("Inspector piece panel", () => {
+  it("heads each piece with its location and name, and offers Replace now, Note a problem and Defer", () => {
+    renderPiece();
+    const card = pieceCard(/^Headrest cover/);
+    expect(within(card).getByRole("heading", { level: 4 })).toHaveTextContent(/^Seat 3A · Headrest cover/);
+    expect(
+      within(card)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(expect.arrayContaining(["Replace now", "Note a problem", "Defer"]));
+  });
+
+  it("a life vest marked Missing offers only Must be fixed", async () => {
+    const user = userEvent.setup();
+    renderPiece();
+    const card = pieceCard(/^Life vest/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Missing" }));
+    expect(outcomeNames(card)).toEqual(["Must be fixed before flight"]);
+    expect(within(card).getByText(/^No-go: must be fixed before flight\. A life vest is required at every occupied seat/)).toBeInTheDocument();
+  });
+
+  it("after a seat belt deferral on the same seat it offers Defer with a fix-by date", async () => {
+    const user = userEvent.setup();
+    renderPiece({ observations: [beltDeferral] });
+    const card = pieceCard(/^Life vest/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Missing" }));
+    expect(outcomeNames(card)).toEqual(["Defer", "Must be fixed before flight"]);
+    expect(within(card).getByText("MEL item FX-25-61-01 (category C, fix within 10 days): Seat blocked")).toBeInTheDocument();
+    expect(within(card).getByText("Fix by 22 Nov 2026")).toBeInTheDocument();
+  });
+
+  it("Defer hides Note only for an MEL item", async () => {
+    const user = userEvent.setup();
+    renderPiece();
+    const card = pieceCard(/^Seat belt/);
+    await user.click(within(card).getByRole("button", { name: "Defer" }));
+    await user.click(within(card).getByRole("radio", { name: "Broken" }));
+    expect(outcomeNames(card)).toEqual(["Defer", "Must be fixed before flight"]);
+    expect(within(card).getByRole("radio", { name: "Defer" })).toBeChecked();
+    expect(within(card).queryByRole("radio", { name: "Note only" })).toBeNull();
+    expect(within(card).getByRole("radiogroup", { name: "Until" })).toBeInTheDocument();
+    expect(within(card).getByRole("radiogroup", { name: "Reason" })).toBeInTheDocument();
+  });
+
+  it("offers only the conditions the MEL lists for the piece", async () => {
+    const user = userEvent.setup();
+    renderPiece();
+    const card = pieceCard(/^Seat belt/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    const names = within(within(card).getByRole("radiogroup", { name: "Condition" }))
+      .getAllByRole("radio")
+      .map((r) => r.closest("label")?.textContent?.trim());
+    expect(names).toEqual(["Worn", "Broken", "Missing", "Other"]);
+  });
+
+  it("Make this stricter offers only higher levels", async () => {
+    const user = userEvent.setup();
+    renderPiece({ observations: [beltDeferral] });
+    const belt = pieceCard(/^Seat belt/);
+    await user.click(within(belt).getByRole("button", { name: "Edit" }));
+    const stricter = within(belt).getByRole("combobox", { name: "Make this stricter" });
+    expect(
+      within(stricter)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["No change", "No-go"]);
+
+    const headrest = pieceCard(/^Headrest cover/);
+    await user.click(within(headrest).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(headrest).getByRole("radio", { name: "Stained" }));
+    const cosmetic = within(headrest).getByRole("combobox", { name: "Make this stricter" });
+    expect(
+      within(cosmetic)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["No change", "MEL item", "No-go"]);
+  });
+
+  it("an edit never offers a raise below the one already made", async () => {
+    const user = userEvent.setup();
+    const raised = problem("HEADREST", { outcome: "MUST_FIX", raisedTo: "NO_GO", melClass: { class: "NO_GO", reason: "Raised by the technician" } });
+    renderPiece({ observations: [raised] });
+    const card = pieceCard(/^Headrest cover/);
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    expect(within(card).queryByRole("combobox", { name: "Make this stricter" })).toBeNull();
+    expect(outcomeNames(card)).toEqual(["Must be fixed before flight"]);
+  });
+
+  it("Mark replaced is disabled without a record", () => {
+    renderPiece({ observations: [problem("HEADREST")] });
+    const card = pieceCard(/^Headrest cover/);
+    expect(within(card).getByRole("button", { name: "Mark replaced" })).toBeDisabled();
+    expect(within(card).getByRole("button", { name: "Mark fixed" })).toBeEnabled();
+  });
+
+  it("Mark replaced is enabled with a record and closes the problem as replaced", async () => {
+    const user = userEvent.setup();
+    const withRecord = visitWith(snap, [{ ...CUSHION_3A, componentId: "HEADREST" }]);
+    const o = problem("HEADREST");
+    const { onCloseObservation } = renderPiece({ observations: [o], records: withRecord.records });
+    const card = pieceCard(/^Headrest cover/);
+    await user.click(within(card).getByRole("button", { name: "Mark replaced" }));
+    expect(onCloseObservation).toHaveBeenCalledWith(o, "REPLACED");
+  });
+
+  it("a carried problem says where it came from and when it ran out", () => {
+    const earlier = { ...beltDeferral, id: "OBS-OLD", openedInVisitId: "visit-0", createdAt: "2026-10-20T09:00:00.000Z", dueDate: "2026-10-30" };
+    renderPiece({ carried: [{ observation: earlier, placement: "SAME", locationId: "SEAT:3A", overdue: true }] });
+    const card = pieceCard(/^Seat belt/);
+    expect(within(card).getByText("Carried over from the check on 20 Oct 2026")).toBeInTheDocument();
+    expect(within(card).getByText("Overdue since 30 Oct 2026")).toHaveClass("must-fix");
+  });
+
+  it("the copy shows no raw codes", async () => {
+    const user = userEvent.setup();
+    const bin = problem("HEADREST", { condition: "OTHER", outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_TIME" });
+    const { container } = renderPiece({ observations: [beltDeferral, bin] });
+    const card = pieceCard(/^Life vest/);
+    await user.click(within(card).getByRole("button", { name: "Defer" }));
+    await user.click(within(card).getByRole("radio", { name: "Missing" }));
+    expect(container.textContent).not.toMatch(/NO_GO|WONT_LATCH|NEXT_CHECK|NEXT_STOP|NO_STOCK|NO_TIME|MUST_FIX|DEFERRED/);
+    expect(container.textContent).toMatch(/Until the next check/);
+  });
+
+  it("submit calls onObserve with the exact ObservationInput", async () => {
+    const user = userEvent.setup();
+    const { onObserve } = renderPiece();
+    const card = pieceCard(/^Seat cushion cover/);
+    await user.click(within(card).getByRole("button", { name: "Defer" }));
+    await user.click(within(card).getByRole("radio", { name: "Stained" }));
+    await user.click(within(card).getByRole("radio", { name: "Until the next stop" }));
+    await user.click(within(card).getByRole("radio", { name: "No stock on hand" }));
+    await user.type(within(card).getByLabelText(/^Note about the problem/), "coffee");
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    expect(onObserve).toHaveBeenCalledTimes(1);
+    expect(onObserve.mock.calls[0]?.[0]).toStrictEqual({
+      locationId: "SEAT:3A",
+      componentId: "CUSHION",
+      condition: "STAINED",
+      note: "coffee",
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_STOP",
+      reason: "NO_STOCK",
+    });
+  });
+
+  it("an edit calls onUpdateObservation with the problem and the new input", async () => {
+    const user = userEvent.setup();
+    const o = problem("HEADREST");
+    const { onUpdateObservation } = renderPiece({ observations: [o] });
+    const card = pieceCard(/^Headrest cover/);
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.selectOptions(within(card).getByRole("combobox", { name: "Make this stricter" }), "MEL item");
+    await user.click(within(card).getByRole("radio", { name: "Must be fixed before flight" }));
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    expect(onUpdateObservation).toHaveBeenCalledWith(o, {
+      locationId: "SEAT:3A",
+      componentId: "HEADREST",
+      condition: "STAINED",
+      note: "",
+      outcome: "MUST_FIX",
+      raisedTo: "MEL",
+    });
   });
 });

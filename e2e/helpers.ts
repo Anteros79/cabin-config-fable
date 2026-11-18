@@ -24,7 +24,8 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export async function selectLocation(page: Page, label: string): Promise<void> {
   await page.locator("#goto-input").fill(label);
   await page.locator("#goto-input").press("Enter");
-  await expect(page.locator(".inspector").getByRole("heading", { name: new RegExp(`^${escapeRegExp(label)}`, "i") })).toBeVisible();
+  // level 3 is the location heading; each piece's level-4 heading also starts with the location label
+  await expect(page.locator(".inspector").getByRole("heading", { level: 3, name: new RegExp(`^${escapeRegExp(label)}`, "i") })).toBeVisible();
 }
 
 /** The inspector shows this location (its heading starts with the label). */
