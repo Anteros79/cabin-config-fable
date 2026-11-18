@@ -340,4 +340,33 @@ describe("piece status from problems", () => {
     const notBlocking = { ...belt, blocksSeat: false };
     expect(buildStates(withProblems([notBlocking])).flags.blocked.size).toBe(0);
   });
+
+  it("a NOTED problem stays noted even when a blocked seat re-classifies it to NO_GO", () => {
+    const belt = observation("SEAT:3A", "SEATBELT", { condition: "BROKEN", outcome: "DEFERRED", melClass: MEL_C, dueDate: "2026-11-22", blocksSeat: true });
+    const missingVest = observation("SEAT:3A", "LIFE_VEST", { condition: "MISSING", outcome: "NOTED", melClass: { class: "NO_GO", reason: "x" } });
+    expect(pieceStatus(withProblems([missingVest]), "SEAT:3A", "LIFE_VEST")).toBe("noted");
+    expect(pieceStatus(withProblems([belt, missingVest]), "SEAT:3A", "LIFE_VEST")).toBe("noted");
+  });
+
+  it("a deferred problem on an unresolved piece shows deferred", () => {
+    const ws = withProblems([observation("SEAT:3A", "CUSHION", { outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" })]);
+    ws.resolution = {
+      ...snap.resolution,
+      components: snap.resolution.components.map((c) =>
+        c.locationId === "SEAT:3A" && c.componentId === "CUSHION"
+          ? { locationId: c.locationId, componentId: c.componentId, status: "NO_MATCH" as const, message: "none", excluded: [] }
+          : c,
+      ),
+    };
+    expect(pieceStatus(ws, "SEAT:3A", "CUSHION")).toBe("deferred");
+  });
+
+  it("an observation id appears only once, preferring this visit's copy", () => {
+    const own = observation("SEAT:3A", "CUSHION", { outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" });
+    const ws = withProblems([own], [carriedAt(own)]);
+    const cushion = componentsAt(ws, location("SEAT:3A")).find((v) => v.componentId === "CUSHION");
+    expect(cushion?.problems).toEqual([own]);
+    expect(cushion?.carried).toBeNull();
+    expect(cushion?.pieceStatus).toBe("deferred");
+  });
 });

@@ -86,17 +86,35 @@ export interface Workspace {
   variantId?: string;
 }
 
-/** The observations that are open now, this visit's and carried, each with the location it sits at on this layout. */
-function openPlaced(ws: Workspace): { observation: Observation; locationId: string; carried: boolean }[] {
-  const own = ws.observations.filter((o) => o.status === "OPEN").map((observation) => ({ observation, locationId: observation.locationId, carried: false }));
-  const carried = ws.carried.flatMap((c) => (c.locationId === null ? [] : [{ observation: c.observation, locationId: c.locationId, carried: true }]));
-  return [...own, ...carried];
+interface PlacedProblem {
+  observation: Observation;
+  locationId: string;
+  carried: boolean;
+}
+interface OpenProblems {
+  placed: PlacedProblem[];
+  /** the same observations with `locationId` set to where they sit on this layout, for the seat-block check */
+  open: Observation[];
+}
+
+/** The observations that are open now, this visit's and carried, each with the location it sits at on this layout. An id appears once; this visit's copy wins. */
+function openPlaced(ws: Workspace): OpenProblems {
+  const own = ws.observations
+    .filter((o) => o.status === "OPEN")
+    .map((observation): PlacedProblem => ({ observation, locationId: observation.locationId, carried: false }));
+  const seen = new Set(own.map((p) => p.observation.id));
+  const carried = ws.carried.flatMap((c): PlacedProblem[] =>
+    c.locationId === null || seen.has(c.observation.id) ? [] : [{ observation: c.observation, locationId: c.locationId, carried: true }],
+  );
+  const placed = [...own, ...carried];
+  return { placed, open: placed.map((p) => ({ ...p.observation, locationId: p.locationId })) };
 }
 
 const CLASS_RANK: Record<MelClass["class"], number> = { COSMETIC: 0, MEL: 1, NO_GO: 2 };
 
 /** The class of a problem now: re-classified against the MEL with the seat-blocked state of the other open problems, never below its stored class, NO_GO once an MEL deferral is overdue. Mirrors the server. */
 function currentClass(ws: Workspace, open: Observation[], o: Observation): MelClass {
+  // `open` carries each problem at the location it is placed at on this layout, so the seat-block is judged there.
   const others = open.filter((x) => x.id !== o.id);
   const now = classify({
     mel: ws.mel,
@@ -111,11 +129,12 @@ function currentClass(ws: Workspace, open: Observation[], o: Observation): MelCl
 }
 
 /** The status a piece's open problems give it, or null when it has none. */
-function problemStatus(ws: Workspace, placed: ReturnType<typeof openPlaced>, locationId: string, componentId: string): LocationStatus | null {
+function problemStatus(ws: Workspace, problems: OpenProblems, locationId: string, componentId: string): LocationStatus | null {
+  const { placed, open } = problems;
   const here = placed.filter((p) => p.locationId === locationId && p.observation.componentId === componentId);
   if (here.length === 0) return null;
-  const open = placed.map((p) => ({ ...p.observation, locationId: p.locationId }));
-  if (here.some((p) => p.observation.outcome === "MUST_FIX" || currentClass(ws, open, p.observation).class === "NO_GO")) return "mustFix";
+  if (here.some((p) => p.observation.outcome !== "NOTED" && (p.observation.outcome === "MUST_FIX" || currentClass(ws, open, p.observation).class === "NO_GO")))
+    return "mustFix";
   if (here.some((p) => p.observation.outcome === "DEFERRED" && !p.carried)) return "deferred";
   if (here.some((p) => p.observation.outcome === "DEFERRED")) return "carried";
   return here.some((p) => p.observation.outcome === "NOTED") ? "noted" : null;
@@ -141,11 +160,8 @@ export interface ComponentView {
 }
 
 export function componentsAt(ws: Workspace, location: CabinLocation): ComponentView[] {
-  const placed = openPlaced(ws);
-  const seatBlocked = seatIsBlocked(
-    placed.map((p) => ({ ...p.observation, locationId: p.locationId })),
-    location.id,
-  );
+  const problems = openPlaced(ws);
+  const seatBlocked = seatIsBlocked(problems.open, location.id);
   return location.componentIds.map((componentId) => {
     const def = ws.componentDefs[componentId];
     const resolution = ws.resolution?.components.find((c) => c.locationId === location.id && c.componentId === componentId) ?? null;
@@ -163,9 +179,12 @@ export function componentsAt(ws: Workspace, location: CabinLocation): ComponentV
       resolution,
       record,
       problems: ws.observations.filter((o) => o.status === "OPEN" && o.locationId === location.id && o.componentId === componentId),
-      carried: ws.carried.find((c) => c.locationId === location.id && c.observation.componentId === componentId) ?? null,
+      carried:
+        (problems.placed.some((p) => p.carried && p.locationId === location.id && p.observation.componentId === componentId)
+          ? ws.carried.find((c) => c.locationId === location.id && c.observation.componentId === componentId)
+          : undefined) ?? null,
       melClass: (condition) => classify({ mel: ws.mel, componentId, condition, variant: ws.variantId ?? "", seatBlocked }),
-      pieceStatus: problemStatus(ws, placed, location.id, componentId) ?? recordStatus,
+      pieceStatus: problemStatus(ws, problems, location.id, componentId) ?? recordStatus,
     };
   });
 }
@@ -217,14 +236,14 @@ export function buildStates(ws: Workspace): { scene: Map<string, LocationState>;
     flags.get(r.locationId)!.recorded += 1;
   }
   // Problems override the record-based status of their piece.
-  const placed = openPlaced(ws);
+  const problems = openPlaced(ws);
   for (const location of ws.layout.locations) {
     for (const componentId of location.componentIds) {
-      const status = problemStatus(ws, placed, location.id, componentId);
+      const status = problemStatus(ws, problems, location.id, componentId);
       if (status) at(location.id).components[componentId] = status;
     }
   }
-  const open = placed.map((p) => ({ ...p.observation, locationId: p.locationId }));
+  const { open } = problems;
   for (const o of open) if (seatIsBlocked(open, o.locationId)) flags.blocked.add(o.locationId);
   for (const [id, s] of scene) {
     const f = flags.get(id);
