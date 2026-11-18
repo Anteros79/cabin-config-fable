@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { allowedOutcomes, dueDateFor, isOverdue } from "../../domain/observations.ts";
 import { melSummary } from "../../domain/labels.ts";
+import { allowedOutcomes, dueDateFor, isOverdue } from "../../domain/observations.ts";
 import { excludedOf, rulesNotUsedLine } from "../../domain/report.ts";
 import type {
   CabinLocation,
@@ -35,7 +35,7 @@ interface Props {
   onCloseObservation(o: Observation, closedAs: "REPLACED" | "FIXED"): void;
   onRemove(record: VisitRecord): void;
   /** Re-sends the last write of a target with its idempotency key. May resolve true once saved. */
-  onRetry(target: string): Promise<boolean> | void;
+  onRetry(target: string): Promise<boolean> | undefined;
   onSelect(locationId: string): void;
   /** A card holds typed input that is not saved (`dirty`), or no longer does: its record form or its problem form. The target is `record:<locationId>|<componentId>`. */
   onDirtyChange(target: string, dirty: boolean): void;
@@ -105,7 +105,7 @@ function ProblemForm({
   status: SaveStatus;
   /** Resolves true once saved: the form closes only then, so a failed save keeps what was typed. */
   onSave(input: ObservationInput): Promise<boolean>;
-  onRetry(): Promise<boolean> | void;
+  onRetry(): Promise<boolean> | undefined;
   onDirty(dirty: boolean): void;
   onDone(): void;
   onCancel(): void;
@@ -198,7 +198,7 @@ function ProblemForm({
     finish(await onSave(request), draft);
   };
   // A retry re-sends what this form sent; a form opened after it (sent is null) stays open with its own input.
-  const retry = async () => finish((await onRetry()) ?? undefined, sent);
+  const retry = async () => finish(await onRetry(), sent);
 
   return (
     <form className="problem-form" onSubmit={submit}>

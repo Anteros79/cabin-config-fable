@@ -511,17 +511,19 @@ export function CabinMap(props: Props | ReadOnlyProps) {
               <fieldset key={side} className="bin-side" aria-label={`${side === "L" ? "Left" : "Right"} side bins`}>
                 <h4>{side === "L" ? "Left (A-C side)" : "Right (D-F side)"}</h4>
                 <div className="loc-list">
-                  {bins
-                    .filter((l) => l.bin?.side === side)
-                    .map((l) => {
-                      const { binType, capacityBags } = binTypeOf(l.bin!);
-                      return button(
+                  {bins.flatMap((l) => {
+                    const b = l.bin;
+                    if (b?.side !== side) return [];
+                    const { binType, capacityBags } = binTypeOf(b);
+                    return [
+                      button(
                         l,
-                        `${l.bin!.side}-${String(l.bin!.module).padStart(2, "0")} · rows ${l.bin!.rowFrom}-${l.bin!.rowTo} · ${capacityBags} bags`,
+                        `${b.side}-${String(b.module).padStart(2, "0")} · rows ${b.rowFrom}-${b.rowTo} · ${capacityBags} bags`,
                         "Overhead bin ",
                         `${BIN_TYPE_WORDS[binType]} bin`,
-                      );
-                    })}
+                      ),
+                    ];
+                  })}
                 </div>
               </fieldset>
             ))}
