@@ -536,7 +536,15 @@ export class VisitStore {
     // R13: a NOTED item needs no action, so it stays on its own visit.
     const others = this.openObservations(tail).filter((o) => o.openedInVisitId !== visitId && o.outcome !== "NOTED");
     if (others.length === 0) return [];
-    return mapCarried(others, this.loadSnapshot(visitId).context.layoutRevision.locations, checkDate);
+    const placed = mapCarried(others, this.loadSnapshot(visitId).context.layoutRevision.locations, checkDate);
+    // the opening visit's check date: what "Carried over from the check on …" names (R42)
+    const opened = this.db.prepare("SELECT check_date FROM visits WHERE id = ?");
+    const dates = new Map<string, string>();
+    return placed.map((c) => {
+      const id = c.observation.openedInVisitId;
+      if (!dates.has(id)) dates.set(id, String((opened.get(id) as { check_date: string } | undefined)?.check_date ?? ""));
+      return { ...c, openedCheckDate: dates.get(id) ?? "" };
+    });
   }
 
   /** Must be called inside a transaction. */

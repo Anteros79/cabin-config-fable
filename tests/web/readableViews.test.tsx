@@ -199,7 +199,7 @@ describe("the after-action report sections", () => {
     ...visit,
     aircraftHeld: true,
     observations: [deferredMel, noGo, closed],
-    carried: [{ observation: overdue, placement: "SAME" as const, locationId: "SEAT:3B", overdue: true }],
+    carried: [{ observation: overdue, placement: "SAME" as const, locationId: "SEAT:3B", overdue: true, openedCheckDate: "2026-11-05" }],
     events: [
       { seq: 2, type: "OBSERVATION_ADDED", at: "2026-11-12T12:03:00.000Z", payload: { observation: deferredMel } },
       { seq: 3, type: "OBSERVATION_UPDATED", at: "2026-11-12T12:04:00.000Z", payload: { before: noGo, after: noGo } },

@@ -932,6 +932,8 @@ describe("observations", () => {
       [assist.id, "ORPHANED", null, false], // MEL D: due 2026-10-13
     ]);
     expect(at(after.carried, 1).observation.locationLabel).toBe("Overhead bin L-02 (rows 3-5, 4 bags)");
+    // R42: each names the check that opened it, by that visit's check date (not when the problem was written down)
+    expect(after.carried.map((c) => c.openedCheckDate)).toEqual(["2026-06-15", "2026-06-15"]);
     // no record can be made on a piece that is not there, so it can only be closed as fixed
     expect(codeOf(() => store.closeObservation(after.id, assist.id, "REPLACED", 1))).toBe("REPLACEMENT_MISSING");
     expect(at(store.closeObservation(after.id, assist.id, "FIXED", 1).visit.observations, 0)).toMatchObject({ id: assist.id, status: "CLOSED" });

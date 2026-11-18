@@ -384,7 +384,7 @@ function obs(extra: Partial<Observation> = {}): Observation {
 }
 
 function carriedOf(observation: Observation, overdue = false): CarriedObservation {
-  return { observation, placement: "SAME", locationId: observation.locationId, overdue };
+  return { observation, placement: "SAME", locationId: observation.locationId, overdue, openedCheckDate: "2026-11-05" };
 }
 
 function ev(seq: number, type: string, payload: Record<string, unknown>): VisitEvent {

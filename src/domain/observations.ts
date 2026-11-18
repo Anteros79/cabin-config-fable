@@ -1,5 +1,5 @@
 import { compareCodePoints } from "./order.ts";
-import type { CabinLocation, CarriedObservation, Condition, MelClass, MelEntry, Observation } from "./types.ts";
+import type { CabinLocation, CarriedPlacement, Condition, MelClass, MelEntry, Observation } from "./types.ts";
 
 const RANK: Record<MelClass["class"], number> = { COSMETIC: 0, MEL: 1, NO_GO: 2 };
 
@@ -104,10 +104,10 @@ function binSideOf(locationId: string): "L" | "R" | null {
 }
 
 /** Where each open observation sits on a (possibly different) layout. ORPHANED ones come last. */
-export function mapCarried(open: Observation[], locations: CabinLocation[], onDate: string): CarriedObservation[] {
+export function mapCarried(open: Observation[], locations: CabinLocation[], onDate: string): CarriedPlacement[] {
   const order = new Map(locations.map((l, i) => [l.id, i]));
   const byId = new Map(locations.map((l) => [l.id, l]));
-  const placed = open.map((observation): CarriedObservation => {
+  const placed = open.map((observation): CarriedPlacement => {
     const overdue = isOpenDeferral(observation) && isOverdue(observation.dueDate, onDate);
     const same = byId.get(observation.locationId);
     if (same?.componentIds.includes(observation.componentId)) {
@@ -128,6 +128,6 @@ export function mapCarried(open: Observation[], locations: CabinLocation[], onDa
     }
     return { observation, placement: "ORPHANED", locationId: null, overdue };
   });
-  const rank = (c: CarriedObservation) => (c.locationId === null ? Number.MAX_SAFE_INTEGER : (order.get(c.locationId) ?? Number.MAX_SAFE_INTEGER - 1));
+  const rank = (c: CarriedPlacement) => (c.locationId === null ? Number.MAX_SAFE_INTEGER : (order.get(c.locationId) ?? Number.MAX_SAFE_INTEGER - 1));
   return placed.sort((a, b) => rank(a) - rank(b) || compareCodePoints(a.observation.id, b.observation.id));
 }

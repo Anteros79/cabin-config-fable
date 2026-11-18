@@ -204,6 +204,7 @@ describe("CabinMap armrests, pieces and statuses", () => {
       placement: "SAME" as const,
       locationId: "SEAT:3A",
       overdue: false,
+      openedCheckDate: "2026-11-05",
     };
     const ws = { ...workspace, observations: [deferral, problem("SEAT:3A", "CUSHION")], carried: [carried] };
     showMap(ws, "SEAT:3A");

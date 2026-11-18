@@ -844,4 +844,8 @@ export interface CarriedObservation {
   placement: "SAME" | "MAPPED" | "ORPHANED";
   locationId: string | null;
   overdue: boolean;
+  /** the check date (YYYY-MM-DD) of the visit that opened the problem: "Carried over from the check on …" */
+  openedCheckDate: string;
 }
+/** Where a carried problem sits on a layout: a CarriedObservation before the opening visit's date is added. */
+export type CarriedPlacement = Omit<CarriedObservation, "openedCheckDate">;

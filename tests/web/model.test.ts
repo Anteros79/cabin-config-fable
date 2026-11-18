@@ -76,6 +76,7 @@ const carriedAt = (o: Observation, locationId: string = o.locationId, overdue = 
   placement: "SAME",
   locationId,
   overdue,
+  openedCheckDate: "2026-11-05",
 });
 
 const withProblems = (observations: Observation[] = [], carried: CarriedObservation[] = []): Workspace => ({ ...workspace(), observations, carried });
@@ -311,13 +312,13 @@ describe("piece status from problems", () => {
 
   it("a carried problem placed on another location marks that location's piece", () => {
     const o = observation("BIN:L-04", "CUSHION", { outcome: "MUST_FIX", melClass: MEL_C });
-    const ws = withProblems([], [{ observation: o, placement: "MAPPED", locationId: "SEAT:3A", overdue: false }]);
+    const ws = withProblems([], [{ observation: o, placement: "MAPPED", locationId: "SEAT:3A", overdue: false, openedCheckDate: "2026-11-05" }]);
     expect(pieceStatus(ws, "SEAT:3A", "CUSHION")).toBe("mustFix");
   });
 
   it("an orphaned carried problem adds no piece status", () => {
     const o = observation("SEAT:99Z", "CUSHION", { outcome: "MUST_FIX" });
-    const ws = withProblems([], [{ observation: o, placement: "ORPHANED", locationId: null, overdue: false }]);
+    const ws = withProblems([], [{ observation: o, placement: "ORPHANED", locationId: null, overdue: false, openedCheckDate: "2026-11-05" }]);
     expect(buildStates(ws).scene).toEqual(buildStates(workspace()).scene);
   });
 
@@ -390,7 +391,7 @@ describe("one class judgement (R35)", () => {
     const vestClass = classify({ mel, componentId: "LIFE_VEST", condition: "MISSING", variant, seatBlocked: true });
     expect(vestClass.class).toBe("MEL");
     const vest = observation("SEAT:3A", "LIFE_VEST", { id: "VEST", outcome: "DEFERRED", condition: "MISSING", melClass: vestClass, dueDate: "2026-11-22" });
-    const mapped: CarriedObservation = { observation: blocker, placement: "MAPPED", locationId: "SEAT:3B", overdue: false };
+    const mapped: CarriedObservation = { observation: blocker, placement: "MAPPED", locationId: "SEAT:3B", overdue: false, openedCheckDate: "2026-11-05" };
 
     // the store's completion gate judges every open observation at its stored location id
     const open = [vest, blocker];

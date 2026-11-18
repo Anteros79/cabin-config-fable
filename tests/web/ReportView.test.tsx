@@ -143,7 +143,7 @@ function outcomeVisit(over: Partial<Visit> = {}): Visit {
   return {
     ...visit,
     observations: [noted, deferredMel, mustFix, closed],
-    carried: [{ observation: carried, placement: "SAME", locationId: "SEAT:5A", overdue: false }],
+    carried: [{ observation: carried, placement: "SAME", locationId: "SEAT:5A", overdue: false, openedCheckDate: "2026-11-05" }],
     events: [
       ev(1, "RECORD_ADDED", { locationId: "SEAT:3A", componentId: "CUSHION" }),
       ev(2, "OBSERVATION_ADDED", { observation: deferredMel }),

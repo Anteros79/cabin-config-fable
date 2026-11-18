@@ -124,6 +124,7 @@ const carriedProblem: CarriedObservation = {
   placement: "SAME",
   locationId: "SEAT:4C",
   overdue: false,
+  openedCheckDate: "2026-11-05",
 };
 
 function workspaceWithEveryStatus(): Workspace {
