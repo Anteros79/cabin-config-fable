@@ -87,7 +87,7 @@ describe("reports: PDF and JSON agree with persisted work", () => {
       schema: "cabin-kit.report/2",
       reportKind: "FINAL",
       visit: { tail: "N100TL", checkDate: "2026-11-12", technician: "Demo tech", status: "COMPLETED" },
-      configuration: { variantId: "V01", carpet: "MOHAWK", seam: "PRE", seatCount: 176, layoutRevisionId: "FX-L-S176-MAX8@1", namespace: "fixture" },
+      configuration: { variantId: "V01", carpet: "MOHAWK", seam: "PRE", seatCount: 176, layoutRevisionId: "FX-L-S176-MAX8-LP@1", namespace: "fixture" },
       counts: { workItems: 2, replacements: 2, totalLines: 6, unresolvedComponents: 0 },
     });
     expect(report.authorityNotice).toMatch(/Not an approved maintenance authority/);
@@ -163,7 +163,7 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     await put(app, `/api/visits/${visit.id}/records`, { record: CUSHION_3A });
     const { text } = await pdfText((await app.app.inject(`/api/visits/${visit.id}/report.pdf`)).rawPayload);
     expect(text).toContain("DRAFT PREVIEW - visit not completed");
-    expect(text).toContain("Unresolved applicability gaps (24 components)");
+    expect(text).toContain("Unresolved applicability gaps (170 components)");
     expect(text).toContain("Ambiguous");
     expect(text).toContain("expired after 2025-12-31");
   });

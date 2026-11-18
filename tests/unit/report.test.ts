@@ -88,7 +88,7 @@ describe("report schema 2 (DOM-01, DOM-16)", () => {
     const partial = oldShapeSnapshot(snapshotFor(fixtureRelease(), "N090TL", "2026-11-12"));
     const old = buildReport(visitWith(partial, [CUSHION_3A]), "DRAFT_PREVIEW", AT);
     expect(old.gaps.find((g) => g.componentId === "BACKREST")?.sourceIds).toEqual([]);
-    expect(old.counts.unresolvedComponents).toBe(24);
+    expect(old.counts.unresolvedComponents).toBe(170); // N090TL: 169 no-match and 1 ambiguous (VAC-2)
     expect(buildPreparation(partial).lines.every((l) => l.excludedRules.length === 0)).toBe(true);
   });
 

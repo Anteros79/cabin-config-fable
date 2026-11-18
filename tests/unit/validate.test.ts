@@ -159,6 +159,37 @@ describe("referential findings", () => {
     expect(withCode(findings, "CANDIDATE_HAS_FIXTURE_DATA")[0]?.refs).toContain(`CAND-73G@2026.1#${seat.id}`);
   });
 
+  it("CANDIDATE_HAS_FIXTURE_DATA: a candidate layout with an armrest location", () => {
+    const content = structuredClone(stagedFull().content);
+    const rev = must(
+      content.layoutRevisions.find((r) => r.id === "CAND-73G@2026.1"),
+      "CAND-73G@2026.1",
+    );
+    const armrest = must(
+      content.layoutRevisions.flatMap((r) => r.locations).find((l) => l.kind === "ARMREST"),
+      "a fixture armrest",
+    );
+    rev.locations.push(structuredClone(armrest));
+    const findings = validateRelease(content);
+    expect(withCode(findings, "CANDIDATE_HAS_FIXTURE_DATA").map((f) => [f.severity, f.refs])).toEqual([
+      ["error", ["CAND-73G@2026.1", `CAND-73G@2026.1#${armrest.id}`]],
+    ]);
+  });
+
+  it("ORPHAN: an MEL entry for an unknown component or citing an unknown source", () => {
+    const findings = validateRelease(
+      fixtureContent((c) => {
+        const first = must(c.mel[0], "an MEL entry");
+        c.mel.push({ ...structuredClone(first), id: "X-MEL-COMPONENT", componentId: "NO_SUCH_PIECE" });
+        c.mel.push({ ...structuredClone(first), id: "X-MEL-SOURCE", sourceId: "NO-SUCH-DOC" });
+      }),
+    );
+    expect(withCode(findings, "ORPHAN").map((f) => [f.severity, f.message, f.refs])).toEqual([
+      ["error", "MEL entry X-MEL-COMPONENT refers to unknown component NO_SUCH_PIECE.", ["X-MEL-COMPONENT"]],
+      ["error", "MEL entry X-MEL-SOURCE cites unknown source NO-SUCH-DOC.", ["X-MEL-SOURCE"]],
+    ]);
+  });
+
   it("RULES_INCOMPARABLE: two released rules whose scopes overlap without either implying the other", () => {
     const findings = validateRelease(
       fixtureContent((c) => {
@@ -222,15 +253,15 @@ describe("referential findings", () => {
   it("a rule and substitute staged for a planned revision of an unreleased variant validate, with a warning", () => {
     const content = fixtureContent((c) => {
       const rev = must(
-        c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1"),
-        "FX-L-S176-MAX8@1",
+        c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8-LP@1"),
+        "FX-L-S176-MAX8-LP@1",
       );
       const v01 = must(
         c.variants.find((v) => v.id === "V01"),
         "V01",
       );
-      c.layoutRevisions.push({ ...structuredClone(rev), id: "FX-L-S176-MAX8@9", status: "planned" });
-      c.variants.push({ ...v01, id: "V12-DRAFT", released: false, layoutRevisionIds: ["FX-L-S176-MAX8@9"] });
+      c.layoutRevisions.push({ ...structuredClone(rev), id: "FX-L-S176-MAX8-LP@9", status: "planned" });
+      c.variants.push({ ...v01, id: "V12-DRAFT", released: false, layoutRevisionIds: ["FX-L-S176-MAX8-LP@9"] });
       c.rules.push({ ...cushionOverAllSeats(c, "X-STAGED", { variant: ["V12-DRAFT"] }), locations: { kind: "SEAT", ids: ["SEAT:3A"], letters: ["A"] } });
       const sub = must(c.substitutes[0], "a substitute");
       c.substitutes.push({

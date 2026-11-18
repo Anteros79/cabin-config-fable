@@ -22,7 +22,7 @@ const BAND = 6;
  */
 function syntheticRelease({ rows, variants, rules }: { rows: number; variants: number; rules: number }): ReleaseContent {
   return fixtureContent((c) => {
-    const template = c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1");
+    const template = c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8-LP@1");
     const seatTemplate = template?.locations.find((l) => l.id === "SEAT:1A");
     if (!template || !seatTemplate?.seat) throw new Error("fixture lacks the template layout");
     const subtypeId = template.subtypeId;

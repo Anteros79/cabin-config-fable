@@ -57,7 +57,7 @@ test("the URL carries tail and date, and Back restores the earlier result", asyn
 test("PARTIAL visit: gaps are visible, cannot be recorded and stay in the report", async ({ page }) => {
   await startVisitUi(page, "N090TL", "2026-11-12", "Gap Tech");
   await openMap(page);
-  await expect(page.locator(".viewer-counts")).toContainText("24 unresolved");
+  await expect(page.locator(".viewer-counts")).toContainText("170 unresolved");
   await selectLocation(page, "Overhead bin L-01");
   const bin = page.locator(".component-card[data-component=BIN_DOOR]");
   await expect(bin).toContainText("No match");
@@ -68,7 +68,7 @@ test("PARTIAL visit: gaps are visible, cannot be recorded and stay in the report
   await expect(page.locator(".component-card[data-component=BACKREST]")).toContainText("expired after 2025-12-31");
   await recordPrimary(page, "CUSHION");
   await page.getByRole("link", { name: "Preview report" }).click();
-  await expect(page.locator("#r-gaps")).toContainText("24 components");
+  await expect(page.locator("#r-gaps")).toContainText("170 components");
 });
 
 test("expired alternate is not offered on 2027-01-01 and the reason is shown", async ({ page }) => {

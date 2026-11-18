@@ -309,7 +309,7 @@ describe("reference updates do not rebase visits", () => {
     const store = openVisits(stores);
     const visit = store.createVisit(snapshotFor(releaseA, "N100TL", "2026-11-12"), "Demo").visit;
     const original = store.getVisit(visit.id);
-    expect(original).toMatchObject({ variantId: "V01", layoutRevisionId: "FX-L-S176-MAX8@1", referenceReleaseId: releaseA.id });
+    expect(original).toMatchObject({ variantId: "V01", layoutRevisionId: "FX-L-S176-MAX8-LP@1", referenceReleaseId: releaseA.id });
 
     // Release B moves N100TL to V10 on the 138-seat layout, which has a seat 14B; V01's layout does not.
     const staged = buildStagedRelease({ includeCandidate: false, label: "N100TL retrofitted" });
@@ -317,7 +317,7 @@ describe("reference updates do not rebase visits", () => {
     const aircraft = staged.content.aircraft.find((a) => a.tail === "N100TL");
     if (!assignment || !aircraft) throw new Error("the fixture no longer has N100TL's V01 assignment");
     assignment.variantId = "V10";
-    assignment.layoutRevisionId = "FX-L-S138@1";
+    assignment.layoutRevisionId = "FX-L-S138-CL@1";
     aircraft.subtypeId = "FX-700";
     const { id, status } = ref.stage(staged.content, [], {});
     expect(status).toBe("validated");
@@ -333,7 +333,7 @@ describe("reference updates do not rebase visits", () => {
     // The existing visit keeps its snapshot, variant and release, and refuses the record that only the new variant allows.
     const loaded = store.getVisit(visit.id);
     expect(loaded.snapshotSha256).toBe(original.snapshotSha256);
-    expect(loaded).toMatchObject({ variantId: "V01", layoutRevisionId: "FX-L-S176-MAX8@1", referenceReleaseId: releaseA.id });
+    expect(loaded).toMatchObject({ variantId: "V01", layoutRevisionId: "FX-L-S176-MAX8-LP@1", referenceReleaseId: releaseA.id });
     expect(loaded.snapshot.context.variant.id).toBe("V01");
     expect(codeOf(() => store.upsertRecord(visit.id, seat14B, undefined))).toBe("UNKNOWN_LOCATION");
     expect(store.getVisit(visit.id)).toMatchObject({ version: 1, recordCount: 0 });

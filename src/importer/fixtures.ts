@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
-import { binPlacement, floorPlacement, geometryDeclaration, seatPlacement, sideOf } from "../domain/geometry.ts";
+import { ARMREST_SPANS, armrestPlacement, binPlacement, floorPlacement, geometryDeclaration, seatPlacement, sideOf } from "../domain/geometry.ts";
 import { compareCodePoints } from "../domain/order.ts";
 import type {
   Aircraft,
   AircraftSubtype,
   ApplicabilityRule,
+  BinType,
   CabinLocation,
   ComponentDef,
   ContextConstraint,
@@ -65,8 +66,47 @@ export interface FixtureContent {
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 const ZONES = ["ELR", "STD", "EXIT"] as const;
 const ns = "fixture" as const;
-/** Seat components the builder generates rules for, and so the only ones a seat part override can name. */
-const SEAT_COMPONENTS = ["CUSHION", "BACKREST"];
+/** The pieces of every seat, in order. The builder generates a rule per zone and letter for each, so these are also the only components a seat part override can name. */
+const SEAT_COMPONENTS = ["CUSHION", "BACKREST", "HEADREST", "SEATBELT", "TRAY", "SEATBACK_NET", "LIFE_VEST"];
+const SEAT_PIECE_NOUN: Readonly<Record<string, string>> = {
+  CUSHION: "cushion cover",
+  BACKREST: "backrest cover",
+  HEADREST: "headrest cover",
+  SEATBELT: "seat belt",
+  TRAY: "tray table",
+  SEATBACK_NET: "seat-back net",
+  LIFE_VEST: "life vest",
+};
+const ALL_BIN_PIECES = [
+  "BIN_DOOR",
+  "BIN_LATCH",
+  "BIN_STRIKER",
+  "BIN_PIVOT",
+  "BIN_ASSIST",
+  "BIN_LINER",
+  "BIN_SIDE_PANEL",
+  "BIN_BUMPER",
+  "BIN_SEAL",
+  "BIN_PLACARD",
+  "BIN_LABEL",
+];
+/** The pieces of a bin, by bin type (fictional): only PIVOT bins have an assist, and CLASSIC bins have no stop bumper either. */
+const BIN_PIECES: Readonly<Record<BinType, readonly string[]>> = {
+  CLASSIC: ALL_BIN_PIECES.filter((id) => id !== "BIN_ASSIST" && id !== "BIN_BUMPER"),
+  PIVOT: ALL_BIN_PIECES,
+  LARGE_PIVOT: ALL_BIN_PIECES.filter((id) => id !== "BIN_ASSIST"),
+};
+/** Fictional bag capacity of one bin module, by bin type. */
+const BIN_CAPACITY: Readonly<Record<BinType, number>> = { CLASSIC: 3, PIVOT: 4, LARGE_PIVOT: 6 };
+/** The bin type in plain words, for layout names and part descriptions that people read. */
+const BIN_WORDS: Readonly<Record<BinType, string>> = { CLASSIC: "classic", PIVOT: "pivot", LARGE_PIVOT: "large pivot" };
+/** The bin type's code in a layout id. */
+const BIN_CODE: Readonly<Record<BinType, string>> = { CLASSIC: "CL", PIVOT: "PV", LARGE_PIVOT: "LP" };
+
+/** Layout id of a seat set with a bin type, e.g. `FX-L-S176-MAX8-LP`: one layout per seat spec, subtype and bin type. */
+function layoutIdOf(specId: string, binType: BinType): string {
+  return `FX-L-${specId}-${BIN_CODE[binType]}`;
+}
 /** The forward floor area is rows 1 to FWD_LAST_ROW; the aft area is the last AFT_ROWS rows; mid is what lies between. */
 const FWD_LAST_ROW = 5;
 const AFT_ROWS = 10;
@@ -93,12 +133,52 @@ function seatSpecOf(data: FixtureData, id: string): SeatSpec {
   return spec;
 }
 
-function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, sourceId: string): LayoutRevision {
+/**
+ * The armrests of one row, both sides, in seat-letter order. A span keeps its id while at least one seat it touches is
+ * present: between a present seat and an omitted one it is the present seat's inner armrest. A span that touches only
+ * omitted seats is dropped.
+ */
+function armrestsOfRow(row: number, present: string[]): CabinLocation[] {
+  const armrests: CabinLocation[] = [];
+  for (const side of ["L", "R"] as const) {
+    ARMREST_SPANS[side].forEach((span, spanIndex) => {
+      const seat = (letter: string | undefined) => (letter !== undefined && present.includes(letter) ? `${row}${letter}` : null);
+      let between: [string | null, string | null];
+      let label: string;
+      if (span.length === 2) {
+        between = [seat(span.charAt(0)), seat(span.charAt(1))];
+        const [a, b] = between;
+        if (a !== null && b !== null) label = `Armrest between ${a} and ${b}`;
+        else if (a !== null || b !== null) label = `Armrest beside ${a ?? b} (no seat ${row}${a === null ? span.charAt(0) : span.charAt(1)})`;
+        else return;
+      } else {
+        const code = seat(span);
+        if (code === null) return;
+        // the first span of a side lies before its seat in letter order, the last after it
+        between = spanIndex === 0 ? [null, code] : [code, null];
+        label = `Armrest at the ${span === "A" || span === "F" ? "window" : "aisle"}, ${code}`;
+      }
+      armrests.push({
+        id: `ARMREST:${row}-${span}`,
+        kind: "ARMREST",
+        label,
+        componentIds: ["ARMREST"],
+        armrest: { row, side, between },
+        placement: armrestPlacement(row, side, spanIndex),
+      });
+    });
+  }
+  return armrests;
+}
+
+function buildRevision(specId: string, spec: SeatSpec, binType: BinType, subtypeId: string, sourceId: string): LayoutRevision {
   const rows: RowLabel[] = [];
   const locations: CabinLocation[] = [];
+  const armrests: CabinLocation[] = [];
   for (let row = 1; row <= spec.rows; row++) {
     rows.push({ printedLabel: String(row), exists: true, physicalOrder: row });
     const present = LETTERS.filter((l) => !spec.omit.includes(`${row}${l}`));
+    armrests.push(...armrestsOfRow(row, present));
     for (const letter of present) {
       const side = sideOf(letter);
       const blockSize = present.filter((l) => sideOf(l) === side).length;
@@ -107,7 +187,7 @@ function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, source
         id: `SEAT:${code}`,
         kind: "SEAT",
         label: `Seat ${code}`,
-        componentIds: ["CUSHION", "BACKREST"],
+        componentIds: [...SEAT_COMPONENTS],
         seat: {
           printedRow: String(row),
           letter,
@@ -127,6 +207,7 @@ function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, source
       });
     }
   }
+  locations.push(...armrests);
   locations.push({
     id: "FLOOR:FULL-CABIN",
     kind: "FLOOR",
@@ -145,31 +226,34 @@ function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, source
       placement: floorPlacement(area.from, area.to, spec.rows),
     });
   }
-  const modules = Math.ceil(spec.rows / 3);
+  const capacityBags = BIN_CAPACITY[binType];
   for (const side of ["L", "R"] as const) {
-    for (let m = 1; m <= modules; m++) {
-      const from = (m - 1) * 3 + 1;
-      const to = Math.min(m * 3, spec.rows);
-      const tag = `${side}-${String(m).padStart(2, "0")}`;
+    let from = 1;
+    spec.binModules[side].forEach((length, i) => {
+      const module = i + 1;
+      const to = from + length - 1;
+      const tag = `${side}-${String(module).padStart(2, "0")}`;
       locations.push({
         id: `BIN:${tag}`,
         kind: "BIN",
-        label: `Overhead bin ${tag} (rows ${from}-${to})`,
-        componentIds: ["BIN_DOOR"],
-        bin: { side, module: m, rowFrom: from, rowTo: to, binType: "PIVOT", capacityBags: 4 },
+        label: `Overhead bin ${tag} (rows ${from}-${to}, ${capacityBags} bags)`,
+        componentIds: [...BIN_PIECES[binType]],
+        bin: { side, module, rowFrom: from, rowTo: to, binType, capacityBags },
         placement: binPlacement(side, from, to),
       });
-    }
+      from = to + 1;
+    });
   }
   const seatCount = locations.filter((l) => l.kind === "SEAT").length;
+  const layoutId = layoutIdOf(specId, binType);
   return {
-    id: `FX-L-${specId}@1`,
-    layoutId: `FX-L-${specId}`,
+    id: `${layoutId}@1`,
+    layoutId,
     revision: "1",
     namespace: ns,
     status: "released",
     subtypeId,
-    name: `Fictional ${seatCount}-seat layout (${specId})`,
+    name: `Fictional ${seatCount}-seat layout (${specId}, ${BIN_WORDS[binType]} bins)`,
     seatSetStatus: "complete",
     declaredSeatCount: seatCount,
     rows,
@@ -179,7 +263,7 @@ function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, source
     geometry: geometryDeclaration(spec.rows),
     sourceId,
     notes: [
-      "Fictional fixture layout. Exit rows, zones, floor areas and bin modules are fixture shortcuts.",
+      "Fictional fixture layout. Exit rows, zones, floor areas, bin modules and the bin type are fixture shortcuts.",
       `Omitted seats: ${spec.omit.length ? spec.omit.join(", ") : "none"}.`,
     ],
   };
@@ -224,9 +308,14 @@ export function fixtureReferenceIssues(data: FixtureData): string[] {
     for (const row of new Set(spec.exitRows.filter((r) => spec.elrRows.includes(r)))) {
       issues.push(`seatSpecs.${id}: row ${row} is both an exit row and an ELR row; a row has one seat zone.`);
     }
+    for (const side of ["L", "R"] as const) {
+      const covered = spec.binModules[side].reduce((sum, length) => sum + length, 0);
+      if (covered !== spec.rows) issues.push(`seatSpecs.${id}.binModules.${side}: the modules cover ${covered} rows, but the layout has ${spec.rows}.`);
+    }
   }
   data.variants.forEach((v, i) => {
     if (v.seatSpec !== null && !Object.hasOwn(data.seatSpecs, v.seatSpec)) issues.push(`variants.${i}.seatSpec: seat spec ${v.seatSpec} is not defined.`);
+    if (v.seatSpec !== null && v.binType === null) issues.push(`variants.${i}.binType: variant ${v.id} has a seat spec, so it needs a bin type.`);
   });
   for (const id of Object.keys(data.variantOmissions)) {
     if (!variants.has(id)) issues.push(`variantOmissions.${id}: variant ${id} does not exist.`);
@@ -299,7 +388,7 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
   }));
   const subtypes: AircraftSubtype[] = data.subtypes.map((s) => ({ id: s.id, namespace: ns, name: s.name }));
 
-  // One layout may serve several maintenance variants: layouts are keyed by seat set, not by variant.
+  // One layout may serve several maintenance variants: layouts are keyed by seat set, subtype and bin type, not by variant.
   const layouts: Layout[] = [];
   const layoutRevisions: LayoutRevision[] = [];
   const revisionFor = new Map<string, LayoutRevision>();
@@ -328,14 +417,16 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
       layouts.push({ id: revision.layoutId, namespace: ns, subtypeId: v.subtype, name: revision.name });
       layoutRevisions.push(revision);
     } else {
-      const key = `${v.seatSpec}|${v.subtype}`;
+      const binType = v.binType;
+      if (binType === null) throw new Error(`invariant: variant ${v.id} has a seat spec but no bin type`);
+      const key = `${v.seatSpec}|${v.subtype}|${binType}`;
       const existing = revisionFor.get(key);
       if (existing) revision = existing;
       else {
         const specId = data.variants.some((o) => o.seatSpec === v.seatSpec && o.subtype !== v.subtype)
           ? `${v.seatSpec}-${v.subtype.replace("FX-", "")}`
           : v.seatSpec;
-        revision = buildRevision(specId, seatSpecOf(data, v.seatSpec), v.subtype, "FX-DOC-CONFIG");
+        revision = buildRevision(specId, seatSpecOf(data, v.seatSpec), binType, v.subtype, "FX-DOC-CONFIG");
         revisionFor.set(key, revision);
         layouts.push({ id: revision.layoutId, namespace: ns, subtypeId: v.subtype, name: revision.name });
         layoutRevisions.push(revision);
@@ -378,6 +469,7 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
   };
   for (const p of data.extraParts) addPart(p.partNo, p.description);
   const rules: ApplicabilityRule[] = [];
+  const componentNames = new Map(data.components.map((c) => [c.id, c.name]));
   const revisionById = new Map(layoutRevisions.map((r) => [r.id, r]));
   for (const v of data.variants) {
     if (!v.released || v.seatSpec === null) continue;
@@ -387,14 +479,14 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
     const omissions = data.variantOmissions[v.id] ?? {};
     const constraint: ContextConstraint = { variant: [v.id] };
     const common = { namespace: ns, constraint, released: true, effectiveFrom: data.ruleEffectiveFrom, effectiveTo: null, qtyPerReplacement: 1 };
-    for (const componentId of ["CUSHION", "BACKREST"]) {
+    for (const componentId of SEAT_COMPONENTS) {
       for (const zone of ZONES) {
         for (const letter of LETTERS) {
           // Only generate rules that can actually match a seat (the baseline had unreachable patterns).
           const reachable = revision.locations.some((l) => l.seat?.maintenanceZone === zone && l.seat.letter === letter);
           if (!reachable) continue;
           const partNo = data.partOverrides[`${v.id}|${zone}|${letter}|${componentId}`] ?? `FAKE-${v.id}-${zone}-${letter}-${componentId}`;
-          addPart(partNo, `Fictional ${componentId === "CUSHION" ? "cushion" : "backrest"} cover, ${v.id} ${zone} seat ${letter}`);
+          addPart(partNo, `Fictional ${SEAT_PIECE_NOUN[componentId] ?? componentId}, ${v.id} ${zone} seat ${letter}`);
           const sourceId = componentId === "BACKREST" && zone === "EXIT" && omissions.backrestExitSource ? omissions.backrestExitSource : data.seatRuleSource;
           rules.push({
             ...common,
@@ -408,6 +500,17 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
         }
       }
     }
+    const armrestPart = `FAKE-${v.id}-ARMREST`;
+    addPart(armrestPart, `Fictional armrest, ${v.id}`);
+    rules.push({
+      ...common,
+      id: `FX-R-${v.id}-ARMREST`,
+      componentId: "ARMREST",
+      partNo: armrestPart,
+      unit: "EA",
+      locations: { kind: "ARMREST" },
+      sourceId: data.seatRuleSource,
+    });
     const kitPart = data.partOverrides[`${v.id}|CARPET_KIT`] ?? `FAKE-${v.id}-CARPET-KIT`;
     addPart(kitPart, `Fictional full-cabin carpet kit, ${v.id}`);
     rules.push({
@@ -445,6 +548,23 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
           partNo,
           unit: "EA",
           locations: { kind: "BIN", ids: [loc.id] },
+          sourceId: data.seatRuleSource,
+        });
+      }
+      const binType = v.binType;
+      if (binType === null) throw new Error(`invariant: released variant ${v.id} has no bin type`);
+      // the door has a rule per bin above; every other piece of the bin type has one rule for all bins
+      for (const componentId of BIN_PIECES[binType].filter((id) => id !== "BIN_DOOR")) {
+        const partNo = `FAKE-${v.id}-${binType}-${componentId}`;
+        const name = componentNames.get(componentId) ?? componentId;
+        addPart(partNo, `Fictional ${name.charAt(0).toLowerCase()}${name.slice(1)}, ${BIN_WORDS[binType]} bins, ${v.id}`);
+        rules.push({
+          ...common,
+          id: `FX-R-${v.id}-BIN-${componentId}`,
+          componentId,
+          partNo,
+          unit: "EA",
+          locations: { kind: "BIN" },
           sourceId: data.seatRuleSource,
         });
       }
@@ -527,6 +647,6 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
     substitutes,
     kitChildren,
     pendingChanges,
-    mel: [],
+    mel: data.mel.map((e) => structuredClone(e)),
   };
 }

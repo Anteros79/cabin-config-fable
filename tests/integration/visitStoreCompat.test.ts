@@ -136,7 +136,7 @@ describe("visit stores written by 5d6679d", () => {
     const id = store.createVisit(old, "Demo tech").visit.id;
     store.upsertRecord(id, CUSHION_3A, undefined);
     const preview = store.getReport(id).report;
-    expect(preview.counts.unresolvedComponents).toBe(24);
+    expect(preview.counts.unresolvedComponents).toBe(170); // built from the current fixture release (VAC-2)
     expect(preview.work[0]?.excludedRules).toEqual([]);
     // the ambiguous candidates still name their sources; old no-match exclusions have none to cite
     expect(preview.gaps.find((g) => g.status === "AMBIGUOUS")?.sourceIds).toEqual(["FX-DOC-B"]);

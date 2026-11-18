@@ -7,7 +7,7 @@ import { buildStagedRelease, contentHash, DEFAULT_FIXTURE_PATH, type StagedBuild
 import { importReference } from "../../src/importer/cli.ts";
 import { type FixtureData, FixtureError } from "../../src/importer/fixtureSchema.ts";
 import { buildFixtureContent, loadFixtureData } from "../../src/importer/fixtures.ts";
-import { asRelease, at, cleanupTempDirs, EXPECTED_CONTENT_HASH, stagedFull, tempDir } from "../helpers.ts";
+import { asRelease, at, cleanupTempDirs, EXPECTED_CONTENT_HASH, fixtureRelease, stagedFull, tempDir } from "../helpers.ts";
 
 afterAll(cleanupTempDirs);
 
@@ -185,6 +185,7 @@ describe("fixture file schema (IMP-04)", () => {
       const v11 = d.variants.find((v) => v.id === "V11");
       if (!v11 || v11.released) throw new Error("fixture changed: V11 is expected to be unreleased");
       v11.seatSpec = "S176";
+      v11.binType = "PIVOT";
       d.partOverrides["V11|ELR|A|CUSHION"] = "FAKE-X";
       d.partOverrides["V11|CARPET_KIT"] = "FAKE-Y";
     });
@@ -227,5 +228,214 @@ describe("fixture file schema (IMP-04)", () => {
     expect(content.vocabulary).not.toBe(data.vocabulary);
     expect(content.vocabulary.units).not.toBe(data.vocabulary.units);
     expect(at(content.pendingChanges, 0)).not.toBe(at(data.pendingChanges, 0));
+  });
+});
+
+describe("fictional pieces, armrests, bin modules and types, MEL (VAC-2)", () => {
+  const release = fixtureRelease();
+  const revisionOf = (id: string) => {
+    const revision = release.layoutRevisions.find((r) => r.id === id);
+    if (!revision) throw new Error(`fixture has no layout revision ${id}`);
+    return revision;
+  };
+  const locationOf = (revisionId: string, locationId: string) => {
+    const location = revisionOf(revisionId).locations.find((l) => l.id === locationId);
+    if (!location) throw new Error(`${revisionId} has no location ${locationId}`);
+    return location;
+  };
+  const binsOfVariant = (variantId: string) => {
+    const revisionId = release.variants.find((v) => v.id === variantId)?.layoutRevisionIds[0] ?? "";
+    return revisionOf(revisionId).locations.filter((l) => l.kind === "BIN");
+  };
+
+  test("every variant points at the layout for its seat spec and bin type", () => {
+    expect(Object.fromEntries(release.variants.map((v) => [v.id, v.layoutRevisionIds]))).toEqual({
+      V01: ["FX-L-S176-MAX8-LP@1"],
+      V02: ["FX-L-S176-MAX8-PV@1"],
+      V03: ["FX-L-S170-PV@1"],
+      V04: ["FX-L-S176-800-LP@1"],
+      V05: ["FX-L-S176-800-PV@1"],
+      V06: ["FX-L-S176-800-PV@1"],
+      V07: ["FX-L-S176-800-PV@1"],
+      V08: ["FX-L-S176-800-PV@1"],
+      V09: ["FX-L-S137-CL@1"],
+      V10: ["FX-L-S138-CL@1"],
+      V11: ["FX-L-V11-PLANNED@0"],
+    });
+  });
+
+  test("S176 LARGE_PIVOT layout has 176 seats, 11 bins per side, and the armrests", () => {
+    const revision = revisionOf("FX-L-S176-MAX8-LP@1");
+    const kinds = { SEAT: 0, ARMREST: 0, FLOOR: 0, BIN: 0 };
+    for (const l of revision.locations) kinds[l.kind] += 1;
+    // 30 rows x 2 sides x 4 armrests (wall, two between-seat spans, aisle) = 240. Rows 14 and 15 omit B and E, but each
+    // span touching the omitted seat also touches a present one (A or C, D or F), so it stays as that seat's inner armrest.
+    expect(kinds).toEqual({ SEAT: 176, ARMREST: 240, FLOOR: 4, BIN: 22 });
+    expect(revision.locations.filter((l) => l.bin?.side === "L").map((l) => l.label)).toEqual([
+      "Overhead bin L-01 (rows 1-2, 6 bags)",
+      "Overhead bin L-02 (rows 3-5, 6 bags)",
+      "Overhead bin L-03 (rows 6-8, 6 bags)",
+      "Overhead bin L-04 (rows 9-11, 6 bags)",
+      "Overhead bin L-05 (rows 12-14, 6 bags)",
+      "Overhead bin L-06 (rows 15-16, 6 bags)",
+      "Overhead bin L-07 (rows 17-19, 6 bags)",
+      "Overhead bin L-08 (rows 20-22, 6 bags)",
+      "Overhead bin L-09 (rows 23-25, 6 bags)",
+      "Overhead bin L-10 (rows 26-28, 6 bags)",
+      "Overhead bin L-11 (rows 29-30, 6 bags)",
+    ]);
+    expect(locationOf("FX-L-S176-MAX8-LP@1", "BIN:R-04").bin).toEqual({ side: "R", module: 4, rowFrom: 9, rowTo: 11, binType: "LARGE_PIVOT", capacityBags: 6 });
+    const armrests = (row: number) => revision.locations.filter((l) => l.armrest?.row === row).map((l) => [l.id, l.label, l.armrest?.between]);
+    expect(armrests(12)).toEqual([
+      ["ARMREST:12-A", "Armrest at the window, 12A", [null, "12A"]],
+      ["ARMREST:12-AB", "Armrest between 12A and 12B", ["12A", "12B"]],
+      ["ARMREST:12-BC", "Armrest between 12B and 12C", ["12B", "12C"]],
+      ["ARMREST:12-C", "Armrest at the aisle, 12C", ["12C", null]],
+      ["ARMREST:12-D", "Armrest at the aisle, 12D", [null, "12D"]],
+      ["ARMREST:12-DE", "Armrest between 12D and 12E", ["12D", "12E"]],
+      ["ARMREST:12-EF", "Armrest between 12E and 12F", ["12E", "12F"]],
+      ["ARMREST:12-F", "Armrest at the window, 12F", ["12F", null]],
+    ]);
+    expect(armrests(14).slice(1, 3)).toEqual([
+      ["ARMREST:14-AB", "Armrest beside 14A (no seat 14B)", ["14A", null]],
+      ["ARMREST:14-BC", "Armrest beside 14C (no seat 14B)", [null, "14C"]],
+    ]);
+    expect(locationOf("FX-L-S176-MAX8-LP@1", "ARMREST:12-AB")).toMatchObject({ kind: "ARMREST", componentIds: ["ARMREST"] });
+  });
+
+  test("a span that touches only omitted seats is dropped (S137 omits 23C)", () => {
+    const row23 = revisionOf("FX-L-S137-CL@1").locations.filter((l) => l.armrest?.row === 23 && l.armrest.side === "L");
+    expect(row23.map((l) => [l.id, l.armrest?.between])).toEqual([
+      ["ARMREST:23-A", [null, "23A"]],
+      ["ARMREST:23-AB", ["23A", "23B"]],
+      ["ARMREST:23-BC", ["23B", null]],
+    ]);
+  });
+
+  test("every seat has the seven seat pieces in order", () => {
+    const seats = release.layoutRevisions.flatMap((r) => r.locations.filter((l) => l.kind === "SEAT"));
+    expect(seats.length).toBeGreaterThan(0);
+    for (const seat of seats) expect(seat.componentIds).toEqual(["CUSHION", "BACKREST", "HEADREST", "SEATBELT", "TRAY", "SEATBACK_NET", "LIFE_VEST"]);
+  });
+
+  test("bin pieces follow the bin type", () => {
+    const all = [
+      "BIN_DOOR",
+      "BIN_LATCH",
+      "BIN_STRIKER",
+      "BIN_PIVOT",
+      "BIN_ASSIST",
+      "BIN_LINER",
+      "BIN_SIDE_PANEL",
+      "BIN_BUMPER",
+      "BIN_SEAL",
+      "BIN_PLACARD",
+      "BIN_LABEL",
+    ];
+    const without = (...ids: string[]) => all.filter((id) => !ids.includes(id));
+    for (const [variant, binType, capacityBags, pieces] of [
+      ["V01", "LARGE_PIVOT", 6, without("BIN_ASSIST")],
+      ["V05", "PIVOT", 4, all],
+      ["V09", "CLASSIC", 3, without("BIN_ASSIST", "BIN_BUMPER")],
+    ] as const) {
+      const bins = binsOfVariant(variant);
+      expect(bins.length).toBeGreaterThan(0);
+      for (const bin of bins) {
+        expect(bin.componentIds).toEqual(pieces);
+        expect(bin.bin).toMatchObject({ binType, capacityBags });
+      }
+    }
+  });
+
+  test("binModules must sum to rows", () => {
+    const invalid = fixtureInvalid(
+      buildWith((d) => {
+        const spec = d.seatSpecs.S176;
+        if (spec) spec.binModules.L = [3, 3];
+      }),
+    );
+    expect(invalid.map((f) => f.message)).toEqual(["seatSpecs.S176.binModules.L: the modules cover 6 rows, but the layout has 30."]);
+  });
+
+  test("N100TL, N200TL and N300TL resolve RESOLVED with every component matched", () => {
+    // and every generic example tail that resolved before VAC-2 (one per variant V01-V08 and V10)
+    for (const tail of ["N100TL", "N200TL", "N300TL", "N010TL", "N020TL", "N030TL", "N040TL", "N050TL", "N060TL", "N070TL", "N080TL", "N101TL"]) {
+      const result = lookup(release, tail, "2026-11-12");
+      expect(result.state).toBe("RESOLVED");
+      const revision = revisionOf(result.context?.layoutRevision.id ?? "");
+      const pieces = revision.locations.reduce((n, l) => n + l.componentIds.length, 0);
+      expect(result.resolution?.counts).toEqual({ resolved: pieces, noMatch: 0, ambiguous: 0 });
+    }
+  });
+
+  test("N090TL stays PARTIAL with the bin gaps", () => {
+    const result = lookup(release, "N090TL", "2026-11-12");
+    expect(result.state).toBe("PARTIAL");
+    // S137, 23 rows, 23C omitted: 137 seats x 7 pieces = 959; armrests 22 rows x 8 + row 23 (3 port, 4 starboard) = 183;
+    // 4 floor locations; bins [2,3,3,3,2,3,3,2,2] = 9 per side x 9 CLASSIC pieces x 2 sides = 162. 959 + 183 + 4 + 162 = 1308.
+    // No match: every bin piece (V09 has no bin rules) 162, the six exit-row backrests on row 12 (expired source) and the
+    // aft carpet panel (unreleased) = 169. Ambiguous: the forward carpet panel. Resolved: 1308 - 169 - 1 = 1138.
+    expect(result.resolution?.counts).toEqual({ resolved: 1138, noMatch: 169, ambiguous: 1 });
+    const binGaps = result.resolution?.components.filter((c) => c.locationId.startsWith("BIN:") && c.status === "NO_MATCH") ?? [];
+    expect(binGaps).toHaveLength(162);
+  });
+
+  test("every component and condition used by the UI has exactly one base MEL entry", () => {
+    const covers = ["STAINED", "TORN", "WORN", "MISSING", "OTHER"];
+    const expected: Record<string, string[]> = {
+      CUSHION: covers,
+      BACKREST: covers,
+      HEADREST: covers,
+      SEATBELT: ["BROKEN", "MISSING", "WORN", "OTHER"],
+      TRAY: [...covers, "BROKEN"],
+      SEATBACK_NET: covers,
+      LIFE_VEST: covers,
+      ARMREST: covers,
+      CARPET_KIT: covers,
+      CARPET_PANEL: covers,
+      BIN_DOOR: [...covers, "WONT_LATCH"],
+      BIN_LATCH: [...covers, "BROKEN", "WONT_LATCH"],
+      BIN_STRIKER: [...covers, "BROKEN", "WONT_LATCH"],
+      BIN_PIVOT: [...covers, "BROKEN"],
+      BIN_ASSIST: [...covers, "BROKEN"],
+      BIN_LINER: covers,
+      BIN_SIDE_PANEL: covers,
+      BIN_BUMPER: covers,
+      BIN_SEAL: covers,
+      BIN_PLACARD: covers,
+      BIN_LABEL: covers,
+    };
+    const base = release.mel.filter((e) => e.constraint === undefined);
+    const got: Record<string, string[]> = {};
+    for (const e of base) got[e.componentId] = [...(got[e.componentId] ?? []), e.condition];
+    const sorted = (r: Record<string, string[]>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, [...v].sort()]));
+    expect(sorted(got)).toEqual(sorted(expected));
+    expect(new Set(release.components.map((c) => c.id))).toEqual(new Set(Object.keys(expected)));
+    expect(new Set(release.mel.map((e) => e.id)).size).toBe(release.mel.length);
+    expect(release.mel.every((e) => e.sourceId === "FX-DOC-MEL")).toBe(true);
+
+    const entry = (componentId: string, condition: string, variant?: string) =>
+      release.mel.find((e) => e.componentId === componentId && e.condition === condition && (e.constraint?.variant?.[0] ?? undefined) === variant);
+    expect(entry("SEATBELT", "BROKEN")?.result).toEqual({
+      class: "MEL",
+      item: "FX-25-21-01",
+      category: "C",
+      intervalDays: 10,
+      conditions: "Seat blocked and placarded INOP",
+      blocksSeat: true,
+    });
+    expect(entry("LIFE_VEST", "MISSING")).toMatchObject({
+      result: { class: "NO_GO", reason: "A life vest is required at every occupied seat" },
+      whenSeatBlocked: { class: "MEL", item: "FX-25-61-01", category: "C", intervalDays: 10, conditions: "Seat blocked" },
+    });
+    expect(entry("TRAY", "BROKEN")?.result).toMatchObject({ class: "MEL", item: "FX-25-22-01", category: "D", intervalDays: 120 });
+    expect(entry("TRAY", "BROKEN", "V09")?.result).toMatchObject({ class: "MEL", item: "FX-25-22-01", category: "C", intervalDays: 10 });
+    expect(release.mel.filter((e) => e.constraint !== undefined)).toHaveLength(1);
+    expect(entry("BIN_DOOR", "WONT_LATCH")?.result).toEqual({ class: "NO_GO", reason: "Bin cannot be secured" });
+    expect(entry("BIN_PIVOT", "MISSING")?.result).toEqual({ class: "NO_GO", reason: "Bin cannot be secured" });
+    expect(entry("BIN_STRIKER", "WONT_LATCH")?.result).toMatchObject({ class: "MEL", item: "FX-25-31-01", category: "C" });
+    expect(entry("BIN_ASSIST", "BROKEN")?.result).toMatchObject({ class: "MEL", item: "FX-25-31-02", category: "D", intervalDays: 120 });
+    expect(entry("BIN_PLACARD", "TORN")?.result).toEqual({ class: "NO_GO", reason: "Maximum-weight placard required" });
+    expect(entry("BIN_PLACARD", "WORN")?.result).toEqual({ class: "COSMETIC" });
   });
 });

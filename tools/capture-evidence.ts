@@ -60,7 +60,7 @@ const SAMPLE_RECORDS = [
   },
 ];
 
-const LAYOUT = "FX-L-S176-MAX8@1";
+const LAYOUT = "FX-L-S176-MAX8-LP@1";
 const DESKTOP = { width: 1440, height: 900 };
 const MOBILE = { width: 390, height: 844 };
 /** Same browser arguments as playwright.config.ts: the platform GPU, or SwiftShader on Linux. */

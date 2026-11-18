@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, test } from "vitest";
 import {
+  armrestPlacement,
   BIN_BOTTOM,
   BIN_DRAWN_INNER_Z,
   BIN_DRAWN_TOP,
@@ -59,6 +60,20 @@ describe("seat geometry (DOM-18)", () => {
   });
 });
 
+describe("armrest geometry (VAC-2)", () => {
+  const z = (side: "L" | "R", span: number) => Number(armrestPlacement(12, side, span).z.toFixed(4));
+  it("sits at the row centre, between the two seats' centres or at the outer edge of a wall or aisle seat", () => {
+    const p = armrestPlacement(12, "L", 1);
+    expect(p.x).toBe(seatPlacement(12, "A").x);
+    expect({ lx: p.lx, lz: p.lz, ly: p.ly }).toEqual({ lx: 0.5, lz: 0.06, ly: 0.25 });
+    expect([0, 1, 2, 3].map((i) => z("L", i))).toEqual([1.645, 1.185, 0.715, 0.255]);
+    expect([0, 1, 2, 3].map((i) => z("R", i))).toEqual([-0.255, -0.715, -1.185, -1.645]);
+  });
+  it("throws RangeError for a span index outside the four of a side", () => {
+    expect(() => armrestPlacement(12, "L", 4)).toThrow(RangeError);
+  });
+});
+
 describe("seat letter and side findings", () => {
   const seat3A = (c: ReleaseContent) => {
     const revision = c.layoutRevisions.find((r) => r.locations.some((l) => l.id === "SEAT:3A"));
@@ -108,15 +123,18 @@ describe("cabin shell (WEB-21)", () => {
     expect(GEOMETRY_VERSION).toBe("cabin-kit.geometry/1");
   });
 
-  it("every placement of the 176-seat layout is unchanged (snapshot taken before the shell was added)", () => {
-    const revision = stagedFull().content.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1");
+  it("every seat and floor placement of the 176-seat layout is unchanged (snapshot taken before the shell was added)", () => {
+    const revision = stagedFull().content.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8-LP@1");
     if (!revision) throw new Error("fixture has no 176-seat layout");
     const kinds = { SEAT: 0, FLOOR: 0, BIN: 0, ARMREST: 0 };
     for (const l of revision.locations) kinds[l.kind] += 1;
-    expect(kinds).toEqual({ SEAT: 176, FLOOR: 4, BIN: 20, ARMREST: 0 });
-    // the placements seatPlacement, floorPlacement and binPlacement produced for this layout before Task 5.6
+    expect(kinds).toEqual({ SEAT: 176, FLOOR: 4, BIN: 22, ARMREST: 240 });
+    // the seat and floor placements seatPlacement and floorPlacement produced for this layout before Task 5.6 (and VAC-2)
+    const seatsAndFloors = JSON.stringify(revision.locations.filter((l) => l.kind === "SEAT" || l.kind === "FLOOR").map((l) => [l.id, l.placement]));
+    expect(createHash("sha256").update(seatsAndFloors).digest("hex")).toBe("b04f48395b137a0b86d77a10f3cb33934acba74262602717289c580928222a7b");
+    // every placement, re-pinned in VAC-2 (was ffc6b2c5): the bins follow the fictional module lengths and the armrests are new
     const json = JSON.stringify(revision.locations.map((l) => [l.id, l.placement]));
-    expect(createHash("sha256").update(json).digest("hex")).toBe("ffc6b2c564a630d787eb264dd1978fc157ab38a630fa6162c58926332d6e0268");
+    expect(createHash("sha256").update(json).digest("hex")).toBe("a1f684579ae8b09ee402ac72258b1a07b6d4ea8a85332941ea0970e34eea978e");
     expect(revision.geometry.cabinLength).toBe(26);
     expect(revision.geometry.cabinHalfWidth).toBe(1.76);
   });

@@ -222,8 +222,8 @@ describe("mandatory fictional fixture seat sets", () => {
   });
   it("one layout serves several maintenance variants", () => {
     const { content } = stagedFull();
-    const shared = content.variants.filter((v) => v.layoutRevisionIds.includes("FX-L-S176-800@1")).map((v) => v.id);
-    expect(shared).toEqual(["V04", "V05", "V06", "V07", "V08"]);
+    const shared = content.variants.filter((v) => v.layoutRevisionIds.includes("FX-L-S176-800-PV@1")).map((v) => v.id);
+    expect(shared).toEqual(["V05", "V06", "V07", "V08"]);
   });
   it("every generated fixture rule is reachable", () => {
     expect(validateRelease(stagedFull().content).filter((f) => f.code === "UNREACHABLE_RULE")).toEqual([]);

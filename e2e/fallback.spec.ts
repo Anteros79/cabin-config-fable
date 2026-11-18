@@ -16,7 +16,7 @@ test("WebGL unavailable: a notice, the map takes over seats, floors and bins, an
   await expect(page.locator("#tab-3d"), "3D tab disabled while unavailable").toBeDisabled();
   await expect(page.locator(".cabin-map button[data-seat]")).toHaveCount(176);
   await expect(page.locator(".cabin-map section[aria-labelledby=map-floor] button.loc")).toHaveCount(4);
-  await expect(page.locator(".cabin-map section[aria-labelledby=map-bins] button.loc")).toHaveCount(20);
+  await expect(page.locator(".cabin-map section[aria-labelledby=map-bins] button.loc")).toHaveCount(22);
   await selectLocation(page, "Mid floor area");
   await recordPrimary(page, "CARPET_PANEL");
   await selectLocation(page, "Overhead bin L-04");

@@ -7,6 +7,11 @@ import { fixtureContent, snapshotFor, visitWith } from "../helpers.ts";
 
 // Property checks as plain loops over a seeded PRNG: no new dependency, the same cases on every run.
 const ITERATIONS = 200;
+/**
+ * Each case of the two lookup properties indexes a whole fixture release afresh. Since VAC-2 (seven seat pieces, armrests,
+ * eleven bin pieces) that takes about 2.5 s alone and can pass the unit tier's 5 s under a full parallel run.
+ */
+const LOOKUP_PROPERTY_TIMEOUT = 20_000;
 const DATE = "2026-11-12";
 /** One released tail per fixture variant V01-V10, each resolving on DATE. */
 const TAILS = ["N010TL", "N020TL", "N030TL", "N040TL", "N050TL", "N060TL", "N070TL", "N080TL", "N090TL", "N101TL"];
@@ -49,7 +54,7 @@ const sortedComponents = (result: LookupResult): ComponentResolution[] =>
 const key = (c: { locationId: string; componentId: string }) => `${c.locationId}\u0000${c.componentId}`;
 
 describe("property: unreleased data is inert", () => {
-  it(`copying any rule as unreleased changes no outcome and is listed as excluded (${ITERATIONS} cases)`, () => {
+  it(`copying any rule as unreleased changes no outcome and is listed as excluded (${ITERATIONS} cases)`, { timeout: LOOKUP_PROPERTY_TIMEOUT }, () => {
     const random = prng(0x2_8001);
     const content = fixtureContent();
     const base = releaseOf(content);
@@ -85,7 +90,7 @@ describe("property: unreleased data is inert", () => {
 });
 
 describe("property: lookup does not depend on input order", () => {
-  it(`shuffling rules, substitutes, kit lines and locations gives the same result (${ITERATIONS} cases)`, () => {
+  it(`shuffling rules, substitutes, kit lines and locations gives the same result (${ITERATIONS} cases)`, { timeout: LOOKUP_PROPERTY_TIMEOUT }, () => {
     const random = prng(0x2_8002);
     const content = fixtureContent();
     const base = releaseOf(content);

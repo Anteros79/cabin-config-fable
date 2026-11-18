@@ -131,7 +131,7 @@ test("3D module failure: the map and list cover everything, work continues, and 
   await expect(page.locator(".cabin-map")).toBeVisible();
   await expect(page.locator(".cabin-map button[data-seat]"), "all seats").toHaveCount(176);
   await expect(page.locator(".cabin-map section[aria-labelledby=map-floor] button.loc"), "all floor locations").toHaveCount(4);
-  await expect(page.locator(".cabin-map section[aria-labelledby=map-bins] button.loc"), "all bin modules").toHaveCount(20);
+  await expect(page.locator(".cabin-map section[aria-labelledby=map-bins] button.loc"), "all bin modules").toHaveCount(22);
   await selectLocation(page, "Overhead bin L-04");
   await recordPrimary(page, "BIN_DOOR");
   await page.unroute("**/assets/CabinScene-*.js");

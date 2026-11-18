@@ -133,9 +133,11 @@ describe("staged import and atomic activation", () => {
     const stores = makeStores();
     const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
     const next = buildStagedRelease({ includeCandidate: false, label: "old shape" });
-    const { mel: _mel, ...oldShape } = next.content;
-    expect(contentHash(oldShape as never)).toBe(contentHash(next.content));
-    const staged = store.stage(next.content, next.findings, {});
+    // a release from before the MEL existed: the fixture's MEL entries (VAC-2) are taken out
+    const content = { ...next.content, mel: [] };
+    const { mel: _mel, ...oldShape } = content;
+    expect(contentHash(oldShape as never)).toBe(contentHash(content));
+    const staged = store.stage(content, next.findings, {});
     const loaded = store.loadRelease(staged.id);
     expect(loaded.mel).toEqual([]);
     expect(loaded.contentHash).toBe(contentHash(oldShape as never));

@@ -43,11 +43,11 @@ describe("released data only (D2)", () => {
         "variant V01",
       );
       const rev = must(
-        c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1"),
-        "revision FX-L-S176-MAX8@1",
+        c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8-LP@1"),
+        "revision FX-L-S176-MAX8-LP@1",
       );
-      c.layoutRevisions.push({ ...rev, id: "FX-L-S176-MAX8@9", status });
-      c.variants.push({ ...v01, id: "V98", layoutRevisionIds: ["FX-L-S176-MAX8@9"] });
+      c.layoutRevisions.push({ ...rev, id: "FX-L-S176-MAX8-LP@9", status });
+      c.variants.push({ ...v01, id: "V98", layoutRevisionIds: ["FX-L-S176-MAX8-LP@9"] });
       expect(status3A(c)).toBe("AMBIGUOUS");
     }
   });
@@ -59,8 +59,8 @@ describe("released data only (D2)", () => {
       "variant V01",
     );
     const rev = must(
-      content.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1"),
-      "revision FX-L-S176-MAX8@1",
+      content.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8-LP@1"),
+      "revision FX-L-S176-MAX8-LP@1",
     );
     const variant = (extra: Partial<MaintenanceVariant>): MaintenanceVariant => ({ ...v01, ...extra });
     const revision = (extra: Partial<LayoutRevision>): LayoutRevision => ({ ...rev, ...extra });
@@ -68,7 +68,7 @@ describe("released data only (D2)", () => {
     expect(isUsablePair(variant({ released: false }), rev)).toBe(false);
     expect(isUsablePair(v01, revision({ status: "planned" }))).toBe(false);
     expect(isUsablePair(v01, revision({ status: "candidate" }))).toBe(false);
-    expect(isUsablePair(variant({ layoutRevisionIds: ["FX-L-S170@1"] }), rev)).toBe(false);
+    expect(isUsablePair(variant({ layoutRevisionIds: ["FX-L-S170-PV@1"] }), rev)).toBe(false);
   });
 });
 
@@ -164,22 +164,22 @@ describe("specificity cases", () => {
     const rel = withCushionRules(
       [
         cushionRule("BOTH", "P-BOTH", { variant: ["V01"] }, ALL_SEATS),
-        cushionRule("FIRST-REV", "P-FIRST", { variant: ["V01"], layoutRevision: ["FX-L-S176-MAX8@1"] }, ALL_SEATS),
+        cushionRule("FIRST-REV", "P-FIRST", { variant: ["V01"], layoutRevision: ["FX-L-S176-MAX8-LP@1"] }, ALL_SEATS),
       ],
       (c) => {
         const rev = must(
-          c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1"),
-          "revision FX-L-S176-MAX8@1",
+          c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8-LP@1"),
+          "revision FX-L-S176-MAX8-LP@1",
         );
-        c.layoutRevisions.push({ ...rev, id: "FX-L-S176-MAX8@2" });
+        c.layoutRevisions.push({ ...rev, id: "FX-L-S176-MAX8-LP@2" });
         must(
           c.variants.find((v) => v.id === "V01"),
           "variant V01",
-        ).layoutRevisionIds.push("FX-L-S176-MAX8@2");
+        ).layoutRevisionIds.push("FX-L-S176-MAX8-LP@2");
       },
     );
-    expect([...matchOf(rel, "BOTH").pairs.keys()]).toEqual(["V01|FX-L-S176-MAX8@1", "V01|FX-L-S176-MAX8@2"]);
-    expect([...matchOf(rel, "FIRST-REV").pairs.keys()]).toEqual(["V01|FX-L-S176-MAX8@1"]);
+    expect([...matchOf(rel, "BOTH").pairs.keys()]).toEqual(["V01|FX-L-S176-MAX8-LP@1", "V01|FX-L-S176-MAX8-LP@2"]);
+    expect([...matchOf(rel, "FIRST-REV").pairs.keys()]).toEqual(["V01|FX-L-S176-MAX8-LP@1"]);
     expect(isStrictlyMoreSpecific(matchOf(rel, "FIRST-REV"), matchOf(rel, "BOTH"))).toBe(true);
     expect(resolutionAt(lookup(rel, "N100TL", "2026-11-12"), "SEAT:3A", "CUSHION")).toMatchObject({ status: "RESOLVED", ruleId: "FIRST-REV" });
   });

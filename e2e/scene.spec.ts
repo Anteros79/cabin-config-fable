@@ -48,7 +48,7 @@ const reducedMotionProject = (projectName: string) => projectName === "reduced-m
 test("genuine WebGL scene with one instance per seat, floor area and bin module", async ({ page, visit }) => {
   await openScene(page, visit.id);
   const info = await scene(page);
-  expect([info.seats, info.floorAreas, info.binModules]).toEqual([176, 3, 20]);
+  expect([info.seats, info.floorAreas, info.binModules]).toEqual([176, 3, 22]);
   expect(await canvasIsPainted(page), "the canvas is painted").toBe(true);
   const gl = await page.evaluate(() => {
     const c = document.createElement("canvas");
@@ -185,11 +185,12 @@ test("the 176-seat layout stays within the budgets when every location carries a
     const s = window.__cabinKit?.scene as unknown as { layout: { locations: { id: string }[] } };
     return s.layout.locations.map((l) => l.id);
   });
-  expect(ids.length, "176 seats, 4 floor locations and 20 bin modules").toBe(200);
+  expect(ids.length, "176 seats, 240 armrests, 4 floor locations and 22 bin modules").toBe(442);
   const every = Object.fromEntries(ids.map((id, i) => [id, { STATUS: statuses[i % 3] ?? "recorded" }]));
   await expectWithinSceneBudget(page, every, async (where) => {
     const marks = (await scene(page)).marks as { badges: number };
-    expect(marks.badges, `${where}: a badge on every location`).toBe(200);
+    // armrests are not drawn yet (VAC-10), so they carry no badge: 176 seats + 4 floor locations + 22 bin modules
+    expect(marks.badges, `${where}: a badge on every drawn location`).toBe(202);
   });
 });
 

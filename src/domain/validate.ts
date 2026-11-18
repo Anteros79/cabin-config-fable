@@ -190,11 +190,11 @@ export function validateRelease(input: unknown, shared?: ReleaseIndex): Finding[
       err("UNSUPPORTED_FIELD", `Candidate layout revision ${r.id} claims a floor or bin map that was not supplied.`, [r.id]);
     }
     if (r.namespace === "candidate") {
-      // zones, floor areas and bin modules are fixture shortcuts and never enter candidate layouts
+      // zones, floor areas, bin modules and armrests are fixture shortcuts and never enter candidate layouts
       for (const loc of r.locations) {
         const at = `${r.id}#${loc.id}`;
         const zone = loc.seat?.maintenanceZone ?? null;
-        if (loc.kind === "FLOOR" || loc.kind === "BIN")
+        if (loc.kind === "FLOOR" || loc.kind === "BIN" || loc.kind === "ARMREST")
           err("CANDIDATE_HAS_FIXTURE_DATA", `Candidate layout revision ${r.id} contains fixture ${loc.kind} location ${loc.id}.`, [r.id, at]);
         else if (zone !== null) err("CANDIDATE_HAS_FIXTURE_DATA", `Candidate seat ${at} carries fixture maintenance zone ${zone}.`, [r.id, at]);
       }
@@ -416,6 +416,10 @@ export function validateRelease(input: unknown, shared?: ReleaseIndex): Finding[
   for (const p of content.pendingChanges) {
     if (!ruleIds.has(p.ruleId)) err("ORPHAN", `Pending change ${p.id} refers to unknown rule ${p.ruleId}.`, [p.id]);
     if (p.sourceId !== null && !sources.has(p.sourceId)) err("ORPHAN", `Pending change ${p.id} cites unknown source ${p.sourceId}.`, [p.id]);
+  }
+  for (const e of content.mel) {
+    if (!components.has(e.componentId)) err("ORPHAN", `MEL entry ${e.id} refers to unknown component ${e.componentId}.`, [e.id]);
+    if (!sources.has(e.sourceId)) err("ORPHAN", `MEL entry ${e.id} cites unknown source ${e.sourceId}.`, [e.id]);
   }
   findings.push(...validateKits(content.kitChildren, parts, units, sources, index.kits));
   // A kit child citing an unreleased source makes every rule or alternate that needs it ineligible at lookup (D3).

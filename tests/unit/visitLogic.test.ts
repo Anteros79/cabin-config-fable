@@ -141,10 +141,19 @@ describe("authoritative record validation", () => {
     );
     const ok = { locationId: "SEAT:3A", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 };
     const report = buildReport(visitWith(partial, [ok]), "DRAFT_PREVIEW", "2026-11-12T12:02:00.000Z");
-    expect(report.counts.unresolvedComponents).toBe(24);
+    // VAC-2: every piece of V09's 18 CLASSIC bins is a gap (V09 has no bin rules)
+    expect(report.counts.unresolvedComponents).toBe(170);
     expect(report.gaps.map((g) => [g.componentId, g.status, g.locationIds.length])).toEqual([
       ["BACKREST", "NO_MATCH", 6],
-      ["BIN_DOOR", "NO_MATCH", 16],
+      ["BIN_DOOR", "NO_MATCH", 18],
+      ["BIN_LABEL", "NO_MATCH", 18],
+      ["BIN_LATCH", "NO_MATCH", 18],
+      ["BIN_LINER", "NO_MATCH", 18],
+      ["BIN_PIVOT", "NO_MATCH", 18],
+      ["BIN_PLACARD", "NO_MATCH", 18],
+      ["BIN_SEAL", "NO_MATCH", 18],
+      ["BIN_SIDE_PANEL", "NO_MATCH", 18],
+      ["BIN_STRIKER", "NO_MATCH", 18],
       ["CARPET_PANEL", "AMBIGUOUS", 1],
       ["CARPET_PANEL", "NO_MATCH", 1],
     ]);
@@ -188,7 +197,8 @@ describe("preparation overview", () => {
     expect(cushion.coverageLocationIds).toEqual(["SEAT:1A", "SEAT:2A", "SEAT:3A", "SEAT:4A", "SEAT:5A"]);
     expect(cushion.coverageSummary).toBe("Seat A rows 1-5 (5 locations)");
     expect(cushion.source).toMatchObject({ id: "FX-DOC-A", revision: "A" });
-    expect(prep.counts.resolvedComponents).toBe(376);
+    // VAC-2: N100TL is V01 on S176 with LARGE_PIVOT bins: 176 seats x 7 + 240 armrests + 4 floor + 22 bins x 10 pieces
+    expect(prep.counts.resolvedComponents).toBe(1696);
     expect(prep.note).toMatch(/not replacements made/);
   });
   it("keeps alternates and their required supplements separate from the primary", () => {
@@ -211,8 +221,8 @@ describe("preparation overview", () => {
     expect(kit.alternates).toEqual([]);
     expect(kit.excludedAlternates[0]?.altPartNo).toBe("FAKE-CK-2000");
     const partial = buildPreparation(snapshotFor(release, "N090TL", "2026-11-12"));
-    expect(partial.counts.unresolvedComponents).toBe(24);
-    expect(partial.gaps.find((g) => g.componentId === "BIN_DOOR")!.locationIds).toHaveLength(16);
+    expect(partial.counts.unresolvedComponents).toBe(170);
+    expect(partial.gaps.find((g) => g.componentId === "BIN_DOOR")!.locationIds).toHaveLength(18);
   });
 });
 
@@ -222,6 +232,6 @@ describe("location summaries", () => {
     const pick = (ids: string[]) => locs.filter((l) => ids.includes(l.id));
     expect(summarizeLocations(pick(["SEAT:1A", "SEAT:2A", "SEAT:4A"]))).toBe("Seat A rows 1-2, 4 (3 locations)");
     expect(summarizeLocations(pick(["SEAT:1A", "SEAT:1B"]))).toBe("Seats A/B row 1 (2 locations)");
-    expect(summarizeLocations(pick(["BIN:L-01"]))).toBe("Overhead bin L-01 (rows 1-3) (1 location)");
+    expect(summarizeLocations(pick(["BIN:L-01"]))).toBe("Overhead bin L-01 (rows 1-2, 6 bags) (1 location)");
   });
 });

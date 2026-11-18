@@ -84,7 +84,7 @@ describe("lookup states", () => {
   });
 
   it("refuses a released pair the variant does not list as inconsistent, not as planned", () => {
-    const bad = fixtureRelease((c) => (c.assignments.find((a) => a.tail === "N100TL")!.layoutRevisionId = "FX-L-S170@1"));
+    const bad = fixtureRelease((c) => (c.assignments.find((a) => a.tail === "N100TL")!.layoutRevisionId = "FX-L-S170-PV@1"));
     const r = lookup(bad, "N100TL", "2026-11-12");
     expect(r.state).toBe("SOURCE_INVALID");
     expect(r.reasonCode).toBe("INCONSISTENT_CONFIGURATION");
@@ -94,7 +94,7 @@ describe("lookup states", () => {
   it("treats an assignment of an unreleased variant or a candidate layout revision as planned", () => {
     const draftVariant = fixtureRelease((c) => (c.variants.find((v) => v.id === "V01")!.released = false));
     expect(lookup(draftVariant, "N100TL", "2026-11-12").state).toBe("PLANNED");
-    const candidateRevision = fixtureRelease((c) => (c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1")!.status = "candidate"));
+    const candidateRevision = fixtureRelease((c) => (c.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8-LP@1")!.status = "candidate"));
     expect(lookup(candidateRevision, "N100TL", "2026-11-12").state).toBe("PLANNED");
   });
 
@@ -190,7 +190,8 @@ describe("mandatory fixture parts", () => {
   });
   it("N090TL shows every gap kind with a reason", () => {
     const r = lookup(release, "N090TL", "2026-11-12");
-    expect(r.resolution!.counts).toEqual({ resolved: 270, noMatch: 23, ambiguous: 1 });
+    // VAC-2: 1308 pieces; no match = 162 bin pieces + 6 exit-row backrests + the aft panel; ambiguous = the forward panel
+    expect(r.resolution!.counts).toEqual({ resolved: 1138, noMatch: 169, ambiguous: 1 });
     const fwd = resolutionAt(r, "FLOOR:FWD", "CARPET_PANEL");
     expect(fwd.status).toBe("AMBIGUOUS");
     expect(fwd.status === "AMBIGUOUS" && fwd.candidates.map((c) => c.ruleId).sort()).toEqual(["FX-R-700-PRE-FWD-PANEL", "FX-R-V09-FWD-PANEL"]);
@@ -533,7 +534,7 @@ describe("substitute scope", () => {
     // lists both components, so the approval's scope does meet the rule's there
     const rel = withRules([rule("X-PIPE", "P|Q", { variant: ["V01"] }, { kind: "SEAT" })], (c) => {
       c.layoutRevisions
-        .find((r) => r.id === "FX-L-S176-MAX8@1")!
+        .find((r) => r.id === "FX-L-S176-MAX8-LP@1")!
         .locations.find((l) => l.id === "SEAT:3A")!
         .componentIds.push("CUSHION|P");
       c.parts.push({ partNo: "Q", namespace: "fixture", description: "Q" });

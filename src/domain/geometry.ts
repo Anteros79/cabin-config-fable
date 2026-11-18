@@ -90,6 +90,36 @@ export function seatPlacement(physicalRow: number, letter: string): Placement {
   return { x: rowCentreX(physicalRow), y: 0, z: lateralCentre(letter), lx: SEAT_DEPTH, lz: SEAT_WIDTH, ly: SEAT_HEIGHT };
 }
 
+/**
+ * Armrest spans of one side, in seat-letter order: the wall armrest of A, between A and B, between B and C and the aisle
+ * armrest of C; the starboard side mirrors with the aisle armrest of D, DE, EF and the wall armrest of F. A one-letter
+ * span is the outer armrest of that seat. `armrestPlacement` takes an index into this list.
+ */
+export const ARMREST_SPANS: Readonly<Record<"L" | "R", readonly string[]>> = { L: ["A", "AB", "BC", "C"], R: ["D", "DE", "EF", "F"] };
+/** Illustrative armrest box: fore-aft length, lateral width, height and the height of its underside. */
+export const ARMREST_LENGTH = 0.5;
+export const ARMREST_WIDTH = 0.06;
+export const ARMREST_HEIGHT = 0.25;
+export const ARMREST_BOTTOM = 0.45;
+
+/**
+ * Placement of an armrest: at the row centre, laterally between the two seats' centres, or at the seat's outer edge for a
+ * wall or aisle armrest. Throws `RangeError` for a span index outside `ARMREST_SPANS`.
+ */
+export function armrestPlacement(physicalRow: number, side: "L" | "R", spanIndex: number): Placement {
+  const span = ARMREST_SPANS[side][spanIndex];
+  if (span === undefined) throw new RangeError(`Unknown armrest span ${spanIndex} on side ${side}`);
+  let z: number;
+  if (span.length === 2) z = (lateralCentre(span.charAt(0)) + lateralCentre(span.charAt(1))) / 2;
+  else {
+    const centre = lateralCentre(span);
+    // the window seats' outer edge is toward the wall, the aisle seats' toward the centreline
+    const outward = span === "A" || span === "F" ? Math.sign(centre) : -Math.sign(centre);
+    z = centre + (outward * SEAT_WIDTH) / 2;
+  }
+  return { x: rowCentreX(physicalRow), y: ARMREST_BOTTOM, z, lx: ARMREST_LENGTH, lz: ARMREST_WIDTH, ly: ARMREST_HEIGHT };
+}
+
 export function floorPlacement(rowFrom: number, rowTo: number, physicalRows: number): Placement {
   const x0 = rowFrom <= 1 ? 0 : rowCentreX(rowFrom) - ROW_PITCH / 2;
   const x1 = rowTo >= physicalRows ? cabinLength(physicalRows) : rowCentreX(rowTo) + ROW_PITCH / 2;

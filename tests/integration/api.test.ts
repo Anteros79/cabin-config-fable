@@ -150,7 +150,7 @@ describe("lookup API", () => {
     expect(refused.statusCode).toBe(422);
     expect(json(refused).error.code).toBe("UNRESOLVED_COMPONENT");
     const report = json(await app.app.inject(`/api/visits/${partial.id}/report`)).report as Report;
-    expect(report.counts.unresolvedComponents).toBe(24);
+    expect(report.counts.unresolvedComponents).toBe(170); // VAC-2: N090TL has 169 no-match pieces and 1 ambiguous
   });
 });
 
@@ -344,7 +344,7 @@ describe("preparation and reference endpoints", () => {
   it("exposes namespaces, findings and candidate layouts with their status", async () => {
     const app = makeApp({ stores: makeStores({ includeCandidate: true }) });
     const reference = json(await app.app.inject("/api/reference"));
-    expect(reference.counts).toMatchObject({ layoutRevisions: { fixture: 6, candidate: 5 }, accepted: 0 });
+    expect(reference.counts).toMatchObject({ layoutRevisions: { fixture: 8, candidate: 5 }, accepted: 0 });
     expect(reference.findings.some((f: { code: string }) => f.code === "AIRLINE_DATA_NOT_SUPPLIED")).toBe(true);
     expect(reference.authorityNotice).toMatch(/Fictional home-lab demonstration/);
     const layouts = json(await app.app.inject("/api/layouts"));

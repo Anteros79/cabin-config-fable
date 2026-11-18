@@ -5,7 +5,14 @@
 import { z } from "zod";
 import { isIsoDate } from "../domain/dates.ts";
 import { MAX_QTY } from "../domain/limits.ts";
-import { ComponentDefSchema, ContextConstraintSchema, LocationSelectorSchema, PendingChangeSchema, VocabularySchema } from "../domain/schema.ts";
+import {
+  ComponentDefSchema,
+  ContextConstraintSchema,
+  LocationSelectorSchema,
+  MelEntrySchema,
+  PendingChangeSchema,
+  VocabularySchema,
+} from "../domain/schema.ts";
 
 const isoDate = z.string().refine(isIsoDate, "Not a real calendar date written as YYYY-MM-DD.");
 const quantity = z.number().int().min(1).max(MAX_QTY);
@@ -17,6 +24,14 @@ const SeatSpecSchema = z
     omit: z.array(z.string()),
     exitRows: z.array(row),
     elrRows: z.array(row),
+    /** Bin module lengths in rows, forward to aft, per side; each list sums to `rows` (checked by `fixtureReferenceIssues`). */
+    binModules: z
+      .object({
+        note: z.string(),
+        L: z.array(z.number().int().min(1)).min(1),
+        R: z.array(z.number().int().min(1)).min(1),
+      })
+      .strict(),
   })
   .strict();
 
@@ -51,6 +66,8 @@ export const FixtureDataSchema = z
           cabinHeight: z.string().nullable(),
           statusNote: z.string(),
           seatSpec: z.string().nullable(),
+          /** Bin type of the variant's cabin; null only for a variant with no seat spec. */
+          binType: z.enum(["CLASSIC", "PIVOT", "LARGE_PIVOT"]).nullable(),
           released: z.boolean(),
         })
         .strict(),
@@ -125,6 +142,8 @@ export const FixtureDataSchema = z
         .strict(),
     ),
     kitChildren: z.array(z.object({ parentPartNo: z.string(), childPartNo: z.string(), qty: quantity, unit: z.string(), source: z.string() }).strict()),
+    /** Fictional minimum equipment list, copied into the release as is. */
+    mel: z.array(MelEntrySchema),
   })
   .strict();
 
