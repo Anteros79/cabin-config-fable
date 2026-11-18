@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import budgets from "../../budgets.json" with { type: "json" };
 import { checkBundle, gzipKb, main } from "../../tools/check-budgets.ts";
 
-const BUNDLE = { indexJsGzipKb: 100, sceneJsGzipKb: 180, cssGzipKb: 7, sceneJsRawKb: 650 };
+const BUNDLE = { indexJsGzipKb: 100, sceneJsGzipKb: 180, cssGzipKb: 7, sceneJsRawKb: 650, reportJsGzipKb: 6 };
 
 describe("checkBundle", () => {
   test("classifies each asset by its name and passes when every class is within budget; the scene chunk has a raw budget too", () => {
@@ -15,6 +15,7 @@ describe("checkBundle", () => {
         { name: "index-AbC123.js", gzipKb: 99.9, rawKb: 330 },
         { name: "CabinScene-x_Y-9.js", gzipKb: 150, rawKb: 650 },
         { name: "index-Zz.css", gzipKb: 7, rawKb: 30 },
+        { name: "ReportView-q1.js", gzipKb: 5.9, rawKb: 20 },
       ],
       BUNDLE,
     );
@@ -23,6 +24,7 @@ describe("checkBundle", () => {
       ["CabinScene-x_Y-9.js", "sceneJsGzipKb", 150, 180, true],
       ["CabinScene-x_Y-9.js", "sceneJsRawKb", 650, 650, true],
       ["index-Zz.css", "cssGzipKb", 7, 7, true],
+      ["ReportView-q1.js", "reportJsGzipKb", 5.9, 6, true],
     ]);
   });
 
@@ -33,6 +35,7 @@ describe("checkBundle", () => {
       ["sceneJsRawKb", false],
       ["indexJsGzipKb", false],
       ["cssGzipKb", false],
+      ["reportJsGzipKb", false],
     ]);
     const rawOnly = checkBundle([{ name: "CabinScene-abc.js", gzipKb: 100, rawKb: 651 }], BUNDLE);
     expect(rawOnly.filter((r) => r.name !== "(missing)" && !r.ok).map((r) => r.budget)).toEqual(["sceneJsRawKb"]);
@@ -45,7 +48,7 @@ describe("checkBundle", () => {
 
   test("a missing class fails: an empty or partial build is not a pass", () => {
     const rows = checkBundle([{ name: "index-a.js", gzipKb: 1, rawKb: 1 }], BUNDLE);
-    expect(rows.filter((r) => !r.ok).map((r) => r.budget)).toEqual(["sceneJsGzipKb", "sceneJsRawKb", "cssGzipKb"]);
+    expect(rows.filter((r) => !r.ok).map((r) => r.budget)).toEqual(["sceneJsGzipKb", "sceneJsRawKb", "cssGzipKb", "reportJsGzipKb"]);
   });
 });
 
@@ -75,7 +78,7 @@ describe("main", () => {
   };
 
   test("prints a table and exits 0 when the build is within budget", () => {
-    const { code, out } = run(build({ "index-a.js": "x", "CabinScene-b.js": "y", "index-c.css": "z" }));
+    const { code, out } = run(build({ "index-a.js": "x", "CabinScene-b.js": "y", "index-c.css": "z", "ReportView-d.js": "r" }));
     expect(code).toBe(0);
     expect(out).toContain("index-a.js");
     expect(out).toContain("sceneJsGzipKb");
@@ -85,14 +88,14 @@ describe("main", () => {
   test("exits 1 and names the asset when one is over budget", () => {
     // random bytes do not compress: 200 kB stays about 200 kB gzipped, over any CSS budget
     const noise = randomBytes(200_000);
-    const { code, out } = run(build({ "index-a.js": "x", "CabinScene-b.js": "y", "index-c.css": noise }));
+    const { code, out } = run(build({ "index-a.js": "x", "CabinScene-b.js": "y", "index-c.css": noise, "ReportView-d.js": "r" }));
     expect(code).toBe(1);
     expect(out).toMatch(/index-c\.css.*OVER/);
   });
 
   test("exits 1 when the scene chunk is over its raw budget, however well it compresses", () => {
     const big = "a".repeat(Math.ceil(budgets.bundle.sceneJsRawKb * 1000) + 1);
-    const { code, out } = run(build({ "index-a.js": "x", "CabinScene-b.js": big, "index-c.css": "z" }));
+    const { code, out } = run(build({ "index-a.js": "x", "CabinScene-b.js": big, "index-c.css": "z", "ReportView-d.js": "r" }));
     expect(code).toBe(1);
     expect(out).toMatch(/CabinScene-b\.js\s+sceneJsRawKb.*OVER/);
     expect(out).toMatch(/CabinScene-b\.js\s+sceneJsGzipKb.*ok/);

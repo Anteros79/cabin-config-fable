@@ -23,6 +23,8 @@ const CLASSES: { budget: BudgetName; size: "gzip" | "raw"; matches: (name: strin
   // also Vite's chunkSizeWarningLimit (vite.config.ts), so a build over it warns as well
   { budget: "sceneJsRawKb", size: "raw", matches: (n) => n.startsWith("CabinScene-") && n.endsWith(".js") },
   { budget: "cssGzipKb", size: "gzip", matches: (n) => n.endsWith(".css") },
+  // the report view, loaded when a report opens (Task 13), so its sections do not grow the index chunk
+  { budget: "reportJsGzipKb", size: "gzip", matches: (n) => n.startsWith("ReportView-") && n.endsWith(".js") },
 ];
 
 export interface Asset {

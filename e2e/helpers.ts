@@ -252,6 +252,8 @@ export const flat = (s: string) => s.replace(/\s+/g, "");
 
 /** The totals table of a report page as [part, quantity, unit] rows. */
 export async function totalsOnPage(page: Page): Promise<[string, number, string][]> {
+  // the report view is its own chunk: wait until its totals table is drawn before reading it
+  await page.locator("#totals-table").waitFor();
   return page
     .locator("#totals-table tbody tr")
     .evaluateAll((trs) =>

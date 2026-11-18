@@ -1,14 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
+import { isOverdue } from "../../domain/observations.ts";
 import { rulesNotUsedLine } from "../../domain/report.ts";
-import type { LookupState } from "../../domain/types.ts";
+import { higherStatus } from "../../domain/status.ts";
+import type { CarriedObservation, LookupState, Observation, Report, ReportPieceOutcome, VisitSnapshot, VisualProfile } from "../../domain/types.ts";
 import { api } from "../api.ts";
+// Cabin3D is already in the first download (the visit workspace's viewer); what is heavy is its scene chunk (three.js),
+// which it loads only once mounted, so "View in 3D" fetches it on demand. A React.lazy() import here would make Rolldown
+// split React and the model into extra shared chunks.
+import { Cabin3D } from "../components/Cabin3D.tsx";
+import { CabinMap } from "../components/CabinMap.tsx";
 import { ScrollRegion } from "../components/ScrollRegion.tsx";
 import { Skeleton } from "../components/Skeleton.tsx";
-import { formatDate, formatDateTime, LOOKUP_STATE_LABEL } from "../format.ts";
+import { conditionLabel, deferLabel, formatDate, formatDateTime, LOOKUP_STATE_LABEL, melLabel } from "../format.ts";
 import { canRetry, describeSaveStatus, useMutations } from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
-import { contentKeyed } from "../model.ts";
+import { contentKeyed, type Workspace } from "../model.ts";
+import type { LocationState } from "../scene/CabinScene.ts";
 
 /** A timestamp in words, with the stored value kept on the element. */
 const Time = ({ iso }: { iso: string }) => (
@@ -17,11 +25,93 @@ const Time = ({ iso }: { iso: string }) => (
   </time>
 );
 
+/** The report's piece outcomes plus its unresolved components (from the gaps), for the cabin picture and the 3D view. */
+function pictureOutcomes(report: Report): ReportPieceOutcome[] {
+  const unresolved = report.gaps.flatMap((g) =>
+    g.locationIds.map((locationId): ReportPieceOutcome => ({ locationId, componentId: g.componentId, status: "unresolved" })),
+  );
+  return [...(report.pieceOutcomes ?? []), ...unresolved];
+}
+
+/** The scene's per-location states from the same outcomes: the higher status wins where a piece is named twice. */
+function outcomeStates(outcomes: readonly ReportPieceOutcome[]): Map<string, LocationState> {
+  const states = new Map<string, LocationState>();
+  for (const o of outcomes) {
+    const s = states.get(o.locationId) ?? { components: {} };
+    s.components[o.componentId] = higherStatus(s.components[o.componentId] ?? "none", o.status);
+    states.set(o.locationId, s);
+  }
+  return states;
+}
+
+/** A read-only workspace over the visit's frozen snapshot: the layout and piece names only. */
+function pictureWorkspace(snapshot: VisitSnapshot, checkDate: string): Workspace {
+  return {
+    mode: "visit",
+    layout: snapshot.context.layoutRevision,
+    resolution: snapshot.resolution,
+    componentDefs: snapshot.resolution.componentDefs,
+    records: [],
+    editable: false,
+    unresolvedReason: null,
+    observations: [],
+    carried: [],
+    checkDate,
+    mel: [],
+  };
+}
+
+/** One problem in an outcome list: where it is, then its condition, class, dates and note, in words. */
+function ProblemLine({ o, checkDate, extra = "" }: { o: Observation; checkDate: string; extra?: string }) {
+  // A closed problem's class and dates no longer apply: only what it was and how it was closed.
+  const open = o.status === "OPEN";
+  const due = open && o.dueDate ? `${isOverdue(o.dueDate, checkDate) ? "Overdue since" : "Fix by"} ${formatDate(o.dueDate)}` : "";
+  const facts = [
+    conditionLabel(o.condition),
+    open && o.outcome !== "NOTED" ? melLabel(o.melClass) : "",
+    open && o.outcome === "DEFERRED" && o.deferUntil ? deferLabel(o.deferUntil) : "",
+    due,
+    extra,
+  ];
+  return (
+    <li>
+      <strong>
+        {o.locationLabel} · {o.componentName}
+      </strong>{" "}
+      · {facts.filter((f) => f !== "").join(" · ")}
+      {o.note && <span className="fine"> · Note: {o.note}</span>}
+    </li>
+  );
+}
+
+const carriedExtra = (c: CarriedObservation) =>
+  `opened in an earlier visit${c.placement === "ORPHANED" ? "; its position is not in this layout" : c.placement === "MAPPED" ? "; mapped to this layout" : ""}`;
+
+/** A list section of the after-action report: a heading, then its problems or "None.". */
+function OutcomeList({ id, title, items }: { id: string; title: string; items: React.ReactNode[] }) {
+  return (
+    <section aria-labelledby={id}>
+      <h3 id={id}>{title}</h3>
+      {items.length === 0 ? <p>None.</p> : <ul className="plain">{items}</ul>}
+    </section>
+  );
+}
+
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
 
 /** After-action report. Printable (browser print / save as PDF), server PDF, and structured JSON. */
-export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (meta: { id: string; number: number; tail: string }) => void }) {
+export function ReportView({
+  visitId,
+  onVisit,
+  visualProfiles = [],
+}: {
+  visitId: string;
+  onVisit?: (meta: { id: string; number: number; tail: string }) => void;
+  visualProfiles?: VisualProfile[];
+}) {
   const [note, setNote] = useState("");
+  const [show3d, setShow3d] = useState(false);
+  const [failed3d, setFailed3d] = useState<string | null>(null);
   const [noteType, setNoteType] = useState("ADVISORY");
   const [author, setAuthor] = useState("");
 
@@ -33,6 +123,16 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
       : res.error.kind === "network"
         ? "The server could not be reached. The saved report is unchanged; retry when the connection is back."
         : res.error.message;
+  // The cabin picture (report schema 3) needs the frozen layout, which only the visit's snapshot carries.
+  const v3 = data?.report.pieceOutcomes !== undefined;
+  const visitRes = useResource(v3 ? `report-visit:${visitId}` : null, (signal) => api.visit(visitId, { signal }));
+  const snapshot = visitRes.data?.visit?.snapshot;
+  const checkDate = data?.report.visit.checkDate ?? "";
+  const workspace = useMemo(() => (snapshot ? pictureWorkspace(snapshot, checkDate) : null), [snapshot, checkDate]);
+  const report0 = data?.report;
+  const outcomes = useMemo(() => (report0 ? pictureOutcomes(report0) : []), [report0]);
+  const states = useMemo(() => outcomeStates(outcomes), [outcomes]);
+  const pieceOutcomes = useMemo(() => ({ pieceOutcomes: outcomes }), [outcomes]);
   const number = data?.report.visit.number;
   const tail = data?.report.visit.tail;
   useEffect(() => {
@@ -76,6 +176,7 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
     );
   }
   const { report, linkedEvents, basisSha256 } = data;
+  const { summary, timeline, observations } = report;
   const c = report.configuration;
   const final = report.reportKind === "FINAL";
   const source = (id: string) => {
@@ -108,6 +209,98 @@ export function ReportView({ visitId, onVisit }: { visitId: string; onVisit?: (m
         </p>
         <p className="authority">{report.authorityNotice}</p>
       </header>
+
+      {summary && (
+        <section aria-labelledby="r-summary">
+          <h3 id="r-summary">Summary</h3>
+          {!summary.releasable && <p className="must-fix">Not releasable: aircraft held</p>}
+          <dl className="facts">
+            <dt>Replaced</dt>
+            <dd>{summary.replaced}</dd>
+            <dt>Noted</dt>
+            <dd>{summary.noted}</dd>
+            <dt>Deferred, cosmetic</dt>
+            <dd>{summary.deferredCosmetic}</dd>
+            <dt>Deferred under the MEL</dt>
+            <dd>{summary.deferredMel}</dd>
+            <dt>Must be fixed</dt>
+            <dd>{summary.mustFix}</dd>
+            <dt>Carried over in</dt>
+            <dd>{summary.carriedIn}</dd>
+            <dt>Still open</dt>
+            <dd>{summary.stillOpen}</dd>
+            <dt>Releasable</dt>
+            <dd>{summary.releasable ? "Yes" : "No"}</dd>
+            <dt>Aircraft held</dt>
+            <dd>{summary.aircraftHeld ? "Yes" : "No"}</dd>
+          </dl>
+        </section>
+      )}
+
+      {report.pieceOutcomes && (
+        <section aria-labelledby="r-picture">
+          <h3 id="r-picture">Cabin picture</h3>
+          <p className="fine">Each location shows the highest status of its pieces at the end of this check.</p>
+          {!workspace ? (
+            visitRes.state === "error" ? (
+              <p className="notice">The cabin picture could not be loaded. The report itself is complete.</p>
+            ) : (
+              <p className="fine">Loading the cabin picture</p>
+            )
+          ) : (
+            <>
+              <button type="button" className="no-print" aria-pressed={show3d} disabled={!!failed3d} onClick={() => setShow3d((on) => !on)}>
+                View in 3D
+              </button>
+              {failed3d && <p className="notice">3D view unavailable. {failed3d} The map below shows the same picture.</p>}
+              {show3d && !failed3d && (
+                <div className="no-print">
+                  <Cabin3D workspace={workspace} states={states} selection={null} onSelect={() => {}} visualProfiles={visualProfiles} onFailed={setFailed3d} />
+                </div>
+              )}
+              <CabinMap workspace={workspace} readOnly={pieceOutcomes} />
+            </>
+          )}
+        </section>
+      )}
+
+      {timeline && (
+        <section aria-labelledby="r-timeline">
+          <h3 id="r-timeline">What happened, in order</h3>
+          {timeline.length === 0 ? (
+            <p>Nothing was recorded in this visit.</p>
+          ) : (
+            <ol>
+              {timeline.map((t) => (
+                <li key={t.seq}>
+                  <Time iso={t.at} /> {t.label}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
+
+      {observations && (
+        <>
+          <OutcomeList id="r-deferred" title="Deferred" items={observations.deferred.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+          <OutcomeList id="r-mustfix" title="Must be fixed" items={observations.mustFix.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+          <OutcomeList id="r-noted" title="Noted" items={observations.noted.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+          <OutcomeList
+            id="r-closed"
+            title="Closed this check"
+            items={observations.closed.map((o) => (
+              <ProblemLine key={o.id} o={o} checkDate={checkDate} extra={o.closedAs === "REPLACED" ? "Closed as replaced" : "Closed as fixed"} />
+            ))}
+          />
+          <OutcomeList
+            id="r-carried"
+            title="Carried over in"
+            items={observations.carriedIn.map((c) => <ProblemLine key={c.observation.id} o={c.observation} checkDate={checkDate} extra={carriedExtra(c)} />)}
+          />
+          <OutcomeList id="r-open" title="Still open" items={observations.stillOpen.map((o) => <ProblemLine key={o.id} o={o} checkDate={checkDate} />)} />
+        </>
+      )}
 
       <section aria-labelledby="r-visit">
         <h3 id="r-visit">Visit</h3>

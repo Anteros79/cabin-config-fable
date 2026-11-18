@@ -1,6 +1,7 @@
-import { Component, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { Component, lazy, type ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { VisualProfile } from "../domain/types.ts";
 import { ApiError, api, type Health } from "./api.ts";
+import { Skeleton } from "./components/Skeleton.tsx";
 import { ThemeControl } from "./components/ThemeControl.tsx";
 import { ToastProvider } from "./components/Toasts.tsx";
 import { useResource } from "./hooks/useResource.ts";
@@ -9,8 +10,16 @@ import { CheckView } from "./views/CheckView.tsx";
 import { LayoutsView } from "./views/LayoutsView.tsx";
 import { PrepView } from "./views/PrepView.tsx";
 import { ReferenceView } from "./views/ReferenceView.tsx";
-import { ReportView } from "./views/ReportView.tsx";
 import { VisitsView } from "./views/VisitsView.tsx";
+
+// The report is its own chunk (ruling R23): its cabin picture, timeline and lists do not grow the first download.
+const ReportView = lazy(() => import("./views/ReportView.tsx").then((m) => ({ default: m.ReportView })));
+/** While the report chunk loads: the same busy placeholder the report shows while its data loads. */
+const REPORT_LOADING = (
+  <section className="panel" aria-label="Report" aria-busy="true">
+    <Skeleton thing="report" shape="report" />
+  </section>
+);
 
 const TITLES: Record<Route["name"], string> = {
   check: "Appearance check",
@@ -264,7 +273,11 @@ export function App() {
           {route.name === "check" && <CheckView visitId={null} tail={route.tail} date={route.date} navigate={navigate} visualProfiles={profiles} />}
           {/* keyed by visit (here and for the report): each visit gets its own write queue, so no status or key carries over */}
           {route.name === "visit" && <CheckView key={route.id} visitId={route.id} onVisit={setVisitMeta} navigate={navigate} visualProfiles={profiles} />}
-          {route.name === "report" && <ReportView key={route.id} visitId={route.id} onVisit={setVisitMeta} />}
+          {route.name === "report" && (
+            <Suspense fallback={REPORT_LOADING}>
+              <ReportView key={route.id} visitId={route.id} onVisit={setVisitMeta} visualProfiles={profiles} />
+            </Suspense>
+          )}
           {route.name === "prep" && <PrepView visitId={route.visitId} tail={route.tail} date={route.date} />}
           {route.name === "visits" && <VisitsView status={route.status} q={route.q} page={route.page} navigate={navigate} />}
           {route.name === "layouts" && <LayoutsView layoutId={route.id} visualProfiles={profiles} />}

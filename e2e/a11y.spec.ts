@@ -69,6 +69,8 @@ test.describe("axe: zero WCAG 2.1 A and AA violations of any impact", () => {
     await api.complete(visit.id);
     await page.goto(`/#/visit/${visit.id}/report`);
     await expect(page.locator("#totals-table")).toBeVisible();
+    // the cabin picture (a read-only map) loads after the report: scan it too
+    await expect(page.locator(".report .cabin-map button[data-seat='7C']")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });

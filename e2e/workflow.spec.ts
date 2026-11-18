@@ -59,8 +59,9 @@ test("README walk-through by keyboard: look up, record, alternate, complete, and
   await test.step("select seat 3A in the map with arrow keys and record the cushion", async () => {
     // Tabs follow the WAI-ARIA pattern: Tab reaches the selected tab, and the arrow keys move to and show the other one.
     // Without WebGL the map is already shown and the 3D tab is disabled.
-    if ((await page.locator("#tab-map").getAttribute("aria-selected")) !== "true") {
-      await tabTo(page, "#tab-3d");
+    // The 3D failure without WebGL arrives asynchronously: the walk stops at whichever tab is selected when Tab reaches it.
+    await tabTo(page, "#tab-3d:not([disabled]), #tab-map[aria-selected=true]");
+    if (await page.locator("#tab-3d").evaluate((el) => el === document.activeElement)) {
       await page.keyboard.press("ArrowRight");
       await expect(page.locator("#tab-map")).toBeFocused();
     }

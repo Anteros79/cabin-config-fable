@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildPreparation } from "../../src/domain/prep.ts";
 import { buildReport } from "../../src/domain/report.ts";
+import type { Observation } from "../../src/domain/types.ts";
 import type { LayoutDetail, ReferenceInfo } from "../../src/web/api.ts";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
 import { LayoutsView } from "../../src/web/views/LayoutsView.tsx";
@@ -154,6 +155,79 @@ describe("views show people words, not machine values", () => {
     await screen.findByText("findings: 3 blocking findings, 12 warnings", { exact: false });
     expect(screen.getByText("2 fixture, 5 candidate")).toBeInTheDocument();
     expect(screen.getByText("Warning")).toBeInTheDocument();
+  });
+});
+
+describe("the after-action report sections", () => {
+  /** A problem as stored: every code field set, so a leak would show. */
+  const problem = (extra: Partial<Observation>): Observation => ({
+    id: "OBS-1",
+    tail: visit.tail,
+    status: "OPEN",
+    version: 1,
+    locationId: "SEAT:3A",
+    componentId: "TRAY",
+    condition: "WONT_LATCH",
+    note: "",
+    outcome: "DEFERRED",
+    deferUntil: "NEXT_CHECK",
+    reason: "NO_STOCK",
+    melClass: { class: "MEL", item: "FX-25-21-01", category: "C", intervalDays: 10, conditions: "Fictional deferral" },
+    dueDate: "2026-11-22",
+    blocksSeat: false,
+    openedInVisitId: visit.id,
+    closedInVisitId: null,
+    closedAs: null,
+    locationLabel: "Seat 3A",
+    componentName: "Tray table",
+    createdAt: "2026-11-12T12:01:00.000Z",
+    updatedAt: "2026-11-12T12:01:00.000Z",
+    ...extra,
+  });
+  const deferredMel = problem({ id: "DM" });
+  const noGo = problem({
+    id: "NG",
+    outcome: "MUST_FIX",
+    raisedTo: "NO_GO",
+    melClass: { class: "NO_GO", reason: "Fictional no-go." },
+    dueDate: null,
+    componentId: "SEATBELT",
+  });
+  const overdue = problem({ id: "OD", locationId: "SEAT:3B", locationLabel: "Seat 3B", dueDate: "2026-11-01", openedInVisitId: "visit-0" });
+  const closed = problem({ id: "CL", status: "CLOSED", closedInVisitId: visit.id, closedAs: "FIXED", condition: "OTHER", componentId: "CUSHION" });
+  const v3 = {
+    ...visit,
+    aircraftHeld: true,
+    observations: [deferredMel, noGo, closed],
+    carried: [{ observation: overdue, placement: "SAME" as const, locationId: "SEAT:3B", overdue: true }],
+    events: [
+      { seq: 2, type: "OBSERVATION_ADDED", at: "2026-11-12T12:03:00.000Z", payload: { observation: deferredMel } },
+      { seq: 3, type: "OBSERVATION_UPDATED", at: "2026-11-12T12:04:00.000Z", payload: { before: noGo, after: noGo } },
+      { seq: 4, type: "OBSERVATION_CLOSED", at: "2026-11-12T12:05:00.000Z", payload: { before: closed, after: closed } },
+      { seq: 5, type: "COMPLETED", at: "2026-11-12T12:06:00.000Z", payload: { aircraftHeld: true } },
+    ],
+  };
+
+  it("no raw codes or ISO timestamps in the new sections", async () => {
+    const envelope = { report: buildReport(v3, "FINAL", "2026-11-12T12:07:00.000Z"), basisSha256: null, linkedEvents: [] };
+    stubFetch((method, url) => (url === `/api/visits/${visit.id}/report` ? { body: envelope } : answer(method, url)));
+    const { container } = render(<ReportView visitId={visit.id} />);
+    await screen.findByRole("heading", { name: "What happened, in order" });
+    await screen.findByRole("heading", { name: /^Seats/ });
+    const sections = ["r-summary", "r-picture", "r-timeline", "r-deferred", "r-mustfix", "r-noted", "r-closed", "r-carried", "r-open"].map(
+      (id) => container.querySelector(`#${id}`)?.closest("section") as HTMLElement,
+    );
+    for (const section of sections) {
+      expect(section).toBeInstanceOf(HTMLElement);
+      const text = section.textContent ?? "";
+      expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+      expect(text).not.toMatch(/\{"/);
+      expect(text).not.toMatch(
+        /\b(NO_GO|WONT_LATCH|MUST_FIX|NEXT_CHECK|NO_STOCK|DEFERRED|NOTED|COSMETIC|REPLACED|FIXED|OTHER|OBSERVATION_\w+|RECORD_\w+|COMPLETED|SEAT:|mustFix)\b/,
+      );
+      for (const time of section.querySelectorAll("time")) expect(time.getAttribute("dateTime")).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    }
+    expect(sections[2]?.querySelectorAll("time")).toHaveLength(4);
   });
 });
 

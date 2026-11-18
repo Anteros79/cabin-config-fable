@@ -1,6 +1,7 @@
 import { type CSSProperties, Fragment, useMemo, useRef, useState } from "react";
-import { type BinType, binTypeOf, type CabinLocation, type ComponentDef, type LayoutRevision } from "../../domain/types.ts";
+import { type BinType, binTypeOf, type CabinLocation, type ComponentDef, type LayoutRevision, type ReportPieceOutcome } from "../../domain/types.ts";
 import {
+  aggregateStatus,
   alternateText,
   componentsAt,
   type LocationFlags,
@@ -20,6 +21,27 @@ interface Props {
   selection: string | null;
   onSelect(locationId: string, componentId: string | null): void;
 }
+/** The report's cabin picture: locations coloured by the pieces' outcomes. No selection, no go-to, no piece list. */
+interface ReadOnlyProps {
+  workspace: Workspace;
+  readOnly: { pieceOutcomes: readonly ReportPieceOutcome[] };
+}
+
+/** Per-location flags from the report's piece outcomes: the status is aggregateStatus() of the location's pieces. */
+function outcomeFlags(layout: LayoutRevision, outcomes: readonly ReportPieceOutcome[]): Map<string, LocationFlags> {
+  const byLocation = new Map<string, LocationStatus[]>();
+  for (const o of outcomes) byLocation.set(o.locationId, [...(byLocation.get(o.locationId) ?? []), o.status]);
+  const flags = new Map<string, LocationFlags>();
+  for (const l of layout.locations) {
+    const statuses = byLocation.get(l.id);
+    if (!statuses) continue;
+    const unresolved = statuses.filter((s) => s === "unresolved").length;
+    const recorded = statuses.filter((s) => s === "recorded").length;
+    flags.set(l.id, { recorded, unresolved, resolved: l.componentIds.length - unresolved, alternate: 0, status: aggregateStatus(statuses) });
+  }
+  return flags;
+}
+const NO_SELECT = () => {};
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 /** The armrest span left of the seat at `index` in LETTERS: A, AB, BC, then D, DE, EF. The last one of a side (C, F) is right of its seat. */
@@ -99,8 +121,17 @@ function stateClass(flags: LocationFlags | undefined, selected: boolean): string
  * Complete keyboard-operable alternative to the 3D view: every seat, floor area and bin module
  * is a real button with a text label and state. It needs no WebGL and is always available.
  */
-export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
+export function CabinMap(props: Props | ReadOnlyProps) {
+  const { workspace } = props;
   const { layout } = workspace;
+  const readOnly = "readOnly" in props;
+  const outcomes = readOnly ? props.readOnly.pieceOutcomes : null;
+  const ownFlags = useMemo(() => (outcomes ? outcomeFlags(layout, outcomes) : null), [layout, outcomes]);
+  const flags: Props["flags"] = ownFlags ?? (props as Props).flags;
+  const selection = readOnly ? null : props.selection;
+  const onSelect = readOnly ? NO_SELECT : props.onSelect;
+  /** aria-pressed only where pressing selects */
+  const pressed = (id: string) => (readOnly ? undefined : selection === id);
   const seats = useMemo(() => new Map(layout.locations.filter((l) => l.kind === "SEAT").map((l) => [l.seat!.code, l])), [layout]);
   const floors = layout.locations.filter((l) => l.kind === "FLOOR");
   const bins = layout.locations.filter((l) => l.kind === "BIN");
@@ -201,7 +232,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         key={location.id}
         type="button"
         className={stateClass(f, selection === location.id)}
-        aria-pressed={selection === location.id}
+        aria-pressed={pressed(location.id)}
         style={tokenStyle("--problem", f?.status)}
         data-location={location.id}
         onClick={() => onSelect(location.id, null)}
@@ -228,7 +259,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         type="button"
         className={`${stateClass(f, selection === location.id)} armrest`}
         tabIndex={-1}
-        aria-pressed={selection === location.id}
+        aria-pressed={pressed(location.id)}
         aria-label={`${location.label}${stateText(f)}`}
         style={tokenStyle("--problem", f?.status)}
         data-location={location.id}
@@ -245,49 +276,51 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
 
   return (
     <div className="cabin-map">
-      <form className="goto" onSubmit={submitGoTo}>
-        <label htmlFor="goto-input">Go to location</label>
-        <input
-          id="goto-input"
-          list="goto-options"
-          value={goTo}
-          onChange={(e) => setGoTo(e.target.value)}
-          onKeyDown={submitOnEnter}
-          onInput={forgetSuggestionKeys}
-          placeholder="e.g. 3A, L-01, FWD"
-          autoComplete="off"
-        />
-        <datalist id="goto-options">
-          {layout.locations.map((l) => (
-            <option key={l.id} value={l.seat?.code ?? l.id.split(":")[1]}>
-              {l.label}
-            </option>
-          ))}
-          {/* the pieces of the selected location only, so the list does not grow with every piece of the cabin */}
-          {selected &&
-            selected.componentIds.length > 1 &&
-            selected.componentIds.map((c) => (
-              <option key={`${selected.id}|${c}`} value={`${selected.seat?.code ?? selected.id.split(":")[1]} ${workspace.componentDefs[c]?.name ?? c}`}>
-                {selected.label}
+      {!readOnly && (
+        <form className="goto" onSubmit={submitGoTo}>
+          <label htmlFor="goto-input">Go to location</label>
+          <input
+            id="goto-input"
+            list="goto-options"
+            value={goTo}
+            onChange={(e) => setGoTo(e.target.value)}
+            onKeyDown={submitOnEnter}
+            onInput={forgetSuggestionKeys}
+            placeholder="e.g. 3A, L-01, FWD"
+            autoComplete="off"
+          />
+          <datalist id="goto-options">
+            {layout.locations.map((l) => (
+              <option key={l.id} value={l.seat?.code ?? l.id.split(":")[1]}>
+                {l.label}
               </option>
             ))}
-        </datalist>
-        <button type="submit">Select</button>
-        <span role="status" className="fine">
-          {goToMessage}
-        </span>
-        {selected && (
-          <button type="button" className="link" onClick={() => document.getElementById("inspector-heading")?.focus()}>
-            Go to parts for {selected.label}
-          </button>
-        )}
-      </form>
+            {/* the pieces of the selected location only, so the list does not grow with every piece of the cabin */}
+            {selected &&
+              selected.componentIds.length > 1 &&
+              selected.componentIds.map((c) => (
+                <option key={`${selected.id}|${c}`} value={`${selected.seat?.code ?? selected.id.split(":")[1]} ${workspace.componentDefs[c]?.name ?? c}`}>
+                  {selected.label}
+                </option>
+              ))}
+          </datalist>
+          <button type="submit">Select</button>
+          <span role="status" className="fine">
+            {goToMessage}
+          </span>
+          {selected && (
+            <button type="button" className="link" onClick={() => document.getElementById("inspector-heading")?.focus()}>
+              Go to parts for {selected.label}
+            </button>
+          )}
+        </form>
+      )}
 
       <section aria-labelledby="map-seats">
         <h3 id="map-seats">
           Seats <span className="count">({seats.size})</span>
         </h3>
-        <p className="fine">Forward is at the top. Arrow keys move between seats; Enter or Space selects.</p>
+        <p className="fine">Forward is at the top. Arrow keys move between seats{readOnly ? "." : "; Enter or Space selects."}</p>
         <ul className="status-key" aria-label="Status key">
           {KEYED_STATUSES.map((s) => (
             <li key={s}>
@@ -345,7 +378,7 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
                             data-seat={code}
                             tabIndex={tabStop === code ? 0 : -1}
                             className={`${stateClass(f, selection === location.id)} tier-${(location.seat?.commercialTier ?? location.seat?.maintenanceZone ?? "none").replace(/\s+/g, "-").toLowerCase()}`}
-                            aria-pressed={selection === location.id}
+                            aria-pressed={pressed(location.id)}
                             style={tokenStyle("--problem", f?.status)}
                             aria-label={`${seatLabelFor(location, f)}${blocked?.has(location.id) ? ", Blocked" : ""}`}
                             onClick={() => {
@@ -410,57 +443,59 @@ export function CabinMap({ workspace, flags, selection, onSelect }: Props) {
         )}
       </section>
 
-      <section className="pieces" aria-labelledby={selected ? "map-pieces" : undefined}>
-        {selected ? (
-          <>
-            <h3 id="map-pieces">Pieces at {selected.label}</h3>
-            <p className="fine">
-              {bin && `${BIN_TYPE_WORDS[bin.binType]} bin, holds ${bin.capacityBags} bags. `}
-              {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}. Choose one to see its parts and problems.
-              {blocked?.has(selected.id) && " "}
-              {blocked?.has(selected.id) && <span className="pill unresolved">Blocked</span>}
-            </p>
-            <ul className="piece-list">
-              {pieces.map((p) => {
-                const word = p.pieceStatus === "none" ? "" : STATUS_ENCODING[p.pieceStatus].label;
-                return (
-                  <li key={p.componentId}>
-                    <button type="button" className="piece" data-component={p.componentId} onClick={() => onSelect(selected.id, p.componentId)}>
-                      <span>{p.name}</span>
-                      {word && (
-                        <span className="badge-text" style={tokenStyle("--ink", p.pieceStatus)}>
-                          <StatusGlyph status={p.pieceStatus} /> {word}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {seatArmrests.length > 0 && (
-              <>
-                <h4>Armrests next to {selectedSeat?.seat?.code}</h4>
-                <div className="loc-list">
-                  {seatArmrests.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className="loc"
-                      aria-label={`${a.label}, next to this seat${stateText(flags.get(a.id))}`}
-                      onClick={() => onSelect(a.id, null)}
-                    >
-                      {a.label}
-                      <StatusGlyph status={flags.get(a.id)?.status ?? "none"} />
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          <p className="fine">Select a seat, an armrest, a floor area or a bin to list its pieces here.</p>
-        )}
-      </section>
+      {!readOnly && (
+        <section className="pieces" aria-labelledby={selected ? "map-pieces" : undefined}>
+          {selected ? (
+            <>
+              <h3 id="map-pieces">Pieces at {selected.label}</h3>
+              <p className="fine">
+                {bin && `${BIN_TYPE_WORDS[bin.binType]} bin, holds ${bin.capacityBags} bags. `}
+                {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}. Choose one to see its parts and problems.
+                {blocked?.has(selected.id) && " "}
+                {blocked?.has(selected.id) && <span className="pill unresolved">Blocked</span>}
+              </p>
+              <ul className="piece-list">
+                {pieces.map((p) => {
+                  const word = p.pieceStatus === "none" ? "" : STATUS_ENCODING[p.pieceStatus].label;
+                  return (
+                    <li key={p.componentId}>
+                      <button type="button" className="piece" data-component={p.componentId} onClick={() => onSelect(selected.id, p.componentId)}>
+                        <span>{p.name}</span>
+                        {word && (
+                          <span className="badge-text" style={tokenStyle("--ink", p.pieceStatus)}>
+                            <StatusGlyph status={p.pieceStatus} /> {word}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {seatArmrests.length > 0 && (
+                <>
+                  <h4>Armrests next to {selectedSeat?.seat?.code}</h4>
+                  <div className="loc-list">
+                    {seatArmrests.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className="loc"
+                        aria-label={`${a.label}, next to this seat${stateText(flags.get(a.id))}`}
+                        onClick={() => onSelect(a.id, null)}
+                      >
+                        {a.label}
+                        <StatusGlyph status={flags.get(a.id)?.status ?? "none"} />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <p className="fine">Select a seat, an armrest, a floor area or a bin to list its pieces here.</p>
+          )}
+        </section>
+      )}
     </div>
   );
 }
