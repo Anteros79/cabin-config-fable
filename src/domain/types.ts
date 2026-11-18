@@ -744,3 +744,45 @@ export const DATE_RULE = "Effective-from and effective-to/expiry dates are calen
 export const REPLACEMENT_COUNT_SEMANTICS =
   "Replacements = number of that component replaced at that location during this visit (one record per visit, location and component). " +
   "Line quantity = replacements x quantity per replacement; mandatory children = replacements x alternate quantity x child quantity.";
+
+export type ObservationOutcome = "NOTED" | "DEFERRED" | "MUST_FIX" | "REPLACED" | "FIXED";
+export type DeferUntil = "NEXT_CHECK" | "NEXT_STOP";
+export type DeferReason = "NO_STOCK" | "NO_TIME" | "OTHER";
+
+/** What a technician writes down about a problem they noticed. */
+export interface ObservationInput {
+  locationId: string;
+  componentId: string;
+  condition: Condition;
+  note: string;
+  outcome: "NOTED" | "DEFERRED" | "MUST_FIX";
+  deferUntil?: DeferUntil;
+  reason?: DeferReason;
+  raisedTo?: "MEL" | "NO_GO";
+}
+
+export interface Observation extends ObservationInput {
+  id: string;
+  tail: string;
+  status: "OPEN" | "CLOSED";
+  version: number;
+  /** Effective class when last written. */
+  melClass: MelClass;
+  /** YYYY-MM-DD, MEL only, fixed when first deferred. */
+  dueDate: string | null;
+  blocksSeat: boolean;
+  openedInVisitId: string;
+  closedInVisitId: string | null;
+  closedAs: "REPLACED" | "FIXED" | null;
+  locationLabel: string;
+  componentName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CarriedObservation {
+  observation: Observation;
+  placement: "SAME" | "MAPPED" | "ORPHANED";
+  locationId: string | null;
+  overdue: boolean;
+}
