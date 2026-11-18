@@ -71,6 +71,21 @@ Status overlays are not tone mapped, so they are drawn in exactly the legend swa
 - Whether the two headrest widths (images 6 and 11) are different products or different viewpoints.
 - True colour. Every photograph is taken under tinted or strong light.
 
-Deliberately not modelled: the heart mark and any wordmark (brand marks), seat belts, literature cards, window shades, passengers.
+Deliberately not modelled: the heart mark and any wordmark (brand marks), literature cards, window shades, passengers. (Seat belts were left out until 2.1.0; see "Piece meshes" below.)
+
+## Piece meshes (2.1.0)
+
+Every piece a technician can tap is its own instanced mesh, tagged with its location id and component id (`SEAT:12A` + `HEADREST`). The shapes are clean and illustrative, not photo-real, and a detailed model can later replace a shape without changing data or reports. The scene budget is 39 draw calls, 546,307 triangles and 3,175 triangles per seat on the 176-seat layout (`budgets.json`).
+
+| Piece | Where it is drawn |
+| --- | --- |
+| Cushion, backrest, headrest | Seat pan, seat back and the top of the seat back; the headrest keeps its own material and takes the status tint |
+| Seat belt | On the pan |
+| Tray table, seat-back net | On the back of the seat in front, or the bulkhead panel in row 1; tagged with the seat behind. No tray or net is drawn for a seat behind an omitted seat |
+| Life vest | Under the pan, shown only with the "Under seat" layer |
+| Armrest | Between two seats, tagged with its own `ARMREST:<row>-<span>` location |
+| Bins | Three fictional types. PIVOT and LARGE_PIVOT swing the bucket down on side pivots (LARGE_PIVOT is deeper and hangs lower); CLASSIC keeps a fixed fascia and swings a shorter lower panel up about its top edge, so it stays under the ceiling. A tap on a closed bin opens it (reduced motion cuts straight to open); the inner pieces are then tappable, from the focus view too |
+
+Status colours for the new piece states (replaced, noted, deferred, carried over, must-fix, blocked) are tokens in `src/web/styles/tokens.css` with light and dark values; printed and PDF output stays light.
 
 The judged comparison of renders against these originals is in [`verification/README.md`](../verification/README.md).

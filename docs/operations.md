@@ -5,11 +5,11 @@ All commands run from the project folder (`implementation/cabin-kit/`, or the ro
 ## First start
 
 ```
-npm run setup            # npm ci, build the web client, import reference data, seed two sample visits
+npm run setup            # npm ci, build the web client, import reference data, seed three sample visits
 npm start                # http://127.0.0.1:4310
 ```
 
-`setup` ends with `npm run sample:seed`, which adds two sample visits (one completed, one draft) to the visit store. To start with an empty visit store, run the first three steps by hand instead: `npm ci && npm run build && npm run reference:import`.
+`setup` ends with `npm run sample:seed`, which adds three sample visits to the visit store: a completed one on N100TL with one deferred problem, a draft on N200TL, and a later draft on N100TL that shows the deferred problem carried over. To start with an empty visit store, run the first three steps by hand instead: `npm ci && npm run build && npm run reference:import`.
 
 ## Settings
 
@@ -117,7 +117,9 @@ The reference store can always be rebuilt with `npm run reference:import`, provi
 
 ## Upgrading and store errors
 
-On start the server opens the visit store and brings it to the newest schema. Migrations are forward-only and run in one transaction: they may add tables, columns, indexes and triggers, and never rewrite stored snapshots, reports or events. A store written by 1.x (schema version 1) opens, lists, reports and completes under 2.0.0; it is migrated to version 2 (an index on retry keys) on first open. Take a backup before upgrading (`npm run visits:backup`): there is no downgrade, and a store a newer version has migrated is refused by an older one. Retry keys older than 30 days are pruned when the store opens.
+On start the server opens the visit store and brings it to the newest schema. Migrations are forward-only and run in one transaction: they may add tables, columns, indexes and triggers, and never rewrite stored snapshots, reports or events. A store written by 1.x (schema version 1) opens, lists, reports and completes under 2.0.0; it is migrated to version 2 (an index on retry keys) on first open.
+
+**Visit store schema 3 (2.1.0).** A store at version 1 or 2 opens, lists, reports and completes under 2.1.0 and is migrated to version 3 on first open. The migration only adds: the `visit_observations` table (problems, owned by the tail) with an index on tail and status, the `visits.aircraft_held` column (default 0), and triggers (a problem closed in a completed visit cannot change, no problem can be deleted, a problem can only be opened in a draft visit, and the empty-visit rule now accepts a visit with problem events instead of records). Stored snapshots, reports and events are never rewritten, so old reports are served as stored (`cabin-kit.report/1` and `/2`) and new ones use `/3`. The check is `tests/fixtures/visits-5d6679d.sqlite`, a store written by the 1.x code. The first import under 2.1.0 stages one new release (`REL-…-b5b0a788`) even from unchanged files, because the content hash changed (see `CHANGELOG.md`). There is still no downgrade: back up first, and a 2.0.0 server refuses a version 3 store. Take a backup before upgrading (`npm run visits:backup`): there is no downgrade, and a store a newer version has migrated is refused by an older one. Retry keys older than 30 days are pruned when the store opens.
 
 Reference stores need no migration. Releases imported before 2.0.0 keep their recorded content hash and still load; the first import under 2.0.0 stages and activates one new release even from unchanged files, because the content hash of the same data changed in 2.0.0 (see `CHANGELOG.md`). Existing visits keep their own snapshots and are unaffected.
 

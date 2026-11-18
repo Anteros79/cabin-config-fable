@@ -152,7 +152,7 @@ describe("server process", () => {
     server.child.kill("SIGTERM");
     expect((await server.done).code).toBe(0);
     expect(health.status).toBe("ok");
-    expect(health.visits).toMatchObject({ visits: 2, drafts: 1, completed: 1 });
+    expect(health.visits).toMatchObject({ visits: 3, drafts: 2, completed: 1 });
     expect(releaseCount(dataDir)).toBe(1); // the server used the seed's reference store instead of importing its own
   });
 

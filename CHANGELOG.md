@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.1.0 (2026-11-18)
+
+The visual appearance check. A technician taps the exact piece on the 3D cabin, sees its part, and replaces it, notes a problem or defers it under a fictional minimum equipment list (MEL). The design is [`docs/superpowers/specs/2026-11-18-visual-appearance-check-design.md`](docs/superpowers/specs/2026-11-18-visual-appearance-check-design.md). All data is still fictional; the MEL is invented and is not any airline's MEL.
+
+### Breaking changes
+
+- **Visit store schema 3.** A store at version 1 or 2 is migrated on first open. The migration only adds a table (`visit_observations`), a column (`visits.aircraft_held`), an index and triggers; stored snapshots, reports and events are never rewritten. A 2.0.0 server refuses a migrated store, so back up first (`npm run visits:backup`). The 1.x store in `tests/fixtures/visits-5d6679d.sqlite` still opens, lists, reports and completes.
+- **Report schema 3.** New reports are `cabin-kit.report/3`: a summary, a timeline in event order, problems by outcome (deferred, must-fix, noted, closed, carried in, still open) and the outcome of each touched piece. Stored `/1` and `/2` reports are served unchanged. Readers of the JSON must accept all three.
+- **Reference content hash changed on purpose:** `9cf6c6d2` → `4d969cc9` (every generated bin carries its type and capacity) → `b5b0a788` (the new pieces and MEL; full value `b5b0a78894e26890e9e956b17f1c04a4e6763740b81795f189b0d242a8f40a99`, pinned in `tests/helpers.ts`). The seat, armrest and bin pieces, the bin types and modules and the MEL are new reference data, so the release id changes (`REL-0001-b5b0a788`). Releases already stored keep their recorded hash and still load; the first import under 2.1.0 stages one new release even from unchanged files. Layout ids now carry the bin type, for example `FX-L-S176-800-PV@1`.
+- **A visit can complete with problems and no replacements** (a record or a problem is enough). Completing while a must-fix problem is open needs `aircraftHeld: true` ("Aircraft held, reported"); the report then says "Not releasable".
+- **The seat has seven pieces, not two.** Cushion and backrest are joined by headrest, seat belt, tray table, seat-back net and life vest. Tray table and net belong to the seat behind. Armrests are their own locations (`ARMREST:<row>-<span>`). Every bin carries a type and length. Counts that were pinned (components, locations) moved with the data.
+
+### Added
+
+- **Tappable pieces in 3D, on the map and in the list.** Each piece is its own instanced mesh; hovering and picking return a location and a component. A life vest shows on the "Under seat" layer. "Go to location" understands pieces (for example `12A headrest`).
+- **Three fictional bin types** (CLASSIC, PIVOT, LARGE_PIVOT) with their own pieces and opening motion. Bins open in 3D and their inner pieces become tappable. The CLASSIC door has a fixed fascia and a lower panel that swings up. Module lengths (2 or 3 rows) are made up.
+- **Problems.** A problem is a condition plus an outcome (note only, defer until the next check or the next stop, or must be fixed). Deferrals are stored per tail and appear on the next check as "Carried over". Only deferred and must-fix problems carry. A carried problem maps to the same piece, or to the bin that now covers its first row, or goes to "No longer at this position".
+- **The fictional MEL.** Classes `COSMETIC`, `MEL` and `NO_GO`; categories A (as stated), B 3 days, C 10 days, D 120 days. A class can be raised, never lowered. A seat belt deferral blocks the seat. An MEL deferral past its due date becomes must-fix. Dates are compared with the visit's check date, never the clock.
+- **After-action report** with a cabin picture (page and PDF), a timeline and lists by outcome; the page can show the marking on the 3D model. The report page is its own lazy chunk.
+- **Status colours** for replaced, noted, deferred, carried over, must-fix and blocked, in light and dark, as tokens.
+- **Sample data.** `npm run sample:seed` now adds three visits: a completed N100TL visit with one deferred tray table, a draft on N200TL, and a later N100TL draft that shows the tray table carried over.
+
+### Budgets
+
+Changed on purpose, once, in `budgets.json`:
+
+- Scene on the 176-seat layout: 39 draw calls (was 32), 546,307 triangles (was 525,000), 3,175 triangles per seat.
+- Index bundle 108.0 kB gzip, report chunk 6.0 kB gzip (new), CSS 7.4 kB gzip.
+
+### Known limits
+
+- Bin types, module lengths and mechanisms, and the whole MEL are fictional stand-ins; public sources do not give them. Nothing here approves a deferral.
+- Problems closed in a visit (marked fixed or replaced) have no row in the work list; the report timeline shows them.
+- The frame rates and capture sizes in `verification/README.md` are from 2.0.0 and were not re-captured.
+
 ## 2.0.0 (2026-11-16)
 
 The platinum-hardening release. It closes the findings of the audit in [`docs/audit-2026-11-15.md`](docs/audit-2026-11-15.md) (the "Closed by" column there names the commit for each; a few stay partial or open, with the reason). All data is still fictional.

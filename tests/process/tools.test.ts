@@ -288,7 +288,42 @@ describe("seed-sample-visits", () => {
     expect(second.stdout).toContain("already has visits");
     const store = VisitStore.open(join(dir, "visits.sqlite"), join(dir, "reference.sqlite"));
     try {
-      expect(store.counts()).toMatchObject({ visits: 2, drafts: 1, completed: 1 });
+      expect(store.counts()).toMatchObject({ visits: 3, drafts: 2, completed: 1 });
+    } finally {
+      store.close();
+    }
+  });
+
+  test("seed creates a completed visit with one deferral and a draft that shows it carried over", async () => {
+    const dir = tempDir("cabin-kit-seed-");
+    const first = await seed(dir);
+    expect(first.code).toBe(0);
+    expect(first.stdout).toContain("with 1 deferred problem");
+    expect(first.stdout).toContain("Draft sample visit #3 on N100TL shows 1 carried-over problem.");
+    const store = VisitStore.open(join(dir, "visits.sqlite"), join(dir, "reference.sqlite"));
+    try {
+      const completed = store.listVisits({ limit: 10 }).items.find((v) => v.number === 1);
+      const carriedDraft = store.listVisits({ limit: 10 }).items.find((v) => v.number === 3);
+      if (!completed || !carriedDraft) throw new Error("the sample visits are missing");
+      expect(completed).toMatchObject({ tail: "N100TL", status: "COMPLETED" });
+      const done = store.getVisit(completed.id);
+      expect(done.observations).toHaveLength(1);
+      expect(done.observations[0]).toMatchObject({
+        locationId: "SEAT:7C",
+        componentId: "TRAY",
+        outcome: "DEFERRED",
+        status: "OPEN",
+        dueDate: "2027-03-12",
+        melClass: { class: "MEL", item: "FX-25-22-01", category: "D" },
+      });
+      expect(carriedDraft).toMatchObject({ tail: "N100TL", status: "DRAFT", checkDate: "2026-11-19" });
+      const draft = store.getVisit(carriedDraft.id);
+      expect(draft.observations).toHaveLength(0);
+      expect(draft.carried).toHaveLength(1);
+      expect(draft.carried[0]).toMatchObject({
+        observation: { id: done.observations[0]?.id, locationId: "SEAT:7C", componentId: "TRAY" },
+        openedCheckDate: "2026-11-12",
+      });
     } finally {
       store.close();
     }

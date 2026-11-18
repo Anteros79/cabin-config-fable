@@ -23,10 +23,11 @@ Fixture shortcuts (zones, exit rows, floor areas, bin modules) never enter candi
 | MaintenanceVariant | id | Subtype, seat hardware, released flag, list of permitted layout revisions |
 | Layout / LayoutRevision | layout id + revision | Immutable. Rows, locations, seat-set status, floor/bin map status, geometry declaration, source |
 | RowLabel | printed label | `exists`, physical order (null for skipped labels). Printed label and physical order are separate |
-| CabinLocation | layout revision + location id (`SEAT:3A`, `FLOOR:FWD`, `BIN:L-01`) | Composite identity; a seat code alone is never an identity |
+| CabinLocation | layout revision + location id (`SEAT:3A`, `FLOOR:FWD`, `BIN:L-01`, `ARMREST:12-AB`) | Composite identity; a seat code alone is never an identity. An `ARMREST` location is one armrest between two seats (or beside one), so a shared armrest is logged once. A `BIN` location carries its side, rows, bin type (`CLASSIC`, `PIVOT`, `LARGE_PIVOT`) and bag capacity; the pieces it offers depend on the bin type |
 | Seat attributes | per seat | Commercial tier; pitch claim (raw, min, max, unit, approximate); width claim (measurement kind); exit; bulkhead; maintenance zone; hardware group. Each independent of the others |
 | TailAssignment | id | Tail, variant, layout revision, carpet, seam, upholstery, inclusive dates, source, released/planned |
-| ComponentDef | id | Location kind, replacement limit per location |
+| ComponentDef | id | Location kind (`SEAT`, `ARMREST`, `FLOOR`, `BIN`), replacement limit per location. A seat has seven pieces (cushion, backrest, headrest, seat belt, tray table, seat-back net, life vest); tray table and net are fitted to the seat in front but belong to the seat behind. A bin has nine to eleven, by bin type |
+| MelEntry | id | Fictional minimum equipment list entry: piece + condition → class `COSMETIC`, `MEL` (item, category A–D, interval, conditions, optional `blocksSeat`) or `NO_GO`, with an optional `whenSeatBlocked` class and an optional per-variant override. Not any airline's MEL. A class can only be raised by the technician, never lowered |
 | Part | part number | |
 | ApplicabilityRule | id | Component, part, quantity and unit per replacement, context constraint, location selector, released flag, inclusive dates, source |
 | SubstituteApproval | id | Component, primary part it may replace, alternate part, quantity, own constraint, own location scope, own dates, approval source |
@@ -36,10 +37,11 @@ Fixture shortcuts (zones, exit rows, floor areas, bin modules) never enter candi
 | VisualProfile | id | Unassigned, illustrative image family |
 | Visit | id, number | Tail, date, technician, status, version, frozen snapshot and its hash |
 | VisitRecord | visit + location + component | Selection (primary or alternate), replacements, note, derived part lines, version |
-| Report | visit | Stored at completion; new reports use schema `cabin-kit.report/2`, stored `cabin-kit.report/1` reports are served unchanged |
-| VisitEvent | visit + sequence | Created, record added/updated/removed, completed, linked advisory or correction |
+| Observation | id | A problem on a piece, owned by the **tail**, not the visit: condition, note, outcome (`NOTED`, `DEFERRED`, `MUST_FIX`), defer-until and reason for a deferral, effective MEL class, due date (MEL only, fixed when first deferred), `blocksSeat`, the visit that opened it and the one that closed it (`REPLACED` or `FIXED`), and the location label as it was. Only open deferred and must-fix problems carry to the next visit on the tail: the same piece, else the bin that now covers its first row on that side, else "No longer at this position" |
+| Report | visit | Stored at completion; new reports use schema `cabin-kit.report/3` (summary, timeline, observations by outcome, piece outcomes for the cabin picture). Stored `/1` and `/2` reports are served unchanged |
+| VisitEvent | visit + sequence | Created, record added/updated/removed, observation added/updated/closed, completed, linked advisory or correction |
 
-One layout serves several variants (fixture `FX-L-S176-800@1` serves V04–V08); a variant may list several layout revisions.
+One layout serves several variants (fixture `FX-L-S176-800-PV@1` serves V05–V08; V04, the large-pivot retrofit, has `FX-L-S176-800-LP@1`); a variant may list several layout revisions.
 
 ## Lookup
 
@@ -185,7 +187,7 @@ Writers use `BEGIN IMMEDIATE`, so an edit racing a completion either commits fir
 ## Storage
 
 - `reference.sqlite`: `release`, `release_entity` (one row per entity: type, id, namespace, JSON), `active_release` (single pointer row), `release_event`. Entities of a release that has left "staged" cannot be changed (triggers).
-- `visits.sqlite`: `visits`, `visit_records`, `visit_events`, `reports`, `idempotency`.
+- `visits.sqlite`: `visits` (with `aircraft_held` from schema 3), `visit_records`, `visit_events`, `reports`, `idempotency`, and from schema 3 `visit_observations`. Completed visits, their observations, events and reports are locked by triggers.
 
 Reference operations refuse a target that is the visit store (same path, symlink or hard link), that contains visit tables, or that this application does not recognise. Classification is by the tables actually present, not by a marker row.
 

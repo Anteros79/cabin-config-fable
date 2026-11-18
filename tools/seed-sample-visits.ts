@@ -1,4 +1,5 @@
-// Adds two fictional sample visits (one draft, one completed) to the configured visit store.
+// Adds three fictional sample visits to the configured visit store: a completed one on N100TL that deferred one problem,
+// a draft on N200TL, and a later draft on N100TL that shows the deferred problem carried over.
 // Non-destructive: it only runs when the visit store has no visits, and never touches reference data
 // beyond creating the reference store if it does not exist yet.
 //   node tools/seed-sample-visits.ts [--data-dir DIR]
@@ -73,6 +74,7 @@ function main(argv: string[]): number {
     };
     const completedSnapshot = snapshot("N100TL", "2026-11-12");
     const draftSnapshot = snapshot("N200TL", "2026-07-01");
+    const carriedSnapshot = snapshot("N100TL", "2026-11-19");
 
     const completed = visits.createVisit(completedSnapshot, TECHNICIAN).visit;
     visits.upsertRecord(
@@ -92,6 +94,16 @@ function main(argv: string[]): number {
       },
       0,
     );
+    // A tray table broken at 7C, deferred for lack of stock: fictional MEL item FX-25-22-01, category D (120 days).
+    visits.addObservation(completed.id, {
+      locationId: "SEAT:7C",
+      componentId: "TRAY",
+      condition: "BROKEN",
+      note: "Sample: the latch does not hold the tray table stowed.",
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_CHECK",
+      reason: "NO_STOCK",
+    });
     const done = visits.completeVisit(completed.id, undefined);
     console.log(`Completed sample visit #${done.visit.number}: ${done.report.totals.map((t) => `${t.partNo} ${t.quantity} ${t.unit}`).join(", ")}`);
 
@@ -103,6 +115,15 @@ function main(argv: string[]): number {
     );
     visits.upsertRecord(draft.id, { locationId: "BIN:L-04", componentId: "BIN_DOOR", selection: "PRIMARY", substituteId: null, quantity: 1, note: "" }, 0);
     console.log(`Draft sample visit #${draft.number} left open with 2 records.`);
+
+    // The next check on N100TL: the deferred tray table is carried over and waits to be closed or deferred again.
+    const next = visits.createVisit(carriedSnapshot, TECHNICIAN).visit;
+    const carried = visits.getVisit(next.id).carried;
+    if (carried.length !== 1) throw new SeedError(`Expected the deferred problem to carry over to the next N100TL check, found ${carried.length}.`);
+    console.log(
+      `Sample visit #${done.visit.number} was completed with 1 deferred problem (tray table at 7C, due ${carried[0]?.observation.dueDate ?? "n/a"}).`,
+    );
+    console.log(`Draft sample visit #${next.number} on N100TL shows 1 carried-over problem.`);
   } finally {
     visits.close();
   }
