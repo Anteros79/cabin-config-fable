@@ -524,7 +524,8 @@ export class VisitStore {
       records,
       events,
       observations,
-      carried: this.carriedInto(id, String(row.tail), String(row.check_date)),
+      // A completed visit is frozen (R44): what was carried into it is in its stored report, not the tail's live state.
+      carried: row.status === "COMPLETED" ? [] : this.carriedInto(id, String(row.tail), String(row.check_date)),
     };
   }
 
@@ -1025,6 +1026,8 @@ export class VisitStore {
           );
         }
       }
+      // taken while still a draft: once completed the visit carries nothing, but its report keeps what was carried in
+      const carried = visit.carried;
       const mustFix = this.openObservations(visit.tail)
         .filter((o) => isMustFixNow(o, this.currentClass(o, snapshot, visit.tail, visit.checkDate)))
         .map((o) => o.id)
@@ -1042,7 +1045,7 @@ export class VisitStore {
         .run(now, now, held ? 1 : 0, visitId);
       this.event(visitId, "COMPLETED", { records: visit.records.length, aircraftHeld: held }, now);
       const completed = this.loadVisitState(visitId);
-      const report = buildReport({ ...completed, snapshot }, "FINAL", now);
+      const report = buildReport({ ...completed, carried, snapshot }, "FINAL", now);
       const reportJson = canonicalJson(report);
       this.db
         .prepare("INSERT INTO reports(visit_id, schema, generated_at, basis_sha256, report_json) VALUES (?, ?, ?, ?, ?)")

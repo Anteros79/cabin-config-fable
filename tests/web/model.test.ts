@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 import { classify, currentClass, isMustFixNow } from "../../src/domain/observations.ts";
 import { buildReport } from "../../src/domain/report.ts";
 import type { CabinLocation, CarriedObservation, Condition, MelClass, Observation, VisitRecord } from "../../src/domain/types.ts";
-import { aggregateStatus, buildStates, componentsAt, describeSeat, openMustFix, seatLabelFor, type Workspace } from "../../src/web/model.ts";
+import {
+  aggregateStatus,
+  buildStates,
+  componentsAt,
+  describeSeat,
+  frozenFromReport,
+  openMustFix,
+  RECORDS_ONLY,
+  seatLabelFor,
+  type Workspace,
+  workListProblems,
+} from "../../src/web/model.ts";
 import { at, fixtureRelease, snapshotFor, visitWith } from "../helpers.ts";
 
 const snap = snapshotFor(fixtureRelease(), "N100TL", "2026-11-12");
@@ -406,5 +417,56 @@ describe("one class judgement (R35)", () => {
     expect(states.get("SEAT:3A")?.components.LIFE_VEST).toBe("deferred");
     // the display still places the carried deferral where this layout maps it
     expect(states.get("SEAT:3B")?.components.SEATBELT).toBe("carried");
+  });
+});
+
+describe("a completed visit is frozen (R44)", () => {
+  const tray = observation("SEAT:3A", "TRAY", {
+    id: "OBS-TRAY",
+    condition: "BROKEN",
+    outcome: "DEFERRED",
+    deferUntil: "NEXT_CHECK",
+    reason: "NO_STOCK",
+    melClass: MEL_C,
+    dueDate: "2026-11-22",
+  });
+  const completedVisit = { ...visitWith(snap, []), status: "COMPLETED" as const, observations: [tray], carried: [] };
+  const report = buildReport(completedVisit, "FINAL", "2026-11-12T12:09:00.000Z");
+  /** The completed visit's workspace as CheckView builds it: live rows are ignored, the report's copies are shown. */
+  const frozenWorkspace = (live: Observation[], carried: CarriedObservation[] = []): Workspace => {
+    const { frozen, observations } = frozenFromReport(report);
+    return { ...withProblems(live, carried), editable: false, observations, frozen };
+  };
+
+  it("piece statuses come from the report's pieceOutcomes, not from live observations", () => {
+    expect(report.pieceOutcomes).toContainEqual({ locationId: "SEAT:3A", componentId: "TRAY", status: "deferred" });
+    // a later check's problem on the tail, carried into this visit live, must not show
+    const later = observation("SEAT:4A", "CUSHION", { id: "OBS-LATER", outcome: "MUST_FIX", openedInVisitId: "visit-3" });
+    const ws = { ...frozenWorkspace([]), carried: [carriedAt(later)] };
+    expect(pieceStatus(ws, "SEAT:3A", "TRAY")).toBe("deferred");
+    expect(buildStates(ws).scene.get("SEAT:3A")?.components.TRAY).toBe("deferred");
+    expect(buildStates(ws).scene.get("SEAT:4A")?.components.CUSHION).not.toBe("mustFix");
+    expect(openMustFix(ws)).toEqual([]);
+  });
+
+  it("closing its deferral in a later draft does not change how it looks", () => {
+    const before = frozenWorkspace([tray]);
+    // the live row is now CLOSED by a later visit; the frozen view still comes from the stored report
+    const after = frozenWorkspace([{ ...tray, status: "CLOSED", closedInVisitId: "visit-3", closedAs: "FIXED" }]);
+    expect(buildStates(after).scene).toEqual(buildStates(before).scene);
+    expect(
+      componentsAt(after, location("SEAT:3A"))
+        .find((v) => v.componentId === "TRAY")
+        ?.problems.map((o) => o.id),
+    ).toEqual(["OBS-TRAY"]);
+    expect(workListProblems(after)).toEqual([{ observation: expect.objectContaining({ id: "OBS-TRAY", status: "OPEN" }), status: "deferred" }]);
+  });
+
+  it("a /1 or /2 report, or one not loaded yet, shows the records and no problem statuses", () => {
+    const ws: Workspace = { ...withProblems([tray]), records: [recordAt("SEAT:3A", "CUSHION")], editable: false, observations: [], frozen: RECORDS_ONLY };
+    expect(pieceStatus(ws, "SEAT:3A", "TRAY")).not.toBe("deferred");
+    expect(buildStates(ws).scene.get("SEAT:3A")?.components.CUSHION).toBe("recorded");
+    const { pieceOutcomes: _p, observations: _o, ...v2 } = report;
+    expect(frozenFromReport({ ...v2, schema: "cabin-kit.report/2" })).toEqual({ frozen: RECORDS_ONLY, observations: [] });
   });
 });

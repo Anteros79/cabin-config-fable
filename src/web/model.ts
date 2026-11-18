@@ -11,6 +11,8 @@ import type {
   MelClass,
   MelEntry,
   Observation,
+  Report,
+  ReportPieceOutcome,
   Resolution,
   SourceArtifact,
   VisitRecord,
@@ -81,6 +83,39 @@ export interface Workspace {
   mel: MelEntry[];
   /** The tail's maintenance variant, which picks the MEL entry. Without it only entries that name no variant apply. */
   variantId?: string;
+  /**
+   * A completed visit is frozen (R44): its piece statuses and blocked seats are those of its stored report, never the
+   * tail's live problems, and `observations` holds the report's copies. Absent where the workspace is live.
+   */
+  frozen?: FrozenOutcomes;
+}
+
+/** What a completed visit shows, from its stored report. Empty for a /1 or /2 report, which has no outcomes: records only. */
+export interface FrozenOutcomes {
+  pieceOutcomes: readonly ReportPieceOutcome[];
+  blockedSeats: readonly string[];
+}
+
+/** No outcomes and no blocked seats: a completed visit whose report has not loaded yet, or a /1 or /2 report. */
+export const RECORDS_ONLY: FrozenOutcomes = { pieceOutcomes: [], blockedSeats: [] };
+
+/**
+ * A completed visit's frozen view from its stored report: the piece outcomes, the blocked seats, and this visit's own
+ * problems as the report recorded them (its open lists, then those closed in it). A report without outcomes gives none.
+ */
+export function frozenFromReport(report: Report): { frozen: FrozenOutcomes; observations: Observation[] } {
+  const ob = report.observations;
+  const own = ob ? [...ob.deferred, ...ob.mustFix.filter((o) => o.openedInVisitId === report.visit.id), ...ob.noted, ...ob.closed] : [];
+  return {
+    frozen: { pieceOutcomes: report.pieceOutcomes ?? [], blockedSeats: [] },
+    observations: own,
+  };
+}
+
+/** The highest status the frozen outcomes give a piece, or null when they name it not at all. */
+function frozenStatus(frozen: FrozenOutcomes, locationId: string, componentId: string): LocationStatus | null {
+  const here = frozen.pieceOutcomes.filter((o) => o.locationId === locationId && o.componentId === componentId).map((o) => o.status);
+  return here.length === 0 ? null : aggregateStatus(here);
 }
 
 interface PlacedProblem {
@@ -96,8 +131,12 @@ interface OpenProblems {
   stored: Observation[];
 }
 
-/** The observations that are open now, this visit's and carried, each with the location it sits at on this layout. An id appears once; this visit's copy wins. */
+/**
+ * The observations that are open now, this visit's and carried, each with the location it sits at on this layout. An id
+ * appears once; this visit's copy wins. A frozen workspace has none: its statuses come from its report.
+ */
 function openPlaced(ws: Workspace): OpenProblems {
+  if (ws.frozen) return { placed: [], open: [], stored: [] };
   const own = ws.observations
     .filter((o) => o.status === "OPEN")
     .map((observation): PlacedProblem => ({ observation, locationId: observation.locationId, carried: false }));
@@ -139,6 +178,17 @@ export function openMustFix(ws: Workspace): { observation: Observation; location
  * changed in this one) or Noted.
  */
 export function workListProblems(ws: Workspace): { observation: Observation; status: LocationStatus }[] {
+  const { frozen } = ws;
+  if (frozen) {
+    // the report's own open problems, each with the status its piece has in the report
+    const byOutcome = (o: Observation): LocationStatus => (o.outcome === "MUST_FIX" ? "mustFix" : o.outcome === "NOTED" ? "noted" : "deferred");
+    return ws.observations
+      .filter((o) => o.status === "OPEN")
+      .map((o) => {
+        const piece = frozenStatus(frozen, o.locationId, o.componentId);
+        return { observation: o, status: piece && problemStatusText(piece) ? piece : byOutcome(o) };
+      });
+  }
   const { placed, stored } = openPlaced(ws);
   const carried = new Set(ws.carried.map((c) => c.observation.id));
   return placed
@@ -151,6 +201,10 @@ export function workListProblems(ws: Workspace): { observation: Observation; sta
 
 /** The status a piece's open problems give it, or null when it has none. */
 function problemStatus(ws: Workspace, problems: OpenProblems, locationId: string, componentId: string): LocationStatus | null {
+  if (ws.frozen) {
+    const status = frozenStatus(ws.frozen, locationId, componentId);
+    return status && problemStatusText(status) ? status : null;
+  }
   const { placed, stored } = problems;
   const here = placed.filter((p) => p.locationId === locationId && p.observation.componentId === componentId);
   if (here.length === 0) return null;
@@ -181,7 +235,7 @@ export interface ComponentView {
 
 export function componentsAt(ws: Workspace, location: CabinLocation): ComponentView[] {
   const problems = openPlaced(ws);
-  const seatBlocked = seatIsBlocked(problems.open, location.id);
+  const seatBlocked = ws.frozen ? ws.frozen.blockedSeats.includes(location.id) : seatIsBlocked(problems.open, location.id);
   return location.componentIds.map((componentId) => {
     const def = ws.componentDefs[componentId];
     const resolution = ws.resolution?.components.find((c) => c.locationId === location.id && c.componentId === componentId) ?? null;
@@ -266,6 +320,7 @@ export function buildStates(ws: Workspace): { scene: Map<string, LocationState>;
   }
   const { open } = problems;
   for (const o of open) if (seatIsBlocked(open, o.locationId)) flags.blocked.add(o.locationId);
+  for (const id of ws.frozen?.blockedSeats ?? []) flags.blocked.add(id);
   for (const [id, s] of scene) {
     const f = flags.get(id);
     if (!f) continue;

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildReport } from "../../src/domain/report.ts";
 import { lookup } from "../../src/domain/resolve.ts";
 import type { Observation, Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
 import { ToastProvider } from "../../src/web/components/Toasts.tsx";
@@ -642,6 +643,32 @@ describe("CheckView problems, carried over and completion", () => {
     fireEvent.click(within(problemRows[0] as HTMLElement).getByRole("button", { name: "Show Seat 3A Headrest cover" }));
     expect(await screen.findByRole("heading", { level: 3, name: "Seat 3A" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /^Headrest cover/ })).toHaveClass("highlighted");
+  });
+
+  it("a completed visit is frozen: no Carried over panel, and its problems come from its stored report (R44)", async () => {
+    const own = obs("OBS-OWN", { openedInVisitId: base.id, componentId: "TRAY", componentName: "Tray table (on the seat in front)", blocksSeat: false });
+    const draftCopy: Visit = { ...base, observations: [own], carried: [], events: [event] };
+    const report = buildReport(draftCopy, "FINAL", "2026-11-12T12:09:00.000Z");
+    // live state since: a later draft closed the deferral, and the tail has other problems (an older server would still send them)
+    const completed: Visit = {
+      ...draftCopy,
+      status: "COMPLETED",
+      completedAt: "2026-11-12T12:09:00.000Z",
+      observations: [{ ...own, status: "CLOSED", closedInVisitId: "visit-later", closedAs: "FIXED" }],
+      carried: withCarried.carried,
+    };
+    const urls: string[] = [];
+    stubFetch((_m, url): Answer => {
+      urls.push(url);
+      return url.endsWith("/report") ? { body: { report, basisSha256: "x", linkedEvents: [] } } : { body: { visit: completed } };
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    const work = await screen.findByRole("region", { name: /^Recorded work/ });
+    await waitFor(() => expect(workCount(work)).toBe("Recorded work (3)"));
+    expect(urls).toContain(`/api/visits/${base.id}/report`);
+    expect(screen.queryByRole("region", { name: /^Carried over/ })).toBeNull();
+    const row = within(work).getByText("Seat 3A / Tray table (on the seat in front)").closest("li") as HTMLElement;
+    expect(row.querySelector(".badge-text")?.textContent?.trim()).toBe("Deferred");
   });
 
   it("the work list says Nothing recorded yet only when there are neither replacements nor problems", async () => {

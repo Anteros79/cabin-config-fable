@@ -22,7 +22,7 @@ import {
   useMutations,
 } from "../hooks/useMutations.ts";
 import { useResource } from "../hooks/useResource.ts";
-import { openMustFix, STATUS_ENCODING, type Workspace, workListProblems } from "../model.ts";
+import { frozenFromReport, openMustFix, RECORDS_ONLY, STATUS_ENCODING, type Workspace, workListProblems } from "../model.ts";
 import { formatRoute } from "../routes.ts";
 import { forgetSuggestionKeys, submitOnEnter } from "../submitOnEnter.ts";
 
@@ -255,9 +255,33 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     setSelection(null);
   }, [lookupAnswer]);
 
+  // A completed visit is frozen (R44): its statuses come from its stored report, read once the visit is known to be completed.
+  const completedId = visit?.status === "COMPLETED" ? visit.id : null;
+  const frozenRes = useResource(completedId ? `check-report:${completedId}` : null, (signal) => api.report(completedId ?? "", { signal }));
+  const frozenReport = frozenRes.data?.report ?? null;
+  const frozen = useMemo(() => (frozenReport ? frozenFromReport(frozenReport) : null), [frozenReport]);
+
   const workspace: Workspace | null = useMemo(() => {
     if (visitId) {
       if (!visit) return null;
+      if (visit.status === "COMPLETED") {
+        // until the report answers (or for a /1 or /2 report) only the records show: never the tail's live problems
+        return {
+          mode: "visit",
+          layout: visit.snapshot.context.layoutRevision,
+          resolution: visit.snapshot.resolution,
+          componentDefs: visit.snapshot.resolution.componentDefs,
+          records: visit.records,
+          editable: false,
+          unresolvedReason: null,
+          observations: frozen?.observations ?? [],
+          carried: [],
+          checkDate: visit.checkDate,
+          mel: visit.snapshot.mel ?? [],
+          variantId: visit.snapshot.context.variant.id,
+          frozen: frozen?.frozen ?? RECORDS_ONLY,
+        };
+      }
       return {
         mode: "visit",
         layout: visit.snapshot.context.layoutRevision,
@@ -290,7 +314,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
       };
     }
     return null;
-  }, [visitId, visit, lookup]);
+  }, [visitId, visit, lookup, frozen]);
 
   useEffect(() => {
     if (selection && workspace && !workspace.layout.locations.some((l) => l.id === selection)) setSelection(null);
@@ -773,7 +797,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                 resetKey={resetKey}
                 onSelect={(id) => select(id, null)}
               />
-              {visit && visitId && visit.carried.length > 0 && (
+              {visit && visitId && visit.status === "DRAFT" && visit.carried.length > 0 && (
                 <section className="worklist" aria-labelledby="carried-h">
                   <h3 id="carried-h">
                     Carried over <span className="count">({visit.carried.length})</span>

@@ -765,6 +765,26 @@ describe("observations", () => {
     ]);
   });
 
+  it("a held check with an overdue carried MEL deferral reports it as must-fix; the completed visit carries nothing (R43, R44)", () => {
+    const store = openVisits(makeStores());
+    const first = store.createVisit(snap(), "Demo").visit;
+    const belt = at(store.addObservation(first.id, BELT_3A).visit.observations, 0);
+    store.completeVisit(first.id, undefined);
+    const late = store.createVisit(snapshotFor(release, "N100TL", "2026-11-23"), "Demo").visit;
+    store.upsertRecord(late.id, CUSHION_3A, undefined);
+    const { report } = store.completeVisit(late.id, undefined, { aircraftHeld: true });
+    expect(report.summary).toMatchObject({ releasable: false, aircraftHeld: true, mustFix: 1, carriedIn: 0, stillOpen: 1 });
+    expect(report.observations?.mustFix.map((o) => o.id)).toEqual([belt.id]);
+    expect(report.pieceOutcomes).toContainEqual({ locationId: "SEAT:3A", componentId: "SEATBELT", status: "mustFix" });
+    // the stored report is what is served afterwards
+    expect(store.getReport(late.id).report).toEqual(report);
+    // a completed visit is frozen: no live carried list, for either check
+    expect(store.getVisit(late.id).carried).toEqual([]);
+    expect(store.getVisit(first.id).carried).toEqual([]);
+    // a later draft still carries it
+    expect(store.createVisit(snapshotFor(release, "N100TL", "2026-11-24"), "Demo").visit.carried.map((c) => c.observation.id)).toEqual([belt.id]);
+  });
+
   it("an update cannot make a problem less serious", () => {
     const store = openVisits(makeStores());
     const first = store.createVisit(snap(), "Demo").visit;
