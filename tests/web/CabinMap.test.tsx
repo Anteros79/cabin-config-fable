@@ -220,5 +220,15 @@ describe("CabinMap armrests, pieces and statuses", () => {
     expect(within(screen.getByRole("region", { name: "Pieces at Seat 3A" })).getByText("Blocked")).toBeInTheDocument();
     expect(container.querySelector('[data-seat="3A"]')?.getAttribute("aria-label")).toContain("Blocked");
     expect(container.querySelector('[data-seat="3B"]')?.getAttribute("aria-label")).not.toContain("Blocked");
+    // on the grid too, in words, not only in the name (VAC-15): a small badge under the seat's button
+    expect(container.querySelector('[data-seat="3A"]')?.parentElement).toHaveTextContent("Blocked");
+    expect(container.querySelector('[data-seat="3B"]')?.parentElement).not.toHaveTextContent("Blocked");
+    // the name says it once
+    expect(
+      container
+        .querySelector('[data-seat="3A"]')
+        ?.getAttribute("aria-label")
+        ?.match(/Blocked/g),
+    ).toHaveLength(1);
   });
 });

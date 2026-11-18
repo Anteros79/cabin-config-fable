@@ -5,8 +5,9 @@
  *
  * Themes: the light values below; the dark values under prefers-color-scheme (unless the light theme is chosen) and
  * under [data-theme="dark"] (the header's theme control, src/web/theme.ts). The two dark blocks are the same, and
- * print.css puts the light values back for paper. Status, tier and select colours are the same in every theme: the 3D
- * view draws them as constants (src/web/scene/materials.ts).
+ * print.css puts the light values back for paper. The recorded, unresolved and alternate status, tier and select colours
+ * are the same in every theme: the 3D view draws them as constants (src/web/scene/materials.ts). The problem statuses
+ * differ by theme, and the 3D view reads them through the --scene-status-* tokens.
  */
 :root {
   color-scheme: light dark;
@@ -98,6 +99,12 @@
   --scene-bg: #eef0f4;
   --scene-outline: #ffffff;
   --scene-wash: #ffffff;
+  /* the problem statuses and the blocked badge in 3D: the legend's colours, so they follow the theme (VAC-15) */
+  --scene-status-mustfix: var(--status-mustfix);
+  --scene-status-deferred: var(--status-deferred);
+  --scene-status-carried: var(--status-carried);
+  --scene-status-noted: var(--status-noted);
+  --scene-status-blocked: var(--border-strong);
   --legend-bg: rgba(255, 255, 255, 0.9);
   --overlay-bg: rgba(20, 26, 46, 0.82);
   --overlay-text: #ffffff;
@@ -169,6 +176,8 @@
   --font-size-082: 0.82rem;
   --font-size-080: 0.8rem;
   --font-size-078: 0.78rem;
+  /* the "Blocked" words on a seat of the map grid, under its letter */
+  --font-size-blocked: 0.6rem;
   /* relative to the surrounding text: monospace part numbers and codes */
   --font-size-mono: 0.9em;
   --font-size-code: 0.78em;
@@ -230,10 +239,10 @@
     --status-mustfix-ink: #ff6bb0;
     --status-deferred: #ff9d45;
     --status-deferred-ink: #ff9d45;
-    --status-carried: #c29bff;
-    --status-carried-ink: #c29bff;
-    --status-noted: #5fb8ff;
-    --status-noted-ink: #5fb8ff;
+    --status-carried: #b090e0;
+    --status-carried-ink: #b090e0;
+    --status-noted: #90d0f0;
+    --status-noted-ink: #90d0f0;
     --scene-bg: #1b2030;
     --scene-outline: #e3e7f0;
     --scene-wash: #d5dae6;
@@ -294,10 +303,10 @@
   --status-mustfix-ink: #ff6bb0;
   --status-deferred: #ff9d45;
   --status-deferred-ink: #ff9d45;
-  --status-carried: #c29bff;
-  --status-carried-ink: #c29bff;
-  --status-noted: #5fb8ff;
-  --status-noted-ink: #5fb8ff;
+  --status-carried: #b090e0;
+  --status-carried-ink: #b090e0;
+  --status-noted: #90d0f0;
+  --status-noted-ink: #90d0f0;
   --scene-bg: #1b2030;
   --scene-outline: #e3e7f0;
   --scene-wash: #d5dae6;

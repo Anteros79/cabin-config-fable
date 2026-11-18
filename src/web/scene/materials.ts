@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { SceneStatusKey } from "../theme.ts";
 import type { ProfilePalette } from "./textures.ts";
 
 /**
@@ -110,28 +111,33 @@ export function withStatusTint<T extends THREE.Material>(material: T): T {
 /**
  * Status colours in 3D: the seat piece tints, the floor and bin tints and the badge discs. They are the `--status-*` tokens
  * that STATUS_ENCODING names (src/web/styles/tokens.css), which the map and the legends draw; a test holds the two equal.
+ * Recorded, unresolved and alternate are the same in every theme. The problem statuses follow the theme through the
+ * `--scene-status-*` tokens (CabinScene.setTheme); the values here are their light values, used until the page's are read
+ * (and in jsdom, which has no stylesheet).
  */
 export const STATUS_COLOUR = {
   recorded: new THREE.Color("#2fe08a"),
   unresolved: new THREE.Color("#ff5757"),
   alternate: new THREE.Color("#5b8cff"),
-  // Fallbacks until the scene tokens set these (VAC-15).
-  mustFix: new THREE.Color("#d6336c"),
-  deferred: new THREE.Color("#f5a524"),
-  carried: new THREE.Color("#a78bfa"),
-  noted: new THREE.Color("#94a3b8"),
+  mustFix: new THREE.Color("#e00b75"),
+  deferred: new THREE.Color("#d26203"),
+  carried: new THREE.Color("#9a10ff"),
+  noted: new THREE.Color("#0f6cb4"),
 } as const;
 
 /**
- * The disc of a blocked seat's "Blocked" badge: grey, the light value of the `--border-strong` token the legend draws it
- * with. A fallback until the scene tokens set it (VAC-15).
+ * The disc of a blocked seat's "Blocked" badge: grey, the light value of `--scene-status-blocked` (the `--border-strong`
+ * token the legend draws it with). The page's value replaces it per theme (CabinScene.setTheme).
  */
 export const BLOCKED_COLOUR = new THREE.Color("#8791a8");
 
 /** The selection outline and floor frame: the `--select` token, the same in every theme; a test holds the two equal. */
 export const SELECT_COLOUR = "#b97c00";
 
-/** What the scene takes from the page theme (CabinScene.setTheme): the `--scene-bg`, `--scene-outline` and `--scene-wash` tokens. */
+/**
+ * What the scene takes from the page theme (CabinScene.setTheme): the `--scene-bg`, `--scene-outline` and `--scene-wash`
+ * tokens, and the `--scene-status-*` tokens.
+ */
 export interface SceneTheme {
   /** the background in neutral cabin light (blue cabin light keeps its own) */
   background: string;
@@ -139,6 +145,8 @@ export interface SceneTheme {
   outline: string;
   /** the ceiling wash in neutral light (blue cabin light keeps its own) */
   wash: string;
+  /** the problem status and blocked badge colours; one left out keeps its light value (STATUS_COLOUR, BLOCKED_COLOUR) */
+  status?: Partial<Record<SceneStatusKey, string>>;
 }
 /** The light theme's values, which the scene starts with; a test holds them equal to tokens.css. */
 export const LIGHT_SCENE_THEME: SceneTheme = { background: "#eef0f4", outline: "#ffffff", wash: "#ffffff" };

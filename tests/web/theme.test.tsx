@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ThemeControl } from "../../src/web/components/ThemeControl.tsx";
-import { applyTheme, chooseTheme, onThemeChange, storedTheme, THEME_KEY } from "../../src/web/theme.ts";
+import { applyTheme, chooseTheme, onThemeChange, sceneThemeTokens, storedTheme, THEME_KEY } from "../../src/web/theme.ts";
 
 afterEach(() => {
   localStorage.clear();
@@ -78,6 +78,42 @@ describe("theme choice", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("the 3D view's colours from the page", () => {
+  const SCENE = { "--scene-bg": "#1b2030", "--scene-outline": "#e3e7f0", "--scene-wash": "#d5dae6" };
+  const STATUS = {
+    "--scene-status-mustfix": "#ff6bb0",
+    "--scene-status-deferred": "#ff9d45",
+    "--scene-status-carried": "#b090e0",
+    "--scene-status-noted": "#90d0f0",
+    "--scene-status-blocked": "#7a84a0",
+  };
+  const set = (tokens: Record<string, string>) => {
+    for (const [name, value] of Object.entries(tokens)) document.documentElement.style.setProperty(name, value);
+  };
+  afterEach(() => {
+    for (const name of [...Object.keys(SCENE), ...Object.keys(STATUS)]) document.documentElement.style.removeProperty(name);
+  });
+
+  test("no stylesheet: null, so the scene keeps its own light values", () => {
+    expect(sceneThemeTokens()).toBeNull();
+  });
+
+  test("the problem status and blocked colours come with the background, outline and wash (VAC-15)", () => {
+    set({ ...SCENE, ...STATUS });
+    expect(sceneThemeTokens()).toEqual({
+      background: "#1b2030",
+      outline: "#e3e7f0",
+      wash: "#d5dae6",
+      status: { mustFix: "#ff6bb0", deferred: "#ff9d45", carried: "#b090e0", noted: "#90d0f0", blocked: "#7a84a0" },
+    });
+  });
+
+  test("a status token that cannot be read is left out, so the scene keeps that one colour", () => {
+    set({ ...SCENE, "--scene-status-deferred": "#ff9d45" });
+    expect(sceneThemeTokens()?.status).toEqual({ deferred: "#ff9d45" });
   });
 });
 

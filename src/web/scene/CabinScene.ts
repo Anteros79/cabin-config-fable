@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { AFT_MARGIN, CEILING_HEIGHT, FORWARD_MARGIN, shellProfile } from "../../domain/geometry.ts";
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.ts";
+import type { SceneStatusKey } from "../theme.ts";
 import { boundPose, type CabinBounds, type CameraPose, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
 import { createEnvironment, ENVIRONMENT_INTENSITY, type LightMode } from "./environment.ts";
 import {
@@ -96,10 +97,20 @@ export interface SceneCallbacks {
   onWheelPassedThrough?(): void;
 }
 
+type StatusColours = Record<keyof typeof STATUS_COLOUR, THREE.Color>;
 /** Bin doors are pale: a status tints them halfway from white toward its colour. */
-const BIN_STATUS_COLOUR = Object.fromEntries(
-  (Object.keys(STATUS_COLOUR) as (keyof typeof STATUS_COLOUR)[]).map((status) => [status, STATUS_COLOUR[status].clone().lerp(new THREE.Color("#ffffff"), 0.5)]),
-) as Record<keyof typeof STATUS_COLOUR, THREE.Color>;
+const binStatusColours = (colours: StatusColours): StatusColours =>
+  Object.fromEntries(
+    (Object.keys(colours) as (keyof StatusColours)[]).map((status) => [status, colours[status].clone().lerp(new THREE.Color("#ffffff"), 0.5)]),
+  ) as StatusColours;
+/** The themed colours (SceneTheme.status) as six-digit hex, each the page's value or, where it gave none, the light fallback. */
+const themedColours = (status: SceneTheme["status"]): Record<SceneStatusKey, string> => ({
+  mustFix: hex6(status?.mustFix ?? `#${STATUS_COLOUR.mustFix.getHexString()}`),
+  deferred: hex6(status?.deferred ?? `#${STATUS_COLOUR.deferred.getHexString()}`),
+  carried: hex6(status?.carried ?? `#${STATUS_COLOUR.carried.getHexString()}`),
+  noted: hex6(status?.noted ?? `#${STATUS_COLOUR.noted.getHexString()}`),
+  blocked: hex6(status?.blocked ?? `#${BLOCKED_COLOUR.getHexString()}`),
+});
 /** Floor frames: selection 10 cm in the select colour; hover 6 cm in the theme's outline colour with 2 cm of ink inside it. */
 const SELECTION_FRAME = [{ width: 0.1, colour: SELECT_COLOUR }] as const;
 /** A CSS colour as lower-case six-digit hex: one spelling per colour, for comparisons and cache keys. */
@@ -178,7 +189,10 @@ const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
 export interface SceneTestHooks {
   measure(durationMs: number): Promise<{ fps: number; frames: number; durationMs: number; worstFrameMs: number }>;
   screenPointOf(locationId: string, part?: "head" | "pan"): { x: number; y: number } | null;
-  /** Screen position of a piece inside the open bin that a pick from the camera reaches, or null if none (or the bin is not open). */
+  /**
+   * Screen position of a piece that a pick there selects, or null if none: a piece inside the open bin (null while the bin
+   * is shut), or a seat part (the life vest, with the Under seat layer on), tried at its triangles' centres.
+   */
   screenPointOfPiece(locationId: string, componentId: string): { x: number; y: number } | null;
   describeScene(): Record<string, unknown>;
   /** Times the next frame from now, for a selection made outside the canvas. */
@@ -249,6 +263,11 @@ export class CabinScene {
   private light: LightMode = "neutral";
   /** what the page theme gives the scene: set by setTheme() */
   private theme: SceneTheme = { background: hex6(LIGHT_SCENE_THEME.background), outline: hex6(LIGHT_SCENE_THEME.outline), wash: hex6(LIGHT_SCENE_THEME.wash) };
+  /** this scene's status colours: the constants, with the problem statuses as the page theme gives them (setTheme) */
+  private statusColours = Object.fromEntries(Object.entries(STATUS_COLOUR).map(([s, c]) => [s, c.clone()])) as StatusColours;
+  private binColours: StatusColours = binStatusColours(STATUS_COLOUR);
+  private blockedColour = BLOCKED_COLOUR.clone();
+  private themed = themedColours(undefined);
   private colourMode: ColourMode = "status";
   private layout: LayoutRevision | null = null;
   private seats: SeatEntry[] = [];
@@ -541,12 +560,36 @@ export class CabinScene {
           return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
         },
         screenPointOfPiece: (locationId, componentId) => {
-          // a point of the piece that a pick from the camera reaches
-          const point = this.bins?.open?.location.id === locationId ? this.bins.pointOf(componentId, this.camera.position.clone()) : null;
-          if (!point) return null;
-          const v = point.project(this.camera);
           const rect = this.canvas.getBoundingClientRect();
-          return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
+          const toScreen = (point: THREE.Vector3) => {
+            const v = point.clone().project(this.camera);
+            return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
+          };
+          // a point of the piece that a pick from the camera reaches
+          if (this.bins?.open?.location.id === locationId) {
+            const point = this.bins.pointOf(componentId, this.camera.position.clone());
+            return point ? toScreen(point) : null;
+          }
+          // a seat part: each triangle's centre in turn, kept if a pick at that point selects this very piece
+          this.camera.updateMatrixWorld();
+          for (const piece of this.pieces) {
+            const instance = piece.locations.findIndex((l, i) => l.id === locationId && piece.components[i] === componentId);
+            const matrix = piece.matrices[instance];
+            if (instance < 0 || !matrix) continue;
+            const world = matrix.clone().premultiply(piece.mesh.matrixWorld);
+            const position = piece.mesh.geometry.getAttribute("position");
+            const index = piece.mesh.geometry.getIndex();
+            const triangles = (index ? index.count : position.count) / 3;
+            const corner = new THREE.Vector3();
+            for (let t = 0; t < triangles; t++) {
+              const centre = new THREE.Vector3();
+              for (let k = 0; k < 3; k++) centre.add(corner.fromBufferAttribute(position, index ? index.getX(t * 3 + k) : t * 3 + k));
+              const at = toScreen(centre.divideScalar(3).applyMatrix4(world));
+              const hit = this.hit(at.x, at.y);
+              if (hit?.location.id === locationId && hit.component === componentId) return at;
+            }
+          }
+          return null;
         },
         describeScene: () => ({
           seats: this.seats.length,
@@ -567,6 +610,12 @@ export class CabinScene {
           profile: this.palette.id,
           light: this.light,
           background: `#${(this.scene.background as THREE.Color).getHexString()}`,
+          /** the problem status, bin door and blocked colours the states are painted with, as the page theme gave them */
+          statusColours: {
+            ...Object.fromEntries((["mustFix", "deferred", "carried", "noted"] as const).map((s) => [s, `#${this.statusColours[s].getHexString()}`])),
+            blocked: `#${this.blockedColour.getHexString()}`,
+          },
+          binDoorColours: Object.fromEntries((["mustFix", "deferred", "carried", "noted"] as const).map((s) => [s, `#${this.binColours[s].getHexString()}`])),
           view: this.currentView,
           transitioning: this.transition !== null,
           ghostFading: this.ghostClock !== null,
@@ -1075,11 +1124,21 @@ export class CabinScene {
   }
 
   /**
-   * Follow the page theme (WEB-16): the background in neutral light, the hover outline and the ceiling wash. Status and
-   * select colours stay. Colours are compared and kept as six-digit hex, so "#fff" and "#ffffff" are the same theme.
+   * Follow the page theme (WEB-16): the background in neutral light, the hover outline, the ceiling wash, and the problem
+   * status and blocked colours (VAC-15), which repaint the states. The recorded, unresolved, alternate and select colours
+   * stay. Colours are compared and kept as six-digit hex, so "#fff" and "#ffffff" are the same theme.
    */
   setTheme(theme: SceneTheme): void {
     const next: SceneTheme = { background: hex6(theme.background), outline: hex6(theme.outline), wash: hex6(theme.wash) };
+    const themed = themedColours(theme.status);
+    const statusChanged = (Object.keys(themed) as (keyof typeof themed)[]).some((k) => themed[k] !== this.themed[k]);
+    if (statusChanged) {
+      this.themed = themed;
+      for (const s of ["mustFix", "deferred", "carried", "noted"] as const) this.statusColours[s].set(themed[s]);
+      this.binColours = binStatusColours(this.statusColours);
+      this.blockedColour.set(themed.blocked);
+      this.applyStates();
+    }
     if (next.background === this.theme.background && next.outline === this.theme.outline && next.wash === this.theme.wash) return;
     this.theme = next;
     (this.hoverMarks.hull.material as THREE.MeshBasicMaterial).color.set(next.outline);
@@ -1192,7 +1251,7 @@ export class CabinScene {
   private applyStates(): void {
     this.updates.applyStates += 1;
     const status = this.colourMode === "status";
-    const colourFor = (s: LocationStatus) => (s === "none" ? null : STATUS_COLOUR[s]);
+    const colourFor = (s: LocationStatus) => (s === "none" ? null : this.statusColours[s]);
     if (this.panOverlay) {
       // Only the tinted seats are drawn: they are packed first and the count stops after them, so an untinted seat costs
       // no triangles, and an overlay with nothing to show costs no draw call (WEB-20).
@@ -1242,7 +1301,7 @@ export class CabinScene {
     for (const b of this.binSides) {
       b.locations.forEach((l, i) => {
         const s = !status ? "none" : l.id === open ? (this.states.get(l.id)?.components.BIN_DOOR ?? "none") : this.statusOf(l.id);
-        b.door.setColorAt(i, s === "none" ? WHITE : BIN_STATUS_COLOUR[s]);
+        b.door.setColorAt(i, s === "none" ? WHITE : this.binColours[s]);
       });
       if (b.door.instanceColor) b.door.instanceColor.needsUpdate = true;
     }
@@ -1258,7 +1317,7 @@ export class CabinScene {
         const s = this.colourMode === "none" || m.locationId === open ? "none" : this.statusOf(m.locationId);
         if (s === "none") continue;
         this.binMarkers.setMatrixAt(markers, m.matrix);
-        this.binMarkers.setColorAt(markers++, STATUS_COLOUR[s]);
+        this.binMarkers.setColorAt(markers++, this.statusColours[s]);
       }
       this.binMarkers.count = markers;
       this.binMarkers.visible = markers > 0;
@@ -1288,7 +1347,7 @@ export class CabinScene {
       const s = blocked ? "none" : this.statusOf(b.locationId);
       if (!blocked && s === "none") continue;
       badges.setMatrixAt(shown, b.matrix);
-      badges.setColorAt(shown, blocked ? BLOCKED_COLOUR : STATUS_COLOUR[s as Exclude<LocationStatus, "none">]);
+      badges.setColorAt(shown, blocked ? this.blockedColour : this.statusColours[s as Exclude<LocationStatus, "none">]);
       cells.setX(shown++, BADGE_GLYPHS.indexOf(blocked ? "blocked" : STATUS_ENCODING[s].glyph));
     }
     badges.count = shown;

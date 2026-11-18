@@ -7,7 +7,7 @@ import { buildStates, type LocationStatus, STATUS_ENCODING, type Workspace } fro
 import { STATUS_COLOUR } from "../../src/web/scene/materials.ts";
 import { BADGE_GLYPHS } from "../../src/web/scene/textures.ts";
 import { fixtureRelease, snapshotFor } from "../helpers.ts";
-import { lightTokens } from "./css.ts";
+import { blocks, declarations, lightTokens, resolveToken, styleFile } from "./css.ts";
 
 // jsdom has no WebGL; the legend does not need a scene.
 vi.mock("../../src/web/scene/CabinScene.ts", () => ({
@@ -19,9 +19,14 @@ vi.mock("../../src/web/scene/CabinScene.ts", () => ({
 }));
 
 const STATUSES = Object.keys(STATUS_ENCODING) as LocationStatus[];
-/** The value of a `--status-*` token in tokens.css: one hex colour, the same in every theme. */
-function tokenHex(token: string): string {
-  const value = lightTokens().get(token) ?? "";
+/** The dark theme's tokens (the system-setting block; the chosen-dark block is held equal to it in tokens.test.ts). */
+const DARK = declarations(blocks(blocks(styleFile("tokens.css"), "@media (prefers-color-scheme: dark)")[0] ?? "", ':root:not([data-theme="light"])')[0] ?? "");
+/**
+ * The value of a `--status-*` token in tokens.css, in the light theme or the dark one: one hex colour. Recorded,
+ * unresolved and alternate are the same in both; the problem statuses differ, and the 3D view draws them as the page has them.
+ */
+function tokenHex(token: string, theme: "light" | "dark" = "light"): string {
+  const value = theme === "dark" ? resolveToken(token, DARK, lightTokens()) : (lightTokens().get(token) ?? "");
   if (!/^#[0-9a-fA-F]{6}$/.test(value)) throw new Error(`no hex value for ${token} in tokens.css`);
   return value;
 }
@@ -158,24 +163,26 @@ describe("STATUS_ENCODING", () => {
     }
   });
 
-  test("status token colours are distinguishable under simulated deuteranopia and protanopia", () => {
-    const coloured = STATUSES.filter((s) => STATUS_ENCODING[s].token !== "");
-    expect(coloured).toEqual(["mustFix", "deferred", "carried", "noted", "recorded", "unresolved", "alternate"]);
-    for (const [kind, matrix] of Object.entries(MACHADO)) {
-      for (const [i, a] of coloured.entries()) {
-        for (const b of coloured.slice(i + 1)) {
-          const difference = deltaE(
-            simulate(matrix, linearRgb(tokenHex(STATUS_ENCODING[a].token))),
-            simulate(matrix, linearRgb(tokenHex(STATUS_ENCODING[b].token))),
-          );
-          const differentGlyph = STATUS_ENCODING[a].glyph !== STATUS_ENCODING[b].glyph;
-          expect(difference >= 15 || differentGlyph, `${a} and ${b} under ${kind}: ΔE ${difference.toFixed(1)}, same glyph`).toBe(true);
-          // and the colours alone are distinguishable too, so a glyph too small to read still leaves the colour
-          expect(difference, `${a} and ${b} under ${kind}`).toBeGreaterThanOrEqual(15);
+  for (const theme of ["light", "dark"] as const) {
+    test(`status token colours are distinguishable under simulated deuteranopia and protanopia, in the ${theme} theme`, () => {
+      const coloured = STATUSES.filter((s) => STATUS_ENCODING[s].token !== "");
+      expect(coloured).toEqual(["mustFix", "deferred", "carried", "noted", "recorded", "unresolved", "alternate"]);
+      for (const [kind, matrix] of Object.entries(MACHADO)) {
+        for (const [i, a] of coloured.entries()) {
+          for (const b of coloured.slice(i + 1)) {
+            const difference = deltaE(
+              simulate(matrix, linearRgb(tokenHex(STATUS_ENCODING[a].token, theme))),
+              simulate(matrix, linearRgb(tokenHex(STATUS_ENCODING[b].token, theme))),
+            );
+            const differentGlyph = STATUS_ENCODING[a].glyph !== STATUS_ENCODING[b].glyph;
+            expect(difference >= 15 || differentGlyph, `${a} and ${b} under ${kind}: ΔE ${difference.toFixed(1)}, same glyph`).toBe(true);
+            // and the colours alone are distinguishable too, so a glyph too small to read still leaves the colour
+            expect(difference, `${a} and ${b} under ${kind}`).toBeGreaterThanOrEqual(15);
+          }
         }
       }
-    }
-  });
+    });
+  }
 });
 
 describe("the scene uses the same encoding", () => {

@@ -64,6 +64,72 @@ test.describe("axe: zero WCAG 2.1 A and AA violations of any impact", () => {
     await expectNoAxeViolations(page);
   });
 
+  // The visual check's states (VAC-15). Problems carry from visit to visit on a tail, so the ones that save problems use
+  // tails no other spec makes visits on.
+  test("on visit with the problem form open, its meaning and outcomes shown", async ({ page, visit }) => {
+    await openVisit(page, visit.id);
+    await openMap(page);
+    await selectLocation(page, "Seat 12A");
+    const headrest = page.locator(".component-card[data-component=HEADREST]");
+    await headrest.getByRole("button", { name: "Defer", exact: true }).click();
+    await page.locator(".problem-form").getByRole("radio", { name: "Stained" }).check();
+    await expect(page.locator(".problem-form .meaning")).toBeVisible();
+    await expect(page.locator(".problem-form").getByRole("radiogroup", { name: "Reason" })).toBeVisible();
+    await expectNoAxeViolations(page);
+  });
+
+  test("on visit with the carried-over panel, a blocked seat and problem badges on the map", async ({ page, api }) => {
+    const earlier = await api.createVisit("N020TL", "2026-11-12", "Axe Tech");
+    const defer = { note: "", outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" };
+    for (const observation of [
+      { ...defer, locationId: "SEAT:14C", componentId: "SEATBELT", condition: "BROKEN" },
+      { ...defer, locationId: "SEAT:12A", componentId: "HEADREST", condition: "STAINED" },
+      { ...defer, locationId: "BIN:L-04", componentId: "BIN_LATCH", condition: "WONT_LATCH" },
+    ]) {
+      expect((await api.call("POST", `/api/visits/${earlier.id}/observations`, { observation })).status).toBe(201);
+    }
+    await api.complete(earlier.id);
+    const later = await api.createVisit("N020TL", "2026-11-14");
+    await openVisit(page, later.id);
+    await expect(page.locator("#carried-h")).toHaveText("Carried over (3)");
+    await openMap(page);
+    await expect(page.locator(".cell", { has: page.locator("button[data-seat='14C']") })).toContainText("Blocked");
+    await selectLocation(page, "Seat 14C");
+    await expectNoAxeViolations(page);
+  });
+
+  test("on visit with a bin open in 3D", async ({ page, visit }) => {
+    await openVisit(page, visit.id);
+    await waitFor3D(page);
+    await openMap(page);
+    // a bin piece opens its bin
+    await page.locator("#goto-input").fill("L-04 latch");
+    await page.locator("#goto-input").press("Enter");
+    await expect(page.locator("#inspector-heading")).toHaveText(/^Overhead bin L-04/);
+    await open3D(page);
+    await expect(page.getByRole("button", { name: "Close bin" })).toBeVisible();
+    await page.waitForFunction(() => window.__cabinKit?.scene?.describeScene().openBin === "BIN:L-04");
+    await expectNoAxeViolations(page);
+  });
+
+  test("on an after-action report (schema 3) with deferred, must-fix and noted problems and a hold", async ({ page, api }) => {
+    const done = await api.createVisit("N030TL", "2026-11-12", "Axe Tech");
+    await api.addRecord(done.id, CUSHION_7C);
+    for (const observation of [
+      { locationId: "SEAT:12A", componentId: "HEADREST", condition: "STAINED", note: "Coffee", outcome: "NOTED" },
+      { locationId: "SEAT:14C", componentId: "SEATBELT", condition: "BROKEN", note: "", outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" },
+      { locationId: "BIN:L-04", componentId: "BIN_DOOR", condition: "WONT_LATCH", note: "", outcome: "MUST_FIX" },
+    ]) {
+      expect((await api.call("POST", `/api/visits/${done.id}/observations`, { observation })).status).toBe(201);
+    }
+    expect((await api.call("POST", `/api/visits/${done.id}/complete`, { confirm: true, aircraftHeld: true })).status).toBe(200);
+    await page.goto(`/#/visit/${done.id}/report`);
+    await expect(page.locator("#r-summary ~ .must-fix")).toHaveText("Not releasable: aircraft held");
+    await expect(page.locator(".report .cabin-map button.loc.problem")).toHaveCount(3);
+    await expect(page.locator("section[aria-labelledby=r-timeline] li")).toHaveCount(5);
+    await expectNoAxeViolations(page);
+  });
+
   test("on report", async ({ page, api, visit }) => {
     await api.addRecord(visit.id, CUSHION_7C);
     await api.complete(visit.id);
@@ -129,6 +195,7 @@ test.describe("colour theme", () => {
     await waitFor3D(page);
     expect(await rootToken(page, "--scene-bg")).toBe("#1b2030");
     expect((await scene(page)).background, "the scene background is --scene-bg").toBe("#1b2030");
+    expect(((await scene(page)).statusColours as Record<string, string>).deferred, "the problem colours are the dark ones too").toBe("#ff9d45");
     await page.emulateMedia({ media: "print" });
     expect([await rootToken(page, "--surface-1"), await rootToken(page, "--text-body")], "light tokens in print").toEqual(["#ffffff", "#141a2e"]);
   });

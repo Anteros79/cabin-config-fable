@@ -43,13 +43,41 @@ export function onThemeChange(listener: () => void): () => void {
   };
 }
 
-/** The 3D view's colours as the page now has them (`--scene-bg`, `--scene-outline`, `--scene-wash`), or null without the stylesheet. */
-export function sceneThemeTokens(): { background: string; outline: string; wash: string } | null {
+/** The statuses (and the blocked badge) whose 3D colour follows the theme, and the token each is read from. */
+const SCENE_STATUS_TOKENS = {
+  mustFix: "--scene-status-mustfix",
+  deferred: "--scene-status-deferred",
+  carried: "--scene-status-carried",
+  noted: "--scene-status-noted",
+  blocked: "--scene-status-blocked",
+} as const;
+export type SceneStatusKey = keyof typeof SCENE_STATUS_TOKENS;
+
+export interface PageSceneTheme {
+  background: string;
+  outline: string;
+  wash: string;
+  /** the colours that could be read; one missing keeps the scene's own (its light fallback) */
+  status: Partial<Record<SceneStatusKey, string>>;
+}
+
+/**
+ * The 3D view's colours as the page now has them (`--scene-bg`, `--scene-outline`, `--scene-wash` and the
+ * `--scene-status-*` tokens), or null without the stylesheet.
+ */
+export function sceneThemeTokens(): PageSceneTheme | null {
   const style = getComputedStyle(document.documentElement);
-  const background = style.getPropertyValue("--scene-bg").trim();
-  const outline = style.getPropertyValue("--scene-outline").trim();
-  const wash = style.getPropertyValue("--scene-wash").trim();
-  return background && outline && wash ? { background, outline, wash } : null;
+  const read = (name: string) => style.getPropertyValue(name).trim();
+  const background = read("--scene-bg");
+  const outline = read("--scene-outline");
+  const wash = read("--scene-wash");
+  if (!background || !outline || !wash) return null;
+  const status: PageSceneTheme["status"] = {};
+  for (const [key, token] of Object.entries(SCENE_STATUS_TOKENS) as [SceneStatusKey, string][]) {
+    const value = read(token);
+    if (value) status[key] = value;
+  }
+  return { background, outline, wash, status };
 }
 
 applyTheme(storedTheme());

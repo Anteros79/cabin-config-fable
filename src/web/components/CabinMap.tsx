@@ -391,6 +391,13 @@ export function CabinMap(props: Props | ReadOnlyProps) {
                             <span aria-hidden="true">{letter}</span>
                             <StatusGlyph status={f?.status ?? "none"} />
                           </button>
+                          {/* the seat's name says Blocked; the grid shows it in words too, under the seat. It sits outside
+                              the button: inside, the visible "C Blocked" would have to appear word for word in the name */}
+                          {blocked?.has(location.id) && (
+                            <small className="blocked-badge" aria-hidden="true">
+                              Blocked
+                            </small>
+                          )}
                         </span>,
                       );
                     })}

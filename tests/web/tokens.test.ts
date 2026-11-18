@@ -1,6 +1,6 @@
 import { readdirSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { LIGHT_SCENE_THEME, SELECT_COLOUR } from "../../src/web/scene/materials.ts";
+import { BLOCKED_COLOUR, LIGHT_SCENE_THEME, SELECT_COLOUR, STATUS_COLOUR } from "../../src/web/scene/materials.ts";
 import { allCss, blocks, declarations, lightTokens, resolveToken, STYLES_DIR, styleFile, styleFiles } from "./css.ts";
 
 /** Files that may hold colour literals: the tokens, and print, which pins paper colours. */
@@ -211,5 +211,34 @@ describe("the 3D view uses the same colours", () => {
   test("the select colour and the scene's starting theme are the light tokens", () => {
     expect(SELECT_COLOUR).toBe(light.get("--select"));
     expect(LIGHT_SCENE_THEME).toEqual({ background: light.get("--scene-bg"), outline: light.get("--scene-outline"), wash: light.get("--scene-wash") });
+  });
+
+  // VAC-15: the problem statuses and the blocked badge are themed in 3D through --scene-status-* tokens, which follow the
+  // legend's colours in each theme; the scene's own fallbacks (jsdom, no stylesheet) are the light values.
+  const SCENE_STATUS = [
+    ["mustfix", "mustFix", "--status-mustfix"],
+    ["deferred", "deferred", "--status-deferred"],
+    ["carried", "carried", "--status-carried"],
+    ["noted", "noted", "--status-noted"],
+    ["blocked", "blocked", "--border-strong"],
+  ] as const;
+
+  for (const [themeName, theme] of [
+    ["light", [light]],
+    ["dark", [darkBySystem, light]],
+    ["print", [printed, light]],
+  ] as const) {
+    test(`the --scene-status-* tokens are the legend's colours in the ${themeName} theme`, () => {
+      for (const [name, , legend] of SCENE_STATUS) {
+        expect(resolveToken(`--scene-status-${name}`, ...theme), name).toBe(resolveToken(legend, ...theme));
+      }
+    });
+  }
+
+  test("the scene's fallback status and blocked colours are the light --scene-status-* values", () => {
+    for (const [name, key] of SCENE_STATUS) {
+      const fallback = key === "blocked" ? BLOCKED_COLOUR : STATUS_COLOUR[key];
+      expect(`#${fallback.getHexString()}`, name).toBe(resolveToken(`--scene-status-${name}`, light));
+    }
   });
 });

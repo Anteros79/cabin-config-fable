@@ -486,6 +486,27 @@ describe("PDF after-action sections (report schema 3)", () => {
     for (const code of ["WONT_LATCH", "NO_GO", "MUST_FIX", "NEXT_CHECK", "NO_STOCK"]) expect(text).not.toContain(code);
   });
 
+  it("release wording (R38): a must-fix open and not held says the items must be fixed; a releasable visit has no line", async () => {
+    const app = makeApp();
+    // a draft preview with a must-fix problem open: not releasable, and nobody has held the aircraft
+    const open = await newVisit(app);
+    const base = `/api/visits/${open.id}`;
+    const observation = { locationId: "BIN:L-01", componentId: "BIN_DOOR", condition: "WONT_LATCH", note: "", outcome: "MUST_FIX" };
+    expect((await post(app, `${base}/observations`, { observation, idempotencyKey: "k-r38-mustfix-1" })).statusCode).toBe(201);
+    const notHeld = await pdfText((await app.app.inject(`${base}/report.pdf`)).rawPayload);
+    expect(notHeld.text).toContain("Not releasable: items must be fixed before flight");
+    expect(notHeld.text).not.toContain("Not releasable: aircraft held");
+    // a completed visit with only a replacement, on a tail with nothing open, is releasable: no "Not releasable" line at all
+    const clean = makeApp();
+    const fine = await newVisit(clean);
+    await put(clean, `/api/visits/${fine.id}/records`, { record: CUSHION_3A });
+    const done = json(await post(clean, `/api/visits/${fine.id}/complete`, { confirm: true }));
+    expect(done.report.summary).toMatchObject({ releasable: true, aircraftHeld: false });
+    const releasable = await pdfText((await clean.app.inject(`/api/visits/${fine.id}/report.pdf`)).rawPayload);
+    expect(releasable.text).toContain("Summary");
+    expect(releasable.text).not.toContain("Not releasable");
+  });
+
   it("the report.pdf route draws the picture from the visit's snapshot", async () => {
     const app = makeApp();
     const { id } = await afterAction(app);

@@ -191,6 +191,15 @@ button.loc.armrest {
   font-weight: 600;
   color: var(--ink, inherit);
 }
+/* a blocked seat on the grid: "Blocked" in small words under its button */
+.cell .blocked-badge {
+  display: block;
+  font-size: var(--font-size-blocked);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-muted);
+}
 .loc-detail {
   display: block;
   font-weight: 400;
