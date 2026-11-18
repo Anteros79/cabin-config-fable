@@ -54,7 +54,13 @@ WHEN NEW.status = 'COMPLETED'
 BEGIN SELECT RAISE(ABORT, 'EMPTY_VISIT'); END;
 CREATE TRIGGER visit_observations_locked BEFORE UPDATE ON visit_observations
 WHEN (SELECT status FROM visits WHERE id = OLD.closed_in_visit_id) IS 'COMPLETED'
+  OR (SELECT status FROM visits WHERE id = NEW.closed_in_visit_id) IS 'COMPLETED'
 BEGIN SELECT RAISE(ABORT, 'VISIT_LOCKED'); END;
+CREATE TRIGGER visit_observations_locked_insert BEFORE INSERT ON visit_observations
+WHEN (SELECT status FROM visits WHERE id = NEW.opened_in_visit_id) IS NOT 'DRAFT'
+BEGIN SELECT RAISE(ABORT, 'VISIT_LOCKED'); END;
+CREATE TRIGGER visit_observations_no_delete BEFORE DELETE ON visit_observations
+BEGIN SELECT RAISE(ABORT, 'VISIT_DELETE_FORBIDDEN'); END;
 `,
   },
 ];

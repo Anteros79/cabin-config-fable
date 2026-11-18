@@ -765,6 +765,95 @@ describe("observations", () => {
     ]);
   });
 
+  it("an update cannot make a problem less serious", () => {
+    const store = openVisits(makeStores());
+    const first = store.createVisit(snap(), "Demo").visit;
+    const belt = at(store.addObservation(first.id, BELT_3A).visit.observations, 0);
+    store.completeVisit(first.id, undefined);
+    const late = store.createVisit(snapshotFor(release, "N100TL", "2026-11-23"), "Demo").visit;
+    store.upsertRecord(late.id, CUSHION_3A, undefined);
+    // overdue MEL belt (effective NO_GO) reworded as a worn belt, noted only: refused
+    const softened = { ...BELT_3A, condition: "WORN", outcome: "NOTED", deferUntil: undefined, reason: undefined };
+    expect(errorOf(() => store.updateObservation(late.id, belt.id, softened, 1))).toMatchObject({
+      code: "OUTCOME_NOT_ALLOWED",
+      status: 422,
+      message: "This problem can't be made less serious",
+    });
+    expect(errorOf(() => store.completeVisit(late.id, undefined))).toMatchObject({ code: "MUST_FIX_OPEN", details: { observationIds: [belt.id] } });
+    // an open MEL MUST_FIX cannot become a noted stain either
+    const tray = { locationId: "SEAT:3A", componentId: "TRAY", condition: "BROKEN", note: "", outcome: "MUST_FIX" };
+    const trayObs = store.addObservation(late.id, tray).visit.observations.find((o) => o.componentId === "TRAY");
+    expect(trayObs?.melClass.class).toBe("MEL");
+    expect(codeOf(() => store.updateObservation(late.id, trayObs?.id ?? "", { ...tray, condition: "STAINED", outcome: "NOTED" }, 1))).toBe(
+      "OUTCOME_NOT_ALLOWED",
+    );
+    expect(errorOf(() => store.completeVisit(late.id, undefined)).details).toEqual({ observationIds: [belt.id, trayObs?.id].sort() });
+  });
+
+  it("closing the seat belt deferral makes a vest deferred under the seat block must-fix again", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const belt = at(store.addObservation(visit.id, BELT_3A).visit.observations, 0);
+    const vestInput = {
+      locationId: "SEAT:3A",
+      componentId: "LIFE_VEST",
+      condition: "MISSING",
+      note: "",
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_CHECK",
+      reason: "NO_STOCK",
+    };
+    const vest = at(store.addObservation(visit.id, vestInput).visit.observations, 1);
+    expect(vest.melClass).toMatchObject({ class: "MEL", item: "FX-25-61-01" });
+    store.closeObservation(visit.id, belt.id, "FIXED", 1);
+    expect(errorOf(() => store.completeVisit(visit.id, undefined))).toMatchObject({ code: "MUST_FIX_OPEN", details: { observationIds: [vest.id] } });
+    // and it can no longer be re-deferred, nor reworded to something milder
+    expect(codeOf(() => store.updateObservation(visit.id, vest.id, { ...vestInput, reason: "OTHER" }, 1))).toBe("OUTCOME_NOT_ALLOWED");
+    expect(store.completeVisit(visit.id, undefined, { aircraftHeld: true }).visit).toMatchObject({ status: "COMPLETED", aircraftHeld: true });
+  });
+
+  it("a record that closed a problem as REPLACED cannot be removed", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    const stain = at(store.addObservation(visit.id, STAIN_3A).visit.observations, 0);
+    store.upsertRecord(visit.id, CUSHION_3A, undefined);
+    store.upsertRecord(visit.id, { ...CUSHION_3A, componentId: "BACKREST" }, undefined);
+    store.closeObservation(visit.id, stain.id, "REPLACED", 1);
+    expect(errorOf(() => store.removeRecord(visit.id, "SEAT:3A", "CUSHION", undefined))).toMatchObject({
+      code: "RECORD_IN_USE",
+      status: 409,
+      details: { observationIds: [stain.id] },
+    });
+    expect(store.removeRecord(visit.id, "SEAT:3A", "BACKREST", undefined).visit.records.map((r) => r.componentId)).toEqual(["CUSHION"]);
+  });
+
+  it("observation rows are locked in storage: no delete, no insert or close through a completed visit", () => {
+    const store = openVisits(makeStores());
+    const done = store.createVisit(snap(), "Demo").visit;
+    const noted = at(store.addObservation(done.id, STAIN_3A).visit.observations, 0);
+    const draft = store.createVisit(snap(), "Demo").visit;
+    const columns =
+      "tail, location_id, component_id, condition, note, outcome, mel_class_json, version, opened_in_visit_id, location_label, component_name, created_at, updated_at";
+    const forge = (id: string, openedIn: string) =>
+      `INSERT INTO visit_observations(id, ${columns}) SELECT '${id}', ${columns.replace("opened_in_visit_id", `'${openedIn}'`)} FROM visit_observations WHERE id = '${noted.id}'`;
+    expect(() => store.rawExec(`DELETE FROM visit_observations WHERE id = '${noted.id}'`)).toThrow(/VISIT_DELETE_FORBIDDEN/);
+    store.completeVisit(done.id, undefined);
+    expect(() => store.rawExec(forge("forged-1", done.id))).toThrow(/VISIT_LOCKED/);
+    store.rawExec(forge("forged-2", draft.id)); // through a draft the storage layer allows it
+    expect(() =>
+      store.rawExec(`UPDATE visit_observations SET status = 'CLOSED', closed_in_visit_id = '${done.id}', closed_as = 'FIXED' WHERE id = '${noted.id}'`),
+    ).toThrow(/VISIT_LOCKED/);
+    expect(store.getVisit(done.id).observations.map((o) => [o.id, o.status])).toEqual([[noted.id, "OPEN"]]);
+  });
+
+  it("observations are listed in the order they were recorded, whatever their timestamps", () => {
+    const store = openVisits(makeStores());
+    const { visit } = store.createVisit(snap(), "Demo");
+    store.addObservation(visit.id, STAIN_3A, { now: "2026-11-12T12:05:00.000Z" });
+    const v = store.addObservation(visit.id, { ...STAIN_3A, componentId: "HEADREST" }, { now: "2026-11-12T12:01:00.000Z" }).visit;
+    expect(v.observations.map((o) => o.componentId)).toEqual(["CUSHION", "HEADREST"]);
+  });
+
   it("an open MUST_FIX on an MEL item blocks completion too", () => {
     const store = openVisits(makeStores());
     const { visit } = store.createVisit(snap(), "Demo");

@@ -150,6 +150,7 @@ const HIDDEN_CHARACTER = /[\p{Cc}\p{Zl}\p{Zp}]|(?![\u200C\u200D])\p{Cf}/u;
 const CONDITIONS: readonly Condition[] = ["STAINED", "TORN", "WORN", "BROKEN", "MISSING", "WONT_LATCH", "OTHER"];
 const OBSERVATION_FIELDS = new Set(["locationId", "componentId", "condition", "note", "outcome", "deferUntil", "reason", "raisedTo"]);
 const RAISE_RANK = { NONE: 0, MEL: 1, NO_GO: 2 } as const;
+const CLASS_RANK: Record<MelClass["class"], number> = { COSMETIC: 0, MEL: 1, NO_GO: 2 };
 
 const invalidObservation = (message: string): DomainError => new DomainError("INVALID_OBSERVATION", message, 422);
 
@@ -469,7 +470,7 @@ export class VisitStore {
   /** Every OPEN observation on the tail, whichever visit opened it. Must be called inside a transaction. */
   private openObservations(tail: string): Observation[] {
     if (!this.hasObservations) return [];
-    return (this.db.prepare("SELECT * FROM visit_observations WHERE tail = ? AND status = 'OPEN' ORDER BY created_at, id").all(tail) as Row[]).map((r) =>
+    return (this.db.prepare("SELECT * FROM visit_observations WHERE tail = ? AND status = 'OPEN' ORDER BY rowid").all(tail) as Row[]).map((r) =>
       this.observationOf(r),
     );
   }
@@ -513,11 +514,9 @@ export class VisitStore {
       (e): VisitEvent => ({ seq: Number(e.seq), type: String(e.type), at: String(e.at), payload: JSON.parse(String(e.payload_json)) }),
     );
     const observations = this.hasObservations
-      ? (
-          this.db
-            .prepare("SELECT * FROM visit_observations WHERE opened_in_visit_id = ? OR closed_in_visit_id = ? ORDER BY created_at, id")
-            .all(id, id) as Row[]
-        ).map((r) => this.observationOf(r))
+      ? (this.db.prepare("SELECT * FROM visit_observations WHERE opened_in_visit_id = ? OR closed_in_visit_id = ? ORDER BY rowid").all(id, id) as Row[]).map(
+          (r) => this.observationOf(r),
+        )
       : [];
     return {
       ...this.summaryOf(row, records.length),
@@ -730,12 +729,56 @@ export class VisitStore {
           current: existing,
         });
       }
+      const inUse = this.replacedBy(visitId, visit.checkDate, locationId, componentId);
+      if (inUse.length > 0) {
+        throw new DomainError(
+          "RECORD_IN_USE",
+          "A problem was closed as replaced by this replacement. Reopen it as a new problem before removing the replacement.",
+          409,
+          { observationIds: inUse },
+        );
+      }
       this.db.prepare("DELETE FROM visit_records WHERE visit_id = ? AND location_id = ? AND component_id = ?").run(visitId, locationId, componentId);
       this.db.prepare("UPDATE visits SET version = version + 1, updated_at = ? WHERE id = ?").run(now, visitId);
       this.event(visitId, "RECORD_REMOVED", { locationId, componentId, recordVersion: existing.version, before: existing }, now);
       this.remember(options.idempotencyKey, `visit:${visitId}`, requestHash, { ok: true }, now);
       return { visit: this.loadVisitState(visitId), replayed: false };
     });
+  }
+
+  /**
+   * The class of an OPEN observation now (R16): re-classified against `snapshot`'s MEL with the seat-blocked
+   * state of the tail's other open observations, never below the class it was stored with (a class is only
+   * raised), then NO_GO when its MEL deferral is past due on `onDate`. Must be called inside a transaction.
+   */
+  private currentClass(o: Observation, snapshot: VisitSnapshot, tail: string, onDate: string): MelClass {
+    const others = this.openObservations(tail).filter((x) => x.id !== o.id);
+    const now = classify({
+      mel: snapshot.mel ?? [],
+      componentId: o.componentId,
+      condition: o.condition,
+      variant: snapshot.context.variant.id,
+      seatBlocked: seatIsBlocked(others, o.locationId),
+      ...(o.raisedTo !== undefined ? { raisedTo: o.raisedTo } : {}),
+    });
+    const melClass = CLASS_RANK[now.class] > CLASS_RANK[o.melClass.class] ? now : o.melClass;
+    return effectiveClass({ ...o, melClass }, onDate);
+  }
+
+  /**
+   * Ids of the observations closed as REPLACED in this visit by the record on (location, component): the same
+   * piece, placed on this visit's layout as `closeObservation` placed it. Must be called inside a transaction.
+   */
+  private replacedBy(visitId: string, checkDate: string, locationId: string, componentId: string): string[] {
+    if (!this.hasObservations) return [];
+    const closed = (
+      this.db
+        .prepare("SELECT * FROM visit_observations WHERE closed_in_visit_id = ? AND closed_as = 'REPLACED' AND component_id = ? ORDER BY rowid")
+        .all(visitId, componentId) as Row[]
+    ).map((r) => this.observationOf(r));
+    if (closed.length === 0) return [];
+    const locations = this.loadSnapshot(visitId).context.layoutRevision.locations;
+    return closed.filter((o) => mapCarried([o], locations, checkDate)[0]?.locationId === locationId).map((o) => o.id);
   }
 
   /** A DRAFT visit to write an observation through. Must be called inside a transaction. */
@@ -762,7 +805,8 @@ export class VisitStore {
   /**
    * The class, due date and seat block of `input` written through `visit`, against the visit's frozen MEL.
    * The seat is blocked by the tail's other open deferrals. An MEL item whose first deferral is past due is
-   * NO_GO, so it can no longer be deferred. Throws OUTCOME_NOT_ALLOWED when the outcome does not fit the class.
+   * NO_GO, so it can no longer be deferred. Throws OUTCOME_NOT_ALLOWED when the outcome does not fit the class,
+   * or when an update would rank below the observation's current class.
    */
   private classifyObservation(
     visit: VisitState,
@@ -784,6 +828,9 @@ export class VisitStore {
     // whatever outcome this write gives it. effectiveClass reads only these four fields.
     const asDeferral = { status: "OPEN", outcome: "DEFERRED", melClass: base, dueDate: firstDue } as Observation;
     const melClass = effectiveClass(asDeferral, visit.checkDate);
+    if (existing && CLASS_RANK[melClass.class] < CLASS_RANK[this.currentClass(existing, snapshot, visit.tail, visit.checkDate).class]) {
+      throw new DomainError("OUTCOME_NOT_ALLOWED", "This problem can't be made less serious", 422, { allowed: [], melClass });
+    }
     const allowed = allowedOutcomes(melClass);
     if (!allowed.includes(input.outcome)) {
       throw new DomainError("OUTCOME_NOT_ALLOWED", `This problem cannot be marked ${input.outcome} under its MEL class.`, 422, { allowed, melClass });
@@ -973,7 +1020,7 @@ export class VisitStore {
         }
       }
       const mustFix = this.openObservations(visit.tail)
-        .filter((o) => o.outcome !== "NOTED" && (o.outcome === "MUST_FIX" || effectiveClass(o, visit.checkDate).class === "NO_GO"))
+        .filter((o) => o.outcome !== "NOTED" && (o.outcome === "MUST_FIX" || this.currentClass(o, snapshot, visit.tail, visit.checkDate).class === "NO_GO"))
         .map((o) => o.id)
         .sort();
       if (mustFix.length > 0 && !held) {
