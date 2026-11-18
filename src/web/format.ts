@@ -1,4 +1,4 @@
-import type { Condition, DeferReason, DeferUntil, FindingSeverity, LookupState, MelClass, ObservationOutcome } from "../domain/types.ts";
+import type { DeferReason, DeferUntil, FindingSeverity, LookupState, MelClass, ObservationOutcome } from "../domain/types.ts";
 
 /**
  * How the interface writes dates, times, states and counts (WEB-21). One fixed form, en-GB, whatever the browser's
@@ -97,17 +97,7 @@ export function formatCounts(counts: Record<string, number>, labels: Record<stri
   return out.length > 0 ? out.join(", ") : "none";
 }
 
-/** A problem's condition in words; the code stays in the data. */
-const CONDITION_LABEL: Record<Condition, string> = {
-  STAINED: "Stained",
-  TORN: "Torn",
-  WORN: "Worn",
-  BROKEN: "Broken",
-  MISSING: "Missing",
-  WONT_LATCH: "Won't latch",
-  OTHER: "Other",
-};
-export const conditionLabel = (c: Condition): string => CONDITION_LABEL[c];
+export { conditionLabel } from "../domain/labels.ts";
 
 /** The item the class takes when a technician raises a problem to MEL: it names no MEL item of its own. */
 const TECH_RAISED_ITEM = "TECH-RAISED";

@@ -84,7 +84,7 @@ describe("reports: PDF and JSON agree with persisted work", () => {
     expect(Object.fromEntries(report.totals.map((t) => [`${t.partNo}|${t.unit}`, t.quantity]))).toEqual(Object.fromEntries(fromRecords));
     for (const t of report.totals) expect(t.locations.reduce((n, l) => n + l.quantity, 0)).toBe(t.quantity);
     expect(report).toMatchObject({
-      schema: "cabin-kit.report/2",
+      schema: "cabin-kit.report/3",
       reportKind: "FINAL",
       visit: { tail: "N100TL", checkDate: "2026-11-12", technician: "Demo tech", status: "COMPLETED" },
       configuration: { variantId: "V01", carpet: "MOHAWK", seam: "PRE", seatCount: 176, layoutRevisionId: "FX-L-S176-MAX8-LP@1", namespace: "fixture" },

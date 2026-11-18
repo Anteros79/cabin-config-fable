@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../domain/canonical.ts";
 import { sha256Hex } from "../domain/hash.ts";
-import { allowedOutcomes, classify, dueDateFor, effectiveClass, mapCarried, seatIsBlocked } from "../domain/observations.ts";
+import { allowedOutcomes, classify, currentClass, dueDateFor, effectiveClass, mapCarried, seatIsBlocked } from "../domain/observations.ts";
 import { buildReport } from "../domain/report.ts";
 import type {
   CarriedObservation,
@@ -752,17 +752,12 @@ export class VisitStore {
    * raised), then NO_GO when its MEL deferral is past due on `onDate`. Must be called inside a transaction.
    */
   private currentClass(o: Observation, snapshot: VisitSnapshot, tail: string, onDate: string): MelClass {
-    const others = this.openObservations(tail).filter((x) => x.id !== o.id);
-    const now = classify({
+    return currentClass(o, {
       mel: snapshot.mel ?? [],
-      componentId: o.componentId,
-      condition: o.condition,
       variant: snapshot.context.variant.id,
-      seatBlocked: seatIsBlocked(others, o.locationId),
-      ...(o.raisedTo !== undefined ? { raisedTo: o.raisedTo } : {}),
+      others: this.openObservations(tail).filter((x) => x.id !== o.id),
+      onDate,
     });
-    const melClass = CLASS_RANK[now.class] > CLASS_RANK[o.melClass.class] ? now : o.melClass;
-    return effectiveClass({ ...o, melClass }, onDate);
   }
 
   /**

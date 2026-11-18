@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildPreparation } from "../../src/domain/prep.ts";
 import { buildReport, rulesNotUsedLine } from "../../src/domain/report.ts";
 import { lookup } from "../../src/domain/resolve.ts";
-import type { ComponentResolution, ReleaseContent, SubstituteApproval, Visit } from "../../src/domain/types.ts";
+import type { CarriedObservation, ComponentResolution, Observation, ReleaseContent, SubstituteApproval, Visit, VisitEvent } from "../../src/domain/types.ts";
 import { REPORT_SCHEMA } from "../../src/domain/types.ts";
 import { DomainError } from "../../src/domain/visitLogic.ts";
 import {
@@ -58,11 +58,11 @@ describe("report schema 2 (DOM-01, DOM-16)", () => {
     expect(bins?.sourceIds).toEqual([]);
   });
 
-  it("new reports use schema /2 and carry excludedRules", () => {
+  it("new reports use schema /3 and carry excludedRules", () => {
     const snap = snapshotFor(releaseWithExpiredExactRule(), "N100TL", "2026-11-12");
     const report = buildReport(visitWith(snap, [CUSHION_3A]), "DRAFT_PREVIEW", AT);
-    expect(REPORT_SCHEMA).toBe("cabin-kit.report/2");
-    expect(report.schema).toBe("cabin-kit.report/2");
+    expect(REPORT_SCHEMA).toBe("cabin-kit.report/3");
+    expect(report.schema).toBe("cabin-kit.report/3");
     const [item] = report.work;
     expect(item?.ruleId).not.toBe("X-EXPIRED-EXACT");
     expect(item?.excludedRules).toEqual([
@@ -83,7 +83,7 @@ describe("report schema 2 (DOM-01, DOM-16)", () => {
     expect(snap.resolution.components.some((c) => "excluded" in c)).toBe(false);
     const report = buildReport(visitWith(snap, [CUSHION_3A]), "DRAFT_PREVIEW", AT);
     expect(report.work[0]?.excludedRules).toEqual([]);
-    expect(report.schema).toBe("cabin-kit.report/2");
+    expect(report.schema).toBe("cabin-kit.report/3");
     // an old PARTIAL snapshot (no-match exclusions without sourceId) builds its gaps and preparation list
     const partial = oldShapeSnapshot(snapshotFor(fixtureRelease(), "N090TL", "2026-11-12"));
     const old = buildReport(visitWith(partial, [CUSHION_3A]), "DRAFT_PREVIEW", AT);
@@ -349,5 +349,195 @@ describe("preparation counts and substitute scope (DOM-17, DOM-21)", () => {
     const meeting = lookup(twoRules(substitute({ kind: "SEAT", letters: ["A", "B"] })), "N100TL", "2026-11-12");
     const attached = entry(meeting.resolution!.rules, "R-ONE").substitutes;
     expect(attached.map((s) => s.id)).toEqual(["X-SUB"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Report v3 (VAC-12)
+
+const COSMETIC = { class: "COSMETIC" } as const;
+const MEL_C = { class: "MEL", item: "FX-25-21-01", category: "C", intervalDays: 10, conditions: "Fictional deferral", blocksSeat: true } as const;
+
+function obs(extra: Partial<Observation> = {}): Observation {
+  return {
+    id: "OBS-1",
+    tail: "N100TL",
+    status: "OPEN",
+    version: 1,
+    locationId: "SEAT:3A",
+    componentId: "HEADREST",
+    condition: "STAINED",
+    note: "",
+    outcome: "NOTED",
+    melClass: COSMETIC,
+    dueDate: null,
+    blocksSeat: false,
+    openedInVisitId: "visit-1",
+    closedInVisitId: null,
+    closedAs: null,
+    locationLabel: "Seat 3A",
+    componentName: "Headrest cover",
+    createdAt: "2026-11-12T12:01:00.000Z",
+    updatedAt: "2026-11-12T12:01:00.000Z",
+    ...extra,
+  };
+}
+
+function carriedOf(observation: Observation, overdue = false): CarriedObservation {
+  return { observation, placement: "SAME", locationId: observation.locationId, overdue };
+}
+
+function ev(seq: number, type: string, payload: Record<string, unknown>): VisitEvent {
+  return { seq, type, at: `2026-11-12T12:0${seq}:00.000Z`, payload };
+}
+
+let v3Snapshot: ReturnType<typeof snapshotFor> | undefined;
+/** One frozen snapshot for every v3 test: building it is the expensive part. */
+function v3Visit(over: Partial<Visit>, inputs: unknown[] = []): Visit {
+  v3Snapshot ??= snapshotFor(fixtureRelease(), "N100TL", "2026-11-12");
+  return { ...visitWith(v3Snapshot, inputs), ...over };
+}
+
+describe("report v3", () => {
+  it("summary counts each outcome once", () => {
+    const visit = v3Visit({
+      observations: [
+        obs({ id: "N", outcome: "NOTED" }),
+        obs({ id: "DC", outcome: "DEFERRED", locationId: "SEAT:3B", dueDate: null }),
+        obs({
+          id: "DM",
+          outcome: "DEFERRED",
+          locationId: "SEAT:3C",
+          componentId: "TRAY",
+          condition: "BROKEN",
+          melClass: { ...MEL_C, blocksSeat: undefined } as Observation["melClass"],
+          dueDate: "2026-11-22",
+        }),
+        obs({ id: "MF", outcome: "MUST_FIX", locationId: "SEAT:4A", condition: "BROKEN" }),
+        obs({ id: "R", status: "CLOSED", closedInVisitId: "visit-1", closedAs: "REPLACED", locationId: "SEAT:4B" }),
+      ],
+      carried: [carriedOf(obs({ id: "C1", outcome: "DEFERRED", openedInVisitId: "earlier", locationId: "SEAT:5A", dueDate: null }))],
+    });
+    const report = buildReport(visit, "DRAFT_PREVIEW", AT);
+    expect(report.summary).toEqual({
+      replaced: 1,
+      noted: 1,
+      deferredCosmetic: 1,
+      deferredMel: 1,
+      mustFix: 1,
+      carriedIn: 1,
+      stillOpen: 4, // 2 deferrals, 1 must-fix, 1 carried; the note and the closed one are not open work
+      releasable: false,
+      aircraftHeld: false,
+    });
+    expect(report.observations?.deferred.map((o) => o.id)).toEqual(["DC", "DM"]);
+    expect(report.observations?.mustFix.map((o) => o.id)).toEqual(["MF"]);
+    expect(report.observations?.noted.map((o) => o.id)).toEqual(["N"]);
+    expect(report.observations?.closed.map((o) => o.id)).toEqual(["R"]);
+    expect(report.observations?.carriedIn.map((c) => c.observation.id)).toEqual(["C1"]);
+    expect(report.observations?.stillOpen.map((o) => o.id).sort()).toEqual(["C1", "DC", "DM", "MF"]);
+  });
+
+  it("releasable false with an open overdue MEL deferral and aircraftHeld true", () => {
+    const overdue = obs({
+      id: "OD",
+      outcome: "DEFERRED",
+      componentId: "TRAY",
+      condition: "BROKEN",
+      melClass: MEL_C,
+      dueDate: "2026-11-10",
+      openedInVisitId: "earlier",
+    });
+    const report = buildReport(v3Visit({ aircraftHeld: true, carried: [carriedOf(overdue, true)] }), "FINAL", AT);
+    expect(report.summary).toMatchObject({ releasable: false, aircraftHeld: true, carriedIn: 1, stillOpen: 1 });
+    // due today is still allowed
+    const dueToday = obs({ id: "DT", outcome: "DEFERRED", melClass: MEL_C, dueDate: "2026-11-12", openedInVisitId: "earlier", blocksSeat: false });
+    expect(buildReport(v3Visit({ carried: [carriedOf(dueToday)] }), "FINAL", AT).summary?.releasable).toBe(true);
+    expect(buildReport(v3Visit({}), "FINAL", AT).summary).toMatchObject({ releasable: true, stillOpen: 0 });
+  });
+
+  it("an open MUST_FIX makes the report not releasable, as the completion gate does", () => {
+    const report = buildReport(v3Visit({ observations: [obs({ outcome: "MUST_FIX", condition: "BROKEN" })] }), "FINAL", AT);
+    expect(report.summary).toMatchObject({ releasable: false, mustFix: 1 });
+  });
+
+  it("timeline is in seq order with before/after for an update", () => {
+    const before = obs({ outcome: "NOTED", note: "" });
+    const after = obs({ outcome: "DEFERRED", note: "ordered", version: 2 });
+    const events = [
+      ev(3, "OBSERVATION_UPDATED", { before, after }),
+      ev(1, "CREATED", {}),
+      ev(2, "OBSERVATION_ADDED", { observation: before }),
+      ev(5, "COMPLETED", { records: 0, aircraftHeld: true }),
+      ev(4, "RECORD_REMOVED", { locationId: "SEAT:3A", componentId: "CUSHION", recordVersion: 1 }),
+      ev(6, "ADVISORY", { note: "x" }),
+    ];
+    const timeline = buildReport(v3Visit({ events, observations: [after] }), "FINAL", AT).timeline;
+    expect(timeline?.map((t) => [t.seq, t.kind])).toEqual([
+      [2, "OBSERVATION_ADDED"],
+      [3, "OBSERVATION_UPDATED"],
+      [4, "RECORD_REMOVED"],
+      [5, "COMPLETED"],
+    ]);
+    expect(timeline?.[0]).toMatchObject({
+      label: "Seat 3A · Headrest cover: problem noted (Stained)",
+      locationId: "SEAT:3A",
+      componentId: "HEADREST",
+      before: null,
+      after: before,
+    });
+    expect(timeline?.[1]).toMatchObject({ label: "Seat 3A · Headrest cover: problem changed (Stained)", before, after });
+    // an older removal event carries no `before`; the label falls back to the frozen layout and component names
+    expect(timeline?.[2]).toMatchObject({ label: "Seat 3A · Seat cushion cover: replacement removed", before: null, after: null });
+    expect(timeline?.[3]).toMatchObject({ kind: "COMPLETED", locationId: null, componentId: null, label: "Visit completed, aircraft held and reported" });
+  });
+
+  it("a record update keeps its before and after", () => {
+    const rec = v3Visit({}, [CUSHION_3A]).records[0];
+    const events = [ev(2, "RECORD_UPDATED", { locationId: "SEAT:3A", componentId: "CUSHION", quantity: 1, recordVersion: 2, before: rec })];
+    const [t] = buildReport(v3Visit({ events }, [CUSHION_3A]), "FINAL", AT).timeline ?? [];
+    expect(t).toMatchObject({ kind: "RECORD_UPDATED", label: "Seat 3A · Seat cushion cover: replacement changed", before: rec });
+    expect(t?.after).toMatchObject({ quantity: 1, recordVersion: 2 });
+  });
+
+  it("a /1 stored report still parses and renders its totals", () => {
+    const stored = JSON.parse(JSON.stringify(buildReport(v3Visit({}, [CUSHION_3A]), "FINAL", AT))) as Record<string, unknown>;
+    for (const key of ["summary", "timeline", "observations", "pieceOutcomes", "excludedRules"]) delete stored[key];
+    stored.schema = "cabin-kit.report/1";
+    const old = stored as unknown as ReturnType<typeof buildReport>;
+    expect(old.schema).toBe("cabin-kit.report/1");
+    expect(old.summary).toBeUndefined();
+    expect(old.totals.map((t) => t.quantity)).toEqual(buildReport(v3Visit({}, [CUSHION_3A]), "FINAL", AT).totals.map((t) => t.quantity));
+    expect(old.counts.replacements).toBe(1);
+  });
+
+  it("pieceOutcomes ranks mustFix over recorded on the same piece", () => {
+    const visit = v3Visit(
+      {
+        observations: [
+          obs({ id: "MF", outcome: "MUST_FIX", locationId: "SEAT:3A", componentId: "CUSHION", condition: "BROKEN" }),
+          obs({ id: "NT", outcome: "NOTED", locationId: "SEAT:3B", componentId: "CUSHION" }),
+        ],
+        carried: [carriedOf(obs({ id: "C", outcome: "DEFERRED", openedInVisitId: "earlier", locationId: "SEAT:3C", componentId: "CUSHION" }))],
+      },
+      [CUSHION_3A, { ...CUSHION_3A, locationId: "SEAT:3B" }, { ...CUSHION_3A, locationId: "SEAT:3D" }],
+    );
+    const outcomes = buildReport(visit, "FINAL", AT).pieceOutcomes ?? [];
+    const at = (locationId: string) => outcomes.filter((p) => p.locationId === locationId && p.componentId === "CUSHION").map((p) => p.status);
+    expect(at("SEAT:3A")).toEqual(["mustFix"]);
+    expect(at("SEAT:3B")).toEqual(["noted"]);
+    expect(at("SEAT:3C")).toEqual(["carried"]);
+    expect(at("SEAT:3D")).toEqual(["recorded"]);
+    expect(outcomes).toHaveLength(4);
+  });
+
+  it("a snapshot without mel classifies everything COSMETIC and still builds", () => {
+    const snap = structuredClone(v3Visit({}).snapshot);
+    delete snap.mel;
+    const visit = {
+      ...visitWith(snap, []),
+      carried: [carriedOf(obs({ outcome: "DEFERRED", openedInVisitId: "earlier", componentId: "TRAY", condition: "BROKEN" }))],
+    };
+    expect(buildReport(visit, "FINAL", AT).summary).toMatchObject({ releasable: true, carriedIn: 1 });
   });
 });

@@ -1,4 +1,5 @@
-import { classify, effectiveClass, isOverdue, seatIsBlocked } from "../domain/observations.ts";
+import { classify, currentClass as currentObservationClass, isMustFixNow, isOverdue, seatIsBlocked } from "../domain/observations.ts";
+import { higherStatus, type LocationStatus } from "../domain/status.ts";
 import type {
   CabinLocation,
   CarriedObservation,
@@ -16,13 +17,7 @@ import type {
 } from "../domain/types.ts";
 import type { LocationState } from "./scene/CabinScene.ts";
 
-/**
- * The work status of a location or one of its components. Problems come from observations: must fix, deferred (opened in
- * this visit), carried (a deferral from an earlier visit) and noted. The rest come from records and the resolution: a
- * replacement is recorded, the component is unresolved, an approved alternate part is eligible here (and nothing is
- * recorded yet), or none of these. The union is in rank order, highest first (aggregateStatus).
- */
-export type LocationStatus = "mustFix" | "unresolved" | "deferred" | "carried" | "noted" | "recorded" | "alternate" | "none";
+export type { LocationStatus } from "../domain/status.ts";
 export type StatusGlyph = "tick" | "question" | "alternate" | "alert" | "pause" | "forward" | "note" | "none";
 
 /**
@@ -70,8 +65,7 @@ export const problemStatusText = (status: LocationStatus | undefined): string =>
  */
 export function aggregateStatus(statuses: Iterable<LocationStatus>): LocationStatus {
   let out: LocationStatus = "none";
-  const rank: Record<LocationStatus, number> = { none: 0, alternate: 1, recorded: 2, noted: 3, carried: 4, deferred: 5, unresolved: 6, mustFix: 7 };
-  for (const s of statuses) if (rank[s] > rank[out]) out = s;
+  for (const s of statuses) out = higherStatus(out, s);
   return out;
 }
 
@@ -122,27 +116,13 @@ function openPlaced(ws: Workspace): OpenProblems {
   return { placed, open: placed.map((p) => ({ ...p.observation, locationId: p.locationId })) };
 }
 
-const CLASS_RANK: Record<MelClass["class"], number> = { COSMETIC: 0, MEL: 1, NO_GO: 2 };
-
-/** The class of a problem now: re-classified against the MEL with the seat-blocked state of the other open problems, never below its stored class, NO_GO once an MEL deferral is overdue. Mirrors the server. */
+/** The class of a problem now, judged as the server's completion gate does. `open` carries each problem at the location it sits at on this layout. */
 function currentClass(ws: Workspace, open: Observation[], o: Observation): MelClass {
-  // `open` carries each problem at the location it is placed at on this layout, so the seat-block is judged there.
-  const others = open.filter((x) => x.id !== o.id);
-  const now = classify({
-    mel: ws.mel,
-    componentId: o.componentId,
-    condition: o.condition,
-    variant: ws.variantId ?? "",
-    seatBlocked: seatIsBlocked(others, o.locationId),
-    ...(o.raisedTo !== undefined ? { raisedTo: o.raisedTo } : {}),
-  });
-  const melClass = CLASS_RANK[now.class] > CLASS_RANK[o.melClass.class] ? now : o.melClass;
-  return effectiveClass({ ...o, melClass }, ws.checkDate);
+  return currentObservationClass(o, { mel: ws.mel, variant: ws.variantId ?? "", others: open.filter((x) => x.id !== o.id), onDate: ws.checkDate });
 }
 
 /** A problem that must be fixed before flight: marked so, or no-go now. A noted problem never is. Mirrors the server's completion gate. */
-const isMustFix = (ws: Workspace, open: Observation[], o: Observation): boolean =>
-  o.outcome !== "NOTED" && (o.outcome === "MUST_FIX" || currentClass(ws, open, o).class === "NO_GO");
+const isMustFix = (ws: Workspace, open: Observation[], o: Observation): boolean => isMustFixNow(o, currentClass(ws, open, o));
 
 /**
  * Every open problem on the tail that must be fixed before flight: this visit's and carried ones, including those no

@@ -57,6 +57,30 @@ export function effectiveClass(o: Observation, onDate: string): MelClass {
   return o.melClass;
 }
 
+/**
+ * The class of an OPEN observation now (R16): re-classified against `mel` with the seat-blocked state of `others` (the
+ * tail's other open observations, each at the location it sits at on this layout), never below the class it was
+ * stored with (a class is only raised), then NO_GO when its MEL deferral is past due on `onDate`.
+ * The server's completion gate, the web model and the report all judge with this.
+ */
+export function currentClass(o: Observation, ctx: { mel: MelEntry[]; variant: string; others: Observation[]; onDate: string }): MelClass {
+  const now = classify({
+    mel: ctx.mel,
+    componentId: o.componentId,
+    condition: o.condition,
+    variant: ctx.variant,
+    seatBlocked: seatIsBlocked(ctx.others, o.locationId),
+    ...(o.raisedTo !== undefined ? { raisedTo: o.raisedTo } : {}),
+  });
+  const melClass = RANK[now.class] > RANK[o.melClass.class] ? now : o.melClass;
+  return effectiveClass({ ...o, melClass }, ctx.onDate);
+}
+
+/** A problem that must be fixed before flight: marked so, or no-go now. A noted problem never is. */
+export function isMustFixNow(o: Observation, cls: MelClass): boolean {
+  return o.outcome !== "NOTED" && (o.outcome === "MUST_FIX" || cls.class === "NO_GO");
+}
+
 export function seatIsBlocked(openObservations: Observation[], seatLocationId: string): boolean {
   return openObservations.some((o) => o.locationId === seatLocationId && isOpenDeferral(o) && o.blocksSeat);
 }

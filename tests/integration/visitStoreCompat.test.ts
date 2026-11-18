@@ -90,7 +90,7 @@ describe("visit stores written by 5d6679d", () => {
     expect(at(added.observations, 0)).toMatchObject({ tail: "N200TL", melClass: { class: "COSMETIC" }, dueDate: null, blocksSeat: false });
     const done = store.completeVisit(DRAFT_ID, added.version);
     expect(done.visit).toMatchObject({ status: "COMPLETED", aircraftHeld: false });
-    expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
+    expect(done.report).toMatchObject({ schema: "cabin-kit.report/3", reportKind: "FINAL" });
     expect(canonicalJson(store.getReport(COMPLETED_ID).report)).toBe(pristine);
   });
 
@@ -150,11 +150,11 @@ describe("visit stores written by 5d6679d", () => {
     expect((await renderReportPdf(stored.report, stored.linkedEvents, stored.basisSha256)).subarray(0, 5).toString()).toBe("%PDF-");
     // the draft: a new preview uses /2 and reads the missing fields as empty
     const preview = store.getReport(DRAFT_ID).report;
-    expect(preview.schema).toBe("cabin-kit.report/2");
+    expect(preview.schema).toBe("cabin-kit.report/3");
     expect(preview.work.map((w) => w.excludedRules)).toEqual(preview.work.map(() => []));
     expect((await renderReportPdf(preview)).subarray(0, 5).toString()).toBe("%PDF-");
     const done = store.completeVisit(DRAFT_ID, undefined);
-    expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
+    expect(done.report).toMatchObject({ schema: "cabin-kit.report/3", reportKind: "FINAL" });
   });
 
   it("a hand-built old-shape PARTIAL snapshot records, reports and completes", async () => {
@@ -174,7 +174,7 @@ describe("visit stores written by 5d6679d", () => {
     expect(preview.gaps.find((g) => g.status === "AMBIGUOUS")?.sourceIds).toEqual(["FX-DOC-B"]);
     expect(preview.gaps.find((g) => g.componentId === "BACKREST")?.sourceIds).toEqual([]);
     const done = store.completeVisit(id, undefined);
-    expect(done.report).toMatchObject({ schema: "cabin-kit.report/2", reportKind: "FINAL" });
+    expect(done.report).toMatchObject({ schema: "cabin-kit.report/3", reportKind: "FINAL" });
     expect((await renderReportPdf(done.report)).subarray(0, 5).toString()).toBe("%PDF-");
   });
 

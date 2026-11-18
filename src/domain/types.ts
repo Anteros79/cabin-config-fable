@@ -1,6 +1,8 @@
 // Logical model for Cabin Kit. See docs/logical-model.md.
 // Everything here is plain data so it can be frozen into visit snapshots and reports.
 
+import type { LocationStatus } from "./status.ts";
+
 export type Namespace = "fixture" | "candidate" | "accepted";
 export type IsoDate = string; // YYYY-MM-DD, calendar date, compared lexically
 
@@ -690,11 +692,11 @@ export interface ReportGap {
   sourceIds?: string[];
 }
 
-/** Schema written by `buildReport`. Stored `/1` reports are served unchanged. */
-export const REPORT_SCHEMA = "cabin-kit.report/2";
+/** Schema written by `buildReport`. Stored `/1` and `/2` reports are served unchanged. */
+export const REPORT_SCHEMA = "cabin-kit.report/3";
 
 export interface Report {
-  schema: "cabin-kit.report/1" | "cabin-kit.report/2";
+  schema: "cabin-kit.report/1" | "cabin-kit.report/2" | "cabin-kit.report/3";
   reportKind: "FINAL" | "DRAFT_PREVIEW";
   generatedAt: string;
   authorityNotice: string;
@@ -741,6 +743,55 @@ export interface Report {
   sources: SourceArtifact[];
   linkedEvents: VisitEvent[];
   counts: { workItems: number; replacements: number; totalLines: number; unresolvedComponents: number };
+  /** Report schema 3: absent from /1 and /2 reports, always present in /3. */
+  summary?: ReportSummary;
+  /** Report schema 3: what happened in this visit, in event order. */
+  timeline?: ReportTimelineEntry[];
+  /** Report schema 3: this visit's problems by outcome, those carried in, and what is still open. */
+  observations?: ReportObservations;
+  /** Report schema 3: the status of each piece that has an outcome, for the cabin picture. */
+  pieceOutcomes?: ReportPieceOutcome[];
+}
+
+export interface ReportSummary {
+  /** problems closed as replaced in this visit */
+  replaced: number;
+  /** problems noted in this visit and still open */
+  noted: number;
+  deferredCosmetic: number;
+  deferredMel: number;
+  mustFix: number;
+  carriedIn: number;
+  /** open problems that need action: this visit's deferrals and must-fix problems, plus those carried in */
+  stillOpen: number;
+  releasable: boolean;
+  aircraftHeld: boolean;
+}
+
+export interface ReportTimelineEntry {
+  seq: number;
+  at: string;
+  kind: "RECORD_ADDED" | "RECORD_UPDATED" | "RECORD_REMOVED" | "OBSERVATION_ADDED" | "OBSERVATION_UPDATED" | "OBSERVATION_CLOSED" | "COMPLETED";
+  locationId: string | null;
+  componentId: string | null;
+  label: string;
+  before: unknown | null;
+  after: unknown | null;
+}
+
+export interface ReportObservations {
+  deferred: Observation[];
+  mustFix: Observation[];
+  noted: Observation[];
+  closed: Observation[];
+  carriedIn: CarriedObservation[];
+  stillOpen: Observation[];
+}
+
+export interface ReportPieceOutcome {
+  locationId: string;
+  componentId: string;
+  status: LocationStatus;
 }
 
 export const AUTHORITY_NOTICE =

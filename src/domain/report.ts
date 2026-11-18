@@ -1,15 +1,25 @@
+import { conditionLabel } from "./labels.ts";
+import { currentClass, isMustFixNow } from "./observations.ts";
 import { compareCodePoints } from "./order.ts";
+import { higherStatus, type LocationStatus } from "./status.ts";
 import { summarizeLocations } from "./summarize.ts";
 import type {
   CabinLocation,
   ComponentResolution,
   ExcludedRule,
+  Observation,
   Report,
   ReportGap,
+  ReportObservations,
+  ReportPieceOutcome,
+  ReportSummary,
+  ReportTimelineEntry,
   ReportTotalLine,
   ReportWorkItem,
   SourceArtifact,
   Visit,
+  VisitEvent,
+  VisitRecord,
   VisitSnapshot,
 } from "./types.ts";
 import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS, REPORT_SCHEMA } from "./types.ts";
@@ -110,6 +120,118 @@ export function buildGaps(snapshot: VisitSnapshot): ReportGap[] {
   );
 }
 
+/** The observations this visit's report is about, sorted into the report's lists. All of it is pure. */
+function buildObservationSection(
+  visit: Visit,
+  order: Map<string, number>,
+): { observations: ReportObservations; summary: ReportSummary; pieceOutcomes: ReportPieceOutcome[] } {
+  const { snapshot } = visit;
+  const own = visit.observations;
+  const ownOpen = own.filter((o) => o.status === "OPEN");
+  const closed = own.filter((o) => o.status === "CLOSED" && o.closedInVisitId === visit.id);
+  const seen = new Set(ownOpen.map((o) => o.id));
+  const carried = visit.carried.filter((c) => !seen.has(c.observation.id));
+  // Every open problem, each at the location it sits at on this layout (an orphan has none), for the seat-block check.
+  const open: Observation[] = [...ownOpen, ...carried.flatMap((c) => (c.locationId === null ? [] : [{ ...c.observation, locationId: c.locationId }]))];
+  const classOf = (o: Observation) =>
+    currentClass(o, { mel: snapshot.mel ?? [], variant: snapshot.context.variant.id, others: open.filter((x) => x.id !== o.id), onDate: visit.checkDate });
+  const mustFixNow = (o: Observation) => isMustFixNow(o, classOf(o));
+
+  const deferred = ownOpen.filter((o) => o.outcome === "DEFERRED");
+  const mustFix = ownOpen.filter((o) => o.outcome === "MUST_FIX");
+  const noted = ownOpen.filter((o) => o.outcome === "NOTED");
+  const needsAction = [...ownOpen.filter((o) => o.outcome !== "NOTED"), ...carried.map((c) => c.observation)];
+  const observations: ReportObservations = { deferred, mustFix, noted, closed, carriedIn: carried, stillOpen: needsAction };
+  const summary: ReportSummary = {
+    replaced: closed.filter((o) => o.closedAs === "REPLACED").length,
+    noted: noted.length,
+    deferredCosmetic: deferred.filter((o) => classOf(o).class === "COSMETIC").length,
+    deferredMel: deferred.filter((o) => classOf(o).class !== "COSMETIC").length,
+    mustFix: mustFix.length,
+    carriedIn: carried.length,
+    stillOpen: needsAction.length,
+    releasable: !needsAction.some(mustFixNow),
+    aircraftHeld: visit.aircraftHeld,
+  };
+
+  // A piece's status, as the cabin picture shows it: problems first, then the record.
+  const pieces = new Map<string, { locationId: string; componentId: string; status: LocationStatus }>();
+  const raise = (locationId: string, componentId: string, status: LocationStatus) => {
+    const key = `${locationId}\u0000${componentId}`;
+    const piece = pieces.get(key) ?? { locationId, componentId, status: "none" as LocationStatus };
+    piece.status = higherStatus(piece.status, status);
+    pieces.set(key, piece);
+  };
+  for (const o of ownOpen)
+    raise(o.locationId, o.componentId, mustFixNow(o) ? "mustFix" : o.outcome === "DEFERRED" ? "deferred" : o.outcome === "NOTED" ? "noted" : "mustFix");
+  for (const c of carried) if (c.locationId !== null) raise(c.locationId, c.observation.componentId, mustFixNow(c.observation) ? "mustFix" : "carried");
+  for (const r of visit.records) raise(r.locationId, r.componentId, "recorded");
+  const pieceOutcomes = [...pieces.values()].sort(
+    (a, b) =>
+      (order.get(a.locationId) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.locationId) ?? Number.MAX_SAFE_INTEGER) ||
+      compareCodePoints(a.locationId, b.locationId) ||
+      compareCodePoints(a.componentId, b.componentId),
+  );
+  return { observations, summary, pieceOutcomes };
+}
+
+const asRecord = (v: unknown): Record<string, unknown> | null =>
+  typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+const asString = (v: unknown): string | null => (typeof v === "string" ? v : null);
+
+const TIMELINE_KINDS: readonly ReportTimelineEntry["kind"][] = [
+  "RECORD_ADDED",
+  "RECORD_UPDATED",
+  "RECORD_REMOVED",
+  "OBSERVATION_ADDED",
+  "OBSERVATION_UPDATED",
+  "OBSERVATION_CLOSED",
+  "COMPLETED",
+];
+
+const OBSERVATION_ADDED_WORDS: Record<string, string> = { NOTED: "problem noted", DEFERRED: "problem deferred", MUST_FIX: "must-fix problem raised" };
+
+/** What happened in the visit, in event order, in plain words. Older events may lack `before`; that reads as null. */
+function buildTimeline(visit: Visit): ReportTimelineEntry[] {
+  const locations = new Map(visit.snapshot.context.layoutRevision.locations.map((l) => [l.id, l.label]));
+  const components = visit.snapshot.resolution.componentDefs;
+  const events = [...visit.events].sort((a, b) => a.seq - b.seq);
+  return events.flatMap((event: VisitEvent): ReportTimelineEntry[] => {
+    const kind = TIMELINE_KINDS.find((k) => k === event.type);
+    if (!kind) return [];
+    const payload = event.payload;
+    const base = { seq: event.seq, at: event.at, kind };
+    if (kind === "COMPLETED") {
+      const label = payload.aircraftHeld === true ? "Visit completed, aircraft held and reported" : "Visit completed";
+      return [{ ...base, locationId: null, componentId: null, label, before: null, after: payload }];
+    }
+    if (kind.startsWith("OBSERVATION_")) {
+      const after = asRecord(kind === "OBSERVATION_ADDED" ? payload.observation : payload.after) as Partial<Observation> | null;
+      const before = kind === "OBSERVATION_ADDED" ? null : (payload.before ?? null);
+      const o = after ?? (asRecord(before) as Partial<Observation> | null) ?? {};
+      const locationId = o.locationId ?? null;
+      const componentId = o.componentId ?? null;
+      const words =
+        kind === "OBSERVATION_ADDED"
+          ? (OBSERVATION_ADDED_WORDS[o.outcome ?? ""] ?? "problem noted")
+          : kind === "OBSERVATION_UPDATED"
+            ? "problem changed"
+            : `problem closed as ${o.closedAs === "REPLACED" ? "replaced" : "fixed"}`;
+      const condition = o.condition ? ` (${conditionLabel(o.condition)})` : "";
+      const where = `${o.locationLabel ?? (locationId && locations.get(locationId)) ?? locationId ?? "Unknown location"} · ${o.componentName ?? (componentId && components[componentId]?.name) ?? componentId ?? "Unknown piece"}`;
+      return [{ ...base, locationId, componentId, label: `${where}: ${words}${condition}`, before, after: after ?? null }];
+    }
+    // RECORD_*: the payload names the piece; the record it replaced (`before`) may be absent on an older event.
+    const locationId = asString(payload.locationId);
+    const componentId = asString(payload.componentId);
+    const { before: rawBefore, ...rest } = payload;
+    const before = (rawBefore ?? null) as VisitRecord | null;
+    const where = `${before?.locationLabel ?? (locationId && locations.get(locationId)) ?? locationId ?? "Unknown location"} · ${before?.componentName ?? (componentId && components[componentId]?.name) ?? componentId ?? "Unknown piece"}`;
+    const words = kind === "RECORD_ADDED" ? "replacement recorded" : kind === "RECORD_UPDATED" ? "replacement changed" : "replacement removed";
+    return [{ ...base, locationId, componentId, label: `${where}: ${words}`, before, after: kind === "RECORD_REMOVED" ? null : rest }];
+  });
+}
+
 /**
  * The report is a pure function of the visit's frozen snapshot and its persisted records.
  * It never reads live reference data, so completed reports are stable across reference releases.
@@ -208,6 +330,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
     .filter((s): s is SourceArtifact => Boolean(s))
     .sort((a, b) => compareCodePoints(a.id, b.id));
 
+  const { observations, summary, pieceOutcomes } = buildObservationSection(visit, order);
   const seatCount = context.layoutRevision.locations.filter((l) => l.kind === "SEAT").length;
   return {
     schema: REPORT_SCHEMA,
@@ -262,5 +385,9 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
       totalLines: totals.length,
       unresolvedComponents: gaps.reduce((n, g) => n + g.locationIds.length, 0),
     },
+    summary,
+    timeline: buildTimeline(visit),
+    observations,
+    pieceOutcomes,
   };
 }
