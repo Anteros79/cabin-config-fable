@@ -12,7 +12,7 @@ const isoDate = z.string().refine(isIsoDate, "Not a real calendar date written a
 const quantity = z.number().int().min(1).max(MAX_QTY);
 const count = z.number().int().min(0);
 const tail = z.string().refine((t) => t === normalizeTail(t) && TAIL_PATTERN.test(t), "Tails are upper case, trimmed, 2-10 letters, digits or hyphens.");
-const locationKind = z.enum(["SEAT", "FLOOR", "BIN"]);
+const locationKind = z.enum(["SEAT", "FLOOR", "BIN", "ARMREST"]);
 const side = z.enum(["L", "R"]);
 const unique = (items: string[]) => new Set(items).size === items.length;
 const raw = z.record(z.string(), z.unknown());
@@ -111,8 +111,12 @@ export const BinAttributesSchema = z
     module: z.number().int(),
     rowFrom: z.number().int(),
     rowTo: z.number().int(),
+    binType: z.enum(["CLASSIC", "PIVOT", "LARGE_PIVOT"]),
+    capacityBags: z.number().int().min(1),
   })
   .strict();
+
+export const ArmrestAttributesSchema = z.object({ row: z.number().int(), side, between: z.tuple([z.string().nullable(), z.string().nullable()]) }).strict();
 
 export const PlacementSchema = z.object({ x: z.number(), y: z.number(), z: z.number(), lx: z.number(), lz: z.number(), ly: z.number() }).strict();
 
@@ -125,6 +129,7 @@ export const CabinLocationSchema = z
     seat: SeatAttributesSchema.optional(),
     floor: FloorAttributesSchema.optional(),
     bin: BinAttributesSchema.optional(),
+    armrest: ArmrestAttributesSchema.optional(),
     placement: PlacementSchema,
   })
   .strict();
@@ -297,6 +302,36 @@ export const VocabularySchema = z
   .object({ carpets: z.array(z.string()), seams: z.array(z.string()), upholsteries: z.array(z.string()), units: z.array(z.string()) })
   .strict();
 
+const melClass = z.discriminatedUnion("class", [
+  z.object({ class: z.literal("COSMETIC") }).strict(),
+  z
+    .object({
+      class: z.literal("MEL"),
+      item: z.string(),
+      category: z.enum(["A", "B", "C", "D"]),
+      intervalDays: z.number().int().min(0),
+      conditions: z.string(),
+      blocksSeat: z.literal(true).optional(),
+    })
+    .strict(),
+  z.object({ class: z.literal("NO_GO"), reason: z.string() }).strict(),
+]);
+
+export const MelEntrySchema = z
+  .object({
+    id: z.string(),
+    componentId: z.string(),
+    condition: z.enum(["STAINED", "TORN", "WORN", "BROKEN", "MISSING", "WONT_LATCH", "OTHER"]),
+    result: melClass,
+    whenSeatBlocked: melClass.optional(),
+    constraint: z
+      .object({ variant: z.array(z.string()).optional() })
+      .strict()
+      .optional(),
+    sourceId: z.string(),
+  })
+  .strict();
+
 export const ReleaseContentSchema = z
   .object({
     schema: z.literal("cabin-kit.reference/1"),
@@ -317,6 +352,7 @@ export const ReleaseContentSchema = z
     pendingChanges: z.array(PendingChangeSchema),
     layoutCategories: z.array(LayoutCategorySchema),
     visualProfiles: z.array(VisualProfileSchema),
+    mel: z.array(MelEntrySchema),
   })
   .strict();
 

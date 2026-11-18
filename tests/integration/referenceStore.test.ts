@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { contentHash, legacyContentHash } from "../../src/domain/hash.ts";
 import { lookup } from "../../src/domain/resolve.ts";
-import type { ReferenceRelease } from "../../src/domain/types.ts";
+import type { MelEntry, ReferenceRelease } from "../../src/domain/types.ts";
 import { buildStagedRelease } from "../../src/importer/assemble.ts";
 import { importReference } from "../../src/importer/cli.ts";
 import { canonicalPath, isSameFile, resolveServerConfig, resolveStoreConfig } from "../../src/server/config.ts";
@@ -103,6 +103,42 @@ describe("staged import and atomic activation", () => {
     expect(store.activeReleaseId()).toBe(staged.id);
     store.activate(staged.id); // idempotent
     expect(store.listReleases().filter((r) => r.status === "active")).toHaveLength(1);
+  });
+
+  it("stage/activate/read keeps mel", () => {
+    const stores = makeStores();
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
+    const next = buildStagedRelease({ includeCandidate: false, label: "with mel" });
+    const mel: MelEntry[] = [
+      {
+        id: "MEL-1",
+        componentId: "TRAY",
+        condition: "BROKEN",
+        result: { class: "MEL", item: "00-00-01", category: "C", intervalDays: 10, conditions: "Fictional." },
+        sourceId: "SRC-1",
+      },
+      { id: "MEL-2", componentId: "TRAY", condition: "STAINED", result: { class: "COSMETIC" }, sourceId: "SRC-1" },
+    ];
+    const withMel = { ...next.content, mel };
+    const staged = store.stage(withMel, next.findings, {});
+    store.activate(staged.id);
+    const read = store.loadRelease(staged.id);
+    expect(read.mel).toEqual(mel);
+    expect(read.contentHash).toBe(contentHash(withMel));
+    const changed = { ...withMel, mel: [{ ...mel[0]!, result: { class: "NO_GO", reason: "Fictional." } } as MelEntry, mel[1]!] };
+    expect(contentHash(changed)).not.toBe(contentHash(withMel));
+  });
+
+  it("an old stored release written without mel still loads and verifies", () => {
+    const stores = makeStores();
+    const store = track(ReferenceStore.open(stores.referencePath, stores.visitsPath));
+    const next = buildStagedRelease({ includeCandidate: false, label: "old shape" });
+    const { mel: _mel, ...oldShape } = next.content;
+    expect(contentHash(oldShape as never)).toBe(contentHash(next.content));
+    const staged = store.stage(next.content, next.findings, {});
+    const loaded = store.loadRelease(staged.id);
+    expect(loaded.mel).toEqual([]);
+    expect(loaded.contentHash).toBe(contentHash(oldShape as never));
   });
 
   it("a failed stage rolls back completely", () => {

@@ -13,7 +13,7 @@ export function sha256Hex(text: string): string {
  */
 export function contentHash(content: ReleaseContent): string {
   const { label: _label, ...hashed } = content;
-  return sha256Hex(canonicalJson(hashed));
+  return sha256Hex(canonicalJson(withoutEmptyMel(hashed)));
 }
 
 /**
@@ -22,5 +22,12 @@ export function contentHash(content: ReleaseContent): string {
  * used to record a new one.
  */
 export function legacyContentHash(content: ReleaseContent): string {
-  return sha256Hex(canonicalJson(content));
+  return sha256Hex(canonicalJson(withoutEmptyMel(content)));
+}
+
+/** An empty `mel` is left out, so releases stored before the key existed keep verifying against their recorded hash. */
+function withoutEmptyMel<T extends { mel?: unknown[] }>(content: T): Omit<T, "mel"> | T {
+  if (content.mel?.length !== 0) return content;
+  const { mel: _mel, ...rest } = content;
+  return rest;
 }

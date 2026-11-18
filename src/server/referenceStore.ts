@@ -38,6 +38,7 @@ const ENTITY_TYPES = [
   "pendingChange",
   "layoutCategory",
   "visualProfile",
+  "mel",
 ] as const;
 type EntityType = (typeof ENTITY_TYPES)[number];
 
@@ -234,6 +235,9 @@ function entityRows(content: ReleaseContent): { type: EntityType; id: string; na
   });
   content.visualProfiles.forEach((x) => {
     push("visualProfile", x.id, "shared", x);
+  });
+  content.mel.forEach((x) => {
+    push("mel", x.id, "shared", x);
   });
   return rows;
 }
@@ -520,6 +524,7 @@ export class ReferenceStore {
       pendingChanges: by("pendingChange"),
       layoutCategories: by("layoutCategory"),
       visualProfiles: by("visualProfile"),
+      mel: by("mel"),
     };
     return { id: head.id, storedHash: head.content_hash, activatedAt: head.activated_at, content };
   }

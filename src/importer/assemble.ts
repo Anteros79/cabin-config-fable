@@ -109,6 +109,7 @@ export function buildStagedRelease(options: BuildOptions = {}): StagedBuild {
     pendingChanges: fixture.pendingChanges,
     layoutCategories: candidate.layoutCategories,
     visualProfiles: VISUAL_PROFILES,
+    mel: fixture.mel,
   };
   const findings = [...fixtureProblems, ...candidate.findings, ...validateRelease(content)];
   return { content, findings, stats: candidate.stats };

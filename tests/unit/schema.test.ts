@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { MAX_QTY } from "../../src/domain/limits.ts";
-import { structuralFindings } from "../../src/domain/schema.ts";
-import type { ReleaseContent } from "../../src/domain/types.ts";
+import { ReleaseContentSchema, structuralFindings } from "../../src/domain/schema.ts";
+import { binTypeOf, type CabinLocation, type MelEntry, type ReleaseContent } from "../../src/domain/types.ts";
 import { hasBlockingFindings, validateRelease } from "../../src/domain/validate.ts";
 import { at, fixtureContent, stagedFull } from "../helpers.ts";
 
@@ -89,5 +89,41 @@ describe("structural schema in front of validateRelease", () => {
     expect(f).toHaveLength(51);
     expect(f.every((x) => x.code === "SCHEMA_INVALID" && x.severity === "error")).toBe(true);
     expect(at(f, 50).message).toMatch(/10 more/);
+  });
+});
+
+describe("mel entries, armrests and bin types", () => {
+  const entry: MelEntry = {
+    id: "MEL-1",
+    componentId: "ARMREST_CAP",
+    condition: "BROKEN",
+    result: { class: "MEL", item: "00-00-01", category: "C", intervalDays: 10, conditions: "Fictional condition text." },
+    whenSeatBlocked: { class: "NO_GO", reason: "Fictional reason." },
+    constraint: { variant: ["V01"] },
+    sourceId: "SRC-1",
+  };
+  const armrest: CabinLocation = {
+    id: "ARMREST:3-AB",
+    kind: "ARMREST",
+    label: "Armrest row 3 between A and B",
+    componentIds: ["ARMREST_CAP"],
+    armrest: { row: 3, side: "L", between: ["3A", "3B"] },
+    placement: { x: 1, y: 0.6, z: 0.2, lx: 0.4, lz: 0.05, ly: 0.05 },
+  };
+
+  test("a release with mel entries and an ARMREST location round-trips", () => {
+    const x = fixtureContent((c) => {
+      c.mel = [entry, { id: "MEL-2", componentId: "TRAY", condition: "STAINED", result: { class: "COSMETIC" }, sourceId: "SRC-1" }];
+      at(c.layoutRevisions, 0).locations.push(armrest);
+    });
+    expect(ReleaseContentSchema.parse(x)).toEqual(x);
+    const bad = structuredClone(x);
+    loose(at(bad.mel, 0)).condition = "DIRTY";
+    expect(ReleaseContentSchema.safeParse(bad).success).toBe(false);
+  });
+
+  test("binTypeOf defaults an old-shape bin", () => {
+    expect(binTypeOf({ side: "L", module: 1, rowFrom: 1, rowTo: 3 } as never)).toEqual({ binType: "PIVOT", capacityBags: 4 });
+    expect(binTypeOf({ side: "L", module: 1, rowFrom: 1, rowTo: 3, binType: "CLASSIC", capacityBags: 6 })).toEqual({ binType: "CLASSIC", capacityBags: 6 });
   });
 });

@@ -12,6 +12,7 @@ import type {
   Layout,
   LayoutRevision,
   MaintenanceVariant,
+  MelEntry,
   Part,
   PendingChange,
   RowLabel,
@@ -39,6 +40,7 @@ export function emptyFixtureContent(): FixtureContent {
     substitutes: [],
     kitChildren: [],
     pendingChanges: [],
+    mel: [],
   };
 }
 
@@ -57,6 +59,7 @@ export interface FixtureContent {
   substitutes: SubstituteApproval[];
   kitChildren: KitChild[];
   pendingChanges: PendingChange[];
+  mel: MelEntry[];
 }
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
@@ -153,7 +156,7 @@ function buildRevision(specId: string, spec: SeatSpec, subtypeId: string, source
         kind: "BIN",
         label: `Overhead bin ${tag} (rows ${from}-${to})`,
         componentIds: ["BIN_DOOR"],
-        bin: { side, module: m, rowFrom: from, rowTo: to },
+        bin: { side, module: m, rowFrom: from, rowTo: to, binType: "PIVOT", capacityBags: 4 },
         placement: binPlacement(side, from, to),
       });
     }
@@ -524,5 +527,6 @@ export function buildFixtureContent(data: FixtureData): FixtureContent {
     substitutes,
     kitChildren,
     pendingChanges,
+    mel: [],
   };
 }

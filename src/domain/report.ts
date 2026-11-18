@@ -15,7 +15,7 @@ import type {
 import { AUTHORITY_NOTICE, DATE_RULE, REPLACEMENT_COUNT_SEMANTICS, REPORT_SCHEMA } from "./types.ts";
 import { DomainError } from "./visitLogic.ts";
 
-const KIND_ORDER: Readonly<Record<string, number>> = { SEAT: 0, FLOOR: 1, BIN: 2 };
+const KIND_ORDER: Readonly<Record<string, number>> = { SEAT: 0, ARMREST: 1, FLOOR: 2, BIN: 3 };
 
 function inconsistent(message: string): DomainError {
   return new DomainError("SNAPSHOT_INCONSISTENT", `The visit snapshot is inconsistent: ${message}`, 500);

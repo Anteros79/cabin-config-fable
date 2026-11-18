@@ -111,9 +111,9 @@ describe("cabin shell (WEB-21)", () => {
   it("every placement of the 176-seat layout is unchanged (snapshot taken before the shell was added)", () => {
     const revision = stagedFull().content.layoutRevisions.find((r) => r.id === "FX-L-S176-MAX8@1");
     if (!revision) throw new Error("fixture has no 176-seat layout");
-    const kinds = { SEAT: 0, FLOOR: 0, BIN: 0 };
+    const kinds = { SEAT: 0, FLOOR: 0, BIN: 0, ARMREST: 0 };
     for (const l of revision.locations) kinds[l.kind] += 1;
-    expect(kinds).toEqual({ SEAT: 176, FLOOR: 4, BIN: 20 });
+    expect(kinds).toEqual({ SEAT: 176, FLOOR: 4, BIN: 20, ARMREST: 0 });
     // the placements seatPlacement, floorPlacement and binPlacement produced for this layout before Task 5.6
     const json = JSON.stringify(revision.locations.map((l) => [l.id, l.placement]));
     expect(createHash("sha256").update(json).digest("hex")).toBe("ffc6b2c564a630d787eb264dd1978fc157ab38a630fa6162c58926332d6e0268");

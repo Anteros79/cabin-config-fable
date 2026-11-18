@@ -4,7 +4,7 @@
 export type Namespace = "fixture" | "candidate" | "accepted";
 export type IsoDate = string; // YYYY-MM-DD, calendar date, compared lexically
 
-export type LocationKind = "SEAT" | "FLOOR" | "BIN";
+export type LocationKind = "SEAT" | "FLOOR" | "BIN" | "ARMREST";
 
 export interface SourceArtifact {
   id: string;
@@ -111,11 +111,30 @@ export interface FloorAttributes {
   rowTo: number | null;
 }
 
+export type BinType = "CLASSIC" | "PIVOT" | "LARGE_PIVOT";
+
 export interface BinAttributes {
   side: "L" | "R";
   module: number;
   rowFrom: number;
   rowTo: number;
+  binType: BinType;
+  capacityBags: number;
+}
+
+/**
+ * A bin's type and capacity, tolerating snapshots stored before they existed: a missing type reads as
+ * "PIVOT" and a missing capacity as 4. Readers of stored data use this; new releases always carry both.
+ */
+export function binTypeOf(bin: BinAttributes): { binType: BinType; capacityBags: number } {
+  return { binType: bin.binType ?? "PIVOT", capacityBags: bin.capacityBags ?? 4 };
+}
+
+export interface ArmrestAttributes {
+  row: number;
+  side: "L" | "R";
+  /** Seat codes either side of the armrest; null = wall or aisle. */
+  between: [string | null, string | null];
 }
 
 /** Approximate placement in the declared geometry frame (metres). */
@@ -139,6 +158,7 @@ export interface CabinLocation {
   seat?: SeatAttributes;
   floor?: FloorAttributes;
   bin?: BinAttributes;
+  armrest?: ArmrestAttributes;
   placement: Placement;
 }
 
@@ -319,6 +339,25 @@ export interface Vocabulary {
   units: string[];
 }
 
+export type Condition = "STAINED" | "TORN" | "WORN" | "BROKEN" | "MISSING" | "WONT_LATCH" | "OTHER";
+export type MelCategory = "A" | "B" | "C" | "D";
+export type MelClass =
+  | { class: "COSMETIC" }
+  | { class: "MEL"; item: string; category: MelCategory; intervalDays: number; conditions: string; blocksSeat?: true }
+  | { class: "NO_GO"; reason: string };
+
+export interface MelEntry {
+  id: string;
+  componentId: string;
+  condition: Condition;
+  result: MelClass;
+  /** Replaces `result` while the seat is blocked (life vest). */
+  whenSeatBlocked?: MelClass;
+  /** Configuration override; the most specific entry wins. */
+  constraint?: { variant?: string[] };
+  sourceId: string;
+}
+
 export interface ReleaseContent {
   schema: "cabin-kit.reference/1";
   label: string;
@@ -338,6 +377,7 @@ export interface ReleaseContent {
   pendingChanges: PendingChange[];
   layoutCategories: LayoutCategory[];
   visualProfiles: VisualProfile[];
+  mel: MelEntry[];
 }
 
 export interface ReferenceRelease extends ReleaseContent {
