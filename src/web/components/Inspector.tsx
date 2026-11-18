@@ -178,12 +178,13 @@ function ProblemForm({
   draftNow.current = JSON.stringify(input());
   // An answer that arrives after this form was cancelled must not close a form opened since in its place.
   const alive = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // set again on every setup: StrictMode runs setup, cleanup, setup on mount
+    alive.current = true;
+    return () => {
       alive.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
   const finish = (saved: boolean | undefined, draft: string | null) => {
     if (alive.current && saved === true && draft !== null && draft === draftNow.current) onDone();
   };

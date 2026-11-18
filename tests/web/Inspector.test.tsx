@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ComponentProps } from "react";
+import { type ComponentProps, StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CabinLocation, MelClass, Observation, Visit, VisitRecord, VisitState } from "../../src/domain/types.ts";
 import { Inspector } from "../../src/web/components/Inspector.tsx";
@@ -432,7 +432,7 @@ const pieceWorkspace = (over: Partial<Workspace> = {}): Workspace => ({
   variantId: snap.context.variant.id,
   ...over,
 });
-function renderPiece(over: Partial<Workspace> = {}, props: Partial<ComponentProps<typeof Inspector>> = {}) {
+function renderPiece(over: Partial<Workspace> = {}, props: Partial<ComponentProps<typeof Inspector>> = {}, options: { strict?: boolean } = {}) {
   const calls = { onObserve: vi.fn(), onUpdateObservation: vi.fn(), onCloseObservation: vi.fn() };
   const view = render(
     <Inspector
@@ -448,6 +448,8 @@ function renderPiece(over: Partial<Workspace> = {}, props: Partial<ComponentProp
       {...calls}
       {...props}
     />,
+    // main.tsx renders in StrictMode, which runs each effect's setup, cleanup and setup again on mount
+    { wrapper: options.strict ? StrictMode : undefined },
   );
   return { ...calls, ...view };
 }
@@ -752,5 +754,16 @@ describe("Inspector piece panel", () => {
       { statusOf: (t) => (t === "observation:OBS-HEADREST" ? { phase: "saved", at: "", replayed: false } : { phase: "idle" }) },
     );
     expect(within(pieceCard(/^Headrest cover/)).queryByText("Saved.")).toBeNull();
+  });
+
+  it("in StrictMode, a successful save still closes the problem form", async () => {
+    const user = userEvent.setup();
+    renderPiece({}, { onObserve: vi.fn(async () => true) }, { strict: true });
+    const card = pieceCard(/^Seat cushion cover/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Stained" }));
+    await user.click(within(card).getByRole("radio", { name: "Note only" }));
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    await waitFor(() => expect(within(card).queryByRole("group", { name: "Note a problem" })).toBeNull());
   });
 });
