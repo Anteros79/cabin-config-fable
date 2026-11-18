@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import * as THREE from "three";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Cabin3D, hoverLabelPosition, WHEEL_HINT, WHEEL_HINT_MS } from "../../src/web/components/Cabin3D.tsx";
 import { Viewer } from "../../src/web/components/Viewer.tsx";
 import { buildStates, type Workspace } from "../../src/web/model.ts";
 import type { SceneCallbacks } from "../../src/web/scene/CabinScene.ts";
+import { buildPieceMeshes, buildSeatGeometries, pickPiece, pieceTargets, type SeatPart } from "../../src/web/scene/seatParts.ts";
 import { at, fixtureRelease } from "../helpers.ts";
 import { styleFile } from "./css.ts";
 
@@ -265,5 +267,164 @@ describe("the 3D toolbar", () => {
     renderCabin(workspace);
     await ready();
     expect(screen.queryByText(/^Drag to orbit ·/)).toBeNull();
+  });
+});
+
+describe("picking the pieces of a seat", () => {
+  // The scene's own instanced meshes, built without a renderer: three raycasts them in jsdom as it does in the browser.
+  const geoms = buildSeatGeometries();
+  const pieces = buildPieceMeshes(layout, geoms, new THREE.MeshBasicMaterial());
+  const place = (id: string) => {
+    const p = layout.locations.find((l) => l.id === id)?.placement;
+    if (!p) throw new Error(`no ${id} in the layout`);
+    return new THREE.Vector3(p.x, 0, p.z);
+  };
+  /** The centre of a part's shape, placed at a location (in that location's own frame: seat or armrest). */
+  const centreOf = (part: Exclude<SeatPart, "wings">, at: string) => {
+    const geometry = geoms[part === "armPads" ? "armPad" : part];
+    geometry.computeBoundingBox();
+    return (geometry.boundingBox ?? new THREE.Box3()).getCenter(new THREE.Vector3()).add(place(at));
+  };
+  const pick = (from: THREE.Vector3, towards: THREE.Vector3, layers = { seats: true, underSeat: false }) => {
+    const ray = new THREE.Raycaster(from, towards.clone().sub(from).normalize());
+    const hit = pickPiece(ray.intersectObjects(pieceTargets(pieces, layers), false), pieces);
+    return hit && { location: hit.location.id, component: hit.component };
+  };
+
+  test("a hit on the tray behind 11A selects SEAT:12A TRAY", () => {
+    const tray = centreOf("tray", "SEAT:11A");
+    // from the gap between the rows, looking forward at the back of 11A
+    expect(pick(tray.clone().add(new THREE.Vector3(0.3, 0, 0)), tray)).toEqual({ location: "SEAT:12A", component: "TRAY" });
+    const net = centreOf("net", "SEAT:11A");
+    expect(pick(net.clone().add(new THREE.Vector3(0.3, 0, 0)), net)).toEqual({ location: "SEAT:12A", component: "SEATBACK_NET" });
+    // the back itself still belongs to 11A
+    expect(
+      pick(new THREE.Vector3(place("SEAT:11A").x + 0.7, 1.0, place("SEAT:11A").z), new THREE.Vector3(place("SEAT:11A").x, 1.0, place("SEAT:11A").z)),
+    ).toEqual({
+      location: "SEAT:11A",
+      component: "BACKREST",
+    });
+  });
+
+  test("row 1 has its tray on the bulkhead panel ahead of it, and a seat with no seat behind draws none", () => {
+    const tray = pieces.find((p) => p.part === "tray");
+    if (!tray) throw new Error("no tray mesh");
+    const owners = tray.locations.map((l) => l?.id);
+    // every seat with a seat directly aft, plus the row-1 seats on the bulkhead
+    expect(owners.filter((id) => id?.match(/^SEAT:1[A-F]$/))).toHaveLength(6);
+    expect(owners).not.toContain("SEAT:14B");
+    const ahead = centreOf("tray", "SEAT:1C").sub(new THREE.Vector3(layout.geometry.rowPitch, 0, 0));
+    expect(pick(ahead.clone().add(new THREE.Vector3(0.3, 0, 0)), ahead)).toEqual({ location: "SEAT:1C", component: "TRAY" });
+  });
+
+  test("the life vest is not pickable until Under seat is on", () => {
+    const vest = centreOf("vest", "SEAT:12A");
+    const from = vest.clone().add(new THREE.Vector3(-0.45, 0, 0));
+    expect(pick(from, vest)?.component).not.toBe("LIFE_VEST");
+    expect(pick(from, vest, { seats: true, underSeat: true })).toEqual({ location: "SEAT:12A", component: "LIFE_VEST" });
+    expect(pick(from, vest, { seats: false, underSeat: true })).toBeNull();
+  });
+
+  test("an armrest pad selects ARMREST:12-AB", () => {
+    const pad = centreOf("armPads", "ARMREST:12-AB");
+    expect(pick(pad.clone().setY(1.5), pad)).toEqual({ location: "ARMREST:12-AB", component: "ARMREST" });
+    // one pad per armrest location, not two per seat
+    expect(pieces.find((p) => p.part === "armPads")?.locations).toHaveLength(layout.locations.filter((l) => l.kind === "ARMREST").length);
+  });
+
+  test("the headrest, the cushion and the belt are their own pieces", () => {
+    const head = centreOf("headrest", "SEAT:12A");
+    expect(pick(head.clone().add(new THREE.Vector3(-0.6, 0, 0)), head)).toEqual({ location: "SEAT:12A", component: "HEADREST" });
+    const belt = centreOf("belt", "SEAT:12A");
+    expect(
+      pick(
+        belt
+          .clone()
+          .setY(1.0)
+          .add(new THREE.Vector3(-0.3, 0, 0)),
+        belt,
+      ),
+    ).toEqual({ location: "SEAT:12A", component: "SEATBELT" });
+    // the point the e2e build aims at for the cushion (screenPointOf "pan") is the cushion, not the belt
+    const pan = place("SEAT:12A").add(new THREE.Vector3(-0.1, 0.52, 0));
+    expect(pick(pan.clone().setY(3), pan)).toEqual({ location: "SEAT:12A", component: "CUSHION" });
+  });
+});
+
+test("on a layout stored before the pieces, a pick only ever selects a piece the location lists", () => {
+  // as in a visit store from 5d6679d: seats list CUSHION and BACKREST only, and there are no armrest locations
+  const old = structuredClone(layout);
+  old.locations = old.locations.filter((l) => l.kind !== "ARMREST").map((l) => (l.kind === "SEAT" ? { ...l, componentIds: ["CUSHION", "BACKREST"] } : l));
+  const geoms = buildSeatGeometries();
+  const pieces = buildPieceMeshes(old, geoms, new THREE.MeshBasicMaterial());
+  for (const piece of pieces)
+    piece.components.forEach((c, i) => {
+      if (c !== null) expect(piece.locations[i]?.componentIds, `${piece.part} ${i}`).toContain(c);
+    });
+  const at = (part: "tray" | "headrest", id: string) => {
+    const p = old.locations.find((l) => l.id === id)?.placement;
+    geoms[part].computeBoundingBox();
+    return (geoms[part].boundingBox ?? new THREE.Box3()).getCenter(new THREE.Vector3()).add(new THREE.Vector3(p?.x, 0, p?.z));
+  };
+  const pick = (from: THREE.Vector3, to: THREE.Vector3) => {
+    const hit = pickPiece(
+      new THREE.Raycaster(from, to.clone().sub(from).normalize()).intersectObjects(pieceTargets(pieces, { seats: true, underSeat: true }), false),
+      pieces,
+    );
+    return hit && { location: hit.location.id, component: hit.component };
+  };
+  // the headrest is part of the backrest, as before; the slab on the back of 11A is 11A's backrest
+  const head = at("headrest", "SEAT:12A");
+  expect(pick(head.clone().add(new THREE.Vector3(-0.6, 0, 0)), head)).toEqual({ location: "SEAT:12A", component: "BACKREST" });
+  const tray = at("tray", "SEAT:11A");
+  expect(pick(tray.clone().add(new THREE.Vector3(0.3, 0, 0)), tray)).toEqual({ location: "SEAT:11A", component: "BACKREST" });
+  // two pads per seat, as drawn before, selecting no piece; no bulkhead tray for a first row that lists no tray
+  const pads = pieces.find((p) => p.part === "armPads");
+  expect(pads?.locations).toHaveLength(2 * old.locations.filter((l) => l.kind === "SEAT").length);
+  expect(new Set(pads?.components)).toEqual(new Set([null]));
+  expect(pieces.find((p) => p.part === "tray")?.locations.filter((l) => l.seat?.physicalRow === 1 && l.componentIds.includes("TRAY"))).toEqual([]);
+});
+
+describe("the 3D view's pieces", () => {
+  test("an Under seat layer, off by default, turns the life vests on", async () => {
+    renderCabin(workspace);
+    await ready();
+    const under = within(screen.getByRole("group", { name: "Layers" })).getByRole("button", { name: "Under seat" });
+    expect(under).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(calls("setLayers").at(-1)?.args[0]).toMatchObject({ underSeat: false }));
+    fireEvent.click(under);
+    expect(calls("setLayers").at(-1)?.args[0]).toMatchObject({ underSeat: true });
+  });
+
+  test("the hover label names the piece with the location", async () => {
+    const defs = { HEADREST: { id: "HEADREST", name: "Headrest cover", locationKind: "SEAT", maxReplacementsPerLocation: 1, countNote: "" } };
+    renderCabin({ ...workspace, componentDefs: defs } as Workspace);
+    await ready();
+    act(() => callbacks().onHover({ locationId: "SEAT:12A", componentId: "HEADREST", x: 10, y: 10 }));
+    expect(document.querySelector(".hover-label")).toHaveTextContent("12A · Headrest cover");
+    act(() => callbacks().onHover({ locationId: "ARMREST:12-AB", componentId: "ARMREST", x: 10, y: 10 }));
+    expect(document.querySelector(".hover-label")).toHaveTextContent(/^Armrest between 12A and 12B$/);
+    // a piece with no plain name shows the location alone, never a raw id
+    act(() => callbacks().onHover({ locationId: "SEAT:12A", componentId: "LIFE_VEST", x: 10, y: 10 }));
+    expect(document.querySelector(".hover-label")).toHaveTextContent(/^Seat 12A$/);
+    act(() => callbacks().onHover(null));
+    expect(document.querySelector(".hover-label")).toBeNull();
+  });
+
+  test("the blocked seats reach the scene", async () => {
+    const blocked = new Set(["SEAT:3A"]);
+    render(
+      <Cabin3D
+        workspace={workspace}
+        states={buildStates(workspace).scene}
+        blocked={blocked}
+        selection={null}
+        onSelect={vi.fn()}
+        visualProfiles={[]}
+        onFailed={vi.fn()}
+      />,
+    );
+    await ready();
+    await waitFor(() => expect(calls("setBlocked").at(-1)?.args[0]).toBe(blocked));
   });
 });

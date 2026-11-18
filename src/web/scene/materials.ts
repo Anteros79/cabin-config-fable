@@ -79,16 +79,16 @@ export function upholsteryVariant(base: THREE.MeshPhysicalMaterial, variant: { c
   return material;
 }
 
-/** The per-instance attribute that carries a headrest's status tint: linear RGB, and the tint's opacity in w (0: none). */
+/** The per-instance attribute that carries a seat piece's status tint: linear RGB, and the tint's opacity in w (0: none). */
 export const STATUS_TINT_ATTRIBUTE = "statusTint";
-/** How strongly a status tints the headrest, as the translucent overlay it replaces did (WEB-21). */
+/** How strongly a status tints a seat piece, as the translucent headrest overlay it replaces did (WEB-21). */
 export const HEADREST_TINT_OPACITY = 0.6;
 
 /**
- * The headrest's status tint, drawn by the headrest's own material instead of a second, translucent copy of its geometry
+ * A seat piece's status tint, drawn by the piece's own material instead of a second, translucent copy of its geometry
  * (WEB-20: that copy cost 900 triangles per tinted seat, 158 400 on a visit where every seat has a status). The final
  * colour is mixed toward the status colour after tone mapping and the output colour space, which is the same sum the
- * overlay's blending made: an unlit, not tone-mapped colour over the lit headrest at the overlay's opacity. The mesh's
+ * overlay's blending made: an unlit, not tone-mapped colour over the lit piece at the overlay's opacity. The mesh's
  * geometry must carry STATUS_TINT_ATTRIBUTE as an instanced vec4.
  */
 export function withStatusTint<T extends THREE.Material>(material: T): T {
@@ -108,7 +108,7 @@ export function withStatusTint<T extends THREE.Material>(material: T): T {
 }
 
 /**
- * Status colours in 3D: the headrest tint, the floor and bin tints and the badge discs. They are the `--status-*` tokens
+ * Status colours in 3D: the seat piece tints, the floor and bin tints and the badge discs. They are the `--status-*` tokens
  * that STATUS_ENCODING names (src/web/styles/tokens.css), which the map and the legends draw; a test holds the two equal.
  */
 export const STATUS_COLOUR = {
@@ -121,6 +121,12 @@ export const STATUS_COLOUR = {
   carried: new THREE.Color("#a78bfa"),
   noted: new THREE.Color("#94a3b8"),
 } as const;
+
+/**
+ * The disc of a blocked seat's "Blocked" badge: grey, the light value of the `--border-strong` token the legend draws it
+ * with. A fallback until the scene tokens set it (VAC-15).
+ */
+export const BLOCKED_COLOUR = new THREE.Color("#8791a8");
 
 /** The selection outline and floor frame: the `--select` token, the same in every theme; a test holds the two equal. */
 export const SELECT_COLOUR = "#b97c00";

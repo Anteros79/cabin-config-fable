@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { BIN_DRAWN_TOP } from "../../domain/geometry.ts";
+import { ARMREST_BOTTOM, ARMREST_HEIGHT, BIN_DRAWN_TOP } from "../../domain/geometry.ts";
+import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
+import { STATUS_TINT_ATTRIBUTE } from "./materials.ts";
 
 /**
  * Seat part geometries in seat-local coordinates: origin on the floor under the seat centre,
@@ -117,8 +119,17 @@ export interface SeatGeometries {
   /** pale outer face of the +Z wing; mirrored per instance for the other wing */
   wingFace: THREE.BufferGeometry;
   arms: THREE.BufferGeometry;
-  armPads: THREE.BufferGeometry;
+  /** one armrest's pad, in armrest coordinates (origin on the floor under the armrest's centre); one per ARMREST location */
+  armPad: THREE.BufferGeometry;
   legs: THREE.BufferGeometry;
+  /** the lap belt and its buckle on the pan, aft of where the cushion is aimed at */
+  belt: THREE.BufferGeometry;
+  /** the stowed tray table on the rear of the back: the seat behind's tray */
+  tray: THREE.BufferGeometry;
+  /** the literature net low on the rear of the back: the seat behind's net */
+  net: THREE.BufferGeometry;
+  /** the life-vest pouch under the pan */
+  vest: THREE.BufferGeometry;
   /** a slightly oversized pan for the tier tint */
   panOverlay: THREE.BufferGeometry;
   /** flat quad lying on the carpet under the seat, for the contact shading (WEB-21) */
@@ -151,16 +162,18 @@ export function buildSeatGeometries(): SeatGeometries {
   const backFront = surface(-half - 0.004, true, 8, 10, 0.0, 0.985);
   const rearShell = surface(half + 0.004, false, 8, 10, 0.0, 0.985);
 
-  // Rear relief in pale shell material: literature ledge, device-holder ledge and the stowed tray slab.
-  const relief: THREE.BufferGeometry[] = [];
+  // Rear relief in pale shell material: literature ledge and device-holder ledge. The stowed tray and the net are pieces
+  // of the seat behind, so each is a mesh of its own.
   const ledge = (v: number, wFrac: number, depth: number, height: number) => {
     const p = backPoint(0, v, half + depth / 2 + 0.004);
-    relief.push(box(depth, height, backWidth(v) * wFrac, p.x, p.y, 0, 0, 0.004, -SEAT.backLean));
+    return box(depth, height, backWidth(v) * wFrac, p.x, p.y, 0, 0, 0.004, -SEAT.backLean);
   };
-  ledge(0.875, 0.78, 0.022, 0.016); // literature slot lip
-  ledge(0.665, 0.66, 0.03, 0.014); // device-holder ledge
-  ledge(0.4625, 0.84, 0.014, 0.17); // stowed tray table
-  const rearRelief = merged(relief);
+  const rearRelief = merged([
+    ledge(0.875, 0.78, 0.022, 0.016), // literature slot lip
+    ledge(0.665, 0.66, 0.03, 0.014), // device-holder ledge
+  ]);
+  const tray = ledge(0.4625, 0.84, 0.014, 0.17);
+  const net = ledge(0.17, 0.7, 0.012, 0.13);
 
   // Headrest: broad centre pad with two projecting wings.
   // The headrest is mounted on the front of the upper back, as in the photographs: the back runs
@@ -176,13 +189,21 @@ export function buildSeatGeometries(): SeatGeometries {
 
   // Arms: pale sculpted arm with a dark pad, on both sides of the seat.
   const armParts: THREE.BufferGeometry[] = [];
-  const padParts: THREE.BufferGeometry[] = [];
   for (const sign of [1, -1]) {
     const z = sign * (SEAT.width / 2 + 0.012);
     armParts.push(box(0.38, 0.055, 0.042, -0.045, 0.655, z, 1, 0.02));
     armParts.push(box(0.07, 0.2, 0.036, 0.17, 0.56, z, 1, 0.014, -0.2));
-    padParts.push(box(0.3, 0.016, 0.036, -0.03, 0.688, z, 1, 0.006));
   }
+  // The pad sits on the arm structures either side of the armrest's centre line, its top on the top of the armrest's
+  // placement box (ARMREST_BOTTOM + ARMREST_HEIGHT), so the drawn pad and the declared armrest agree.
+  const padTop = ARMREST_BOTTOM + ARMREST_HEIGHT;
+  const armPad = box(0.3, 0.016, 0.036, -0.03, padTop - 0.008, 0, 1, 0.006);
+
+  // Lap belt across the aft part of the pan, buckled in the middle; the pan follows a 0.06 rad tilt.
+  const beltY = SEAT.panY + 0.066;
+  const belt = merged([box(0.036, 0.008, 0.36, 0.075, beltY, 0, 0, 0, 0.06), box(0.05, 0.016, 0.07, 0.075, beltY + 0.004, 0, 0, 0, 0.06)]);
+  // Life-vest pouch under the pan, between the legs.
+  const vest = box(0.22, 0.05, 0.24, -0.08, 0.33, 0, 0);
 
   // Legs: silver braces and feet.
   const legParts: THREE.BufferGeometry[] = [];
@@ -212,11 +233,237 @@ export function buildSeatGeometries(): SeatGeometries {
     headrest,
     wingFace,
     arms: merged(armParts),
-    armPads: merged(padParts),
+    armPad,
     legs: merged(legParts),
+    belt,
+    tray,
+    net,
+    vest,
     panOverlay,
     contact,
   };
+}
+
+/**
+ * The thin panel ahead of a seat with no seat in front (row 1, or a bulkhead row), in the frame of the seat that would be
+ * there: it lies where that seat's back would, so the tray and net of the seat behind it sit on it as on any back.
+ */
+export function buildBulkheadPanel(): THREE.BufferGeometry {
+  // only as tall as the tray and net need, so it hides little of the first row behind it
+  const p = backPoint(0, 0.33, SEAT.backThickness / 2 - 0.008);
+  return box(0.024, 0.44, SEAT.width, p.x, p.y, 0, 0, 0, -SEAT.backLean);
+}
+
+// ---- pieces -------------------------------------------------------------------------------------
+
+/** Seat parts drawn as one instanced mesh each. */
+export type SeatPart =
+  | "legs"
+  | "pan"
+  | "backCore"
+  | "backFront"
+  | "rearShell"
+  | "rearRelief"
+  | "headrest"
+  | "arms"
+  | "armPads"
+  | "wings"
+  | "belt"
+  | "tray"
+  | "net"
+  | "vest";
+
+/**
+ * What a hit on each part selects: the piece (a component id, or null for the seat as a whole) and whose it is. A part
+ * owned by "behind" is drawn on a seat's back but belongs to the seat directly aft of it: the tray and the net.
+ */
+export const PIECE_TAGS: Readonly<Record<SeatPart, { component: string | null; owner: "self" | "behind" }>> = {
+  legs: { component: null, owner: "self" },
+  arms: { component: null, owner: "self" },
+  pan: { component: "CUSHION", owner: "self" },
+  backCore: { component: "BACKREST", owner: "self" },
+  backFront: { component: "BACKREST", owner: "self" },
+  rearShell: { component: "BACKREST", owner: "self" },
+  rearRelief: { component: "BACKREST", owner: "self" },
+  wings: { component: "BACKREST", owner: "self" },
+  headrest: { component: "HEADREST", owner: "self" },
+  belt: { component: "SEATBELT", owner: "self" },
+  tray: { component: "TRAY", owner: "behind" },
+  net: { component: "SEATBACK_NET", owner: "behind" },
+  vest: { component: "LIFE_VEST", owner: "self" },
+  armPads: { component: "ARMREST", owner: "self" },
+};
+
+/**
+ * A part whose piece a location does not list (a layout stored before the pieces existed lists only CUSHION and
+ * BACKREST) selects this piece instead, if listed: as the scene did before. Otherwise it selects the location as a whole.
+ */
+const FALLBACK: Partial<Record<SeatPart, string>> = { headrest: "BACKREST", belt: "CUSHION" };
+
+/** The piece a part selects at a location: its own if the location lists it, else its fallback if listed, else none. */
+function pieceAt(location: CabinLocation, part: SeatPart): string | null {
+  const own = PIECE_TAGS[part].component;
+  if (own !== null && location.componentIds.includes(own)) return own;
+  const fallback = FALLBACK[part];
+  return fallback !== undefined && location.componentIds.includes(fallback) ? fallback : null;
+}
+
+/** One instanced mesh of a seat part: what each of its instances belongs to, and the matrix of each. */
+export interface PieceMesh {
+  part: SeatPart;
+  mesh: THREE.InstancedMesh;
+  /** the piece the part is (PIECE_TAGS) */
+  component: string | null;
+  owner: "self" | "behind";
+  /** the location instance i belongs to, with the owner applied (the seat behind for a tray or a net) */
+  locations: CabinLocation[];
+  /** the piece a pick on instance i selects: always one its location lists, or null for the location as a whole */
+  components: (string | null)[];
+  /** where instance i is drawn */
+  matrices: THREE.Matrix4[];
+  /** the piece's status tint, one vec4 per instance (see withStatusTint), or null for a part that is no piece */
+  tint: THREE.InstancedBufferAttribute | null;
+}
+
+/** The geometry each part draws. */
+function partGeometry(geoms: SeatGeometries, part: SeatPart): THREE.BufferGeometry {
+  if (part === "armPads") return geoms.armPad;
+  if (part === "wings") return geoms.wingFace;
+  return geoms[part];
+}
+
+const translation = (l: CabinLocation) => new THREE.Matrix4().makeTranslation(l.placement.x, 0, l.placement.z);
+
+/**
+ * Which seats draw a tray and a net on their back for the seat behind, and which seats have theirs on a bulkhead panel.
+ * The seat behind is the same letter in the next physical row. A seat with no seat directly ahead has its tray and net on
+ * a panel ahead of it, one row pitch forward, if it is in the first row or marked as a bulkhead seat; otherwise (behind
+ * an omitted seat) none is drawn.
+ */
+export function trayCarriers(seats: CabinLocation[]): { carriers: { on: CabinLocation; owner: CabinLocation }[]; bulkhead: CabinLocation[] } {
+  const byPosition = new Map(seats.map((s) => [`${s.seat?.physicalRow}|${s.seat?.letter}`, s]));
+  const firstRow = Math.min(...seats.map((s) => s.seat?.physicalRow ?? Number.POSITIVE_INFINITY));
+  const at = (s: CabinLocation, rows: number) => (s.seat ? byPosition.get(`${s.seat.physicalRow + rows}|${s.seat.letter}`) : undefined);
+  const carriers: { on: CabinLocation; owner: CabinLocation }[] = [];
+  for (const on of seats) {
+    const owner = at(on, 1);
+    if (owner) carriers.push({ on, owner });
+  }
+  const bulkhead = seats.filter((s) => !at(s, -1) && (s.seat?.physicalRow === firstRow || s.seat?.bulkhead === true));
+  return { carriers, bulkhead };
+}
+
+/**
+ * Every seat part of a layout as one instanced mesh, with what each instance belongs to (WEB-20: one draw call per part,
+ * however many seats). Parts that are pieces carry a per-instance status tint on their own copy of the geometry. The
+ * meshes start with `material`; the scene gives each part its own. Returns nothing for a layout with no seats. The caller
+ * owns the meshes and the copied geometries (`geometries`).
+ */
+export function buildPieceMeshes(
+  layout: LayoutRevision,
+  geoms: SeatGeometries,
+  material: THREE.Material,
+): PieceMesh[] & { geometries: THREE.BufferGeometry[] } {
+  const out = Object.assign([] as PieceMesh[], { geometries: [] as THREE.BufferGeometry[] });
+  const seats = layout.locations.filter((l) => l.kind === "SEAT");
+  if (seats.length === 0) return out;
+  const armrests = layout.locations.filter((l) => l.kind === "ARMREST");
+  type Instance = { location: CabinLocation; matrix: THREE.Matrix4; component?: string | null };
+  const atSeats: Instance[] = seats.map((s) => ({ location: s, matrix: translation(s) }));
+  const { carriers, bulkhead } = trayCarriers(seats);
+  const pitch = new THREE.Matrix4().makeTranslation(-layout.geometry.rowPitch, 0, 0);
+  // The tray and net: on the back of the seat ahead, or on the bulkhead panel one row pitch ahead. A seat behind that
+  // does not list the piece leaves it to the back it is drawn on, as part of that seat's backrest.
+  const behind = (part: "tray" | "net"): Instance[] => {
+    const component = PIECE_TAGS[part].component ?? "";
+    return [
+      ...carriers.map((c) =>
+        c.owner.componentIds.includes(component)
+          ? { location: c.owner, matrix: translation(c.on), component }
+          : { location: c.on, matrix: translation(c.on), component: c.on.componentIds.includes("BACKREST") ? "BACKREST" : null },
+      ),
+      ...bulkhead.filter((s) => s.componentIds.includes(component)).map((s) => ({ location: s, matrix: pitch.clone().multiply(translation(s)), component })),
+    ];
+  };
+  // One pad per armrest location; a layout without armrest locations (stored before they existed) keeps two
+  // unpickable pads per seat, as it was drawn then.
+  const padSide = (sign: number) => new THREE.Matrix4().makeTranslation(0, 0, sign * (SEAT.width / 2 + 0.012));
+  const pads: Instance[] =
+    armrests.length > 0
+      ? armrests.map((a) => ({ location: a, matrix: translation(a) }))
+      : [1, -1].flatMap((sign) => atSeats.map((s) => ({ location: s.location, matrix: s.matrix.clone().multiply(padSide(sign)), component: null })));
+  // The pale wing faces: the aisle-side wing of every seat (instance i), then the window-side wing (n + i), which only
+  // families with both wings pale show (the scene hides them otherwise). One draw call, not two (WEB-20).
+  const mirror = new THREE.Matrix4().makeScale(1, 1, -1);
+  const wings: Instance[] = [
+    ...atSeats.map((s) => ({ location: s.location, matrix: s.location.placement.z > 0 ? s.matrix.clone().multiply(mirror) : s.matrix })),
+    ...atSeats.map((s) => ({ location: s.location, matrix: s.location.placement.z > 0 ? s.matrix : s.matrix.clone().multiply(mirror) })),
+  ];
+  const instances: Record<SeatPart, Instance[]> = {
+    legs: atSeats,
+    pan: atSeats,
+    backCore: atSeats,
+    backFront: atSeats,
+    rearShell: atSeats,
+    rearRelief: atSeats,
+    headrest: atSeats,
+    belt: atSeats,
+    tray: behind("tray"),
+    net: behind("net"),
+    vest: atSeats,
+    arms: atSeats,
+    armPads: pads,
+    wings,
+  };
+  for (const part of Object.keys(instances) as SeatPart[]) {
+    const list = instances[part];
+    if (list.length === 0) continue;
+    const { component, owner } = PIECE_TAGS[part];
+    let geometry = partGeometry(geoms, part);
+    let tint: THREE.InstancedBufferAttribute | null = null;
+    if (component !== null) {
+      // the tint lives on this layout's copy of the shape, so the shared shape stays free of per-layout attributes
+      geometry = geometry.clone();
+      tint = new THREE.InstancedBufferAttribute(new Float32Array(list.length * 4), 4);
+      geometry.setAttribute(STATUS_TINT_ATTRIBUTE, tint);
+      out.geometries.push(geometry);
+    }
+    const mesh = new THREE.InstancedMesh(geometry, material, list.length);
+    list.forEach((entry, i) => {
+      mesh.setMatrixAt(i, entry.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+    out.push({
+      part,
+      mesh,
+      component,
+      owner,
+      locations: list.map((e) => e.location),
+      components: list.map((e) => (e.component !== undefined ? e.component : pieceAt(e.location, part))),
+      matrices: list.map((e) => e.matrix),
+      tint,
+    });
+  }
+  return out;
+}
+
+/** The meshes a pick may hit: every part while seats are shown, the life vests only while the under-seat layer is on too. */
+export function pieceTargets(pieces: readonly PieceMesh[], layers: { seats: boolean; underSeat: boolean }): THREE.Object3D[] {
+  if (!layers.seats) return [];
+  return pieces.filter((p) => p.part !== "vest" || layers.underSeat).map((p) => p.mesh);
+}
+
+/** What the nearest hit selects, if it is a seat part: the owning location and the piece. */
+export function pickPiece(
+  hits: readonly THREE.Intersection[],
+  pieces: readonly PieceMesh[],
+): { location: CabinLocation; component: string | null; piece: PieceMesh; instance: number } | null {
+  const first = hits[0];
+  const piece = first && pieces.find((p) => p.mesh === first.object);
+  if (!piece || first.instanceId === undefined) return null;
+  const location = piece.locations[first.instanceId];
+  return location ? { location, component: piece.components[first.instanceId] ?? null, piece, instance: first.instanceId } : null;
 }
 
 /** Cross-section of a closed overhead bin for one side (z > 0 = left). Extruded along X with unit length. */

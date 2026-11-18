@@ -26,7 +26,7 @@ import {
 } from "./helpers.ts";
 
 const CUSHION_7C = { locationId: "SEAT:7C", componentId: "CUSHION", selection: "PRIMARY", quantity: 1 };
-const ALL_LAYERS_NO_CONTEXT = { seats: true, floor: true, bins: true, context: false };
+const ALL_LAYERS_NO_CONTEXT = { seats: true, floor: true, bins: true, underSeat: false, context: false };
 
 /** Opens the visit on the 3D tab with the scene at rest. The first-use hint is dismissed (it has its own test). */
 async function openScene(page: Page, visitId: string): Promise<void> {
@@ -107,15 +107,16 @@ async function hoverALocation(page: Page): Promise<string | null> {
 }
 
 /**
- * Draws the 176-seat layout in every preset, with and without the context layer, with `states` layered on, the selection
- * outlined and a location hovered, and asserts the draw calls and triangles of each view against budgets.json (PF-21).
+ * Draws the 176-seat layout in every preset, with and without the context layer and with every other layer on (the
+ * life vests under the seats too), with `states` layered on, the selection outlined and a location hovered, and asserts
+ * the draw calls and triangles of each view against budgets.json (PF-21).
  * `check` asserts the status set is in place in each view.
  */
 async function expectWithinSceneBudget(page: Page, states: Record<string, Record<string, string>>, check: (where: string) => Promise<void>): Promise<void> {
   const seen: string[] = [];
   let worst = { drawCalls: 0, triangles: 0, at: "" };
   for (const context of [false, true]) {
-    await sceneCall(page, "setLayers", { ...ALL_LAYERS_NO_CONTEXT, context });
+    await sceneCall(page, "setLayers", { ...ALL_LAYERS_NO_CONTEXT, underSeat: true, context });
     for (const view of ["cutaway", "overhead", "aisle", "carpet", "bins"]) {
       await setCamera(page, view);
       await page.evaluate(() => document.querySelector("canvas")?.scrollIntoView({ block: "center" }));
@@ -179,60 +180,71 @@ test("the 176-seat layout stays within the draw-call and triangle budgets in eve
 
 test("the 176-seat layout stays within the budgets when every location carries a status, as on a completed visit (PF-21)", async ({ page, visit }) => {
   await openSceneWith7CSelected(page, visit.id);
-  // every seat, floor area, the full-cabin floor and every bin module, the three statuses in turn
-  const statuses = ["recorded", "unresolved", "alternate"];
-  const ids = await page.evaluate(() => {
-    const s = window.__cabinKit?.scene as unknown as { layout: { locations: { id: string }[] } };
-    return s.layout.locations.map((l) => l.id);
+  // every piece of every seat, armrest, floor area, the full-cabin floor and every bin module, the statuses in turn
+  const statuses = ["recorded", "unresolved", "alternate", "mustFix", "deferred", "carried", "noted"];
+  const locations = await page.evaluate(() => {
+    const s = window.__cabinKit?.scene as unknown as { layout: { locations: { id: string; componentIds: string[] }[] } };
+    return s.layout.locations.map((l) => ({ id: l.id, componentIds: l.componentIds }));
   });
-  expect(ids.length, "176 seats, 240 armrests, 4 floor locations and 22 bin modules").toBe(442);
-  const every = Object.fromEntries(ids.map((id, i) => [id, { STATUS: statuses[i % 3] ?? "recorded" }]));
+  expect(locations.length, "176 seats, 240 armrests, 4 floor locations and 22 bin modules").toBe(442);
+  let n = 0;
+  const every = Object.fromEntries(
+    locations.map((l) => [l.id, Object.fromEntries(l.componentIds.map((c) => [c, statuses[n++ % statuses.length] ?? "recorded"]))]),
+  );
   await expectWithinSceneBudget(page, every, async (where) => {
     const marks = (await scene(page)).marks as { badges: number };
-    // armrests are not drawn yet (VAC-10), so they carry no badge: 176 seats + 4 floor locations + 22 bin modules
-    expect(marks.badges, `${where}: a badge on every drawn location`).toBe(202);
+    // 176 seats + 240 armrests + 4 floor locations + 22 bin modules
+    expect(marks.badges, `${where}: a badge on every location`).toBe(442);
   });
 });
 
-test("the headrest tint attribute carries each seat's status colour at 0.6, and nothing in the other colour modes (WEB-20)", async ({ page, visit }) => {
+test("each piece's tint attribute carries that piece's status colour at 0.6, and nothing in the other colour modes (WEB-20)", async ({ page, visit }) => {
   await openScene(page, visit.id);
-  const statuses = { "SEAT:7C": "recorded", "SEAT:12A": "unresolved", "SEAT:15D": "alternate" } as const;
-  await injectStates(page, Object.fromEntries(Object.entries(statuses).map(([id, s]) => [id, { STATUS: s }])));
-  // the scene's own per-seat attribute, read through the e2e build's hook, in the order of its seats
-  const tints = () =>
-    page.evaluate(() => {
-      const s = window.__cabinKit?.scene as unknown as { seats: { location: { id: string } }[]; headrestTint: { array: Float32Array } | null };
-      if (!s.headrestTint) throw new Error("no headrest tint attribute");
-      const a = s.headrestTint.array;
-      return Object.fromEntries(s.seats.map((seat, i) => [seat.location.id, [a[i * 4], a[i * 4 + 1], a[i * 4 + 2], a[i * 4 + 3]] as number[]]));
-    });
-  const inStatusMode = await tints();
+  const statuses = { "SEAT:7C": "recorded", "SEAT:12A": "unresolved", "SEAT:15D": "mustFix" } as const;
+  await injectStates(page, Object.fromEntries(Object.entries(statuses).map(([id, s]) => [id, { HEADREST: s }])));
+  // 12A's tray is drawn on the back of 11A and tinted there; 12A's cushion carries no status
+  await injectStates(page, { "SEAT:12A": { TRAY: "deferred" } });
+  // the scene's own per-instance attribute of one seat part, read through the e2e build's hook, by owning location
+  const tints = (part: string) =>
+    page.evaluate((wanted) => {
+      const s = window.__cabinKit?.scene as unknown as { pieces: { part: string; locations: { id: string }[]; tint: { array: Float32Array } | null }[] };
+      const piece = s.pieces.find((p) => p.part === wanted);
+      if (!piece?.tint) throw new Error(`no tint attribute on ${wanted}`);
+      const a = piece.tint.array;
+      return Object.fromEntries(piece.locations.map((l, i) => [l.id, [a[i * 4], a[i * 4 + 1], a[i * 4 + 2], a[i * 4 + 3]] as number[]]));
+    }, part);
+  const expected = (status: keyof typeof STATUS_COLOUR) =>
+    [STATUS_COLOUR[status].r, STATUS_COLOUR[status].g, STATUS_COLOUR[status].b, HEADREST_TINT_OPACITY].map((v) => Number(Math.fround(v).toFixed(5)));
+  const inStatusMode = await tints("headrest");
   expect(Object.keys(inStatusMode)).toHaveLength(176);
   for (const [id, status] of Object.entries(statuses)) {
-    const [r, g, b, w] = inStatusMode[id] ?? [];
-    const colour = STATUS_COLOUR[status];
     expect(
-      [r, g, b, w].map((v) => Number(v?.toFixed(5))),
+      (inStatusMode[id] ?? []).map((v) => Number(v?.toFixed(5))),
       `${id} ${status}`,
-    ).toEqual([colour.r, colour.g, colour.b, HEADREST_TINT_OPACITY].map((v) => Number(Math.fround(v).toFixed(5))));
+    ).toEqual(expected(status));
   }
   const untinted = Object.entries(inStatusMode).filter(([id]) => !(id in statuses));
   expect(untinted.length).toBe(173);
   expect(
     untinted.filter(([, t]) => t[3] !== 0).map(([id]) => id),
-    "a seat with no status has no tint",
+    "a seat with no headrest status has no headrest tint",
   ).toEqual([]);
+  expect(
+    (await tints("tray"))["SEAT:12A"]?.map((v) => Number(v?.toFixed(5))),
+    "12A's tray, on the back of 11A",
+  ).toEqual(expected("deferred"));
+  expect((await tints("pan"))["SEAT:12A"]?.[3], "a piece with no status is not tinted").toBe(0);
   for (const mode of ["tier", "none"]) {
     await sceneCall(page, "setColourMode", mode);
     await settle(page);
-    const tinted = Object.entries(await tints())
+    const tinted = Object.entries(await tints("headrest"))
       .filter(([, t]) => t[3] !== 0)
       .map(([id]) => id);
     expect(tinted, `no headrest is tinted in the ${mode} colour mode`).toEqual([]);
   }
   await sceneCall(page, "setColourMode", "status");
   await settle(page);
-  expect((await tints())["SEAT:12A"]?.[3], "the tint comes back in the status mode").toBeCloseTo(HEADREST_TINT_OPACITY, 5);
+  expect((await tints("headrest"))["SEAT:12A"]?.[3], "the tint comes back in the status mode").toBeCloseTo(HEADREST_TINT_OPACITY, 5);
 });
 
 test("spatial picking selects the exact seat and its component", async ({ page, visit }) => {
@@ -240,7 +252,9 @@ test("spatial picking selects the exact seat and its component", async ({ page, 
   await setCamera(page, "focus", "SEAT:7C");
   await clickLocation(page, "SEAT:7C", "head");
   await expectInspector(page, "Seat 7C");
-  await expect(page.locator(".component-card[data-component=BACKREST].highlighted"), "the headrest picks the backrest").toHaveCount(1);
+  // clicking the headrest of 7C focuses HEADREST, not BACKREST
+  await expect(page.locator(".component-card[data-component=HEADREST].highlighted"), "the headrest picks the headrest cover").toHaveCount(1);
+  await expect(page.locator(".component-card[data-component=BACKREST].highlighted")).toHaveCount(0);
   expect((await scene(page)).selection).toBe("SEAT:7C");
   // neighbours resolve to their own identities
   await clickLocation(page, "SEAT:7B", "head");
@@ -250,6 +264,16 @@ test("spatial picking selects the exact seat and its component", async ({ page, 
   await clickLocation(page, "SEAT:7C", "pan");
   await expectInspector(page, "Seat 7C");
   await expect(page.locator(".component-card[data-component=CUSHION].highlighted"), "the pan picks the cushion").toHaveCount(1);
+});
+
+test("an armrest pad picks the armrest location; the Under seat layer starts off", async ({ page, visit }) => {
+  await openScene(page, visit.id);
+  await setCamera(page, "focus", "ARMREST:12-C");
+  await clickLocation(page, "ARMREST:12-C");
+  await expectInspector(page, "Armrest at the aisle, 12C");
+  expect((await scene(page)).selection).toBe("ARMREST:12-C");
+  await expect(page.getByRole("group", { name: "Layers" }).getByRole("button", { name: "Under seat" })).toHaveAttribute("aria-pressed", "false");
+  expect(((await scene(page)).layers as { underSeat: boolean }).underSeat).toBe(false);
 });
 
 test("selection, recorded and unresolved states stay in sync across 3D, map, inspector and work list", async ({ page, visit }) => {
@@ -297,6 +321,9 @@ test("selection and hover are outlined, status is a badge, and the hover label f
   await page.mouse.move(pt.x, pt.y);
   await expect(page.locator(".hover-label")).toBeVisible();
   await expect.poll(async () => ((await scene(page)).marks as { hover: string | null }).hover, { message: "hover outline under the pointer" }).toBe("SEAT:14C");
+  // the piece is named with its seat, and only that piece is outlined
+  await expect(page.locator(".hover-label")).toHaveText("14C · Headrest cover");
+  expect(((await scene(page)).marks as { hoverPart: string | null }).hoverPart).toBe("headrest");
   const label = await page.locator(".hover-label").boundingBox();
   const wrap = await page.locator(".canvas-wrap").boundingBox();
   if (!label || !wrap) throw new Error("no label or canvas box");
@@ -314,7 +341,7 @@ test("selection and hover are outlined, status is a badge, and the hover label f
 test("floor areas and bin modules are pickable in 3D", async ({ page, visit }) => {
   await openScene(page, visit.id);
   await setCamera(page, "overhead");
-  await sceneCall(page, "setLayers", { seats: false, floor: true, bins: false, context: false });
+  await sceneCall(page, "setLayers", { seats: false, floor: true, bins: false, underSeat: false, context: false });
   await clickLocation(page, "FLOOR:MID");
   await expectInspector(page, "Mid floor area");
   await sceneCall(page, "setLayers", ALL_LAYERS_NO_CONTEXT);
@@ -707,7 +734,7 @@ test("a right click and a long press never pick; the aisle strip picks the full-
   await expect(page.locator("#inspector-heading"), "selection unchanged").toHaveText("Seat 7C");
   expect((await scene(page)).selection).toBe("SEAT:7C");
   await setCamera(page, "overhead");
-  await sceneCall(page, "setLayers", { seats: false, floor: true, bins: false, context: false });
+  await sceneCall(page, "setLayers", { seats: false, floor: true, bins: false, underSeat: false, context: false });
   await settle(page);
   await clickLocation(page, "FLOOR:FULL-CABIN");
   await expectInspector(page, "Full cabin floor");

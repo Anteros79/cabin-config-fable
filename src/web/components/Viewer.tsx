@@ -102,6 +102,7 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
             key={attempt}
             workspace={workspace}
             states={scene}
+            blocked={flags.blocked}
             selection={selection}
             onSelect={onSelect}
             visualProfiles={visualProfiles}

@@ -1,6 +1,6 @@
 {
   "bundle": { "indexJsGzipKb": 108.0, "sceneJsGzipKb": 177.2, "cssGzipKb": 7.1, "sceneJsRawKb": 697 },
   "api": { "mutationResponseBytes": 8000, "lookupGzipBytes": 30000 },
-  "scene": { "triangles176": 525000, "drawCalls176": 32, "seatTriangles": 3100 },
+  "scene": { "triangles176": 546307, "drawCalls176": 39, "seatTriangles": 3175 },
   "coverage": { "domainLines": 90, "serverLines": 85, "importerLines": 85 }
 }

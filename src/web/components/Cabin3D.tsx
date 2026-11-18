@@ -1,6 +1,7 @@
+import type { CSSProperties } from "react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import type { VisualProfile } from "../../domain/types.ts";
-import { STATUS_ENCODING, type Workspace } from "../model.ts";
+import type { CabinLocation, ComponentDef, VisualProfile } from "../../domain/types.ts";
+import { BLOCKED_GLYPH_PATH, STATUS_ENCODING, type Workspace } from "../model.ts";
 import type { CabinScene, ColourMode, Layers, LightMode, LocationState, PresetView, SceneTestHooks } from "../scene/CabinScene.ts";
 import { onThemeChange, sceneThemeTokens } from "../theme.ts";
 import { KEYED_STATUSES, StatusGlyph } from "./StatusGlyph.tsx";
@@ -12,6 +13,8 @@ const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
 interface Props {
   workspace: Workspace;
   states: Map<string, LocationState>;
+  /** the seats an open deferral blocks (buildStates' flags.blocked): their badge shows "Blocked" */
+  blocked?: ReadonlySet<string>;
   selection: string | null;
   onSelect(locationId: string, componentId: string | null): void;
   visualProfiles: VisualProfile[];
@@ -25,6 +28,8 @@ declare global {
     __cabinKit?: { scene: (CabinScene & SceneTestHooks) | null };
   }
 }
+
+const LAYER_LABELS: Record<keyof Layers, string> = { seats: "Seats", floor: "Floor", bins: "Bins", underSeat: "Under seat", context: "Context (walls)" };
 
 /** The five camera presets, shown as one segmented control. Focus and Focus rear need a selected location. */
 const PRESET_BUTTONS: { view: PresetView; label: string; hint: string; needsSelection: boolean }[] = [
@@ -103,6 +108,18 @@ const HOVER_OFFSET = 14;
 /** The gap the hover label keeps from the edges of the canvas. */
 const HOVER_MARGIN = 4;
 
+/**
+ * What the hover label says: the piece with its location ("12A · Headrest cover"), or the location as a whole when there
+ * is no piece, no plain name for it, or the location's own label already names it (an armrest).
+ */
+export function hoverText(location: CabinLocation, componentId: string | null, componentDefs: Record<string, ComponentDef>): string {
+  const name = componentId === null ? undefined : componentDefs[componentId]?.name;
+  if (name === undefined || location.kind === "ARMREST") return location.label;
+  return `${location.seat?.code ?? location.label} · ${name}`;
+}
+
+const NO_BLOCKED: ReadonlySet<string> = new Set();
+
 /** Where the hover label goes: beside the pointer, inside the canvas wrap. */
 export function hoverLabelPosition(
   pointer: { x: number; y: number },
@@ -122,7 +139,7 @@ export function hoverLabelPosition(
  * The interactive 3D cutaway. The renderer is loaded on demand; any failure (module, WebGL,
  * lost context) is reported upward so the complete map-and-list fallback takes over.
  */
-export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles, onFailed, paused = false }: Props) {
+export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, onSelect, visualProfiles, onFailed, paused = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<CabinScene | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -138,9 +155,9 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   const [wheelHint, setWheelHint] = useState(false);
   const wheelHintTimer = useRef<number | undefined>(undefined);
   const [ready, setReady] = useState(false);
-  const [hover, setHover] = useState<{ label: string; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ locationId: string; componentId: string | null; x: number; y: number } | null>(null);
   const hoverRef = useRef<HTMLParagraphElement | null>(null);
-  const [layers, setLayers] = useState<Layers>({ seats: true, floor: true, bins: true, context: false });
+  const [layers, setLayers] = useState<Layers>({ seats: true, floor: true, bins: true, underSeat: false, context: false });
   const [light, setLight] = useState<LightMode>("neutral");
   const [profile, setProfile] = useState("photo-navy-band");
   const [colourMode, setColourMode] = useState<ColourMode>(workspace.mode === "explore" ? "tier" : "status");
@@ -198,6 +215,9 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
   useEffect(() => {
     if (ready) sceneRef.current?.setStates(states);
   }, [ready, states]);
+  useEffect(() => {
+    if (ready) sceneRef.current?.setBlocked(blocked);
+  }, [ready, blocked]);
   // A location selected outside the canvas (map, list, work list, go-to) while the 3D view shows is brought into view if
   // it is off to the side or behind a bin. A pick in the canvas never moves the camera.
   useEffect(() => {
@@ -290,6 +310,7 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
     }
   };
   const camera = (view: PresetView) => sceneRef.current?.setCamera(view, selection);
+  const hoverLocation = hover ? workspace.layout.locations.find((l) => l.id === hover.locationId) : undefined;
   const toggle = (key: keyof Layers) => setLayers((l) => ({ ...l, [key]: !l[key] }));
   const activeProfile = visualProfiles.find((p) => p.id === profile);
   const keysId = useId();
@@ -354,9 +375,9 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
             <span className="group-label" id={`${toolbarId}-layers`}>
               Layers
             </span>
-            {(["seats", "floor", "bins", "context"] as const).map((key) => (
+            {(["seats", "floor", "bins", "underSeat", "context"] as const).map((key) => (
               <button key={key} type="button" className="toggle" aria-pressed={layers[key]} onClick={() => toggle(key)}>
-                {key === "context" ? "Context (walls)" : key.charAt(0).toUpperCase() + key.slice(1)}
+                {LAYER_LABELS[key]}
               </button>
             ))}
           </div>
@@ -442,19 +463,34 @@ export function Cabin3D({ workspace, states, selection, onSelect, visualProfiles
           {wheelHint ? WHEEL_HINT : ""}
         </p>
         {/* The live region announces selection; this label only follows the pointer. */}
-        {hover && (
+        {hoverLocation && hover && (
           <p className="hover-label" aria-hidden="true" ref={hoverRef}>
-            {hover.label}
+            {hoverText(hoverLocation, hover.componentId, workspace.componentDefs)}
           </p>
         )}
         <ul className="legend" aria-label="Legend">
-          {/* status badges show in both colour modes; "Work status" also tints headrests, floor areas and bins */}
+          {/* status badges show in both colour modes; "Work status" also tints each seat piece, floor areas and bins */}
           {colourMode !== "none" &&
             KEYED_STATUSES.map((s) => (
               <li key={s} data-status={s}>
                 <StatusGlyph status={s} /> {STATUS_ENCODING[s].label}
               </li>
             ))}
+          {colourMode !== "none" && blocked.size > 0 && (
+            <li data-blocked="">
+              <svg
+                className="status-glyph"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+                style={{ "--status-colour": "var(--border-strong)" } as CSSProperties}
+              >
+                <circle cx="12" cy="12" r="10.6" />
+                <path d={BLOCKED_GLYPH_PATH} />
+              </svg>{" "}
+              Blocked seat
+            </li>
+          )}
           {colourMode === "tier" && (
             <>
               <li>

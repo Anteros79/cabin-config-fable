@@ -54,6 +54,9 @@ export const GLYPH_PATHS: Record<Exclude<StatusGlyph, "none">, string> = {
   note: "M7 8.5h10M7 12.5h10M7 16.5h6",
 };
 
+/** The "Blocked" mark of a seat that an open deferral blocks: a bar across the disc, in the same 24 × 24 box. */
+export const BLOCKED_GLYPH_PATH = "M7 12h10";
+
 /** The problem statuses: a badge shows their words as well as their glyph, and a button's accessible name carries them. */
 const PROBLEM_STATUSES: readonly LocationStatus[] = ["mustFix", "deferred", "carried", "noted"];
 /** The words a problem status adds to a name ("Must fix"), or "" for any other status. */

@@ -6,6 +6,7 @@ import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.
 import { boundPose, type CabinBounds, type CameraPose, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
 import { createEnvironment, ENVIRONMENT_INTENSITY, type LightMode } from "./environment.ts";
 import {
+  BLOCKED_COLOUR,
   createOverlayMaterial,
   createSeatMaterials,
   HEADREST_TINT_OPACITY,
@@ -14,7 +15,6 @@ import {
   SELECT_COLOUR,
   type SeatMaps,
   STATUS_COLOUR,
-  STATUS_TINT_ATTRIBUTE,
   setGhosted,
   TIER_COLOUR,
   upholsteryVariant,
@@ -22,7 +22,19 @@ import {
 } from "./materials.ts";
 import { createBadges, createFrame, createOutline, frameGeometry, HOVER_OUTLINE, hullGeometry, SELECTION_OUTLINE, type ViewportUniform } from "./outline.ts";
 import { PickGesture, type PointerSample, TouchAxisLock } from "./pickGesture.ts";
-import { buildBinGeometry, buildSeatGeometries, SEAT, type SeatGeometries } from "./seatParts.ts";
+import {
+  buildBinGeometry,
+  buildBulkheadPanel,
+  buildPieceMeshes,
+  buildSeatGeometries,
+  type PieceMesh,
+  pickPiece,
+  pieceTargets,
+  SEAT,
+  type SeatGeometries,
+  type SeatPart,
+  trayCarriers,
+} from "./seatParts.ts";
 import { buildShellGeometries, lightChannelMask } from "./shell.ts";
 import {
   BADGE_ATLAS_SIZE,
@@ -69,12 +81,14 @@ export interface Layers {
   seats: boolean;
   floor: boolean;
   bins: boolean;
+  /** the life vests under the seats: drawn and pickable only while on */
+  underSeat: boolean;
   context: boolean;
 }
 export interface SceneCallbacks {
   onPick(locationId: string, componentId: string | null): void;
-  /** the hovered location's label and the pointer's position in the canvas (CSS pixels), or null when nothing is hovered */
-  onHover(hover: { label: string; x: number; y: number } | null): void;
+  /** the hovered location and piece (null: the location as a whole) and the pointer's position in the canvas (CSS pixels), or null when nothing is hovered */
+  onHover(hover: { locationId: string; componentId: string | null; x: number; y: number } | null): void;
   onContextLost(): void;
   /** the wheel turned over the canvas without zooming (the view has no focus and no Ctrl or Cmd is held): the page scrolled */
   onWheelPassedThrough?(): void;
@@ -97,6 +111,8 @@ const hoverFrame = (outline: string) =>
 const GHOSTED_OUTLINE_OPACITY = 0.45;
 /** Where a seat's badge sits: above the top of the headrest, in seat coordinates. */
 const BADGE_ABOVE_HEADREST = 0.075;
+/** Where an armrest's badge sits: above its pad, in armrest coordinates. */
+const BADGE_ABOVE_ARMREST = 0.06;
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 const WHITE = new THREE.Color("#ffffff");
 const FULL_CABIN = "FLOOR:FULL-CABIN";
@@ -117,6 +133,8 @@ interface SeatEntry {
 /** One status badge: where it sits and the layer that shows it. */
 interface BadgeEntry {
   locationId: string;
+  /** a seat's badge, which shows "Blocked" while the seat is blocked */
+  seat: boolean;
   layer: "seats" | "floor" | "bins";
   matrix: THREE.Matrix4;
 }
@@ -128,13 +146,15 @@ interface Marks {
   rings: readonly { width: number; colour: string }[];
   /** the location outlined, null when the marks are hidden */
   location: CabinLocation | null;
+  /** the seat part's instance outlined, or null for the whole location */
+  piece: PiecePick | null;
 }
+
+/** One instance of a seat part: what a pick or a hover found. */
+type PiecePick = { piece: PieceMesh; instance: number };
 
 /** The palette colours a material can follow; applyProfile() sets each such material's colour from the palette. */
 type PaletteColour = "aisleBorder";
-
-/** Seat parts drawn as one instanced mesh each; applyPalette() gives each its material for the visual family. */
-type SeatPart = "legs" | "pan" | "backCore" | "backFront" | "rearShell" | "rearRelief" | "headrest" | "arms" | "armPads" | "wings";
 
 /** Light that is not the environment: a key from the window side, and a blue-tinted fill in blue cabin light only. */
 interface CabinLights {
@@ -220,7 +240,7 @@ export class CabinScene {
   private raycaster = new THREE.Raycaster();
   private geoms: SeatGeometries;
   private groups = { seats: new THREE.Group(), floor: new THREE.Group(), bins: new THREE.Group(), context: new THREE.Group(), marks: new THREE.Group() };
-  private layers: Layers = { seats: true, floor: true, bins: true, context: false };
+  private layers: Layers = { seats: true, floor: true, bins: true, underSeat: false, context: false };
   private palette: ProfilePalette = PALETTES["photo-navy-band"];
   private light: LightMode = "neutral";
   /** what the page theme gives the scene: set by setTheme() */
@@ -228,14 +248,21 @@ export class CabinScene {
   private colourMode: ColourMode = "status";
   private layout: LayoutRevision | null = null;
   private seats: SeatEntry[] = [];
-  private seatMeshes: { mesh: THREE.InstancedMesh; component: string | null }[] = [];
+  /**
+   * Every seat part as one instanced mesh (WEB-20), with what each instance belongs to: a tap selects the piece, and the
+   * tray and net on a seat's back select the seat behind (seatParts.ts). In the "Work status" colour mode each piece is
+   * tinted by its own status, drawn by its material (withStatusTint).
+   */
+  private pieces: PieceMesh[] = [];
+  /** the thin panels ahead of the first row, which carry the first row's trays and nets */
+  private bulkheadPanels: THREE.InstancedMesh | null = null;
   private panOverlay: THREE.InstancedMesh | null = null;
-  /** the headrest tint of the "Work status" colour mode, one vec4 per seat, drawn by the headrest's material (withStatusTint) */
-  private headrestTint: THREE.InstancedBufferAttribute | null = null;
   private badges: THREE.InstancedMesh | null = null;
   private badgeEntries: BadgeEntry[] = [];
   /** the welded outline shape of a seat, made once */
   private seatHull: THREE.BufferGeometry;
+  /** the outline shape of each piece, by component id, made once: hover outlines only the piece under the pointer */
+  private pieceHulls = new Map<string, THREE.BufferGeometry>();
   /** the outline shape of each side's bin module, made per layout */
   private binHulls: Partial<Record<"L" | "R", THREE.BufferGeometry>> = {};
   /** floor frames per location and mark kind, made on first use and released with the layout */
@@ -278,14 +305,10 @@ export class CabinScene {
   /** the palette the materials show; null makes the next applyProfile() apply it again */
   private appliedPalette: ProfilePalette | null = null;
   private paletteMaterials: { material: THREE.MeshStandardMaterial; colour: PaletteColour }[] = [];
-  private seatParts: Partial<Record<SeatPart, THREE.InstancedMesh>> = {};
   private floorMaterials: { material: THREE.MeshStandardMaterial; lx: number; lz: number; offsetX: number }[] = [];
-  /**
-   * The pale wing faces are one instanced mesh of two instances per seat: the aisle-side wing (instance i) and the
-   * window-side wing (instance n + i), which only families with both wings pale show. One draw call, not two (WEB-20).
-   */
-  private windowWingMatrices: THREE.Matrix4[] = [];
-  /** whether the window-side wings are shown; null until the first palette */
+  /** the seats an open deferral blocks: their badge shows "Blocked" */
+  private blocked: ReadonlySet<string> = new Set();
+  /** whether the window-side wings (instances n + i of the wing mesh) are shown; null until the first palette */
   private windowWingsShown: boolean | null = null;
   private updates: UpdateCounts = { buildLayout: 0, applyProfile: 0, applyStates: 0 };
   /** scenes alive on the page; the last one to go releases the shared texture cache */
@@ -394,6 +417,17 @@ export class CabinScene {
     const keep = <T extends Disposable>(resource: T): T => this.sceneResources.track(resource);
     const g = this.geoms;
     this.seatHull = keep(hullGeometry([g.pan, g.backCore, g.backFront, g.rearShell, g.headrest, g.arms]));
+    const pieceShapes: [string, THREE.BufferGeometry[]][] = [
+      ["CUSHION", [g.pan]],
+      ["BACKREST", [g.backCore, g.backFront, g.rearShell]],
+      ["HEADREST", [g.headrest]],
+      ["SEATBELT", [g.belt]],
+      ["TRAY", [g.tray]],
+      ["SEATBACK_NET", [g.net]],
+      ["LIFE_VEST", [g.vest]],
+      ["ARMREST", [g.armPad]],
+    ];
+    for (const [component, parts] of pieceShapes) this.pieceHulls.set(component, keep(hullGeometry(parts)));
     const marks = (hull: THREE.Mesh, rings: Marks["rings"]): Marks => {
       keep(hull.material as THREE.Material);
       if (hull instanceof THREE.InstancedMesh) keep(hull);
@@ -402,7 +436,7 @@ export class CabinScene {
       keep(frame.geometry);
       hull.visible = frame.visible = false;
       this.groups.marks.add(hull, frame);
-      return { hull, frame, rings, location: null };
+      return { hull, frame, rings, location: null, piece: null };
     };
     this.selectionMarks = marks(
       createOutline(this.seatHull, SELECT_COLOUR, SELECTION_OUTLINE.widthMetres, { minPixels: SELECTION_OUTLINE.minPixels, viewport: this.viewport }),
@@ -489,6 +523,8 @@ export class CabinScene {
           // the aisle centreline belongs to the full-cabin strip, so an area is aimed at beside it
           if (location.kind === "FLOOR") centre.set(location.placement.x, 0, location.id === FULL_CABIN ? 0 : location.placement.lz / 4);
           if (location.kind === "BIN") centre.set(location.placement.x, 1.75, (location.bin?.side === "L" ? 1 : -1) * 0.95);
+          // the top of an armrest's pad
+          if (location.kind === "ARMREST") centre.set(location.placement.x - 0.03, location.placement.y + location.placement.ly, location.placement.z);
           const v = centre.project(this.camera);
           const rect = this.canvas.getBoundingClientRect();
           return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
@@ -526,6 +562,8 @@ export class CabinScene {
           marks: {
             selection: this.selectionMarks.hull.visible || this.selectionMarks.frame.visible,
             hover: this.hovered,
+            /** the seat part outlined by the hover marks, and the piece a pick there selects */
+            hoverPart: this.hoverMarks.piece?.piece.part ?? null,
             badges: this.badges?.visible ? this.badges.count : 0,
           },
           frames: this.frameCount,
@@ -574,15 +612,14 @@ export class CabinScene {
     this.clearGroup(this.groups.bins);
     this.clearGroup(this.groups.context);
     this.layoutResources.disposeAll();
-    this.seatMeshes = [];
+    this.pieces = [];
+    this.bulkheadPanels = null;
     this.floorMeshes = [];
     this.floorTintEntries = [];
     this.binSides = [];
     this.shellParts = [];
     this.paletteMaterials = [];
     this.floorMaterials = [];
-    this.seatParts = {};
-    this.windowWingMatrices = [];
     this.windowWingsShown = null;
     this.binHulls = {};
     this.frames.clear();
@@ -591,6 +628,7 @@ export class CabinScene {
     this.badgeEntries = [];
     // the marks may show geometry of the layout released above
     this.hovered = null;
+    this.hoverMarks.piece = this.selectionMarks.piece = null;
     for (const m of [this.selectionMarks, this.hoverMarks]) m.hull.visible = m.frame.visible = false;
     const own = <T extends Disposable>(resource: T): T => this.layoutResources.track(resource);
     const length = layout.geometry.cabinLength;
@@ -611,46 +649,29 @@ export class CabinScene {
       this.paletteMaterials.push({ material, colour });
       return material;
     };
-    // Seat parts get their materials for the visual family from applyPalette(); until then they share this one.
+    // Seat parts get their materials for the visual family from applyPalette(); until then they share this one. Each part
+    // is one instanced mesh; the tray and net on a seat's back belong to the seat behind, the pads to the armrests.
+    // (The pale surround of the banded family is the upper-back band itself, drawn in the texture.)
     const unpainted = own(new THREE.MeshBasicMaterial());
-    const addSeatMesh = (
-      part: SeatPart,
-      geometry: THREE.BufferGeometry,
-      component: string | null,
-      matrices: THREE.Matrix4[] = this.seats.map((s) => s.matrix),
-    ) => {
-      if (n === 0) return null;
-      const mesh = own(new THREE.InstancedMesh(geometry, unpainted, matrices.length));
-      matrices.forEach((m, i) => {
-        mesh.setMatrixAt(i, m);
+    const pieces = buildPieceMeshes(layout, this.geoms, unpainted);
+    for (const geometry of pieces.geometries) own(geometry);
+    for (const piece of pieces) {
+      own(piece.mesh);
+      this.groups.seats.add(piece.mesh);
+    }
+    this.pieces = [...pieces];
+    // The first row's trays and nets sit on a thin panel ahead of it, placed where a seat's back would be.
+    const atBulkhead = trayCarriers(this.seats.map((seat) => seat.location)).bulkhead;
+    if (atBulkhead.length > 0) {
+      const panels = own(new THREE.InstancedMesh(own(buildBulkheadPanel()), unpainted, atBulkhead.length));
+      atBulkhead.forEach((l, i) => {
+        panels.setMatrixAt(i, new THREE.Matrix4().makeTranslation(l.placement.x - layout.geometry.rowPitch, 0, l.placement.z));
       });
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.computeBoundingSphere();
-      this.groups.seats.add(mesh);
-      this.seatMeshes.push({ mesh, component });
-      this.seatParts[part] = mesh;
-      return mesh;
-    };
-    addSeatMesh("legs", this.geoms.legs, null);
-    addSeatMesh("pan", this.geoms.pan, "CUSHION");
-    addSeatMesh("backCore", this.geoms.backCore, "BACKREST");
-    addSeatMesh("backFront", this.geoms.backFront, "BACKREST");
-    addSeatMesh("rearShell", this.geoms.rearShell, "BACKREST");
-    addSeatMesh("rearRelief", this.geoms.rearRelief, "BACKREST");
-    // The headrest draws its own status tint (withStatusTint), from a per-seat attribute on this layout's copy of its shape.
-    const headrest = own(this.geoms.headrest.clone());
-    this.headrestTint = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4);
-    headrest.setAttribute(STATUS_TINT_ATTRIBUTE, this.headrestTint);
-    addSeatMesh("headrest", headrest, "BACKREST");
-    addSeatMesh("arms", this.geoms.arms, null);
-    addSeatMesh("armPads", this.geoms.armPads, null);
-    // Pale wing faces: the aisle-side wing always, the window-side wing only in the banded family. Both are built for
-    // every family; applyPalette() shows or hides the window-side ones, so a family change does no geometry work.
-    const mirror = new THREE.Matrix4().makeScale(1, 1, -1);
-    const aisleSide = this.seats.map((s) => (s.location.placement.z > 0 ? s.matrix.clone().multiply(mirror) : s.matrix));
-    this.windowWingMatrices = this.seats.map((s) => (s.location.placement.z > 0 ? s.matrix : s.matrix.clone().multiply(mirror)));
-    addSeatMesh("wings", this.geoms.wingFace, "BACKREST", [...aisleSide, ...this.windowWingMatrices]);
-    // (the pale surround of the banded family is the upper-back band itself, drawn in the texture)
+      panels.instanceMatrix.needsUpdate = true;
+      panels.computeBoundingSphere();
+      this.groups.seats.add(panels);
+      this.bulkheadPanels = panels;
+    }
 
     // Contact shading: a soft dark patch on the carpet under every seat grounds it, without shadow maps (WEB-21). It is
     // drawn before the floor status overlays and never picked.
@@ -677,8 +698,8 @@ export class CabinScene {
       this.groups.seats.add(contact);
     }
 
-    // The tier tint covers the pan. The status tint covers the headrest only, so the upholstery stays visible (WEB-21);
-    // the headrest's material draws it (see headrestTint).
+    // The tier tint covers the pan. The status tint is drawn by each piece's own material (see pieces), at a partial
+    // opacity, so the upholstery stays visible (WEB-21).
     this.panOverlay = n ? own(new THREE.InstancedMesh(this.geoms.panOverlay, own(createOverlayMaterial(0.6)), n)) : null;
     if (this.panOverlay) {
       this.panOverlay.renderOrder = 5;
@@ -692,8 +713,20 @@ export class CabinScene {
     for (const seat of this.seats) {
       this.badgeEntries.push({
         locationId: seat.location.id,
+        seat: true,
         layer: "seats",
         matrix: seat.matrix.clone().multiply(new THREE.Matrix4().makeTranslation(badgeOnSeat)),
+      });
+    }
+    // an armrest's badge sits above its pad
+    this.geoms.armPad.computeBoundingBox();
+    const pad = this.geoms.armPad.boundingBox ?? new THREE.Box3();
+    for (const a of layout.locations.filter((l) => l.kind === "ARMREST")) {
+      this.badgeEntries.push({
+        locationId: a.id,
+        seat: false,
+        layer: "seats",
+        matrix: new THREE.Matrix4().makeTranslation(a.placement.x + (pad.min.x + pad.max.x) / 2, pad.max.y + BADGE_ABOVE_ARMREST, a.placement.z),
       });
     }
 
@@ -714,9 +747,15 @@ export class CabinScene {
     if (areas.length > 0) for (const a of areas) addFloor(a.placement.x, a.placement.lx, a.id);
     else addFloor(length / 2, length, null);
     // A floor badge sits on the aisle, the floor every view shows: an area's at its middle, the full cabin's near the front.
-    for (const a of areas) this.badgeEntries.push({ locationId: a.id, layer: "floor", matrix: new THREE.Matrix4().makeTranslation(a.placement.x, 0.07, 0) });
+    for (const a of areas)
+      this.badgeEntries.push({ locationId: a.id, seat: false, layer: "floor", matrix: new THREE.Matrix4().makeTranslation(a.placement.x, 0.07, 0) });
     if (layout.locations.some((l) => l.id === FULL_CABIN)) {
-      this.badgeEntries.push({ locationId: FULL_CABIN, layer: "floor", matrix: new THREE.Matrix4().makeTranslation(Math.min(0.8, length / 2), 0.07, 0) });
+      this.badgeEntries.push({
+        locationId: FULL_CABIN,
+        seat: false,
+        layer: "floor",
+        matrix: new THREE.Matrix4().makeTranslation(Math.min(0.8, length / 2), 0.07, 0),
+      });
     }
     // The aisle strip shows the full-cabin floor's status and is its pick target (WEB-18): the area under it is reached
     // anywhere else across the cabin width.
@@ -762,7 +801,7 @@ export class CabinScene {
       const mine = binLocations.filter((l) => l.bin?.side === side);
       // a bin's badge sits on its door, on the aisle side
       for (const l of mine)
-        this.badgeEntries.push({ locationId: l.id, layer: "bins", matrix: new THREE.Matrix4().makeTranslation(l.placement.x, 1.95, sign * 0.8) });
+        this.badgeEntries.push({ locationId: l.id, seat: false, layer: "bins", matrix: new THREE.Matrix4().makeTranslation(l.placement.x, 1.95, sign * 0.8) });
       const spans: { x: number; lx: number }[] =
         mine.length > 0
           ? mine.map((l) => ({ x: l.placement.x, lx: l.placement.lx }))
@@ -902,6 +941,9 @@ export class CabinScene {
     const set = createSeatMaterials(p, this.seatMaps("back", p));
     for (const material of Object.values(set)) mine(material);
     const plain = (colour: string) => mine(upholsteryVariant(set.upholstery, { colour }));
+    // A piece draws its own status tint, so each piece part has a material of its own: a mesh drawn with a tinted
+    // material must carry the tint attribute (seatParts.ts buildPieceMeshes), and a clone does not keep the tint.
+    const tinted = <T extends THREE.Material>(material: T): T => withStatusTint(mine(material.clone()));
     const rearShell = mine(set.shell.clone());
     rearShell.color.set("#ffffff");
     rearShell.map = getTexture(textureKey("rearShell", p.id, SEAT_TEXTURE_SIZE, { powerPanel: REAR_SHELL_POWER_PANEL }), () =>
@@ -913,17 +955,22 @@ export class CabinScene {
     wings.side = THREE.DoubleSide;
     const materials: Record<SeatPart, THREE.Material> = {
       legs: set.metal,
-      pan: mine(upholsteryVariant(set.upholstery, { maps: this.seatMaps("pan", p) })),
-      backCore: plain(p.upholsteryDark),
-      backFront: set.upholstery,
-      rearShell,
-      rearRelief: set.shell,
+      pan: withStatusTint(mine(upholsteryVariant(set.upholstery, { maps: this.seatMaps("pan", p) }))),
+      backCore: withStatusTint(plain(p.upholsteryDark)),
+      backFront: tinted(set.upholstery),
+      rearShell: withStatusTint(rearShell),
+      rearRelief: tinted(set.shell),
       headrest: withStatusTint(plain(p.headrest)),
       arms,
-      armPads: set.pad,
-      wings,
+      armPads: tinted(set.pad),
+      wings: withStatusTint(wings),
+      belt: tinted(set.pad),
+      tray: tinted(set.shell),
+      net: tinted(set.pad),
+      vest: withStatusTint(plain(p.upholsteryDark)),
     };
-    for (const [part, mesh] of Object.entries(this.seatParts)) mesh.material = materials[part as SeatPart];
+    for (const piece of this.pieces) piece.mesh.material = materials[piece.part];
+    if (this.bulkheadPanels) this.bulkheadPanels.material = set.shell;
     this.showWindowWings(p.paleBothWings);
     // Each floor area repeats the carpet to its own size, so it draws a copy of the cached texture.
     const carpet = getTexture(textureKey("carpet", p.id, CARPET_TEXTURE_SIZE), () => carpetTexture(p));
@@ -940,15 +987,18 @@ export class CabinScene {
 
   /** Show or hide the window-side wing faces: their instances take the window-side matrices, or none. */
   private showWindowWings(shown: boolean): void {
-    const wings = this.seatParts.wings;
+    const wings = this.piece("wings");
     if (!wings || this.windowWingsShown === shown) return;
     const n = this.seats.length;
-    this.windowWingMatrices.forEach((m, i) => {
-      wings.setMatrixAt(n + i, shown ? m : ZERO);
-    });
-    wings.instanceMatrix.needsUpdate = true;
-    wings.computeBoundingSphere();
+    for (let i = n; i < wings.matrices.length; i++) wings.mesh.setMatrixAt(i, shown ? (wings.matrices[i] ?? ZERO) : ZERO);
+    wings.mesh.instanceMatrix.needsUpdate = true;
+    wings.mesh.computeBoundingSphere();
     this.windowWingsShown = shown;
+  }
+
+  /** The instanced mesh of one seat part, if the layout has seats. */
+  private piece(part: SeatPart): PieceMesh | undefined {
+    return this.pieces.find((p) => p.part === part);
   }
 
   /** The environment for a light mode, prefiltered once and kept for the life of the scene. */
@@ -996,7 +1046,7 @@ export class CabinScene {
     this.theme = next;
     (this.hoverMarks.hull.material as THREE.MeshBasicMaterial).color.set(next.outline);
     this.hoverMarks.rings = hoverFrame(next.outline);
-    if (this.hoverMarks.location) this.placeMarks(this.hoverMarks, this.hoverMarks.location, "hover");
+    if (this.hoverMarks.location) this.placeMarks(this.hoverMarks, this.hoverMarks.location, "hover", this.hoverMarks.piece);
     this.applyLight();
     this.invalidate();
   }
@@ -1013,6 +1063,8 @@ export class CabinScene {
 
   private applyLayers(): void {
     this.groups.seats.visible = this.layers.seats;
+    const vest = this.piece("vest");
+    if (vest) vest.mesh.visible = this.layers.underSeat;
     this.groups.floor.visible = this.layers.floor;
     this.groups.bins.visible = this.layers.bins;
     this.groups.context.visible = this.layers.context;
@@ -1096,7 +1148,7 @@ export class CabinScene {
   /**
    * Show record states and the colour mode (WEB-20): instance colours, badge cells and overlay visibility only, no
    * geometry or material work. Status is a badge on every location (WEB-21); the "Work status" mode also tints the
-   * headrest, floor areas and bin doors.
+   * seat pieces (each by its own status), floor areas and bin doors.
    */
   private applyStates(): void {
     this.updates.applyStates += 1;
@@ -1117,12 +1169,16 @@ export class CabinScene {
       this.panOverlay.instanceMatrix.needsUpdate = true;
       if (this.panOverlay.instanceColor) this.panOverlay.instanceColor.needsUpdate = true;
     }
-    if (this.headrestTint) {
-      // The headrest draws its tint itself: no triangles and no draw call of its own, however many seats have a status (WEB-20).
-      const tint = this.headrestTint;
-      this.seats.forEach((s, i) => {
-        const head = status ? colourFor(this.statusOf(s.location.id)) : null;
-        if (head) tint.setXYZW(i, head.r, head.g, head.b, HEADREST_TINT_OPACITY);
+    // Each piece draws its own status tint: no triangles and no draw call of its own, however many pieces have a status
+    // (WEB-20). The tint is the piece's own status; the badge shows the location's.
+    for (const piece of this.pieces) {
+      const { tint } = piece;
+      if (!tint) continue;
+      piece.locations.forEach((l, i) => {
+        const component = piece.components[i];
+        const pieceStatus = component ? this.states.get(l.id)?.components[component] : undefined;
+        const colour = status && pieceStatus ? colourFor(pieceStatus) : null;
+        if (colour) tint.setXYZW(i, colour.r, colour.g, colour.b, HEADREST_TINT_OPACITY);
         else tint.setXYZW(i, 0, 0, 0, 0);
       });
       tint.needsUpdate = true;
@@ -1163,17 +1219,27 @@ export class CabinScene {
     // shown badges are packed first and drawn; the rest are not (see applyStates)
     let shown = 0;
     for (const b of this.badgeEntries) {
-      const s = this.colourMode === "none" || !this.layers[b.layer] ? "none" : this.statusOf(b.locationId);
-      if (s === "none") continue;
+      if (this.colourMode === "none" || !this.layers[b.layer]) continue;
+      // a blocked seat shows "Blocked" in grey, over whatever status it has
+      const blocked = b.seat && this.blocked.has(b.locationId);
+      const s = blocked ? "none" : this.statusOf(b.locationId);
+      if (!blocked && s === "none") continue;
       badges.setMatrixAt(shown, b.matrix);
-      badges.setColorAt(shown, STATUS_COLOUR[s]);
-      cells.setX(shown++, BADGE_GLYPHS.indexOf(STATUS_ENCODING[s].glyph));
+      badges.setColorAt(shown, blocked ? BLOCKED_COLOUR : STATUS_COLOUR[s as Exclude<LocationStatus, "none">]);
+      cells.setX(shown++, BADGE_GLYPHS.indexOf(blocked ? "blocked" : STATUS_ENCODING[s].glyph));
     }
     badges.count = shown;
     badges.visible = shown > 0;
     badges.instanceMatrix.needsUpdate = true;
     if (badges.instanceColor) badges.instanceColor.needsUpdate = true;
     cells.needsUpdate = true;
+  }
+
+  /** The seats an open deferral blocks (buildStates' flags.blocked): their badge shows "Blocked". */
+  setBlocked(blocked: ReadonlySet<string>): void {
+    this.blocked = blocked;
+    this.applyBadges();
+    this.invalidate();
   }
 
   setSelection(locationId: string | null): void {
@@ -1185,6 +1251,7 @@ export class CabinScene {
     const p = location.placement;
     if (location.kind === "SEAT") return { centre: new THREE.Vector3(p.x + 0.07, 0.6, p.z), size: new THREE.Vector3(0.74, 1.22, SEAT.width + 0.07) };
     if (location.kind === "FLOOR") return { centre: new THREE.Vector3(p.x, 0.03, 0), size: new THREE.Vector3(p.lx - 0.04, 0.06, p.lz - 0.04) };
+    if (location.kind === "ARMREST") return { centre: new THREE.Vector3(p.x, p.y + p.ly / 2, p.z), size: new THREE.Vector3(p.lx, p.ly, p.lz) };
     const sign = location.bin?.side === "L" ? 1 : -1;
     return { centre: new THREE.Vector3(p.x, 1.98, sign * 1.25), size: new THREE.Vector3(p.lx - 0.02, 0.68, 1.02) };
   }
@@ -1197,10 +1264,14 @@ export class CabinScene {
     this.invalidate();
   }
 
-  /** Outline a location, or hide the marks: a hull around a seat or bin module, a frame inside a floor area's edge. */
-  private placeMarks(marks: Marks, location: CabinLocation | null, kind: "selection" | "hover"): void {
+  /**
+   * Outline a location, or hide the marks: a hull around a seat, armrest pad or bin module, a frame inside a floor area's
+   * edge. With `piece` (a seat part's instance) only that piece is outlined.
+   */
+  private placeMarks(marks: Marks, location: CabinLocation | null, kind: "selection" | "hover", piece: PiecePick | null = null): void {
     marks.hull.visible = marks.frame.visible = false;
     marks.location = location;
+    marks.piece = location ? piece : null;
     if (kind === "hover") this.hovered = location?.id ?? null;
     this.ghostOutline(marks);
     if (!location) return;
@@ -1218,11 +1289,24 @@ export class CabinScene {
       marks.frame.visible = true;
       return;
     }
-    if (location.kind === "SEAT") {
+    const component = piece ? piece.piece.components[piece.instance] : null;
+    const hull = component ? this.pieceHulls.get(component) : undefined;
+    if (piece && hull) {
+      // a mirrored wing face outlines the backrest of its seat, unmirrored
+      const matrix = piece.piece.part === "wings" ? this.seats.find((s) => s.location.id === location.id)?.matrix : piece.piece.matrices[piece.instance];
+      if (!matrix) return;
+      marks.hull.geometry = hull;
+      marks.hull.matrix.copy(matrix);
+    } else if (location.kind === "SEAT") {
       const seat = this.seats.find((s) => s.location.id === location.id);
       if (!seat) return;
       marks.hull.geometry = this.seatHull;
       marks.hull.matrix.copy(seat.matrix);
+    } else if (location.kind === "ARMREST") {
+      const pad = this.pieceHulls.get("ARMREST");
+      if (!pad) return;
+      marks.hull.geometry = pad;
+      marks.hull.matrix.makeTranslation(p.x, 0, p.z);
     } else {
       const side = location.bin?.side === "L" ? "L" : "R";
       const hull = this.binHulls[side];
@@ -1502,7 +1586,9 @@ export class CabinScene {
       // "focus", and "focus-rear" of a floor area or bin: the location from the aisle side
       const bounds = this.bounds();
       if (!bounds) return;
-      const pose = poseToFrame(location.placement, location.kind, bounds);
+      // an armrest is framed as its seat is
+      const armrest = location.kind === "ARMREST";
+      const pose = poseToFrame(armrest ? { ...location.placement, y: 0 } : location.placement, armrest ? "SEAT" : location.kind, bounds);
       set(pose.position, pose.target);
     }
   }
@@ -1528,14 +1614,16 @@ export class CabinScene {
 
   // ---- picking --------------------------------------------------------------------------------
 
-  private hit(clientX: number, clientY: number): { location: CabinLocation; component: string | null } | null {
+  private hit(clientX: number, clientY: number): { location: CabinLocation; component: string | null; piece?: PiecePick } | null {
     if (!this.layout) return null;
     const rect = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
     // Only visible, unghosted, selectable objects take part: a hidden layer can never block a pick.
     const targets: THREE.Object3D[] = [];
-    if (this.layers.seats) for (const s of this.seatMeshes) targets.push(s.mesh);
+    targets.push(...pieceTargets(this.pieces, this.layers));
+    // the bulkhead panels pick nothing themselves, but hide what is behind them, as they are drawn
+    if (this.layers.seats && this.bulkheadPanels) targets.push(this.bulkheadPanels);
     if (this.layers.floor && this.pickableFloorBins) {
       for (const f of this.floorMeshes) if (f.locationId) targets.push(f.mesh);
       // raycasting ignores visibility, so the strip is a target even while it shows no status
@@ -1545,13 +1633,10 @@ export class CabinScene {
       for (const b of this.binSides) if (!b.door.userData.ghost && b.locations.length) targets.push(b.door, b.body);
     const hits = this.raycaster.intersectObjects(targets, false);
     const first = hits[0];
-    if (!first) return null;
-    const seat = this.seatMeshes.find((s) => s.mesh === first.object);
-    if (seat && first.instanceId !== undefined) {
-      // the wing mesh has two instances per seat (aisle side, then window side)
-      const entry = this.seats[first.instanceId % this.seats.length];
-      return entry ? { location: entry.location, component: seat.component } : null;
-    }
+    if (!first || first.object === this.bulkheadPanels) return null;
+    // a seat part: the piece and its owner (the seat behind for a tray or a net, the armrest for a pad)
+    const piece = pickPiece(hits, this.pieces);
+    if (piece) return { location: piece.location, component: piece.component, piece };
     if (first.object === this.fullCabinOverlay) {
       const location = this.layout.locations.find((l) => l.id === FULL_CABIN);
       return location ? { location, component: null } : null;
@@ -1623,13 +1708,17 @@ export class CabinScene {
     this.hoverPending = null;
     const hit = this.hit(e.clientX, e.clientY);
     const target = hit && hit.location.id !== this.selection ? hit.location : null;
-    if ((target?.id ?? null) !== this.hovered) {
-      this.placeMarks(this.hoverMarks, target, "hover");
+    // only the piece under the pointer is outlined, so moving from one piece of a seat to another moves the outline
+    const piece = target && hit?.piece ? hit.piece : null;
+    const shown = this.hoverMarks.piece;
+    const samePiece = piece === null ? shown === null : shown !== null && shown.piece === piece.piece && shown.instance === piece.instance;
+    if ((target?.id ?? null) !== this.hovered || !samePiece) {
+      this.placeMarks(this.hoverMarks, target, "hover", piece);
       this.needsRender = true;
     }
     this.canvas.style.cursor = hit ? "pointer" : "grab";
     const rect = this.canvas.getBoundingClientRect();
-    this.callbacks.onHover(hit ? { label: hit.location.label, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
+    this.callbacks.onHover(hit ? { locationId: hit.location.id, componentId: hit.component, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
   }
 
   private clearHover(): void {

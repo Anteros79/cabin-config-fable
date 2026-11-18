@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLYPH_PATHS, type StatusGlyph } from "../model.ts";
+import { BLOCKED_GLYPH_PATH, GLYPH_PATHS, type StatusGlyph } from "../model.ts";
 
 /**
  * Visual profiles. Each is an unassigned, illustrative reading of a coherent image family
@@ -100,9 +100,9 @@ export const SERVICE_UNIT_TEXTURE_SIZE: TextureSize = { width: 256, height: 128 
 /** the soft dark patch drawn on the carpet under each seat */
 export const CONTACT_TEXTURE_SIZE: TextureSize = { width: 128, height: 128 };
 /** The status badge atlas: one square cell per glyph, side by side, in BADGE_GLYPHS order. */
-export const BADGE_ATLAS_SIZE: TextureSize = { width: 1024, height: 128 };
-/** The atlas cells, left to right. "none" is an empty cell. */
-export const BADGE_GLYPHS: readonly StatusGlyph[] = ["tick", "question", "alternate", "alert", "pause", "forward", "note", "none"];
+export const BADGE_ATLAS_SIZE: TextureSize = { width: 1152, height: 128 };
+/** The atlas cells, left to right. "none" is an empty cell; "blocked" is the mark of a blocked seat. */
+export const BADGE_GLYPHS: readonly (StatusGlyph | "blocked")[] = ["tick", "question", "alternate", "alert", "pause", "forward", "note", "none", "blocked"];
 /** The rear shell shows the two-opening panel (appearance only; no availability claim). A factory parameter, so part of the key. */
 export const REAR_SHELL_POWER_PANEL = true;
 /** Strength of the Sobel pass that turns a seat height map into its normal map. A factory parameter, so part of the key. */
@@ -808,7 +808,7 @@ export function statusBadgeAtlas(): THREE.CanvasTexture {
     g.lineWidth = 2.6;
     g.lineCap = "round";
     g.lineJoin = "round";
-    g.stroke(new Path2D(GLYPH_PATHS[glyph]));
+    g.stroke(new Path2D(glyph === "blocked" ? BLOCKED_GLYPH_PATH : GLYPH_PATHS[glyph]));
     g.restore();
   });
   return toTexture(c);
