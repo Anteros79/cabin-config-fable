@@ -4,6 +4,7 @@ import type { Observation, ObservationInput, RecordInput, VisitRecord, VisualPro
 import { ApiError, api, type VisitEnvelope, type VisitStateEnvelope } from "../api.ts";
 import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { Inspector } from "../components/Inspector.tsx";
+import { SaveLine } from "../components/SaveLine.tsx";
 import { Skeleton } from "../components/Skeleton.tsx";
 import { loadSceneModule } from "../components/sceneModule.ts";
 import { type ToastOptions, useToast } from "../components/Toasts.tsx";
@@ -487,7 +488,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
     reloadOnConflict(target);
     return res !== undefined;
   };
-  const mustFix = workspace?.mode === "visit" ? openMustFix(workspace) : [];
+  const mustFix = useMemo(() => (workspace?.mode === "visit" ? openMustFix(workspace) : []), [workspace]);
   const needsHold = mustFix.length > 0 || serverMustFix !== null;
   const complete = async () => {
     if (!visit || (needsHold && !held)) return;
@@ -791,16 +792,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
                                   <br />
                                   <span className={overdue ? "must-fix" : "fine"}>{problemFacts(o, overdue)}</span>
                                   {/* a placed item shows its saves on its piece; one no longer at its position shows them here */}
-                                  {!locationId && saving.phase !== "idle" && (
-                                    <p role="status" className={`save-state ${saveStatusClass(saving)}`}>
-                                      {describeSaveStatus(saving)}{" "}
-                                      {canRetry(saving) && (
-                                        <button type="button" onClick={() => void retry(observationTarget(o))}>
-                                          Retry safely
-                                        </button>
-                                      )}
-                                    </p>
-                                  )}
+                                  {!locationId && saving.phase !== "idle" && <SaveLine status={saving} onRetry={() => void retry(observationTarget(o))} />}
                                 </div>
                                 <div className="row-actions">
                                   {locationId ? (

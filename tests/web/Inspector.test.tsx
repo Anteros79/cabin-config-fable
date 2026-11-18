@@ -712,4 +712,45 @@ describe("Inspector piece panel", () => {
     await act(async () => answer.resolve(true));
     expect(within(card).getByLabelText(/^Note about the problem/)).toHaveValue("more");
   });
+
+  it("a late success of a cancelled form does not close the form reopened in its place", async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    const answer = deferred<boolean>();
+    renderPiece({}, { onObserve: vi.fn(() => answer.promise), onDirtyChange });
+    const card = pieceCard(/^Seat cushion cover/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Stained" }));
+    await user.click(within(card).getByRole("radio", { name: "Note only" }));
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    await user.click(within(card).getByRole("button", { name: "Cancel" }));
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Torn" }));
+    await user.type(within(card).getByLabelText(/^Note about the problem/), "a new tear");
+    await act(async () => answer.resolve(true));
+    expect(within(card).getByRole("group", { name: "Note a problem" })).toBeInTheDocument();
+    expect(within(card).getByLabelText(/^Note about the problem/)).toHaveValue("a new tear");
+    expect(dirtyNow(onDirtyChange)).toBe(true);
+  });
+
+  it("an open problem's own save line is hidden while it is edited, and a finished save leaves no Saved line", async () => {
+    const user = userEvent.setup();
+    const o = problem("HEADREST");
+    const failed: SaveStatus = { phase: "failed", message: "The store refused it.", retryable: true };
+    const view = renderPiece({ observations: [o] }, { statusOf: (t) => (t === "observation:OBS-HEADREST" ? failed : { phase: "idle" }) });
+    const card = pieceCard(/^Headrest cover/);
+    expect(within(card).getAllByText("Not saved: The store refused it.")).toHaveLength(1);
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.click(within(card).getByRole("radio", { name: "Note only" }));
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    // only the form's own line and its one Retry safely
+    expect(within(card).getAllByText("Not saved: The store refused it.")).toHaveLength(1);
+    expect(within(card).getAllByRole("button", { name: "Retry safely" })).toHaveLength(1);
+    view.unmount();
+    renderPiece(
+      { observations: [o] },
+      { statusOf: (t) => (t === "observation:OBS-HEADREST" ? { phase: "saved", at: "", replayed: false } : { phase: "idle" }) },
+    );
+    expect(within(pieceCard(/^Headrest cover/)).queryByText("Saved.")).toBeNull();
+  });
 });

@@ -15,8 +15,9 @@ import type {
   VisitRecord,
 } from "../../domain/types.ts";
 import { conditionLabel, deferLabel, formatDate, formatDateTime, melLabel, outcomeLabel, reasonLabel } from "../format.ts";
-import { canRetry, describeSaveStatus, observationTarget, recordTarget, type SaveStatus, saveStatusClass } from "../hooks/useMutations.ts";
+import { observationTarget, recordTarget, type SaveStatus } from "../hooks/useMutations.ts";
 import { type ComponentView, componentsAt, describeSeat, sourceText, type Workspace } from "../model.ts";
+import { SaveLine, statusText } from "./SaveLine.tsx";
 
 interface Props {
   workspace: Workspace;
@@ -33,7 +34,7 @@ interface Props {
   onCloseObservation(o: Observation, closedAs: "REPLACED" | "FIXED"): void;
   onRemove(record: VisitRecord): void;
   /** Re-sends the last write of a target with its idempotency key. May resolve true once saved. */
-  onRetry(target: string): unknown;
+  onRetry(target: string): Promise<boolean> | void;
   onSelect(locationId: string): void;
   /** A card holds typed input that is not saved (`dirty`), or no longer does: its record form or its problem form. The target is `record:<locationId>|<componentId>`. */
   onDirtyChange(target: string, dirty: boolean): void;
@@ -74,26 +75,6 @@ export function conditionsFor(mel: MelEntry[], componentId: string): Condition[]
   return CONDITIONS.filter((c) => mel.some((e) => e.componentId === componentId && e.condition === c && e.constraint?.variant === undefined));
 }
 
-/** The save line under a form: the status in words, and after a conflict that the saved state was reloaded. */
-const statusText = (status: SaveStatus): string =>
-  status.phase === "conflict" ? `${describeSaveStatus(status)} The current saved state has been reloaded.` : describeSaveStatus(status);
-
-/** A save status line and, where it applies, its Retry safely button. */
-function SaveLine({ status, text = statusText(status), onRetry }: { status: SaveStatus; text?: React.ReactNode; onRetry(): void }) {
-  return (
-    <>
-      <p role="status" aria-live="polite" className={`save-state ${saveStatusClass(status)}`}>
-        {text}
-      </p>
-      {canRetry(status) && (
-        <button type="button" onClick={onRetry}>
-          Retry safely
-        </button>
-      )}
-    </>
-  );
-}
-
 /** What the problem form is open for: a new problem (Defer presets the outcome), or a change to an open one. */
 type ProblemPanel = { preset: "DEFERRED" | null; editing: Observation | null };
 
@@ -123,7 +104,7 @@ function ProblemForm({
   status: SaveStatus;
   /** Resolves true once saved: the form closes only then, so a failed save keeps what was typed. */
   onSave(input: ObservationInput): Promise<boolean>;
-  onRetry(): unknown;
+  onRetry(): Promise<boolean> | void;
   onDirty(dirty: boolean): void;
   onDone(): void;
   onCancel(): void;
@@ -195,8 +176,16 @@ function ProblemForm({
   // Read when an answer arrives, which may be after more typing: the draft on screen then, not at the click.
   const draftNow = useRef("");
   draftNow.current = JSON.stringify(input());
-  const finish = (saved: unknown, draft: string | null) => {
-    if (saved === true && draft !== null && draft === draftNow.current) onDone();
+  // An answer that arrives after this form was cancelled must not close a form opened since in its place.
+  const alive = useRef(true);
+  useEffect(
+    () => () => {
+      alive.current = false;
+    },
+    [],
+  );
+  const finish = (saved: boolean | undefined, draft: string | null) => {
+    if (alive.current && saved === true && draft !== null && draft === draftNow.current) onDone();
   };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +196,7 @@ function ProblemForm({
     finish(await onSave(request), draft);
   };
   // A retry re-sends what this form sent; a form opened after it (sent is null) stays open with its own input.
-  const retry = async () => finish(await onRetry(), sent);
+  const retry = async () => finish((await onRetry()) ?? undefined, sent);
 
   return (
     <form className="problem-form" onSubmit={submit}>
@@ -307,6 +296,7 @@ function ProblemItem({
   carried,
   record,
   actionable,
+  editing,
   status,
   onEdit,
   onClose,
@@ -316,6 +306,8 @@ function ProblemItem({
   carried: { overdue: boolean } | null;
   record: VisitRecord | null;
   actionable: boolean;
+  /** The problem form is open to change this problem. */
+  editing: boolean;
   /** The save status of this problem's own writes (`observation:<id>`). */
   status: SaveStatus;
   onEdit(button: HTMLButtonElement): void;
@@ -358,7 +350,8 @@ function ProblemItem({
           )}
         </div>
       )}
-      {status.phase !== "idle" && <SaveLine status={status} onRetry={onRetry} />}
+      {/* while it is being edited the form carries the one save line; a done save leaves no lasting "Saved" here */}
+      {!editing && status.phase !== "idle" && status.phase !== "saved" && <SaveLine status={status} onRetry={onRetry} />}
     </li>
   );
 }
@@ -785,6 +778,7 @@ function ComponentCard({
                 carried={carried}
                 record={record}
                 actionable={editable}
+                editing={problemPanel?.editing?.id === o.id}
                 status={statusOf(observationTarget(o))}
                 onEdit={(button) => openProblem(button, { preset: null, editing: o })}
                 onClose={(closedAs) => onCloseObservation(o, closedAs)}
