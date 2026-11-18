@@ -188,6 +188,7 @@ describe("ReportView after-action sections", () => {
     expect(items).toHaveLength(4);
     for (const li of items) expect(li.querySelector("time")).not.toBeNull();
     expect(items[1]).toHaveTextContent("Seat 3C · Tray table: problem deferred (Won't latch)");
+    expect(items[1]?.querySelector(".timeline-change")).toBeNull();
     // the outcome lists name each problem where it sits
     const list = (name: string) => within(screen.getByRole("heading", { name, level: 3 }).closest("section") as HTMLElement);
     expect(list("Deferred").getByText(/Seat 3C · Tray table/)).toBeInTheDocument();
@@ -292,6 +293,19 @@ describe("ReportView after-action sections", () => {
       "4B",
       "5A",
     ]);
+  });
+
+  it("an update in the timeline says what changed, in words (Minor 2)", async () => {
+    const before = obs({ id: "U", condition: "STAINED", outcome: "NOTED" });
+    const after = { ...before, condition: "TORN" as const, outcome: "DEFERRED" as const, deferUntil: "NEXT_CHECK" as const, reason: "NO_STOCK" as const };
+    const v = outcomeVisit({ observations: [after], carried: [], events: [ev(1, "OBSERVATION_UPDATED", { before, after })] });
+    stubFetch(reportAnswer(outcomeEnvelope(v), v));
+    const { container } = render(<ReportView visitId={v.id} />);
+    await screen.findByRole("heading", { name: "What happened, in order" });
+    const item = container.querySelector("#r-timeline")?.closest("section")?.querySelector("ol > li");
+    expect(item).toHaveTextContent(
+      "Seat 3A · Headrest cover: problem changed (Torn). Stained → Torn; Note only → Deferred until the next check; Reason: No stock on hand",
+    );
   });
 
   it("Not releasable shows when releasable is false", async () => {

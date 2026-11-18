@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { canonicalJson } from "../../domain/canonical.ts";
 import { isOverdue } from "../../domain/observations.ts";
-import { rulesNotUsedLine } from "../../domain/report.ts";
+import { rulesNotUsedLine, timelineChange } from "../../domain/report.ts";
 import { higherStatus } from "../../domain/status.ts";
 import type { CarriedObservation, LookupState, MelClass, Observation, Report, ReportPieceOutcome, VisitSnapshot, VisualProfile } from "../../domain/types.ts";
 import { api } from "../api.ts";
@@ -341,6 +341,7 @@ export function ReportView({
               {timeline.map((t) => (
                 <li key={t.seq}>
                   <Time iso={t.at} /> {t.label}
+                  {timelineChange(t) && <span className="timeline-change">. {timelineChange(t)}</span>}
                 </li>
               ))}
             </ol>

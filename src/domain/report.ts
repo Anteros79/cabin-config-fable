@@ -1,4 +1,4 @@
-import { conditionLabel } from "./labels.ts";
+import { conditionLabel, deferLabel, reasonLabel } from "./labels.ts";
 import { currentClass, isMustFixNow, seatIsBlocked } from "./observations.ts";
 import { compareCodePoints } from "./order.ts";
 import { higherStatus, type LocationStatus } from "./status.ts";
@@ -245,6 +245,39 @@ function buildTimeline(visit: Visit): ReportTimelineEntry[] {
     const words = kind === "RECORD_ADDED" ? "replacement recorded" : kind === "RECORD_UPDATED" ? "replacement changed" : "replacement removed";
     return [{ ...base, locationId, componentId, label: `${where}: ${words}`, before, after: kind === "RECORD_REMOVED" ? null : rest }];
   });
+}
+
+/** A problem's outcome with its deferral, as the timeline says it: "Note only", "Deferred until the next check". */
+function outcomeWords(o: Partial<Observation>): string {
+  if (o.outcome === "NOTED") return "Note only";
+  if (o.outcome === "MUST_FIX") return "Must be fixed";
+  if (o.outcome === "DEFERRED") return o.deferUntil ? `Deferred ${deferLabel(o.deferUntil).toLowerCase()}` : "Deferred";
+  return "";
+}
+const RAISE_WORDS: Record<"MEL" | "NO_GO", string> = { MEL: "MEL item", NO_GO: "no-go" };
+
+/**
+ * What an OBSERVATION_UPDATED entry changed, before and after, in words: condition, outcome (with its deferral), reason
+ * and the technician's raise, e.g. "Stained → Torn; Note only → Deferred until the next check". "" for any other entry,
+ * or when none of those changed. Pure over the stored `before` and `after`, so reports already stored get the words too.
+ */
+export function timelineChange(entry: Pick<ReportTimelineEntry, "kind" | "before" | "after">): string {
+  if (entry.kind !== "OBSERVATION_UPDATED") return "";
+  const before = asRecord(entry.before) as Partial<Observation> | null;
+  const after = asRecord(entry.after) as Partial<Observation> | null;
+  if (!before || !after) return "";
+  const changes: string[] = [];
+  if (before.condition && after.condition && before.condition !== after.condition) {
+    changes.push(`${conditionLabel(before.condition)} → ${conditionLabel(after.condition)}`);
+  }
+  const was = outcomeWords(before);
+  const now = outcomeWords(after);
+  if (was !== now && was !== "" && now !== "") changes.push(`${was} → ${now}`);
+  if (after.outcome === "DEFERRED" && after.reason && before.reason !== after.reason) {
+    changes.push(before.reason ? `${reasonLabel(before.reason)} → ${reasonLabel(after.reason)}` : `Reason: ${reasonLabel(after.reason)}`);
+  }
+  if (after.raisedTo && before.raisedTo !== after.raisedTo) changes.push(`Raised to ${RAISE_WORDS[after.raisedTo]}`);
+  return changes.join("; ");
 }
 
 /**

@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import { conditionLabel, deferLabel, melLabel } from "../domain/labels.ts";
 import { isOverdue } from "../domain/observations.ts";
-import { rulesNotUsedLine } from "../domain/report.ts";
+import { rulesNotUsedLine, timelineChange } from "../domain/report.ts";
 import { aggregateStatus, type LocationStatus } from "../domain/status.ts";
 import type { CabinLocation, CarriedObservation, Observation, Report, VisitEvent } from "../domain/types.ts";
 import { formatDate, formatDateTime } from "../web/format.ts";
@@ -510,7 +510,11 @@ export function renderReportPdf(
             { header: "When", width: 120 },
             { header: "What happened", width: width - 120 },
           ],
-          report.timeline.map((t) => [formatDateTime(t.at), noteCell("T", formatDateTime(t.at), t.label)]),
+          // an update says what changed, before and after, in words
+          report.timeline.map((t) => {
+            const change = timelineChange(t);
+            return [formatDateTime(t.at), noteCell("T", formatDateTime(t.at), change ? `${t.label}. ${change}` : t.label)];
+          }),
         );
         printNotes("Notes on what happened");
       }

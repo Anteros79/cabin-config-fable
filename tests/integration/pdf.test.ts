@@ -545,6 +545,21 @@ describe("PDF after-action sections (report schema 3)", () => {
     }
   });
 
+  it("an update in the timeline says what changed, in words (Minor 2)", async () => {
+    const app = makeApp();
+    const visit = await newVisit(app);
+    const base = `/api/visits/${visit.id}`;
+    const stain = { locationId: "SEAT:4A", componentId: "CUSHION", condition: "STAINED", note: "", outcome: "NOTED" };
+    const added = json(await post(app, `${base}/observations`, { observation: stain, idempotencyKey: "k-minor2-add-1" }));
+    const o = added.visit.observations[0];
+    const torn = { ...stain, condition: "TORN", outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" };
+    expect(
+      (await put(app, `${base}/observations/${o.id}`, { observation: torn, expectedVersion: o.version, idempotencyKey: "k-minor2-upd-1" })).statusCode,
+    ).toBe(200);
+    const flat = (await pdfText((await app.app.inject(`${base}/report.pdf`)).rawPayload)).text.replace(/\s+/g, "");
+    expect(flat).toContain("Stained->Torn;Noteonly->Deferreduntilthenextcheck;Reason:Nostockonhand");
+  });
+
   it("a blocked seat is outlined on the picture, named in its alt text and keyed in the legend (Minor 1)", async () => {
     const app = makeApp();
     const { report, layout } = await afterAction(app);

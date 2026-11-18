@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPreparation } from "../../src/domain/prep.ts";
-import { buildReport, rulesNotUsedLine } from "../../src/domain/report.ts";
+import { buildReport, rulesNotUsedLine, timelineChange } from "../../src/domain/report.ts";
 import { lookup } from "../../src/domain/resolve.ts";
 import type { CarriedObservation, ComponentResolution, Observation, ReleaseContent, SubstituteApproval, Visit, VisitEvent } from "../../src/domain/types.ts";
 import { REPORT_SCHEMA } from "../../src/domain/types.ts";
@@ -603,5 +603,35 @@ describe("report v3", () => {
       carried: [carriedOf(obs({ outcome: "DEFERRED", openedInVisitId: "earlier", componentId: "TRAY", condition: "BROKEN" }))],
     };
     expect(buildReport(visit, "FINAL", AT).summary).toMatchObject({ releasable: true, carriedIn: 1 });
+  });
+});
+
+describe("timelineChange (Minor 2)", () => {
+  const was = obs({ id: "X", condition: "STAINED", outcome: "NOTED" });
+  const entry = (before: unknown, after: unknown, kind: "OBSERVATION_UPDATED" | "OBSERVATION_ADDED" = "OBSERVATION_UPDATED") => ({ kind, before, after });
+
+  it("says what an update changed, before and after, in words", () => {
+    const now = { ...was, condition: "TORN", outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" };
+    expect(timelineChange(entry(was, now))).toBe("Stained → Torn; Note only → Deferred until the next check; Reason: No stock on hand");
+    const later = { ...now, deferUntil: "NEXT_STOP", reason: "NO_TIME", raisedTo: "NO_GO" };
+    expect(timelineChange(entry(now, later))).toBe(
+      "Deferred until the next check → Deferred until the next stop; No stock on hand → No time on this turn; Raised to no-go",
+    );
+    expect(timelineChange(entry(later, { ...later, outcome: "MUST_FIX", deferUntil: undefined, reason: undefined }))).toBe(
+      "Deferred until the next stop → Must be fixed",
+    );
+  });
+
+  it("says nothing for other entries, an unchanged update or a missing before", () => {
+    expect(timelineChange(entry(was, was))).toBe("");
+    expect(timelineChange(entry(null, was))).toBe("");
+    expect(timelineChange(entry(was, { ...was, condition: "TORN" }, "OBSERVATION_ADDED"))).toBe("");
+  });
+
+  it("the report's timeline entries carry before and after, so the words come from the stored report", () => {
+    const now = { ...was, condition: "TORN" };
+    const report = buildReport(v3Visit({ events: [ev(1, "OBSERVATION_UPDATED", { before: was, after: now })] }), "FINAL", AT);
+    const [t] = report.timeline ?? [];
+    expect(t && timelineChange(t)).toBe("Stained → Torn");
   });
 });
