@@ -44,14 +44,23 @@ export const recordTarget = (locationId: string, componentId: string): string =>
 export const observationTarget = (p: { id: string } | { locationId: string; componentId: string }): string =>
   "id" in p ? `observation:${p.id}` : `observation:${p.locationId}:${p.componentId}`;
 
+/** Refusals of a problem write in plain words: the server's own message can name codes ("MUST_FIX"), which the UI never shows. */
+const PLAIN_REFUSAL: Record<string, string> = {
+  OUTCOME_NOT_ALLOWED: "This can't be saved that way any more. Check the choices and try again.",
+  INVALID_OBSERVATION: "Some details are missing or not allowed.",
+  REPLACEMENT_MISSING: "Record the replacement first.",
+  RECORD_IN_USE: "This replacement is linked to a problem marked replaced.",
+};
+
 function outcomeOf(error: unknown, mayBeStored: boolean): SaveStatus {
   if (error instanceof ApiError && error.kind === "http") {
     if (CONFLICT_CODES.has(error.code)) return { phase: "conflict", code: error.code, message: error.message, current: error.details };
+    const message = PLAIN_REFUSAL[error.code] ?? error.message;
     // After an unknown outcome a refusal answers only for this attempt: a 5xx can come before the key is looked up,
     // and the create route resolves the configuration (a 4xx) before the store checks the key. So the first attempt
     // may still be stored, and the same key must be kept. Conflicts are raised only after the key is looked up.
-    if (mayBeStored) return { phase: "unknown", message: retryRefused(error.message) };
-    return { phase: "failed", message: error.message, retryable: error.status >= 500 };
+    if (mayBeStored) return { phase: "unknown", message: retryRefused(message) };
+    return { phase: "failed", message, retryable: error.status >= 500 };
   }
   // No answer, a cancelled request, or anything else: the write may have reached the server.
   return { phase: "unknown", message: UNKNOWN_OUTCOME };

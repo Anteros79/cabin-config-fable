@@ -8,7 +8,7 @@ import { recordTarget, type SaveStatus, UNKNOWN_OUTCOME } from "../../src/web/ho
 import type { Workspace } from "../../src/web/model.ts";
 import { CheckView } from "../../src/web/views/CheckView.tsx";
 import { CUSHION_3A, fixtureRelease, KIT_PRIMARY, snapshotFor, visitWith } from "../helpers.ts";
-import { type Answer, stubFetch } from "./fetchStub.ts";
+import { type Answer, deferred, stubFetch } from "./fetchStub.ts";
 
 // The 3D view is not under test here; stand-in buttons select a location the way a click in the cabin would.
 vi.mock("../../src/web/components/Viewer.tsx", () => ({
@@ -679,5 +679,37 @@ describe("Inspector piece panel", () => {
     await waitFor(() => expect(within(card).queryByRole("group", { name: "Note a problem" })).toBeNull());
     // the closed form's unsaved state is withdrawn in the render after it unmounts
     await waitFor(() => expect(dirtyNow(onDirtyChange)).toBe(false));
+  });
+
+  it("a late success does not close a form reopened and typed into after the save went unanswered", async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    const unknown: SaveStatus = { phase: "unknown", message: UNKNOWN_OUTCOME };
+    const onRetry = vi.fn(async () => true);
+    renderPiece({}, { onRetry, onDirtyChange, statusOf: (t) => (t === "observation:SEAT:3A:CUSHION" ? unknown : { phase: "idle" }) });
+    const card = pieceCard(/^Seat cushion cover/);
+    // the form that sent the unanswered save was closed; this one is new, with new input
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Torn" }));
+    await user.type(within(card).getByLabelText(/^Note about the problem/), "a new tear");
+    await user.click(within(card).getByRole("button", { name: "Retry safely" }));
+    expect(onRetry).toHaveBeenCalledWith("observation:SEAT:3A:CUSHION");
+    expect(within(card).getByRole("group", { name: "Note a problem" })).toBeInTheDocument();
+    expect(within(card).getByLabelText(/^Note about the problem/)).toHaveValue("a new tear");
+    expect(dirtyNow(onDirtyChange)).toBe(true);
+  });
+
+  it("a late success does not close the form once its draft was changed after the save", async () => {
+    const user = userEvent.setup();
+    const answer = deferred<boolean>();
+    renderPiece({}, { onObserve: vi.fn(() => answer.promise) });
+    const card = pieceCard(/^Seat cushion cover/);
+    await user.click(within(card).getByRole("button", { name: "Note a problem" }));
+    await user.click(within(card).getByRole("radio", { name: "Stained" }));
+    await user.click(within(card).getByRole("radio", { name: "Note only" }));
+    await user.click(within(card).getByRole("button", { name: "Save problem" }));
+    await user.type(within(card).getByLabelText(/^Note about the problem/), "more");
+    await act(async () => answer.resolve(true));
+    expect(within(card).getByLabelText(/^Note about the problem/)).toHaveValue("more");
   });
 });

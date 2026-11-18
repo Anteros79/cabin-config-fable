@@ -703,6 +703,27 @@ describe("CheckView problems, carried over and completion", () => {
     expect(await screen.findByRole("button", { name: "Complete visit…" })).toBeEnabled();
   });
 
+  it("a refused problem save says so in plain words, with no codes", async () => {
+    stubFetch((method): Answer => {
+      if (method === "GET") return { body: { visit: base } };
+      return {
+        status: 422,
+        body: {
+          error: { code: "OUTCOME_NOT_ALLOWED", message: "This problem cannot be marked MUST_FIX under its MEL class.", details: { allowed: ["DEFERRED"] } },
+        },
+      };
+    });
+    render(<CheckView visitId={base.id} navigate={vi.fn()} visualProfiles={[]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Pick seat 3A" }));
+    const card = await screen.findByRole("region", { name: new RegExp(`^${cushion.componentName}`) });
+    fireEvent.click(within(card).getByRole("button", { name: "Note a problem" }));
+    fireEvent.click(within(card).getByRole("radio", { name: "Stained" }));
+    fireEvent.click(within(card).getByRole("radio", { name: "Note only" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Save problem" }));
+    await within(card).findByText("Not saved: This can't be saved that way any more. Check the choices and try again.");
+    expect(card.textContent).not.toMatch(/[A-Z]{2,}_[A-Z]/);
+  });
+
   it("a problem save with no answer keeps the form and its input, and Retry safely closes it with the same key", async () => {
     let posts = 0;
     const saved = stateOf(base, {

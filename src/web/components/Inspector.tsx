@@ -137,8 +137,9 @@ function ProblemForm({
   const [note, setNote] = useState(editing?.note ?? "");
   // A raise asked for in this form. The raise the problem already has is kept: it can never be lowered.
   const [raise, setRaise] = useState<Raise | null>(null);
-  // Set by the first save, so a status left by an earlier problem on the same target is not shown as this one's.
-  const [sent, setSent] = useState(false);
+  // What this form last sent, so a status left by an earlier problem on the same target is not shown as this one's,
+  // and a late success closes the form only while it still holds that same draft.
+  const [sent, setSent] = useState<string | null>(null);
   const dirty =
     condition !== (editing?.condition ?? null) ||
     outcome !== (editing?.outcome ?? panel.preset) ||
@@ -179,24 +180,34 @@ function ProblemForm({
   // could store the problem twice.
   const blocked = status.phase === "saving" || status.phase === "unknown";
 
+  const input = (): ObservationInput | null =>
+    condition === null || chosen === null
+      ? null
+      : {
+          locationId: editing?.locationId ?? locationId,
+          componentId: view.componentId,
+          condition,
+          note,
+          outcome: chosen,
+          ...(deferring && deferUntil !== null && reason !== null ? { deferUntil, reason } : {}),
+          ...(raisedTo !== undefined ? { raisedTo } : {}),
+        };
+  // Read when an answer arrives, which may be after more typing: the draft on screen then, not at the click.
+  const draftNow = useRef("");
+  draftNow.current = JSON.stringify(input());
+  const finish = (saved: unknown, draft: string | null) => {
+    if (saved === true && draft !== null && draft === draftNow.current) onDone();
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!valid || blocked || condition === null || chosen === null) return;
-    setSent(true);
-    const saved = await onSave({
-      locationId: editing?.locationId ?? locationId,
-      componentId: view.componentId,
-      condition,
-      note,
-      outcome: chosen,
-      ...(deferring && deferUntil !== null && reason !== null ? { deferUntil, reason } : {}),
-      ...(raisedTo !== undefined ? { raisedTo } : {}),
-    });
-    if (saved) onDone();
+    const request = input();
+    if (!valid || blocked || request === null) return;
+    const draft = JSON.stringify(request);
+    setSent(draft);
+    finish(await onSave(request), draft);
   };
-  const retry = async () => {
-    if ((await onRetry()) === true) onDone();
-  };
+  // A retry re-sends what this form sent; a form opened after it (sent is null) stays open with its own input.
+  const retry = async () => finish(await onRetry(), sent);
 
   return (
     <form className="problem-form" onSubmit={submit}>
@@ -285,7 +296,7 @@ function ProblemForm({
           </button>
         </div>
       </fieldset>
-      {(sent || status.phase === "unknown") && <SaveLine status={status} onRetry={() => void retry()} />}
+      {(sent !== null || status.phase === "unknown") && <SaveLine status={status} onRetry={() => void retry()} />}
     </form>
   );
 }
