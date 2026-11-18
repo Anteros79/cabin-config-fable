@@ -8,10 +8,11 @@ import { CUSHION_3A, fixtureRelease, snapshotFor, visitWith } from "../helpers.t
 import { type Answer, deferred, stubFetch } from "./fetchStub.ts";
 
 // The 3D view is not under test here: a stand-in records what the report hands it.
-const shown3d = vi.hoisted(() => ({ states: null as Map<string, LocationState> | null }));
+const shown3d = vi.hoisted(() => ({ states: null as Map<string, LocationState> | null, blocked: null as ReadonlySet<string> | null }));
 vi.mock("../../src/web/components/Cabin3D.tsx", () => ({
-  Cabin3D: (props: { states: Map<string, LocationState> }) => {
+  Cabin3D: (props: { states: Map<string, LocationState>; blocked?: ReadonlySet<string> }) => {
     shown3d.states = props.states;
+    shown3d.blocked = props.blocked ?? null;
     return <p>3D stand-in</p>;
   },
 }));
@@ -240,6 +241,57 @@ describe("ReportView after-action sections", () => {
     const list = (name: string) => within(screen.getByRole("heading", { name, level: 3 }).closest("section") as HTMLElement);
     expect(list("Must be fixed").getByRole("listitem")).toHaveTextContent(/Seat 5A · Tray table.*carried over from an earlier check/);
     expect(list("Carried over in").getByText("None.")).toBeInTheDocument();
+  });
+
+  it("the cabin picture marks a blocked seat, on the map and in 3D (Minor 1)", async () => {
+    const belt = obs({
+      id: "BELT",
+      outcome: "DEFERRED",
+      locationId: "SEAT:6A",
+      locationLabel: "Seat 6A",
+      componentId: "SEATBELT",
+      componentName: "Seat belt",
+      condition: "BROKEN",
+      deferUntil: "NEXT_CHECK",
+      melClass: { ...MEL_C, blocksSeat: true },
+      dueDate: "2026-11-22",
+      blocksSeat: true,
+    });
+    const v = outcomeVisit({ observations: [belt], carried: [] });
+    const env = outcomeEnvelope(v);
+    expect(env.report.blockedSeats).toEqual(["SEAT:6A"]);
+    stubFetch(reportAnswer(env, v));
+    const { container } = render(<ReportView visitId={v.id} />);
+    const picture = within((await screen.findByRole("heading", { name: "Cabin picture" })).closest("section") as HTMLElement);
+    expect(await picture.findByRole("button", { name: /^Seat 6A.*Deferred, Blocked$/ })).toBeInTheDocument();
+    expect(container.querySelector("#r-picture")?.closest("section")?.querySelectorAll(".blocked-badge")).toHaveLength(1);
+    fireEvent.click(picture.getByRole("button", { name: "View in 3D" }));
+    await picture.findByText("3D stand-in");
+    expect([...(shown3d.blocked ?? [])]).toEqual(["SEAT:6A"]);
+  });
+
+  it("a press on the cabin picture brings that location's line into view; a location with no line is not a button (Minor 12)", async () => {
+    const v = outcomeVisit();
+    stubFetch(reportAnswer(outcomeEnvelope(v), v));
+    const { container } = render(<ReportView visitId={v.id} />);
+    const picture = within((await screen.findByRole("heading", { name: "Cabin picture" })).closest("section") as HTMLElement);
+    fireEvent.click(await picture.findByRole("button", { name: /^Seat 4A.*Must fix/ }));
+    const mustFixLine = within(screen.getByRole("heading", { name: "Must be fixed", level: 3 }).closest("section") as HTMLElement).getByRole("listitem");
+    expect(mustFixLine).toHaveFocus();
+    // a seat with only a replacement goes to its row in the work recorded
+    fireEvent.click(picture.getByRole("button", { name: /^Seat 3A/ }));
+    expect(document.activeElement).toHaveTextContent(/Seat 3A/);
+    // a seat with nothing in the report is a named cell, not a button
+    expect(picture.queryByRole("button", { name: /^Seat 9A/ })).toBeNull();
+    expect(picture.getByRole("img", { name: /^Seat 9A/ })).toBeInTheDocument();
+    // the pressable ones are exactly the locations with a line: 3A (work), 3C, 4A, 4B (closed) and 5A (carried)
+    expect([...container.querySelectorAll(".cabin-map button.loc")].map((b) => b.getAttribute("data-seat") ?? b.getAttribute("data-location")).sort()).toEqual([
+      "3A",
+      "3C",
+      "4A",
+      "4B",
+      "5A",
+    ]);
   });
 
   it("Not releasable shows when releasable is false", async () => {

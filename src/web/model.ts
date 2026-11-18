@@ -107,7 +107,7 @@ export function frozenFromReport(report: Report): { frozen: FrozenOutcomes; obse
   const ob = report.observations;
   const own = ob ? [...ob.deferred, ...ob.mustFix.filter((o) => o.openedInVisitId === report.visit.id), ...ob.noted, ...ob.closed] : [];
   return {
-    frozen: { pieceOutcomes: report.pieceOutcomes ?? [], blockedSeats: [] },
+    frozen: { pieceOutcomes: report.pieceOutcomes ?? [], blockedSeats: report.blockedSeats ?? [] },
     observations: own,
   };
 }

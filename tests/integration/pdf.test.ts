@@ -545,6 +545,19 @@ describe("PDF after-action sections (report schema 3)", () => {
     }
   });
 
+  it("a blocked seat is outlined on the picture, named in its alt text and keyed in the legend (Minor 1)", async () => {
+    const app = makeApp();
+    const { report, layout } = await afterAction(app);
+    expect(report.blockedSeats).toEqual([]);
+    const plain = await renderReportPdf(report, [], null, layout);
+    expect((await pdfText(plain)).text).not.toContain("Blocked seat");
+    const bytes = await renderReportPdf({ ...report, blockedSeats: ["SEAT:4A"] }, [], null, layout);
+    expect(bytes.toString("latin1")).toContain("/Alt (Cabin picture: 1 must be fixed, 1 piece deferred, 1 piece noted, 1 piece replaced, 1 seat blocked)");
+    const items = await pdfItems(bytes);
+    const pageOf = (str: string) => items.find((i) => i.str.includes(str))?.page;
+    expect(pageOf("Blocked seat (outlined and crossed)")).toBe(pageOf("Cabin picture"));
+  });
+
   it("a v3 report without its layout says the picture could not be drawn", async () => {
     const app = makeApp();
     const { report } = await afterAction(app);

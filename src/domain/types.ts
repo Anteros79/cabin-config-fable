@@ -752,6 +752,8 @@ export interface Report {
   observations?: ReportObservations;
   /** Report schema 3: the status of each piece that has an outcome, for the cabin picture. */
   pieceOutcomes?: ReportPieceOutcome[];
+  /** Report schema 3: the seats an open seat-blocking deferral blocks, for the "Blocked" mark. Absent from reports stored before it was added. */
+  blockedSeats?: string[];
 }
 
 export interface ReportSummary {

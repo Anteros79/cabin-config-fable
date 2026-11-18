@@ -75,13 +75,24 @@ function pictureOutcomes(report: Report): { locationId: string; componentId: str
   return [...byPiece.values()];
 }
 
-/** "Cabin picture: 3 pieces deferred, 1 must be fixed", in the order of FIGURE_ORDER. */
-function pictureAlt(outcomes: { status: LocationStatus }[]): string {
+/** The mark of a blocked seat on the picture and in its legend: a heavy outline and one diagonal. */
+function blockedMark(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number): void {
+  doc.lineWidth(1.1).strokeColor("#111827");
+  doc.rect(x, y, w, h).stroke();
+  doc
+    .moveTo(x, y + h)
+    .lineTo(x + w, y)
+    .stroke();
+}
+
+/** "Cabin picture: 3 pieces deferred, 1 must be fixed, 1 seat blocked", in the order of FIGURE_ORDER, blocked seats last. */
+function pictureAlt(outcomes: { status: LocationStatus }[], blockedSeats: number): string {
   const parts = FIGURE_ORDER.flatMap((status) => {
     const n = outcomes.filter((o) => o.status === status).length;
     const phrase = ALT_PHRASE[status];
     return n > 0 && phrase ? [phrase(n)] : [];
   });
+  if (blockedSeats > 0) parts.push(`${blockedSeats} ${blockedSeats === 1 ? "seat" : "seats"} blocked`);
   return parts.length > 0 ? `Cabin picture: ${parts.join(", ")}` : "Cabin picture: no piece has an outcome in this check";
 }
 
@@ -392,7 +403,7 @@ export function renderReportPdf(
         const figureH = SIDE_BIN_H + GAP + bodyH + GAP + SIDE_BIN_H + GAP + floors.length * (FLOOR_H + 1);
         const legendRows = Math.ceil(LEGEND_ORDER.length / 2);
         // Heading, picture and legend stay together on one page.
-        ensure(40 + figureH + 14 + legendRows * 13 + 24);
+        ensure(40 + figureH + 14 + legendRows * 13 + 24 + ((report.blockedSeats ?? []).length > 0 ? 19 : 0));
         heading("Cabin picture");
         para("Each location shows the highest status of its pieces at the end of this check. Left and right are as seen facing forward.", 8);
         const x0 = MARGIN + LABEL_W;
@@ -409,7 +420,8 @@ export function renderReportPdf(
         };
         const px = (l: CabinLocation) => x0 + (l.placement.x - l.placement.lx / 2 - minX) * scale;
         const pw = (l: CabinLocation) => l.placement.lx * scale;
-        const alt = safe(pictureAlt(outcomes));
+        const blocked = new Set(report.blockedSeats ?? []);
+        const alt = safe(pictureAlt(outcomes, seats.filter((l) => blocked.has(l.id)).length));
         root.add(
           doc.struct("Figure", { alt }, () => {
             doc.lineWidth(0.3).strokeColor("#9aa3b5");
@@ -429,6 +441,12 @@ export function renderReportPdf(
               const w = Math.max(l.placement.lz * scale, 2);
               draw(px(l), bodyY + (halfZ + l.placement.z - l.placement.lz / 2) * scale, pw(l), w, fillOf(l.id));
             }
+            // a blocked seat: a heavy outline and a diagonal across it, so it reads without colour
+            for (const l of seats.filter((p) => blocked.has(p.id))) {
+              const w = Math.max(l.placement.lz * scale, 2);
+              blockedMark(doc, px(l), bodyY + (halfZ + l.placement.z - l.placement.lz / 2) * scale, pw(l), w);
+            }
+            doc.lineWidth(0.3).strokeColor("#9aa3b5");
             for (const l of places.filter((p) => p.kind === "ARMREST")) {
               const h = Math.max(l.placement.lz * scale, 1.6);
               draw(px(l), bodyY + (halfZ + l.placement.z) * scale - h / 2, pw(l), h, fillOf(l.id));
@@ -464,6 +482,21 @@ export function renderReportPdf(
           });
         });
         doc.y = legendTop + legendRows * 13 + 6;
+        if (blocked.size > 0) {
+          const ly = doc.y;
+          artifact("Layout", () => {
+            doc.rect(MARGIN, ly + 1, 9, 9).fillAndStroke(PDF_STATUS.none.fill, "#6b7488");
+            blockedMark(doc, MARGIN, ly + 1, 9, 9);
+          });
+          tagged("P", () => {
+            doc
+              .font("Helvetica")
+              .fontSize(8.5)
+              .fillColor("#000000")
+              .text("Blocked seat (outlined and crossed)", MARGIN + 14, ly + 1, { width: width - 20, lineBreak: false });
+          });
+          doc.y = ly + 13 + 6;
+        }
       }
     }
 

@@ -67,10 +67,13 @@ function ProblemLine({
   checkDate,
   extra = "",
   classes,
+  id,
 }: {
   o: Observation;
   checkDate: string;
   extra?: string;
+  /** the line's id, when a press on the cabin picture can bring it into view */
+  id?: string;
   /** the class of each open problem on the check date; a report stored before it was recorded falls back to the stored class */
   classes: Record<string, MelClass> | undefined;
 }) {
@@ -85,7 +88,7 @@ function ProblemLine({
     extra,
   ];
   return (
-    <li>
+    <li id={id} tabIndex={id ? -1 : undefined}>
       <strong>
         {o.locationLabel} · {o.componentName}
       </strong>{" "}
@@ -106,6 +109,43 @@ function OutcomeList({ id, title, items }: { id: string; title: string; items: R
       {items.length === 0 ? <p>None.</p> : <ul className="plain">{items}</ul>}
     </section>
   );
+}
+
+/** The id of a problem's line in one of the report's lists, which the cabin picture can bring into view. */
+const lineId = (list: string, observationId: string) => `r-line-${list}-${observationId}`;
+
+/**
+ * Where a press on each location of the cabin picture goes: the first line about it in the lists (deferred, must-fix,
+ * noted, closed, carried in), else its row in the work recorded. A location with neither is not pressable.
+ */
+function lineTargets(report: Report): Map<string, string> {
+  const targets = new Map<string, string>();
+  const add = (locationId: string | null, id: string) => {
+    if (locationId !== null && !targets.has(locationId)) targets.set(locationId, id);
+  };
+  const ob = report.observations;
+  if (ob) {
+    for (const [list, items] of [
+      ["deferred", ob.deferred],
+      ["mustfix", ob.mustFix],
+      ["noted", ob.noted],
+      ["closed", ob.closed],
+    ] as const)
+      for (const o of items) add(o.locationId, lineId(list, o.id));
+    for (const c of ob.carriedIn) add(c.locationId, lineId("carried", c.observation.id));
+  }
+  report.work.forEach((w, i) => {
+    add(w.locationId, `r-work-${i}`);
+  });
+  return targets;
+}
+
+/** Brings a line of the report into view and moves focus to it. */
+function showLine(id: string | undefined) {
+  const el = id ? document.getElementById(id) : null;
+  if (!el) return;
+  el.scrollIntoView?.({ block: "center" });
+  el.focus({ preventScroll: true });
 }
 
 const roleText = (role: string) => (role === "MANDATORY_CHILD" ? "Required supplement" : role === "ALTERNATE" ? "Alternate" : "Primary");
@@ -143,7 +183,13 @@ export function ReportView({
   const report0 = data?.report;
   const outcomes = useMemo(() => (report0 ? pictureOutcomes(report0) : []), [report0]);
   const states = useMemo(() => outcomeStates(outcomes), [outcomes]);
-  const pieceOutcomes = useMemo(() => ({ pieceOutcomes: outcomes }), [outcomes]);
+  const targets = useMemo(() => (report0 ? lineTargets(report0) : new Map<string, string>()), [report0]);
+  const blockedSeats = report0?.blockedSeats;
+  const blocked = useMemo(() => new Set(blockedSeats ?? []), [blockedSeats]);
+  const pieceOutcomes = useMemo(
+    () => ({ pieceOutcomes: outcomes, blockedSeats: blockedSeats ?? [], lines: new Set(targets.keys()), onShow: (id: string) => showLine(targets.get(id)) }),
+    [outcomes, blockedSeats, targets],
+  );
   const number = data?.report.visit.number;
   const tail = data?.report.visit.tail;
   useEffect(() => {
@@ -268,7 +314,15 @@ export function ReportView({
               {failed3d && <p className="notice">3D view unavailable. {failed3d} The map below shows the same picture.</p>}
               {show3d && !failed3d && (
                 <div className="no-print">
-                  <Cabin3D workspace={workspace} states={states} selection={null} onSelect={() => {}} visualProfiles={visualProfiles} onFailed={setFailed3d} />
+                  <Cabin3D
+                    workspace={workspace}
+                    states={states}
+                    blocked={blocked}
+                    selection={null}
+                    onSelect={() => {}}
+                    visualProfiles={visualProfiles}
+                    onFailed={setFailed3d}
+                  />
                 </div>
               )}
               <CabinMap workspace={workspace} readOnly={pieceOutcomes} />
@@ -299,7 +353,9 @@ export function ReportView({
           <OutcomeList
             id="r-deferred"
             title="Deferred"
-            items={observations.deferred.map((o) => <ProblemLine classes={observations.classes} key={o.id} o={o} checkDate={checkDate} />)}
+            items={observations.deferred.map((o) => (
+              <ProblemLine classes={observations.classes} key={o.id} id={lineId("deferred", o.id)} o={o} checkDate={checkDate} />
+            ))}
           />
           <OutcomeList
             id="r-mustfix"
@@ -309,6 +365,7 @@ export function ReportView({
               <ProblemLine
                 classes={observations.classes}
                 key={o.id}
+                id={lineId("mustfix", o.id)}
                 o={o}
                 checkDate={checkDate}
                 extra={o.openedInVisitId !== report.visit.id ? "carried over from an earlier check" : ""}
@@ -318,7 +375,9 @@ export function ReportView({
           <OutcomeList
             id="r-noted"
             title="Noted"
-            items={observations.noted.map((o) => <ProblemLine classes={observations.classes} key={o.id} o={o} checkDate={checkDate} />)}
+            items={observations.noted.map((o) => (
+              <ProblemLine classes={observations.classes} key={o.id} id={lineId("noted", o.id)} o={o} checkDate={checkDate} />
+            ))}
           />
           <OutcomeList
             id="r-closed"
@@ -327,6 +386,7 @@ export function ReportView({
               <ProblemLine
                 classes={observations.classes}
                 key={o.id}
+                id={lineId("closed", o.id)}
                 o={o}
                 checkDate={checkDate}
                 extra={o.closedAs === "REPLACED" ? "Closed as replaced" : "Closed as fixed"}
@@ -337,7 +397,14 @@ export function ReportView({
             id="r-carried"
             title="Carried over in"
             items={observations.carriedIn.map((c) => (
-              <ProblemLine classes={observations.classes} key={c.observation.id} o={c.observation} checkDate={checkDate} extra={carriedExtra(c)} />
+              <ProblemLine
+                classes={observations.classes}
+                key={c.observation.id}
+                id={lineId("carried", c.observation.id)}
+                o={c.observation}
+                checkDate={checkDate}
+                extra={carriedExtra(c)}
+              />
             ))}
           />
           <OutcomeList
@@ -479,8 +546,8 @@ export function ReportView({
                 </tr>
               </thead>
               <tbody>
-                {report.work.map((w) => (
-                  <tr key={`${w.locationId}|${w.componentId}`}>
+                {report.work.map((w, i) => (
+                  <tr key={`${w.locationId}|${w.componentId}`} id={`r-work-${i}`} tabIndex={-1}>
                     <th scope="row">{w.locationLabel}</th>
                     <td>{w.componentName}</td>
                     <td>

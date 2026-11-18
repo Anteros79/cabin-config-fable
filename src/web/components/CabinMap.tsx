@@ -21,14 +21,28 @@ interface Props {
   selection: string | null;
   onSelect(locationId: string, componentId: string | null): void;
 }
-/** The report's cabin picture: locations coloured by the pieces' outcomes. No selection, no go-to, no piece list. */
+/**
+ * The report's cabin picture: locations coloured by the pieces' outcomes, blocked seats marked. No selection, no go-to,
+ * no piece list. A location with a line in the report's lists is a button that shows that line (`onShow`); any other
+ * location is a plain cell with the same name, so nothing on the picture is a button that does nothing.
+ */
 interface ReadOnlyProps {
   workspace: Workspace;
-  readOnly: { pieceOutcomes: readonly ReportPieceOutcome[] };
+  readOnly: {
+    pieceOutcomes: readonly ReportPieceOutcome[];
+    blockedSeats?: readonly string[];
+    /** the locations that have a line in the report, and what pressing one does */
+    lines?: ReadonlySet<string>;
+    onShow?(locationId: string): void;
+  };
 }
 
 /** Per-location flags from the report's piece outcomes: the status is aggregateStatus() of the location's pieces. */
-function outcomeFlags(layout: LayoutRevision, outcomes: readonly ReportPieceOutcome[]): Map<string, LocationFlags> {
+function outcomeFlags(
+  layout: LayoutRevision,
+  outcomes: readonly ReportPieceOutcome[],
+  blockedSeats: readonly string[],
+): Map<string, LocationFlags> & { blocked: Set<string> } {
   const byLocation = new Map<string, LocationStatus[]>();
   for (const o of outcomes) byLocation.set(o.locationId, [...(byLocation.get(o.locationId) ?? []), o.status]);
   const flags = new Map<string, LocationFlags>();
@@ -39,9 +53,9 @@ function outcomeFlags(layout: LayoutRevision, outcomes: readonly ReportPieceOutc
     const recorded = statuses.filter((s) => s === "recorded").length;
     flags.set(l.id, { recorded, unresolved, resolved: l.componentIds.length - unresolved, alternate: 0, status: aggregateStatus(statuses) });
   }
-  return flags;
+  return Object.assign(flags, { blocked: new Set(blockedSeats) });
 }
-const NO_SELECT = () => {};
+const NO_LINES: ReadonlySet<string> = new Set();
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 /** The armrest span left of the seat at `index` in LETTERS: A, AB, BC, then D, DE, EF. The last one of a side (C, F) is right of its seat. */
@@ -126,10 +140,15 @@ export function CabinMap(props: Props | ReadOnlyProps) {
   const { layout } = workspace;
   const readOnly = "readOnly" in props;
   const outcomes = readOnly ? props.readOnly.pieceOutcomes : null;
-  const ownFlags = useMemo(() => (outcomes ? outcomeFlags(layout, outcomes) : null), [layout, outcomes]);
+  const blockedSeats = readOnly ? props.readOnly.blockedSeats : undefined;
+  const ownFlags = useMemo(() => (outcomes ? outcomeFlags(layout, outcomes, blockedSeats ?? []) : null), [layout, outcomes, blockedSeats]);
   const flags: Props["flags"] = ownFlags ?? (props as Props).flags;
   const selection = readOnly ? null : props.selection;
-  const onSelect = readOnly ? NO_SELECT : props.onSelect;
+  const onShow = readOnly ? props.readOnly.onShow : undefined;
+  const onSelect = readOnly ? (locationId: string) => onShow?.(locationId) : props.onSelect;
+  const lines = readOnly ? (props.readOnly.lines ?? NO_LINES) : null;
+  /** In the report's picture only a location with a line in the report can be pressed. */
+  const pressable = (id: string) => lines === null || (lines.has(id) && onShow !== undefined);
   /** aria-pressed only where pressing selects */
   const pressed = (id: string) => (readOnly ? undefined : selection === id);
   const seats = useMemo(() => new Map(layout.locations.filter((l) => l.kind === "SEAT").map((l) => [l.seat!.code, l])), [layout]);
@@ -137,11 +156,16 @@ export function CabinMap(props: Props | ReadOnlyProps) {
   const bins = layout.locations.filter((l) => l.kind === "BIN");
   const rows = layout.rows;
   const gridRef = useRef<HTMLFieldSetElement | null>(null);
-  const firstSeat = layout.locations.find((l) => l.kind === "SEAT");
+  const firstSeat = layout.locations.find((l) => l.kind === "SEAT" && pressable(l.id));
   const [focusCode, setFocusCode] = useState<string | null>(null);
   const selected = selection ? layout.locations.find((l) => l.id === selection) : undefined;
   const selectedSeat = selected?.kind === "SEAT" ? selected : undefined;
-  const tabStop = (focusCode && seats.has(focusCode) ? focusCode : null) ?? selectedSeat?.seat?.code ?? firstSeat?.seat?.code ?? null;
+  /** a seat the arrow keys can move to: every seat, or in the report's picture one with a line */
+  const focusable = (code: string): boolean => {
+    const seat = seats.get(code);
+    return seat !== undefined && pressable(seat.id);
+  };
+  const tabStop = (focusCode && focusable(focusCode) ? focusCode : null) ?? selectedSeat?.seat?.code ?? firstSeat?.seat?.code ?? null;
   const [goTo, setGoTo] = useState("");
   const [goToMessage, setGoToMessage] = useState("");
 
@@ -160,7 +184,7 @@ export function CabinMap(props: Props | ReadOnlyProps) {
       const letter = LETTERS[col];
       if (row === undefined || letter === undefined) return;
       const next = `${row.printedLabel}${letter}`;
-      if (seats.has(next)) {
+      if (focusable(next)) {
         setFocusCode(next);
         gridRef.current?.querySelector<HTMLButtonElement>(`[data-seat="${next}"]`)?.focus();
         return;
@@ -176,7 +200,7 @@ export function CabinMap(props: Props | ReadOnlyProps) {
     } else if (e.key === "Home" || e.key === "End") {
       e.preventDefault();
       const row = e.key === "Home" ? existing[0] : existing[existing.length - 1];
-      const next = LETTERS.map((l) => `${row?.printedLabel}${l}`).find((c) => seats.has(c));
+      const next = LETTERS.map((l) => `${row?.printedLabel}${l}`).find((c) => focusable(c));
       if (next) {
         setFocusCode(next);
         gridRef.current?.querySelector<HTMLButtonElement>(`[data-seat="${next}"]`)?.focus();
@@ -227,6 +251,20 @@ export function CabinMap(props: Props | ReadOnlyProps) {
   // The accessible name is the visible text plus hidden prefix and state, so it always contains what is shown.
   const button = (location: CabinLocation, text: string, hiddenPrefix = "", detail = "") => {
     const f = flags.get(location.id);
+    if (!pressable(location.id)) {
+      // the report's picture: no line to show, so a plain cell with the same words, not a button that does nothing
+      return (
+        <span key={location.id} className={`${stateClass(f, false)} static`} style={tokenStyle("--problem", f?.status)} data-location={location.id}>
+          <span>
+            {hiddenPrefix && <span className="sr-only">{hiddenPrefix}</span>}
+            {text}
+            <span className="sr-only">{stateText(f)}</span>
+            {detail && <small className="loc-detail">{detail}</small>}
+          </span>
+          <StatusGlyph status={f?.status ?? "none"} />
+        </span>
+      );
+    }
     return (
       <button
         key={location.id}
@@ -253,6 +291,20 @@ export function CabinMap(props: Props | ReadOnlyProps) {
     const location = armrests.get(`ARMREST:${row}-${span}`);
     if (!location) return <span key={`arm-${span}`} className="armrest-slot" aria-hidden="true" />;
     const f = flags.get(location.id);
+    if (!pressable(location.id)) {
+      return (
+        <span
+          key={location.id}
+          role="img"
+          className={`${stateClass(f, false)} armrest static`}
+          aria-label={`${location.label}${stateText(f)}`}
+          style={tokenStyle("--problem", f?.status)}
+          data-location={location.id}
+        >
+          <StatusGlyph status={f?.status ?? "none"} />
+        </span>
+      );
+    }
     return (
       <button
         key={location.id}
@@ -320,7 +372,10 @@ export function CabinMap(props: Props | ReadOnlyProps) {
         <h3 id="map-seats">
           Seats <span className="count">({seats.size})</span>
         </h3>
-        <p className="fine">Forward is at the top. Arrow keys move between seats{readOnly ? "." : "; Enter or Space selects."}</p>
+        <p className="fine">
+          Forward is at the top. Arrow keys move between seats
+          {readOnly ? " that have a line in this report; Enter or Space shows that line." : "; Enter or Space selects."}
+        </p>
         <ul className="status-key" aria-label="Status key">
           {KEYED_STATUSES.map((s) => (
             <li key={s}>
@@ -371,6 +426,30 @@ export function CabinMap(props: Props | ReadOnlyProps) {
                       );
                       if (!location) return around(<span className={`${cls} empty`} title={`No seat ${code}`} />);
                       const f = flags.get(location.id);
+                      const isBlocked = blocked?.has(location.id) ?? false;
+                      const name = `${seatLabelFor(location, f)}${isBlocked ? ", Blocked" : ""}`;
+                      if (!pressable(location.id)) {
+                        // the report's picture: no line to show for this seat, so a named cell, not a button
+                        return around(
+                          <span className={cls}>
+                            <span
+                              role="img"
+                              data-seat={code}
+                              className={`${stateClass(f, false)} static`}
+                              style={tokenStyle("--problem", f?.status)}
+                              aria-label={name}
+                            >
+                              <span aria-hidden="true">{letter}</span>
+                              <StatusGlyph status={f?.status ?? "none"} />
+                            </span>
+                            {isBlocked && (
+                              <small className="blocked-badge" aria-hidden="true">
+                                Blocked
+                              </small>
+                            )}
+                          </span>,
+                        );
+                      }
                       return around(
                         <span className={cls}>
                           <button
@@ -380,7 +459,7 @@ export function CabinMap(props: Props | ReadOnlyProps) {
                             className={`${stateClass(f, selection === location.id)} tier-${(location.seat?.commercialTier ?? location.seat?.maintenanceZone ?? "none").replace(/\s+/g, "-").toLowerCase()}`}
                             aria-pressed={pressed(location.id)}
                             style={tokenStyle("--problem", f?.status)}
-                            aria-label={`${seatLabelFor(location, f)}${blocked?.has(location.id) ? ", Blocked" : ""}`}
+                            aria-label={name}
                             onClick={() => {
                               setFocusCode(code);
                               onSelect(location.id, null);
@@ -393,7 +472,7 @@ export function CabinMap(props: Props | ReadOnlyProps) {
                           </button>
                           {/* the seat's name says Blocked; the grid shows it in words too, under the seat. It sits outside
                               the button: inside, the visible "C Blocked" would have to appear word for word in the name */}
-                          {blocked?.has(location.id) && (
+                          {isBlocked && (
                             <small className="blocked-badge" aria-hidden="true">
                               Blocked
                             </small>

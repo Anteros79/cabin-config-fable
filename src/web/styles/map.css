@@ -73,8 +73,18 @@ fieldset.bin-side {
   border-radius: var(--radius-2);
   background: repeating-linear-gradient(45deg, var(--empty-cell-a), var(--empty-cell-a) 4px, var(--empty-cell-b) 4px, var(--empty-cell-b) 8px);
 }
-.cell button {
+.cell button,
+.cell .static {
   width: 100%;
+}
+/* a cell of the report's picture with no line to show: the look of a seat button, with nothing to press */
+.loc.static {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  color: var(--text-body);
 }
 .skipped {
   margin: var(--step-030) 0;
@@ -85,7 +95,8 @@ fieldset.bin-side {
   color: var(--text-muted);
   text-align: center;
 }
-button.loc {
+button.loc,
+.loc.static {
   position: relative;
   min-height: var(--seat-height);
   padding: var(--step-020) var(--step-030);
@@ -118,23 +129,27 @@ button.loc.tier-exit::before {
   background: var(--tier);
   pointer-events: none;
 }
-button.loc.recorded {
+button.loc.recorded,
+.loc.static.recorded {
   background: var(--status-recorded-bg);
   border-color: var(--success);
   color: var(--status-recorded-text);
 }
-button.loc.unresolved {
+button.loc.unresolved,
+.loc.static.unresolved {
   background: var(--status-unresolved-bg);
   border-color: var(--danger);
   color: var(--status-unresolved-text);
   border-style: dashed;
 }
-button.loc.partial {
+button.loc.partial,
+.loc.static.partial {
   border-color: var(--danger);
   border-style: dashed;
 }
 /* a problem status: --problem is set inline to its status token, --ink to its text token */
-button.loc.problem {
+button.loc.problem,
+.loc.static.problem {
   border-color: var(--problem);
 }
 /* selection is drawn inside the button, so the focus outline stays visible on a selected seat;
@@ -149,17 +164,20 @@ button.loc.selected::before {
   right: 5px;
   bottom: 5px;
 }
-button.loc.alternate {
+button.loc.alternate,
+.loc.static.alternate {
   border-color: var(--accent);
 }
 /* the status glyph is decorative: the state is in each button's accessible name */
-button.loc .status-glyph {
+button.loc .status-glyph,
+.loc.static .status-glyph {
   width: 1.05rem;
   height: 1.05rem;
 }
 /* armrests: a narrow button in the gap between two seats of a row; on narrow screens they leave the grid and stay in the seat's piece list */
 .armrest-slot,
-button.loc.armrest {
+button.loc.armrest,
+.loc.static.armrest {
   display: none;
 }
 @media (min-width: 721px) {
@@ -172,7 +190,8 @@ button.loc.armrest {
   .armrest-slot {
     display: block;
   }
-  button.loc.armrest {
+  button.loc.armrest,
+  .loc.static.armrest {
     display: flex;
     justify-content: center;
     align-self: center;
@@ -181,7 +200,8 @@ button.loc.armrest {
     height: 1.6rem;
     padding: 0;
   }
-  button.loc.armrest .status-glyph {
+  button.loc.armrest .status-glyph,
+  .loc.static.armrest .status-glyph {
     width: 0.6rem;
     height: 0.6rem;
   }
@@ -227,7 +247,8 @@ button.loc.armrest {
   flex-wrap: wrap;
   gap: var(--step-030);
 }
-.loc-list button.loc {
+.loc-list button.loc,
+.loc-list .loc.static {
   padding: var(--step-030) var(--space-5);
   text-align: left;
 }
@@ -248,6 +269,7 @@ button.loc.armrest {
     max-height: 55vh;
   }
   button.loc,
+  .loc.static,
   .cell.empty {
     min-height: var(--control-height-touch);
   }

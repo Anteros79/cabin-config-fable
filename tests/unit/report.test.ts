@@ -503,6 +503,26 @@ describe("report v3", () => {
     expect(observations?.classes).toEqual({ OD: { class: "NO_GO", reason: "MEL deferral expired", expiredOn: "2026-11-10" }, N: { class: "COSMETIC" } });
   });
 
+  it("lists the seats an open seat-blocking deferral blocks, carried ones where they sit now (Minor 1)", () => {
+    const belt = obs({ id: "B1", outcome: "DEFERRED", componentId: "SEATBELT", condition: "BROKEN", melClass: MEL_C, dueDate: "2026-11-22", blocksSeat: true });
+    const carriedBelt = obs({
+      id: "B2",
+      outcome: "DEFERRED",
+      componentId: "SEATBELT",
+      condition: "BROKEN",
+      melClass: MEL_C,
+      dueDate: "2026-11-22",
+      blocksSeat: true,
+      locationId: "SEAT:5B",
+      openedInVisitId: "earlier",
+    });
+    const notBlocking = obs({ id: "N", outcome: "DEFERRED", locationId: "SEAT:4A", dueDate: null });
+    const closedBelt = obs({ ...belt, id: "B3", locationId: "SEAT:6A", status: "CLOSED", closedInVisitId: "visit-1", closedAs: "FIXED" });
+    const report = buildReport(v3Visit({ observations: [belt, notBlocking, closedBelt], carried: [carriedOf(carriedBelt)] }), "FINAL", AT);
+    expect(report.blockedSeats).toEqual(["SEAT:3A", "SEAT:5B"]);
+    expect(buildReport(v3Visit({}), "FINAL", AT).blockedSeats).toEqual([]);
+  });
+
   it("an overdue open MEL deferral counts as must-fix, not as deferred", () => {
     const overdue = obs({ id: "OD", outcome: "DEFERRED", componentId: "TRAY", condition: "BROKEN", melClass: MEL_C, dueDate: "2026-11-10", blocksSeat: false });
     const { summary, observations } = buildReport(v3Visit({ observations: [overdue] }), "FINAL", AT);

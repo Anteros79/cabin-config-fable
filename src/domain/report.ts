@@ -1,5 +1,5 @@
 import { conditionLabel } from "./labels.ts";
-import { currentClass, isMustFixNow } from "./observations.ts";
+import { currentClass, isMustFixNow, seatIsBlocked } from "./observations.ts";
 import { compareCodePoints } from "./order.ts";
 import { higherStatus, type LocationStatus } from "./status.ts";
 import { summarizeLocations } from "./summarize.ts";
@@ -125,7 +125,7 @@ export function buildGaps(snapshot: VisitSnapshot): ReportGap[] {
 function buildObservationSection(
   visit: Visit,
   order: Map<string, number>,
-): { observations: ReportObservations; summary: ReportSummary; pieceOutcomes: ReportPieceOutcome[] } {
+): { observations: ReportObservations; summary: ReportSummary; pieceOutcomes: ReportPieceOutcome[]; blockedSeats: string[] } {
   const { snapshot } = visit;
   const own = visit.observations;
   const ownOpen = own.filter((o) => o.status === "OPEN");
@@ -180,7 +180,14 @@ function buildObservationSection(
       compareCodePoints(a.locationId, b.locationId) ||
       compareCodePoints(a.componentId, b.componentId),
   );
-  return { observations, summary, pieceOutcomes };
+  // The seats an open seat-blocking deferral blocks, where it sits on this layout (carried ones at their placed location):
+  // the cabin picture marks them "Blocked". Seats of the frozen layout only, in physical order.
+  const placedOpen: Observation[] = [...ownOpen, ...carried.flatMap((c) => (c.locationId === null ? [] : [{ ...c.observation, locationId: c.locationId }]))];
+  const seatIds = new Set(snapshot.context.layoutRevision.locations.filter((l) => l.kind === "SEAT").map((l) => l.id));
+  const blockedSeats = [...new Set(placedOpen.map((o) => o.locationId))]
+    .filter((id) => seatIds.has(id) && seatIsBlocked(placedOpen, id))
+    .sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0) || compareCodePoints(a, b));
+  return { observations, summary, pieceOutcomes, blockedSeats };
 }
 
 const asRecord = (v: unknown): Record<string, unknown> | null =>
@@ -338,7 +345,7 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
     .filter((s): s is SourceArtifact => Boolean(s))
     .sort((a, b) => compareCodePoints(a.id, b.id));
 
-  const { observations, summary, pieceOutcomes } = buildObservationSection(visit, order);
+  const { observations, summary, pieceOutcomes, blockedSeats } = buildObservationSection(visit, order);
   const seatCount = context.layoutRevision.locations.filter((l) => l.kind === "SEAT").length;
   return {
     schema: REPORT_SCHEMA,
@@ -397,5 +404,6 @@ export function buildReport(visit: Visit, reportKind: "FINAL" | "DRAFT_PREVIEW",
     timeline: buildTimeline(visit),
     observations,
     pieceOutcomes,
+    blockedSeats,
   };
 }
