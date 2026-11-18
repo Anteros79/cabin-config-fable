@@ -64,7 +64,7 @@ function main(argv: string[]): number {
       return 0;
     }
 
-    // Build both snapshots before anything is written: if either lookup does not resolve, nothing is added.
+    // Build the three snapshots before anything is written: if a lookup does not resolve, nothing is added.
     const now = new Date().toISOString();
     const snapshot = (tail: string, date: string) => {
       const result = lookup(release, tail, date);
@@ -75,6 +75,11 @@ function main(argv: string[]): number {
     const completedSnapshot = snapshot("N100TL", "2026-11-12");
     const draftSnapshot = snapshot("N200TL", "2026-07-01");
     const carriedSnapshot = snapshot("N100TL", "2026-11-19");
+    // The deferred tray table must be able to carry to the later check: its piece must exist in that layout. Checked
+    // here, before any write, so a failure cannot leave a part-seeded store.
+    const trayAt7C = carriedSnapshot.context.layoutRevision.locations.find((l) => l.id === "SEAT:7C")?.componentIds.includes("TRAY");
+    if (!trayAt7C)
+      throw new SeedError("Seat 7C has no tray table in the N100TL layout of 2026-11-19, so the deferral could not carry over. No sample visits were added.");
 
     const completed = visits.createVisit(completedSnapshot, TECHNICIAN).visit;
     visits.upsertRecord(
@@ -118,12 +123,16 @@ function main(argv: string[]): number {
 
     // The next check on N100TL: the deferred tray table is carried over and waits to be closed or deferred again.
     const next = visits.createVisit(carriedSnapshot, TECHNICIAN).visit;
+    const deferred = visits.getVisit(completed.id).observations;
     const carried = visits.getVisit(next.id).carried;
-    if (carried.length !== 1) throw new SeedError(`Expected the deferred problem to carry over to the next N100TL check, found ${carried.length}.`);
+    if (deferred.length !== 1 || carried.length !== 1)
+      throw new SeedError(
+        `Expected one deferred problem carried over to the next N100TL check, found ${deferred.length} deferred and ${carried.length} carried.`,
+      );
     console.log(
-      `Sample visit #${done.visit.number} was completed with 1 deferred problem (tray table at 7C, due ${carried[0]?.observation.dueDate ?? "n/a"}).`,
+      `Sample visit #${done.visit.number} was completed with ${deferred.length} deferred problem (tray table at 7C, due ${deferred[0]?.dueDate ?? "n/a"}).`,
     );
-    console.log(`Draft sample visit #${next.number} on N100TL shows 1 carried-over problem.`);
+    console.log(`Draft sample visit #${next.number} on N100TL shows ${carried.length} carried-over problem.`);
   } finally {
     visits.close();
   }

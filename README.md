@@ -34,12 +34,14 @@ Version 2.1.0 adds a visual way to do the check: tap the exact piece in 3D, see 
 - **Defer:** until the next check or the next stop, with a reason (no stock, no time, other).
 - **Must be fixed** before flight.
 
+The outcomes on offer depend on the MEL class: a cosmetic problem can be noted or deferred, an MEL item can be deferred or must-fix, and a no-go item is must-fix only.
+
 **The fictional MEL.** Every piece and condition has a class: `COSMETIC`, `MEL` (deferrable under an MEL item with a category and a due date) or `NO_GO`. The MEL is data, like the parts list, and it is not the airline's MEL: the items, categories (A as stated, B 3 days, C 10 days, D 120 days) and wording are invented for this demonstration.
 
 - A class can be raised by the technician, never lowered.
 - A seat belt deferral blocks the seat. While a seat is blocked, an entry that allows it (a missing life vest) becomes deferrable on that seat.
 - An MEL deferral past its due date is treated as `NO_GO`: it becomes must-fix. Dates are compared against the visit's check date, never the clock.
-- Completing a check with must-fix items needs the answer "Aircraft held, reported". The visit stores it and the report says "Not releasable".
+- Completing a check with must-fix items needs the answer "Aircraft held, reported to maintenance". The visit stores it and the report says "Not releasable".
 
 **Carried over.** Only deferred and must-fix problems carry to the next check on the same tail; a problem that was only noted stays on its own visit. A carried problem attaches to the same piece, or, if that bin changed, to the bin that now covers its first row on the same side. If the piece no longer exists (for example an assist spring after a move to LARGE_PIVOT) it is listed under "No longer at this position" until the technician closes it. It is never dropped.
 

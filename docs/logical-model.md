@@ -173,11 +173,13 @@ Backward compatibility: fields added after a snapshot was frozen are absent from
 
 Report schema 2 (`cabin-kit.report/2`) adds `excludedRules` to each work item and `sourceIds` to each gap, and `sources` lists every source the report cites: work items (rule, selection, mandatory children, pending changes), their excluded rules, and gaps (ambiguous candidates and no-match exclusions). A stored `/1` report is immutable and is returned exactly as stored; readers treat its missing fields as empty. Work items are ordered by physical position: seats by physical row then letter, then floor areas by first row, then bins by module, each tie broken by location id; gap location ids follow the same order. Bins on both sides share module numbers, so they interleave left and right: `BIN:L-01`, `BIN:R-01`, `BIN:L-02`, `BIN:R-02` and so on. A record whose location is absent from the snapshot, or a location of unknown kind, is refused as `SNAPSHOT_INCONSISTENT` (HTTP 500), never placed silently. The preparation overview's `counts.parts` is the number of distinct primary part numbers.
 
+Report schema 3 (`cabin-kit.report/3`) adds `summary` (counts of replaced, noted, deferred cosmetic and MEL, must-fix, carried in and still open, plus `releasable` and `aircraftHeld`), `timeline` (every record and problem event of the visit in order, with before and after), `observations` (this visit's problems by outcome, those carried in and those still open) and `pieceOutcomes` (the status of each touched piece, for the cabin picture). The page and the PDF both show them. A report of schema 1 or 2 has none of these fields, and every reader guards for their absence.
+
 | Operation | Guarantee |
 | --- | --- |
 | Add / update | One record per visit, location and component. `expectedRecordVersion` mismatch → 409 `STALE_RECORD` |
 | Remove | Same version check; no orphan child lines exist because lines live on the record |
-| Complete | One transaction: version check, non-empty check, re-derivation of every record from the snapshot, lock, report stored. Repeating it returns the stored report |
+| Complete | One transaction: version check, non-empty check (a record or a problem event counts), re-derivation of every record from the snapshot, lock, report stored. Repeating it returns the stored report |
 | Retry | A repeated idempotency key returns the first outcome, for record writes, completion and linked events; the same key with a different request is refused. Keys are pruned after 30 days when the store opens; events and reports are never pruned |
 | After completion | Edits refused by the application and by triggers on records, visit, report and events. Advisories and corrections are appended as linked events |
 | Linked events | `ADVISORY` or `CORRECTION_NOTE`, with a note of 1-2,000 characters and an optional author of at most 80 (both trimmed first; nothing is truncated). Accepted on drafts and on completed visits (decision D4 of the hardening plan), appended only, and idempotent by key like the other writes |
@@ -187,7 +189,7 @@ Writers use `BEGIN IMMEDIATE`, so an edit racing a completion either commits fir
 ## Storage
 
 - `reference.sqlite`: `release`, `release_entity` (one row per entity: type, id, namespace, JSON), `active_release` (single pointer row), `release_event`. Entities of a release that has left "staged" cannot be changed (triggers).
-- `visits.sqlite`: `visits` (with `aircraft_held` from schema 3), `visit_records`, `visit_events`, `reports`, `idempotency`, and from schema 3 `visit_observations`. Completed visits, their observations, events and reports are locked by triggers.
+- `visits.sqlite`: `visits` (with `aircraft_held` from schema 3), `visit_records`, `visit_events`, `reports`, `idempotency`, and from schema 3 `visit_observations`. Triggers lock completed visits' records, snapshots, events and reports. For observations: one closed in a completed visit cannot change, none can be deleted, and none can be opened through a visit that is not a draft. A deferral opened in a completed visit stays open until a later check closes it.
 
 Reference operations refuse a target that is the visit store (same path, symlink or hard link), that contains visit tables, or that this application does not recognise. Classification is by the tables actually present, not by a marker row.
 
