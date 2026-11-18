@@ -59,6 +59,8 @@ npm start            # http://127.0.0.1:4310
 
 At 2.0.0 this was tested from a fresh clone of the release branch, and the page and the lookup API answered on the port given. At 2.1.0 the process tests seed a fresh data folder: the import activates release `REL-0001-b5b0a788` and the seed adds three sample visits.
 
+**Upgrading an existing data folder to 2.1.0:** back up the visits (`npm run visits:backup`), then after upgrading, run `npm run reference:import` to get the new pieces and MEL. Until then the active release is the old one: seats have only their cushion and backrest, and no problem can be noted or deferred.
+
 `npm start` binds to loopback only unless told otherwise (see Configuration); there is no authentication. If no reference store exists it creates one with the same import the CLI uses. It never re-imports or resets an existing store.
 
 The seed leaves a completed visit on N100TL with one deferred tray table (seat 7C), a draft on N200TL and a later draft on N100TL (2026-11-19) that shows the tray table under "Carried over".

@@ -79,7 +79,7 @@
   --status-alternate-bg: var(--info-bg);
   --status-alternate-border: var(--info-border);
   --status-alternate-text: var(--info-text);
-  /* problem statuses (VAC-9 placeholders, Task 15 tunes them): the fill is the badge disc and the border, 3:1 on every surface
+  /* problem statuses: the fill is the badge disc and the border, 3:1 on every surface
      and with the glyph ink on it; the -ink is the badge words, 4.5:1 on every surface. Light and dark values differ. */
   --status-mustfix: #e00b75;
   --status-mustfix-ink: #ca0a69;

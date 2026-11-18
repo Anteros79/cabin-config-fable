@@ -76,7 +76,8 @@ function main(argv: string[]): number {
     const draftSnapshot = snapshot("N200TL", "2026-07-01");
     const carriedSnapshot = snapshot("N100TL", "2026-11-19");
     // The deferred tray table must be able to carry to the later check: its piece must exist in that layout. Checked
-    // here, before any write, so a failure cannot leave a part-seeded store.
+    // here, before any write, so this cause cannot leave a part-seeded store. The consistency check after the writes
+    // (below) can still fail once the three visits are written; its message says so.
     const trayAt7C = carriedSnapshot.context.layoutRevision.locations.find((l) => l.id === "SEAT:7C")?.componentIds.includes("TRAY");
     if (!trayAt7C)
       throw new SeedError("Seat 7C has no tray table in the N100TL layout of 2026-11-19, so the deferral could not carry over. No sample visits were added.");
@@ -127,7 +128,7 @@ function main(argv: string[]): number {
     const carried = visits.getVisit(next.id).carried;
     if (deferred.length !== 1 || carried.length !== 1)
       throw new SeedError(
-        `Expected one deferred problem carried over to the next N100TL check, found ${deferred.length} deferred and ${carried.length} carried.`,
+        `Expected one deferred problem carried over to the next N100TL check, found ${deferred.length} deferred and ${carried.length} carried. The three sample visits had already been written when this check failed.`,
       );
     console.log(
       `Sample visit #${done.visit.number} was completed with ${deferred.length} deferred problem (tray table at 7C, due ${deferred[0]?.dueDate ?? "n/a"}).`,
