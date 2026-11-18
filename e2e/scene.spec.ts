@@ -517,29 +517,25 @@ test("a camera preset eases along an arc and drawing stops when it arrives; redu
   visit,
 }, testInfo) => {
   test.skip(reducedMotionProject(testInfo.project.name), "the glide needs motion; the reduced-motion project has its own test");
+  // The glide is timed (performance.now), so a renderer slower than the glide (software WebGL) would draw only its two ends.
+  // The page's clock is the test's: paused before the click, it moves on a step at a time and each step draws one frame.
+  await page.clock.install();
   await openScene(page, visit.id);
   await pressPreset(page, "Reset");
   const start = await cameraOf(page);
-  // sample the camera on every frame from before the click until the transition has started and ended
-  await page.evaluate(() => {
-    const w = window as unknown as { __poses: number[][]; __posesDone: boolean };
-    w.__poses = [];
-    w.__posesDone = false;
-    let started = false;
-    const step = () => {
-      const i = window.__cabinKit?.scene?.describeScene() as { transitioning: boolean; camera: { position: number[]; target: number[] } };
-      w.__poses.push([...i.camera.position, ...i.camera.target]);
-      if (i.transitioning) started = true;
-      if (started && !i.transitioning) w.__posesDone = true;
-      else requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  });
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   await toolbarButton(page, "Aisle").click();
-  await page.waitForFunction(() => (window as unknown as { __posesDone: boolean }).__posesDone);
+  expect((await scene(page)).transitioning, "the preset change eases").toBe(true);
+  const poses: number[][] = [];
+  // 50 ms a step: a glide (250-700 ms) is seen at five or more poses; fastForward fires the one frame due, not three
+  for (let step = 0; step < 40 && (await scene(page)).transitioning; step++) {
+    await page.clock.fastForward(50);
+    poses.push(await cameraOf(page));
+  }
+  expect((await scene(page)).transitioning, "the glide ends on the paused clock").toBe(false);
+  await page.clock.resume();
   await settle(page);
   const end = await cameraOf(page);
-  const poses = await page.evaluate(() => (window as unknown as { __poses: number[][] }).__poses);
   expect(
     poses.some((p) => drift(p, start) > 0.05 && drift(p, end) > 0.05),
     "the camera passes through poses between the two presets",

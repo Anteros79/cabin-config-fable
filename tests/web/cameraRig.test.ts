@@ -8,6 +8,9 @@ import {
   easeInOutCubic,
   interpolatePose,
   MIN_CAMERA_HEIGHT,
+  NOMINAL_FRAME_MS,
+  ORBIT_DAMPING,
+  orbitDampingFor,
   poseToFrame,
   TRANSITION_MAX_MS,
   TRANSITION_MIN_MS,
@@ -148,4 +151,20 @@ test("boundPose moves the camera with a clamped target and keeps it above the fl
   expect(low.target.y).toBe(-0.5);
   // new vectors: the pose passed in is not changed
   expect(panned.target.x).toBe(33);
+});
+
+test("orbitDampingFor: the glide after a drag lasts a time, not a number of frames", () => {
+  // 60 Hz and faster: the share of one frame, as before
+  expect(orbitDampingFor(NOMINAL_FRAME_MS)).toBeCloseTo(ORBIT_DAMPING, 12);
+  expect(orbitDampingFor(4)).toBeCloseTo(ORBIT_DAMPING, 12);
+  expect(orbitDampingFor(0)).toBeCloseTo(ORBIT_DAMPING, 12);
+  // a frame as long as two spends what two would
+  expect(1 - orbitDampingFor(2 * NOMINAL_FRAME_MS)).toBeCloseTo((1 - ORBIT_DAMPING) ** 2, 12);
+  // a second of glide is left in the same share whether it takes 60 frames, 5 or 1
+  const left = (frameMs: number, frames: number) => (1 - orbitDampingFor(frameMs)) ** frames;
+  expect(left(1000 / 5, 5)).toBeCloseTo(left(NOMINAL_FRAME_MS, 60), 12);
+  expect(left(1000, 1)).toBeCloseTo(left(NOMINAL_FRAME_MS, 60), 12);
+  // a long frame spends nearly all of it, and never more
+  expect(orbitDampingFor(1000)).toBeGreaterThan(0.999);
+  expect(orbitDampingFor(60_000)).toBeLessThanOrEqual(1);
 });

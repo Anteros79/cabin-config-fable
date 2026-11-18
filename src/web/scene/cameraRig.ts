@@ -29,6 +29,23 @@ export const SEAT_FRAME_DISTANCE = 2.2;
 const FLOOR_FRAME_MIN_DISTANCE = 2.5;
 const FLOOR_FRAME_DISTANCE_PER_METRE = 1.3;
 
+/** The share of the orbit's remaining glide spent in one frame at 60 Hz. */
+export const ORBIT_DAMPING = 0.12;
+/** The frame the damping factor is set for. */
+export const NOMINAL_FRAME_MS = 1000 / 60;
+
+/**
+ * The orbit damping factor for a frame that took `frameMs`. OrbitControls spends a fixed share of the glide left after a
+ * drag in each update, so on its own the glide lasts a number of frames, not a time: at 60 Hz it is over in about a
+ * second, but a device that draws a frame a second (software WebGL) would creep on for a minute. Spending the share of
+ * as many 60 Hz frames as the frame took keeps the glide's length in time, at any frame rate. A frame shorter than a
+ * 60 Hz one counts as one, so 60 Hz and faster behave as they did. The total move is the same either way.
+ */
+export function orbitDampingFor(frameMs: number): number {
+  const frames = Math.max(frameMs, NOMINAL_FRAME_MS) / NOMINAL_FRAME_MS;
+  return 1 - (1 - ORBIT_DAMPING) ** frames;
+}
+
 export function easeInOutCubic(t: number): number {
   const x = Math.min(Math.max(t, 0), 1);
   return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;

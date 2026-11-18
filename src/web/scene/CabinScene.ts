@@ -4,7 +4,18 @@ import { AFT_MARGIN, CEILING_HEIGHT, FORWARD_MARGIN, shellProfile } from "../../
 import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
 import { aggregateStatus, type LocationStatus, STATUS_ENCODING } from "../model.ts";
 import type { SceneStatusKey } from "../theme.ts";
-import { boundPose, type CabinBounds, type CameraPose, easeInOutCubic, interpolatePose, poseToFrame, transitionMs } from "./cameraRig.ts";
+import {
+  boundPose,
+  type CabinBounds,
+  type CameraPose,
+  easeInOutCubic,
+  interpolatePose,
+  NOMINAL_FRAME_MS,
+  ORBIT_DAMPING,
+  orbitDampingFor,
+  poseToFrame,
+  transitionMs,
+} from "./cameraRig.ts";
 import { createEnvironment, ENVIRONMENT_INTENSITY, type LightMode } from "./environment.ts";
 import {
   BLOCKED_COLOUR,
@@ -379,6 +390,8 @@ export class CabinScene {
   private viewLocation: string | null = null;
   private pickableFloorBins = true;
   frameCount = 0;
+  /** when the frame before this one ran, while frames follow one another; null when the last frame requested none */
+  private lastFrameAt: number | null = null;
   private canvas: HTMLCanvasElement;
   private callbacks: SceneCallbacks;
 
@@ -406,7 +419,7 @@ export class CabinScene {
     this.controls.connect(canvas);
     // the controls set touch-action: none inline; the stylesheet's pan-y lets a vertical drag scroll the page
     canvas.style.touchAction = "";
-    this.controls.dampingFactor = 0.12;
+    this.controls.dampingFactor = ORBIT_DAMPING;
     this.controls.minDistance = 0.8;
     // set per layout from the cabin length
     this.controls.maxDistance = 90;
@@ -1971,10 +1984,11 @@ export class CabinScene {
     if (this.disposed || this.paused) return;
     this.inFrame = true;
     let settling = false;
+    let now = 0;
     try {
       this.measureStep?.();
       this.processHover();
-      const now = performance.now();
+      now = performance.now();
       // a transition's own moves are the scene's, even while the user holds a pointer down
       const animating = this.transition !== null;
       this.stepTransition(now);
@@ -1991,11 +2005,18 @@ export class CabinScene {
         if (this.drawnOpenBin() !== drawn) this.binDrawnChanged();
         this.needsRender = true;
       }
-      if (animating)
-        this.place(() => {
-          settling = this.controls.update();
-        });
-      else settling = this.controls.update();
+      // the glide after a drag is spent by the time that passed, not by the frame (see orbitDampingFor)
+      this.controls.dampingFactor = orbitDampingFor(this.lastFrameAt === null ? NOMINAL_FRAME_MS : now - this.lastFrameAt);
+      try {
+        if (animating)
+          this.place(() => {
+            settling = this.controls.update();
+          });
+        else settling = this.controls.update();
+      } finally {
+        // the controls' own updates, between frames (a pointer move), spend the share of one frame
+        this.controls.dampingFactor = ORBIT_DAMPING;
+      }
       if (settling) this.needsRender = true;
       if (this.needsRender) {
         this.needsRender = false;
@@ -2006,7 +2027,10 @@ export class CabinScene {
     } finally {
       this.inFrame = false;
     }
-    if (settling || this.measureStep || this.needsRender || this.transition || this.ghostClock !== null || this.bins?.animating) this.requestFrame();
+    const more = settling || this.measureStep || this.needsRender || this.transition || this.ghostClock !== null || this.bins?.animating;
+    // frame to frame, start to start: a slow frame's own drawing counts in the time that passed
+    this.lastFrameAt = more ? now : null;
+    if (more) this.requestFrame();
   };
 
   /**
