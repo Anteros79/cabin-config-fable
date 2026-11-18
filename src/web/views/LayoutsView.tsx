@@ -43,6 +43,10 @@ export function LayoutsView({ layoutId, visualProfiles }: { layoutId: string | n
       componentDefs: Object.fromEntries(detail.components.map((c) => [c.id, c])),
       records: [],
       editable: false,
+      observations: [],
+      carried: [],
+      checkDate: "",
+      mel: [],
       unresolvedReason: candidate
         ? "Unresolved: no approved parts, applicability or substitute catalogue was supplied for this candidate layout, and it is not assigned to any tail."
         : "Open an appearance check for a tail and date to resolve parts. Applicability depends on the dated tail configuration.",

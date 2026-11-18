@@ -13,6 +13,10 @@ const workspace: Workspace = {
   records: [],
   editable: true,
   unresolvedReason: null,
+  observations: [],
+  carried: [],
+  checkDate: "2026-11-12",
+  mel: [],
 };
 
 describe("CabinMap Go to location", () => {

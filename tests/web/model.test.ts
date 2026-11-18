@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CabinLocation, VisitRecord } from "../../src/domain/types.ts";
+import type { CabinLocation, CarriedObservation, Condition, MelClass, Observation, VisitRecord } from "../../src/domain/types.ts";
 import { aggregateStatus, buildStates, componentsAt, describeSeat, seatLabelFor, type Workspace } from "../../src/web/model.ts";
 import { at, fixtureRelease, snapshotFor } from "../helpers.ts";
 
@@ -36,7 +36,49 @@ const workspace = (records: Workspace["records"] = []): Workspace => ({
   records,
   editable: true,
   unresolvedReason: null,
+  observations: [],
+  carried: [],
+  checkDate: "2026-11-12",
+  mel: snap.mel ?? [],
+  variantId: snap.context.variant.id,
 });
+
+const COSMETIC: MelClass = { class: "COSMETIC" };
+const MEL_C: MelClass = { class: "MEL", item: "FX-25-21-01", category: "C", intervalDays: 10, conditions: "Seat blocked and placarded INOP" };
+
+const observation = (locationId: string, componentId: string, over: Partial<Observation> = {}): Observation => ({
+  id: `OBS-${locationId}-${componentId}`,
+  tail: "N100TL",
+  status: "OPEN",
+  version: 1,
+  melClass: COSMETIC,
+  dueDate: null,
+  blocksSeat: false,
+  openedInVisitId: "visit-1",
+  closedInVisitId: null,
+  closedAs: null,
+  locationLabel: locationId,
+  componentName: componentId,
+  createdAt: "2026-11-12T12:02:00.000Z",
+  updatedAt: "2026-11-12T12:02:00.000Z",
+  locationId,
+  componentId,
+  condition: "STAINED" as Condition,
+  note: "",
+  outcome: "NOTED",
+  ...over,
+});
+
+const carriedAt = (o: Observation, locationId: string = o.locationId, overdue = false): CarriedObservation => ({
+  observation: o,
+  placement: "SAME",
+  locationId,
+  overdue,
+});
+
+const withProblems = (observations: Observation[] = [], carried: CarriedObservation[] = []): Workspace => ({ ...workspace(), observations, carried });
+const pieceStatus = (ws: Workspace, locationId: string, componentId: string) =>
+  componentsAt(ws, location(locationId)).find((v) => v.componentId === componentId)?.pieceStatus;
 
 describe("componentsAt", () => {
   it("lists each component of a seat with its resolution, rule and no record", () => {
@@ -203,5 +245,99 @@ describe("seatLabelFor", () => {
       seat: { ...(base.seat as NonNullable<CabinLocation["seat"]>), maintenanceZone: "Z9", commercialTier: "TIER-X" },
     };
     expect(seatLabelFor(loc, undefined)).toBe(`${loc.label}, zone Z9, TIER-X`);
+  });
+});
+
+describe("piece status from problems", () => {
+  it("rank: mustFix beats unresolved beats deferred beats carried beats noted beats recorded beats alternate", () => {
+    const order = ["mustFix", "unresolved", "deferred", "carried", "noted", "recorded", "alternate", "none"] as const;
+    for (const [i, high] of order.entries()) {
+      for (const low of order.slice(i + 1)) {
+        expect(aggregateStatus([low, high]), `${high} over ${low}`).toBe(high);
+        expect(aggregateStatus([high, low]), `${high} over ${low}`).toBe(high);
+      }
+    }
+  });
+
+  it("a piece with a record and an open NOTED problem is noted", () => {
+    const ws = { ...withProblems([observation("SEAT:3A", "CUSHION")]), records: [recordAt("SEAT:3A", "CUSHION")] };
+    expect(pieceStatus(ws, "SEAT:3A", "CUSHION")).toBe("noted");
+    expect(buildStates(ws).scene.get("SEAT:3A")?.components.CUSHION).toBe("noted");
+    expect(buildStates(ws).flags.get("SEAT:3A")?.status).toBe("noted");
+  });
+
+  it("a closed problem changes nothing", () => {
+    const ws = withProblems([observation("SEAT:3A", "CUSHION", { status: "CLOSED", closedAs: "FIXED" })]);
+    expect(pieceStatus(ws, "SEAT:3A", "CUSHION")).not.toBe("noted");
+  });
+
+  it("an open deferral opened in this visit is deferred; one carried from an earlier visit is carried", () => {
+    const deferral = observation("SEAT:3A", "CUSHION", { outcome: "DEFERRED", deferUntil: "NEXT_CHECK", reason: "NO_STOCK" });
+    expect(pieceStatus(withProblems([deferral]), "SEAT:3A", "CUSHION")).toBe("deferred");
+    const earlier = { ...deferral, openedInVisitId: "visit-0" };
+    const ws = withProblems([], [carriedAt(earlier)]);
+    expect(pieceStatus(ws, "SEAT:3A", "CUSHION")).toBe("carried");
+    expect(componentsAt(ws, location("SEAT:3A")).find((v) => v.componentId === "CUSHION")?.carried?.observation).toBe(earlier);
+    expect(buildStates(ws).scene.get("SEAT:3A")?.components.CUSHION).toBe("carried");
+  });
+
+  it("a must-fix outcome makes the piece mustFix over a record and a deferral", () => {
+    const ws = {
+      ...withProblems([
+        observation("SEAT:3A", "CUSHION", { outcome: "MUST_FIX", melClass: MEL_C }),
+        observation("SEAT:3A", "CUSHION", { id: "OBS-2", outcome: "DEFERRED", condition: "TORN" }),
+      ]),
+      records: [recordAt("SEAT:3A", "CUSHION")],
+    };
+    expect(pieceStatus(ws, "SEAT:3A", "CUSHION")).toBe("mustFix");
+  });
+
+  it("an overdue carried MEL deferral is mustFix on the visit's checkDate", () => {
+    const deferral = observation("SEAT:3A", "SEATBELT", {
+      condition: "BROKEN",
+      outcome: "DEFERRED",
+      deferUntil: "NEXT_CHECK",
+      reason: "NO_STOCK",
+      melClass: MEL_C,
+      dueDate: "2026-11-11",
+      openedInVisitId: "visit-0",
+    });
+    expect(pieceStatus(withProblems([], [carriedAt(deferral, "SEAT:3A", true)]), "SEAT:3A", "SEATBELT")).toBe("mustFix");
+    const notDue = { ...deferral, dueDate: "2026-11-12" };
+    expect(pieceStatus(withProblems([], [carriedAt(notDue)]), "SEAT:3A", "SEATBELT")).toBe("carried");
+  });
+
+  it("a carried problem placed on another location marks that location's piece", () => {
+    const o = observation("BIN:L-04", "CUSHION", { outcome: "MUST_FIX", melClass: MEL_C });
+    const ws = withProblems([], [{ observation: o, placement: "MAPPED", locationId: "SEAT:3A", overdue: false }]);
+    expect(pieceStatus(ws, "SEAT:3A", "CUSHION")).toBe("mustFix");
+  });
+
+  it("an orphaned carried problem adds no piece status", () => {
+    const o = observation("SEAT:99Z", "CUSHION", { outcome: "MUST_FIX" });
+    const ws = withProblems([], [{ observation: o, placement: "ORPHANED", locationId: null, overdue: false }]);
+    expect(buildStates(ws).scene).toEqual(buildStates(workspace()).scene);
+  });
+
+  it("melClass reads the frozen MEL and the seat-blocked state", () => {
+    const vest = (ws: Workspace) => componentsAt(ws, location("SEAT:3A")).find((v) => v.componentId === "LIFE_VEST");
+    expect(vest(workspace())?.melClass("MISSING").class).toBe("NO_GO");
+    const belt = observation("SEAT:3A", "SEATBELT", { condition: "BROKEN", outcome: "DEFERRED", melClass: MEL_C, dueDate: "2026-11-22", blocksSeat: true });
+    expect(vest(withProblems([belt]))?.melClass("MISSING").class).toBe("MEL");
+    expect(vest(withProblems([], [carriedAt({ ...belt, openedInVisitId: "visit-0" })]))?.melClass("MISSING").class).toBe("MEL");
+  });
+
+  it("a stored class is a floor: an overdue open MEL deferral is NO_GO even when classified lower", () => {
+    const deferral = observation("SEAT:3A", "SEATBELT", { condition: "WORN", outcome: "DEFERRED", melClass: MEL_C, dueDate: "2026-11-01" });
+    expect(pieceStatus(withProblems([deferral]), "SEAT:3A", "SEATBELT")).toBe("mustFix");
+  });
+
+  it("a blocked seat appears in flags.blocked", () => {
+    expect(buildStates(workspace()).flags.blocked.size).toBe(0);
+    const belt = observation("SEAT:3A", "SEATBELT", { condition: "BROKEN", outcome: "DEFERRED", melClass: MEL_C, dueDate: "2026-11-22", blocksSeat: true });
+    expect([...buildStates(withProblems([belt])).flags.blocked]).toEqual(["SEAT:3A"]);
+    expect([...buildStates(withProblems([], [carriedAt({ ...belt, openedInVisitId: "visit-0" })])).flags.blocked]).toEqual(["SEAT:3A"]);
+    const notBlocking = { ...belt, blocksSeat: false };
+    expect(buildStates(withProblems([notBlocking])).flags.blocked.size).toBe(0);
   });
 });

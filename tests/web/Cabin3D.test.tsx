@@ -41,6 +41,10 @@ const workspace: Workspace = {
   records: [],
   editable: false,
   unresolvedReason: null,
+  observations: [],
+  carried: [],
+  checkDate: "2026-11-12",
+  mel: [],
 };
 
 beforeEach(() => {

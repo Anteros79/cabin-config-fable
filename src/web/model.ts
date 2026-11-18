@@ -1,11 +1,28 @@
-import type { CabinLocation, ComponentDef, ComponentResolution, FrozenRule, LayoutRevision, Resolution, SourceArtifact, VisitRecord } from "../domain/types.ts";
+import { classify, effectiveClass, seatIsBlocked } from "../domain/observations.ts";
+import type {
+  CabinLocation,
+  CarriedObservation,
+  ComponentDef,
+  ComponentResolution,
+  Condition,
+  FrozenRule,
+  LayoutRevision,
+  MelClass,
+  MelEntry,
+  Observation,
+  Resolution,
+  SourceArtifact,
+  VisitRecord,
+} from "../domain/types.ts";
 import type { LocationState } from "./scene/CabinScene.ts";
 
 /**
- * The work status of a location or one of its components: a replacement is recorded, the component is unresolved, an
- * approved alternate part is eligible here (and nothing is recorded yet), or none of these.
+ * The work status of a location or one of its components. Problems come from observations: must fix, deferred (opened in
+ * this visit), carried (a deferral from an earlier visit) and noted. The rest come from records and the resolution: a
+ * replacement is recorded, the component is unresolved, an approved alternate part is eligible here (and nothing is
+ * recorded yet), or none of these. The union is in rank order, highest first (aggregateStatus).
  */
-export type LocationStatus = "recorded" | "unresolved" | "alternate" | "none";
+export type LocationStatus = "mustFix" | "unresolved" | "deferred" | "carried" | "noted" | "recorded" | "alternate" | "none";
 export type StatusGlyph = "tick" | "question" | "alternate" | "none";
 
 /**
@@ -13,6 +30,11 @@ export type StatusGlyph = "tick" | "question" | "alternate" | "none";
  * colour alone: every status but "none" has its own glyph, drawn in a disc of its colour token. "none" shows nothing.
  */
 export const STATUS_ENCODING: Record<LocationStatus, { glyph: StatusGlyph; token: string; label: string }> = {
+  // The problem statuses have no glyph or token yet: they show as a 3D tint and as text until their encoding lands.
+  mustFix: { glyph: "none", token: "", label: "Must fix" },
+  deferred: { glyph: "none", token: "", label: "Deferred" },
+  carried: { glyph: "none", token: "", label: "Carried" },
+  noted: { glyph: "none", token: "", label: "Noted" },
   recorded: { glyph: "tick", token: "--status-recorded", label: "Recorded" },
   unresolved: { glyph: "question", token: "--status-unresolved", label: "Unresolved" },
   alternate: { glyph: "alternate", token: "--status-alternate", label: "Has alternate" },
@@ -30,12 +52,13 @@ export const GLYPH_PATHS: Record<Exclude<StatusGlyph, "none">, string> = {
 };
 
 /**
- * The status a whole location shows: an unresolved component wins (the location still needs attention, even with other
- * parts recorded), then a record, then an eligible alternate.
+ * The status a whole location shows, the highest-ranked of its pieces: a must-fix problem, an unresolved component (the
+ * location still needs attention, even with other parts recorded), a deferral, a carried deferral, a noted problem, a
+ * record, then an eligible alternate.
  */
 export function aggregateStatus(statuses: Iterable<LocationStatus>): LocationStatus {
   let out: LocationStatus = "none";
-  const rank: Record<LocationStatus, number> = { none: 0, alternate: 1, recorded: 2, unresolved: 3 };
+  const rank: Record<LocationStatus, number> = { none: 0, alternate: 1, recorded: 2, noted: 3, carried: 4, deferred: 5, unresolved: 6, mustFix: 7 };
   for (const s of statuses) if (rank[s] > rank[out]) out = s;
   return out;
 }
@@ -51,6 +74,51 @@ export interface Workspace {
   editable: boolean;
   /** why nothing can be resolved here (explore mode) */
   unresolvedReason: string | null;
+  /** The visit's own observations (opened or closed in it). Empty where there is no visit. */
+  observations: Observation[];
+  /** The tail's other open deferred and must-fix observations, placed on this layout. Empty where there is no visit. */
+  carried: CarriedObservation[];
+  /** The visit's check date (YYYY-MM-DD): overdue is judged against it, never the clock. */
+  checkDate: string;
+  /** The MEL frozen in the visit's snapshot. Empty where there is no visit. */
+  mel: MelEntry[];
+  /** The tail's maintenance variant, which picks the MEL entry. Without it only entries that name no variant apply. */
+  variantId?: string;
+}
+
+/** The observations that are open now, this visit's and carried, each with the location it sits at on this layout. */
+function openPlaced(ws: Workspace): { observation: Observation; locationId: string; carried: boolean }[] {
+  const own = ws.observations.filter((o) => o.status === "OPEN").map((observation) => ({ observation, locationId: observation.locationId, carried: false }));
+  const carried = ws.carried.flatMap((c) => (c.locationId === null ? [] : [{ observation: c.observation, locationId: c.locationId, carried: true }]));
+  return [...own, ...carried];
+}
+
+const CLASS_RANK: Record<MelClass["class"], number> = { COSMETIC: 0, MEL: 1, NO_GO: 2 };
+
+/** The class of a problem now: re-classified against the MEL with the seat-blocked state of the other open problems, never below its stored class, NO_GO once an MEL deferral is overdue. Mirrors the server. */
+function currentClass(ws: Workspace, open: Observation[], o: Observation): MelClass {
+  const others = open.filter((x) => x.id !== o.id);
+  const now = classify({
+    mel: ws.mel,
+    componentId: o.componentId,
+    condition: o.condition,
+    variant: ws.variantId ?? "",
+    seatBlocked: seatIsBlocked(others, o.locationId),
+    ...(o.raisedTo !== undefined ? { raisedTo: o.raisedTo } : {}),
+  });
+  const melClass = CLASS_RANK[now.class] > CLASS_RANK[o.melClass.class] ? now : o.melClass;
+  return effectiveClass({ ...o, melClass }, ws.checkDate);
+}
+
+/** The status a piece's open problems give it, or null when it has none. */
+function problemStatus(ws: Workspace, placed: ReturnType<typeof openPlaced>, locationId: string, componentId: string): LocationStatus | null {
+  const here = placed.filter((p) => p.locationId === locationId && p.observation.componentId === componentId);
+  if (here.length === 0) return null;
+  const open = placed.map((p) => ({ ...p.observation, locationId: p.locationId }));
+  if (here.some((p) => p.observation.outcome === "MUST_FIX" || currentClass(ws, open, p.observation).class === "NO_GO")) return "mustFix";
+  if (here.some((p) => p.observation.outcome === "DEFERRED" && !p.carried)) return "deferred";
+  if (here.some((p) => p.observation.outcome === "DEFERRED")) return "carried";
+  return here.some((p) => p.observation.outcome === "NOTED") ? "noted" : null;
 }
 
 export interface ComponentView {
@@ -62,13 +130,29 @@ export interface ComponentView {
   rule: FrozenRule | null;
   resolution: ComponentResolution | null;
   record: VisitRecord | null;
+  /** open problems opened in this visit on this piece */
+  problems: Observation[];
+  /** a problem carried over from an earlier visit onto this piece, if any */
+  carried: CarriedObservation | null;
+  /** the class a problem with this condition would have on this piece now, given the seat-blocked state */
+  melClass: (condition: Condition) => MelClass;
+  /** what the piece shows: its problems first, then the record-based status */
+  pieceStatus: LocationStatus;
 }
 
 export function componentsAt(ws: Workspace, location: CabinLocation): ComponentView[] {
+  const placed = openPlaced(ws);
+  const seatBlocked = seatIsBlocked(
+    placed.map((p) => ({ ...p.observation, locationId: p.locationId })),
+    location.id,
+  );
   return location.componentIds.map((componentId) => {
     const def = ws.componentDefs[componentId];
     const resolution = ws.resolution?.components.find((c) => c.locationId === location.id && c.componentId === componentId) ?? null;
     const rule = resolution?.status === "RESOLVED" ? (ws.resolution?.rules[resolution.ruleId] ?? null) : null;
+    const record = ws.records.find((r) => r.locationId === location.id && r.componentId === componentId) ?? null;
+    const alternate = rule?.substitutes.some((sub) => sub.locationIds === null || sub.locationIds.includes(location.id)) ?? false;
+    const recordStatus: LocationStatus = record ? "recorded" : resolution && resolution.status !== "RESOLVED" ? "unresolved" : alternate ? "alternate" : "none";
     return {
       componentId,
       name: def?.name ?? componentId,
@@ -77,7 +161,11 @@ export function componentsAt(ws: Workspace, location: CabinLocation): ComponentV
       status: resolution ? resolution.status : "NOT_SUPPLIED",
       rule,
       resolution,
-      record: ws.records.find((r) => r.locationId === location.id && r.componentId === componentId) ?? null,
+      record,
+      problems: ws.observations.filter((o) => o.status === "OPEN" && o.locationId === location.id && o.componentId === componentId),
+      carried: ws.carried.find((c) => c.locationId === location.id && c.observation.componentId === componentId) ?? null,
+      melClass: (condition) => classify({ mel: ws.mel, componentId, condition, variant: ws.variantId ?? "", seatBlocked }),
+      pieceStatus: problemStatus(ws, placed, location.id, componentId) ?? recordStatus,
     };
   });
 }
@@ -92,10 +180,13 @@ export interface LocationFlags {
   status: LocationStatus;
 }
 
+/** The per-location flags, with the ids of the seats that an open deferral blocks. */
+export type StateFlags = Map<string, LocationFlags> & { blocked: Set<string> };
+
 /** One pass over the resolution: status per location and component for the 3D scene and the map. */
-export function buildStates(ws: Workspace): { scene: Map<string, LocationState>; flags: Map<string, LocationFlags> } {
+export function buildStates(ws: Workspace): { scene: Map<string, LocationState>; flags: StateFlags } {
   const scene = new Map<string, LocationState>();
-  const flags = new Map<string, LocationFlags>();
+  const flags: StateFlags = Object.assign(new Map<string, LocationFlags>(), { blocked: new Set<string>() });
   const at = (id: string) => {
     let s = scene.get(id);
     if (!s) {
@@ -125,6 +216,16 @@ export function buildStates(ws: Workspace): { scene: Map<string, LocationState>;
     s.components[r.componentId] = "recorded";
     flags.get(r.locationId)!.recorded += 1;
   }
+  // Problems override the record-based status of their piece.
+  const placed = openPlaced(ws);
+  for (const location of ws.layout.locations) {
+    for (const componentId of location.componentIds) {
+      const status = problemStatus(ws, placed, location.id, componentId);
+      if (status) at(location.id).components[componentId] = status;
+    }
+  }
+  const open = placed.map((p) => ({ ...p.observation, locationId: p.locationId }));
+  for (const o of open) if (seatIsBlocked(open, o.locationId)) flags.blocked.add(o.locationId);
   for (const [id, s] of scene) {
     const f = flags.get(id);
     if (!f) continue;

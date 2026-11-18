@@ -252,6 +252,11 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
         records: visit.records,
         editable: visit.status === "DRAFT",
         unresolvedReason: null,
+        observations: visit.observations,
+        carried: visit.carried,
+        checkDate: visit.checkDate,
+        mel: visit.snapshot.mel ?? [],
+        variantId: visit.snapshot.context.variant.id,
       };
     }
     if (lookup?.context && lookup.resolution) {
@@ -263,6 +268,11 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
         records: [],
         editable: false,
         unresolvedReason: null,
+        observations: [],
+        carried: [],
+        checkDate: lookup.checkDate,
+        mel: [],
+        variantId: lookup.context.variant.id,
       };
     }
     return null;

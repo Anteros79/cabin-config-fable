@@ -85,6 +85,10 @@ const BIN_STATUS_COLOUR = {
   recorded: STATUS_COLOUR.recorded.clone().lerp(new THREE.Color("#ffffff"), 0.5),
   unresolved: STATUS_COLOUR.unresolved.clone().lerp(new THREE.Color("#ffffff"), 0.5),
   alternate: STATUS_COLOUR.alternate.clone().lerp(new THREE.Color("#ffffff"), 0.5),
+  mustFix: STATUS_COLOUR.mustFix.clone().lerp(new THREE.Color("#ffffff"), 0.5),
+  deferred: STATUS_COLOUR.deferred.clone().lerp(new THREE.Color("#ffffff"), 0.5),
+  carried: STATUS_COLOUR.carried.clone().lerp(new THREE.Color("#ffffff"), 0.5),
+  noted: STATUS_COLOUR.noted.clone().lerp(new THREE.Color("#ffffff"), 0.5),
 };
 /** Floor frames: selection 10 cm in the select colour; hover 6 cm in the theme's outline colour with 2 cm of ink inside it. */
 const SELECTION_FRAME = [{ width: 0.1, colour: SELECT_COLOUR }] as const;

@@ -115,6 +115,11 @@ export const STATUS_COLOUR = {
   recorded: new THREE.Color("#2fe08a"),
   unresolved: new THREE.Color("#ff5757"),
   alternate: new THREE.Color("#5b8cff"),
+  // Fallbacks until the scene tokens set these (VAC-15).
+  mustFix: new THREE.Color("#d6336c"),
+  deferred: new THREE.Color("#f5a524"),
+  carried: new THREE.Color("#a78bfa"),
+  noted: new THREE.Color("#94a3b8"),
 } as const;
 
 /** The selection outline and floor frame: the `--select` token, the same in every theme; a test holds the two equal. */
