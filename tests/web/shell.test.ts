@@ -42,12 +42,14 @@ describe("cabin shell geometry (WEB-21)", () => {
     }
   });
 
-  it("BIN_DRAWN_TOP and BIN_DRAWN_INNER_Z bound the drawn bin, and the shell profile stays outside it", () => {
-    const { door, body } = buildBinGeometry(1);
+  it("BIN_DRAWN_TOP and BIN_DRAWN_INNER_Z bound the drawn bin of every type, shut and open inside, and the shell profile stays outside it", () => {
     const box = new THREE.Box3();
-    for (const g of [door, body]) {
-      g.computeBoundingBox();
-      box.union(g.boundingBox as THREE.Box3);
+    for (const binType of ["CLASSIC", "PIVOT", "LARGE_PIVOT"] as const) {
+      const { door, closedBody, openBody, interior } = buildBinGeometry(1, binType);
+      for (const g of [door, closedBody, openBody, ...Object.values(interior)]) {
+        g.computeBoundingBox();
+        box.union(g.boundingBox as THREE.Box3);
+      }
     }
     // float32 positions
     expect(box.max.y).toBeCloseTo(BIN_DRAWN_TOP, 6);

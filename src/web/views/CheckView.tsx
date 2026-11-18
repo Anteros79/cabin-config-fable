@@ -753,7 +753,7 @@ export function CheckView({ visitId, tail: routeTail = null, date: routeDate = n
           </section>
 
           <div className="workspace">
-            <Viewer workspace={workspace} selection={selection} onSelect={select} visualProfiles={visualProfiles} />
+            <Viewer workspace={workspace} selection={selection} focusComponent={focusComponent} onSelect={select} visualProfiles={visualProfiles} />
             <aside className="side" aria-label="Selected location and recorded work">
               <Inspector
                 workspace={workspace}

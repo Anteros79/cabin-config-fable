@@ -13,12 +13,14 @@ const TABS: { id: TabId; label: string }[] = [
 interface Props {
   workspace: Workspace;
   selection: string | null;
+  /** the piece focused at the selection: a bin piece opens that bin in 3D */
+  focusComponent?: string | null;
   onSelect(locationId: string, componentId: string | null): void;
   visualProfiles: VisualProfile[];
 }
 
 /** 3D cutaway with a complete map-and-list alternative. A 3D failure never loses selection or work. */
-export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props) {
+export function Viewer({ workspace, selection, focusComponent = null, onSelect, visualProfiles }: Props) {
   const [tab, setTab] = useState<TabId>("3d");
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -104,6 +106,7 @@ export function Viewer({ workspace, selection, onSelect, visualProfiles }: Props
             states={scene}
             blocked={flags.blocked}
             selection={selection}
+            focusComponent={focusComponent}
             onSelect={onSelect}
             visualProfiles={visualProfiles}
             onFailed={setFailure}

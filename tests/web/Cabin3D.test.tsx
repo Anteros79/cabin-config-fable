@@ -5,7 +5,20 @@ import { Cabin3D, hoverLabelPosition, WHEEL_HINT, WHEEL_HINT_MS } from "../../sr
 import { Viewer } from "../../src/web/components/Viewer.tsx";
 import { buildStates, type Workspace } from "../../src/web/model.ts";
 import type { SceneCallbacks } from "../../src/web/scene/CabinScene.ts";
-import { buildPieceMeshes, buildSeatGeometries, pickPiece, pieceTargets, type SeatPart } from "../../src/web/scene/seatParts.ts";
+import { poseToFrame } from "../../src/web/scene/cameraRig.ts";
+import {
+  BIN_OPEN_MS,
+  BIN_OPENING,
+  BinRun,
+  binOpenMatrix,
+  buildBinGeometry,
+  buildPieceMeshes,
+  buildSeatGeometries,
+  openBottomEdge,
+  pickPiece,
+  pieceTargets,
+  type SeatPart,
+} from "../../src/web/scene/seatParts.ts";
 import { at, fixtureRelease } from "../helpers.ts";
 import { styleFile } from "./css.ts";
 
@@ -455,5 +468,303 @@ describe("the 3D view's pieces", () => {
     );
     await ready();
     await waitFor(() => expect(calls("setBlocked").at(-1)?.args[0]).toBe(blocked));
+  });
+});
+
+describe("the overhead bins in 3D", () => {
+  const materials = () => ({ door: new THREE.MeshBasicMaterial(), body: new THREE.MeshBasicMaterial(), interior: new THREE.MeshBasicMaterial() });
+  const ALL_BIN_PIECES = [
+    "BIN_DOOR",
+    "BIN_LATCH",
+    "BIN_STRIKER",
+    "BIN_PIVOT",
+    "BIN_ASSIST",
+    "BIN_LINER",
+    "BIN_SIDE_PANEL",
+    "BIN_BUMPER",
+    "BIN_SEAL",
+    "BIN_PLACARD",
+    "BIN_LABEL",
+  ];
+  /** The fixture layout with every bin of one type and that type's pieces, as a layout of that bin type is released. */
+  const withBins = (binType: "CLASSIC" | "PIVOT" | "LARGE_PIVOT") => {
+    const without: string[] = { CLASSIC: ["BIN_ASSIST", "BIN_BUMPER"], PIVOT: [], LARGE_PIVOT: ["BIN_ASSIST"] }[binType];
+    const copy = structuredClone(layout);
+    for (const l of copy.locations)
+      if (l.bin) {
+        l.bin.binType = binType;
+        l.componentIds = ALL_BIN_PIECES.filter((p) => !without.includes(p));
+      }
+    return copy;
+  };
+  const bin = (l: typeof layout, id: string) => {
+    const found = l.locations.find((x) => x.id === id);
+    if (!found) throw new Error(`no ${id}`);
+    return found;
+  };
+  const bounds = { length: layout.geometry.cabinLength, halfWidth: layout.geometry.cabinHalfWidth, height: 2.3 };
+  /** A ray from where the "focus" view of the bin puts the camera, through a point. */
+  const fromFocus = (l: typeof layout, id: string, point: THREE.Vector3) => {
+    const camera = poseToFrame(bin(l, id).placement, "BIN", bounds).position;
+    return new THREE.Raycaster(camera, point.clone().sub(camera).normalize());
+  };
+  /** A ray from the aisle at standing height at the middle of a closed bin's face. */
+  const atFace = (l: typeof layout, id: string) => {
+    const p = bin(l, id).placement;
+    const sign = p.z > 0 ? 1 : -1;
+    const face = new THREE.Vector3(p.x, 1.84, sign * 0.9);
+    const from = new THREE.Vector3(p.x - 0.3, 1.6, -sign * 0.3);
+    return new THREE.Raycaster(from, face.sub(from).normalize());
+  };
+  const pickWith = (run: BinRun, ray: THREE.Raycaster) => {
+    const hit = run.pick(
+      ray.intersectObjects(
+        run.targets(() => true),
+        false,
+      ),
+    );
+    return hit && { location: hit.location.id, component: hit.component, closed: hit.closed };
+  };
+  /** A tap as the scene handles it: a closed bin opens, and the pick selects. */
+  const tap = (run: BinRun, ray: THREE.Raycaster, instant = true) => {
+    const hit = pickWith(run, ray);
+    if (hit?.closed) run.openBin(hit.location, 0, instant);
+    return hit && { location: hit.location, component: hit.component };
+  };
+
+  test("tapping BIN:L-04 opens it and selects BIN_DOOR; a second bin closes the first", () => {
+    const run = new BinRun(layout, materials());
+    expect(run.target).toBeNull();
+    expect(tap(run, atFace(layout, "BIN:L-04"))).toEqual({ location: "BIN:L-04", component: "BIN_DOOR" });
+    expect(run.target).toBe("BIN:L-04");
+    expect(run.open?.location.id).toBe("BIN:L-04");
+    expect(run.level).toBe(1);
+    // the open door or bucket face still selects BIN_DOOR, and does not open anything else
+    const face = run.pointOf("BIN_DOOR");
+    if (!face) throw new Error("no door point");
+    expect(tap(run, fromFocus(layout, "BIN:L-04", face))).toEqual({ location: "BIN:L-04", component: "BIN_DOOR" });
+    expect(run.target).toBe("BIN:L-04");
+    // opening asks for nothing when the bin is already open
+    expect(run.openBin("BIN:L-04", 0, true)).toBe(false);
+    // a second bin: at most one is open
+    expect(tap(run, atFace(layout, "BIN:L-05"))).toEqual({ location: "BIN:L-05", component: "BIN_DOOR" });
+    expect(run.target).toBe("BIN:L-05");
+    expect(run.open?.location.id).toBe("BIN:L-05");
+    // L-04 is shut again: its door is back where the closed bin draws it, and its face opens it once more
+    expect(tap(run, atFace(layout, "BIN:L-04"))).toEqual({ location: "BIN:L-04", component: "BIN_DOOR" });
+    expect(run.target).toBe("BIN:L-04");
+    expect(run.openBin(null, 0, true)).toBe(true);
+    expect(run.target).toBeNull();
+    expect(run.open).toBeNull();
+    run.dispose();
+  });
+
+  test("the latch is pickable only while open, from the bin's focus view, for every bin type", () => {
+    for (const binType of ["CLASSIC", "PIVOT", "LARGE_PIVOT"] as const) {
+      const l = withBins(binType);
+      const run = new BinRun(l, materials());
+      run.openBin("BIN:L-04", 0, true);
+      const latch = run.pointOf("BIN_LATCH");
+      if (!latch) throw new Error(`${binType}: no latch drawn`);
+      const ray = fromFocus(l, "BIN:L-04", latch);
+      expect(pickWith(run, ray), binType).toEqual({ location: "BIN:L-04", component: "BIN_LATCH", closed: false });
+      run.openBin(null, 0, true);
+      expect(pickWith(run, ray)?.component, binType).not.toBe("BIN_LATCH");
+      expect(run.targets(() => true).length, `${binType}: only the closed meshes are targets`).toBe(4);
+      run.dispose();
+    }
+  });
+
+  test("every piece a bin lists is drawn inside it, and tapped there selects that piece", () => {
+    const run = new BinRun(layout, materials());
+    run.openBin("BIN:R-03", 0, true);
+    const listed = bin(layout, "BIN:R-03").componentIds;
+    for (const piece of listed) {
+      const point = run.pointOf(piece);
+      expect(point, piece).not.toBeNull();
+    }
+    for (const piece of ["BIN_LINER", "BIN_STRIKER", "BIN_SEAL", "BIN_PLACARD"]) {
+      const point = run.pointOf(piece);
+      if (!point) throw new Error(`no ${piece}`);
+      expect(pickWith(run, fromFocus(layout, "BIN:R-03", point))?.component, piece).toBe(piece);
+    }
+    run.dispose();
+  });
+
+  test("BIN_ASSIST is drawn for PIVOT and absent for LARGE_PIVOT", () => {
+    const pivot = buildBinGeometry(1, "PIVOT", 2.4).interior;
+    const large = buildBinGeometry(1, "LARGE_PIVOT", 2.4).interior;
+    const classic = buildBinGeometry(-1, "CLASSIC", 2.4).interior;
+    expect(pivot.BIN_ASSIST).toBeDefined();
+    expect(large.BIN_ASSIST).toBeUndefined();
+    expect(classic.BIN_ASSIST).toBeUndefined();
+    // a classic bin has no stop bumper either; the pivot bins do
+    expect(classic.BIN_BUMPER).toBeUndefined();
+    expect(pivot.BIN_BUMPER).toBeDefined();
+    expect(large.BIN_BUMPER).toBeDefined();
+    // and an open PIVOT bin draws it, an open LARGE_PIVOT bin does not
+    for (const [binType, drawn] of [
+      ["PIVOT", true],
+      ["LARGE_PIVOT", false],
+    ] as const) {
+      const run = new BinRun(withBins(binType), materials());
+      run.openBin("BIN:L-04", 0, true);
+      expect(run.pointOf("BIN_ASSIST") !== null, binType).toBe(drawn);
+      run.dispose();
+    }
+  });
+
+  test("each type opens the way it does: classic door up 75 degrees, pivot bucket down 35, large pivot 38 and 0.05 m lower", () => {
+    expect(BIN_OPENING.CLASSIC.angleDeg).toBe(75);
+    expect(BIN_OPENING.PIVOT.angleDeg).toBe(35);
+    expect(BIN_OPENING.LARGE_PIVOT.angleDeg).toBe(38);
+    const door = buildBinGeometry(1, "PIVOT").door;
+    const lowest = (binType: "CLASSIC" | "PIVOT" | "LARGE_PIVOT", side: 1 | -1) => {
+      const g = buildBinGeometry(side, binType)
+        .door.clone()
+        .applyMatrix4(binOpenMatrix(side, binType, 1));
+      g.computeBoundingBox();
+      return (g.boundingBox as THREE.Box3).min.y;
+    };
+    door.computeBoundingBox();
+    const closedBottom = (door.boundingBox as THREE.Box3).min.y;
+    for (const side of [1, -1] as const) {
+      // the classic door lifts: its free edge goes up, nothing goes below the closed bin
+      expect(lowest("CLASSIC", side)).toBeGreaterThanOrEqual(closedBottom - 1e-6);
+      // the pivot bucket comes down
+      expect(lowest("PIVOT", side)).toBeLessThan(closedBottom - 0.05);
+      expect(lowest("LARGE_PIVOT", side)).toBeCloseTo(lowest("PIVOT", side) - 0.05, 4);
+      expect(openBottomEdge("LARGE_PIVOT")).toBeCloseTo(openBottomEdge("PIVOT") - 0.05, 6);
+    }
+    // the hinge line stays put: the classic door turns about its top edge
+    const top = new THREE.Vector3(0, 2.152, 0.762);
+    expect(
+      top
+        .clone()
+        .applyMatrix4(binOpenMatrix(1, "CLASSIC", 1))
+        .distanceTo(top),
+    ).toBeLessThan(0.002);
+    // a closed bin is the same shape whatever its type
+    for (const binType of ["CLASSIC", "PIVOT", "LARGE_PIVOT"] as const) {
+      expect(binOpenMatrix(1, binType, 0).equals(new THREE.Matrix4())).toBe(true);
+    }
+  });
+
+  test("reduced motion opens in one frame; otherwise the bin opens over 350 ms, easing out", () => {
+    expect(BIN_OPEN_MS).toBe(350);
+    const reduced = new BinRun(layout, materials());
+    reduced.openBin("BIN:L-04", 1000, true);
+    expect(reduced.level).toBe(1);
+    expect(reduced.animating).toBe(false);
+    reduced.openBin(null, 1000, true);
+    expect(reduced.level).toBe(0);
+    expect(reduced.open).toBeNull();
+    reduced.dispose();
+
+    const run = new BinRun(layout, materials());
+    run.openBin("BIN:L-04", 1000, false);
+    expect(run.level).toBe(0);
+    expect(run.animating).toBe(true);
+    run.step(1000 + BIN_OPEN_MS / 2);
+    // easeOutCubic(0.5) = 1 - 0.5^3
+    expect(run.level).toBeCloseTo(0.875, 6);
+    run.step(1000 + BIN_OPEN_MS);
+    expect(run.level).toBe(1);
+    expect(run.animating).toBe(false);
+    // closing eases back down, and the interior goes once it is shut
+    run.openBin(null, 2000, false);
+    expect(run.open?.location.id).toBe("BIN:L-04");
+    run.step(2000 + BIN_OPEN_MS);
+    expect(run.level).toBe(0);
+    expect(run.open).toBeNull();
+    // finishing (reduced motion turned on mid-way) jumps to the end
+    run.openBin("BIN:L-05", 3000, false);
+    run.finish();
+    expect(run.level).toBe(1);
+    expect(run.animating).toBe(false);
+    run.dispose();
+  });
+
+  test("on a layout stored before the bin pieces, an open bin draws and picks only what the bin lists", () => {
+    // as in a visit store from 5d6679d: a bin lists only its door and has no type (read as PIVOT)
+    const old = structuredClone(layout);
+    old.locations = old.locations.map((l) =>
+      l.kind === "BIN" && l.bin
+        ? { ...l, componentIds: ["BIN_DOOR"], bin: { side: l.bin.side, module: l.bin.module, rowFrom: l.bin.rowFrom, rowTo: l.bin.rowTo } as typeof l.bin }
+        : l,
+    );
+    const run = new BinRun(old, materials());
+    expect(tap(run, atFace(old, "BIN:L-04"))).toEqual({ location: "BIN:L-04", component: "BIN_DOOR" });
+    for (const piece of ["BIN_LATCH", "BIN_LINER", "BIN_ASSIST", "BIN_PLACARD"]) expect(run.pointOf(piece), piece).toBeNull();
+    for (const range of run.open?.ranges ?? []) if (range.piece !== null) expect(["BIN_DOOR"]).toContain(range.piece);
+    run.dispose();
+  });
+
+  test("a layout without a bin map draws illustrative modules that never open", () => {
+    const bare = structuredClone(layout);
+    bare.locations = bare.locations.filter((l) => l.kind === "SEAT");
+    const run = new BinRun(bare, materials());
+    expect(run.sides.every((s) => s.door.count > 0 && s.locations.length === 0)).toBe(true);
+    expect(run.targets(() => true)).toEqual([]);
+    expect(run.openBin("BIN:L-04", 0, true)).toBe(false);
+    run.dispose();
+  });
+});
+
+describe("opening a bin from the 3D view", () => {
+  function renderBins(selection: string | null, focusComponent: string | null, paused = false) {
+    const props = { workspace, states: buildStates(workspace).scene, onSelect: vi.fn(), visualProfiles: [], onFailed: vi.fn() };
+    const view = render(<Cabin3D {...props} selection={selection} focusComponent={focusComponent} paused={paused} />);
+    return {
+      rerender: (s: string | null, c: string | null, p = paused) => view.rerender(<Cabin3D {...props} selection={s} focusComponent={c} paused={p} />),
+    };
+  }
+
+  test("focusing a bin piece (Go to location or the piece list) opens that bin, also while the 3D view is hidden", async () => {
+    const view = renderBins(null, null, true);
+    await ready();
+    view.rerender("BIN:L-04", "BIN_LATCH");
+    await waitFor(() => expect(calls("openBin").at(-1)?.args).toEqual(["BIN:L-04"]));
+    // selecting the bin as a whole does not open it
+    scenes.calls = [];
+    view.rerender("BIN:L-05", null);
+    expect(calls("openBin").map((c) => c.args[0])).not.toContain("BIN:L-05");
+  });
+
+  test("Close bin and Escape close the open bin; selecting elsewhere closes it too", async () => {
+    const view = renderBins("BIN:L-04", "BIN_DOOR");
+    await ready();
+    expect(screen.queryByRole("button", { name: "Close bin" })).toBeNull();
+    act(() => callbacks().onBinOpenChange?.("BIN:L-04"));
+    scenes.calls = [];
+    fireEvent.click(screen.getByRole("button", { name: "Close bin" }));
+    expect(calls("openBin").map((c) => c.args[0])).toEqual([null]);
+    // focus does not drop to the page when the button goes
+    act(() => callbacks().onBinOpenChange?.(null));
+    expect(screen.queryByRole("button", { name: "Close bin" })).toBeNull();
+    expect(document.activeElement).toBe(document.querySelector("canvas"));
+
+    act(() => callbacks().onBinOpenChange?.("BIN:L-04"));
+    scenes.calls = [];
+    const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+    expect(fireEvent.keyDown(canvas, { key: "Escape" })).toBe(false);
+    expect(calls("openBin").map((c) => c.args[0])).toEqual([null]);
+    act(() => callbacks().onBinOpenChange?.(null));
+    // with no bin open, Escape is left alone for whatever else wants it
+    scenes.calls = [];
+    expect(fireEvent.keyDown(canvas, { key: "Escape" })).toBe(true);
+    expect(calls("openBin")).toEqual([]);
+
+    act(() => callbacks().onBinOpenChange?.("BIN:L-04"));
+    scenes.calls = [];
+    view.rerender("SEAT:7C", null);
+    expect(calls("openBin").map((c) => c.args[0])).toEqual([null]);
+  });
+
+  test("the Viewer passes the focused piece to the 3D view", async () => {
+    const view = render(<Viewer workspace={workspace} selection={null} onSelect={vi.fn()} visualProfiles={[]} />);
+    await ready();
+    view.rerender(<Viewer workspace={workspace} selection="BIN:R-03" focusComponent="BIN_SEAL" onSelect={vi.fn()} visualProfiles={[]} />);
+    await waitFor(() => expect(calls("openBin").at(-1)?.args).toEqual(["BIN:R-03"]));
   });
 });

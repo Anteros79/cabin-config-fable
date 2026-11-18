@@ -23,7 +23,8 @@ import {
 import { createBadges, createFrame, createOutline, frameGeometry, HOVER_OUTLINE, hullGeometry, SELECTION_OUTLINE, type ViewportUniform } from "./outline.ts";
 import { PickGesture, type PointerSample, TouchAxisLock } from "./pickGesture.ts";
 import {
-  buildBinGeometry,
+  BinRun,
+  buildBinMarker,
   buildBulkheadPanel,
   buildPieceMeshes,
   buildSeatGeometries,
@@ -89,6 +90,8 @@ export interface SceneCallbacks {
   /** the hovered location and piece (null: the location as a whole) and the pointer's position in the canvas (CSS pixels), or null when nothing is hovered */
   onHover(hover: { locationId: string; componentId: string | null; x: number; y: number } | null): void;
   onContextLost(): void;
+  /** a bin opened (its location id) or the open bin closed (null): by a tap, by openBin(), or by a new layout */
+  onBinOpenChange?(locationId: string | null): void;
   /** the wheel turned over the canvas without zooming (the view has no focus and no Ctrl or Cmd is held): the page scrolled */
   onWheelPassedThrough?(): void;
 }
@@ -175,6 +178,8 @@ const TEST_HOOKS = import.meta.env.VITE_TEST_HOOKS === "1";
 export interface SceneTestHooks {
   measure(durationMs: number): Promise<{ fps: number; frames: number; durationMs: number; worstFrameMs: number }>;
   screenPointOf(locationId: string, part?: "head" | "pan"): { x: number; y: number } | null;
+  /** Screen position of a piece inside the open bin, or null if that bin is not open or draws no such piece. */
+  screenPointOfPiece(locationId: string, componentId: string): { x: number; y: number } | null;
   describeScene(): Record<string, unknown>;
   /** Times the next frame from now, for a selection made outside the canvas. */
   markInteraction(): void;
@@ -274,6 +279,13 @@ export class CabinScene {
   /** every floor-area tint and the aisle strip's, as instances of one flat unit plane: one draw call (WEB-20) */
   private floorTint: THREE.InstancedMesh | null = null;
   private floorTintEntries: { locationId: string; matrix: THREE.Matrix4 }[] = [];
+  /** the overhead bins: closed per side, at most one open with its inside (seatParts.ts BinRun) */
+  private bins: BinRun | null = null;
+  /** the material of an open bin's inside: a shade and a status tint per vertex, ghosted with its side */
+  private binInterior: THREE.MeshStandardMaterial | null = null;
+  /** a coloured band on the face of each shut bin with a status, packed like floorTint: one draw call */
+  private binMarkers: THREE.InstancedMesh | null = null;
+  private binMarkerEntries: { locationId: string; matrix: THREE.Matrix4 }[] = [];
   /** `ghost` is where the side is going (and decides picking at once); `level` fades toward it, 0 solid to 1 ghosted */
   private binSides: {
     side: "L" | "R";
@@ -528,10 +540,21 @@ export class CabinScene {
           const rect = this.canvas.getBoundingClientRect();
           return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
         },
+        screenPointOfPiece: (locationId, componentId) => {
+          const point = this.bins?.open?.location.id === locationId ? this.bins.pointOf(componentId) : null;
+          if (!point) return null;
+          const v = point.project(this.camera);
+          const rect = this.canvas.getBoundingClientRect();
+          return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
+        },
         describeScene: () => ({
           seats: this.seats.length,
           floorAreas: this.floorMeshes.filter((f) => f.locationId).length,
           binModules: this.binSides.reduce((n, b) => n + b.locations.length, 0),
+          /** the bin opening or open, how far it is open, and whether it is moving */
+          openBin: this.bins?.target ?? null,
+          binLevel: this.bins?.level ?? 0,
+          binAnimating: this.bins?.animating ?? false,
           profile: this.palette.id,
           light: this.light,
           background: `#${(this.scene.background as THREE.Color).getHexString()}`,
@@ -564,6 +587,8 @@ export class CabinScene {
             /** the seat part outlined by the hover marks, and the piece a pick there selects */
             hoverPart: this.hoverMarks.piece?.piece.part ?? null,
             badges: this.badges?.visible ? this.badges.count : 0,
+            /** the coloured bands on the faces of shut bins with a status */
+            binMarkers: this.binMarkers?.visible ? this.binMarkers.count : 0,
           },
           frames: this.frameCount,
           frameRequests: this.frameRequests,
@@ -606,6 +631,8 @@ export class CabinScene {
     const layout = this.layout;
     if (!layout) return;
     this.updates.buildLayout += 1;
+    // a bin open on the old layout goes with it (read before its resources are released, which shuts it)
+    const binWasOpen = this.bins?.target ?? null;
     this.clearGroup(this.groups.seats);
     this.clearGroup(this.groups.floor);
     this.clearGroup(this.groups.bins);
@@ -615,6 +642,10 @@ export class CabinScene {
     this.bulkheadPanels = null;
     this.floorMeshes = [];
     this.floorTintEntries = [];
+    this.bins = null;
+    this.binInterior = null;
+    this.binMarkers = null;
+    this.binMarkerEntries = [];
     this.binSides = [];
     this.shellParts = [];
     this.paletteMaterials = [];
@@ -785,50 +816,34 @@ export class CabinScene {
     }
 
     // bins -------------------------------------------------------------------------------------
-    const binLocations = layout.locations.filter((l) => l.kind === "BIN");
     // Textures shared by every family come from the cache and are not this layout's to release; the repeated copies are.
     const service = getTexture(textureKey("serviceUnit", "shared", SERVICE_UNIT_TEXTURE_SIZE), serviceUnitTexture);
     const doorTexture = getTexture(textureKey("binDoor", "shared", BIN_DOOR_TEXTURE_SIZE), binDoorTexture);
-    for (const side of ["L", "R"] as const) {
-      const sign = side === "L" ? 1 : -1;
-      const { door, body } = buildBinGeometry(sign);
-      own(door);
-      own(body);
-      this.binHulls[side] = own(hullGeometry([door, body]));
-      // Without a supplied bin map the run is drawn as illustrative, unpickable three-row modules.
-      const mine = binLocations.filter((l) => l.bin?.side === side);
-      // a bin's badge sits on its door, on the aisle side
-      for (const l of mine)
+    // Double-sided surfaces that turn transparent when ghosted draw in one pass, not two (WEB-20); at ghost opacity
+    // the back-then-front ordering a second pass buys is not visible.
+    const singlePass = { side: THREE.DoubleSide, forceSinglePass: true };
+    // An open bin's inside is two meshes with one material: a shade and a status tint per vertex (seatParts.ts BinRun).
+    this.binInterior = withStatusTint(std("#ffffff", 0.6, 0, { vertexColors: true, ...singlePass }));
+    const bins = own(
+      new BinRun(layout, {
+        door: own(new THREE.MeshStandardMaterial({ map: doorTexture, roughness: 0.42, ...singlePass })),
+        body: std("#d5d8df", 0.6, 0, singlePass),
+        interior: this.binInterior,
+      }),
+    );
+    this.bins = bins;
+    this.groups.bins.add(bins.group);
+    for (const b of bins.sides) {
+      const sign = b.sign;
+      this.binHulls[b.side] = own(hullGeometry([b.door.geometry, b.body.geometry]));
+      // a bin's badge sits on its door, on the aisle side; its marker along the face below
+      for (const l of b.locations) {
         this.badgeEntries.push({ locationId: l.id, seat: false, layer: "bins", matrix: new THREE.Matrix4().makeTranslation(l.placement.x, 1.95, sign * 0.8) });
-      const spans: { x: number; lx: number }[] =
-        mine.length > 0
-          ? mine.map((l) => ({ x: l.placement.x, lx: l.placement.lx }))
-          : Array.from({ length: Math.ceil(rows / 3) }, (_, i) => {
-              const from = i * 3;
-              const to = Math.min(from + 3, rows);
-              const x0 = layout.geometry.rowPitch * from + FORWARD_MARGIN;
-              const x1 = layout.geometry.rowPitch * to + FORWARD_MARGIN;
-              return { x: (x0 + x1) / 2, lx: x1 - x0 };
-            });
-      const count = Math.max(spans.length, 1);
-      // Double-sided surfaces that turn transparent when ghosted draw in one pass, not two (WEB-20); at ghost opacity
-      // the back-then-front ordering a second pass buys is not visible.
-      const singlePass = { side: THREE.DoubleSide, forceSinglePass: true };
-      const doorMesh = own(new THREE.InstancedMesh(door, own(new THREE.MeshStandardMaterial({ map: doorTexture, roughness: 0.42, ...singlePass })), count));
-      const bodyMesh = own(new THREE.InstancedMesh(body, std("#d5d8df", 0.6, 0, singlePass), count));
-      spans.forEach((s, i) => {
-        const m = new THREE.Matrix4().makeScale(s.lx, 1, 1).setPosition(s.x, 0, 0);
-        doorMesh.setMatrixAt(i, m);
-        doorMesh.setColorAt(i, WHITE);
-        bodyMesh.setMatrixAt(i, m);
-      });
-      if (spans.length === 0) {
-        doorMesh.count = 0;
-        bodyMesh.count = 0;
+        this.binMarkerEntries.push({
+          locationId: l.id,
+          matrix: new THREE.Matrix4().makeScale(Math.max(l.placement.lx - 0.3, 0.1), 1, sign).setPosition(l.placement.x, 0, 0),
+        });
       }
-      doorMesh.instanceMatrix.needsUpdate = true;
-      bodyMesh.instanceMatrix.needsUpdate = true;
-      doorMesh.computeBoundingSphere();
       const map = own(service.clone());
       map.needsUpdate = true;
       map.repeat.set(rows, 1);
@@ -839,8 +854,22 @@ export class CabinScene {
       psu.rotation.x = Math.PI / 2;
       psu.rotation.z = sign > 0 ? 0 : Math.PI;
       psu.position.set(FORWARD_MARGIN + (rows * layout.geometry.rowPitch) / 2, 1.648, sign * 1.55);
-      this.groups.bins.add(doorMesh, bodyMesh, psu);
-      this.binSides.push({ side, door: doorMesh, body: bodyMesh, locations: mine, extras: [psu], ghost: false, level: 0 });
+      this.groups.bins.add(psu);
+      this.binSides.push({ side: b.side, door: b.door, body: b.body, locations: b.locations, extras: [psu], ghost: false, level: 0 });
+    }
+    if (this.binMarkerEntries.length > 0) {
+      // unlit, like the status overlays, so the band is the legend's colour; mirrored on the right by its instance
+      const markers = own(
+        new THREE.InstancedMesh(
+          own(buildBinMarker()),
+          own(new THREE.MeshBasicMaterial({ toneMapped: false, side: THREE.DoubleSide })),
+          this.binMarkerEntries.length,
+        ),
+      );
+      markers.setColorAt(0, WHITE);
+      markers.frustumCulled = false;
+      this.groups.bins.add(markers);
+      this.binMarkers = markers;
     }
 
     // context (secondary, hidden by default) --------------------------------------------------
@@ -887,6 +916,7 @@ export class CabinScene {
     this.applyStates();
     this.applySelection();
     this.updateGhosting(true);
+    if (binWasOpen !== null) this.callbacks.onBinOpenChange?.(null);
     this.invalidate();
   }
 
@@ -1120,9 +1150,10 @@ export class CabinScene {
 
   private applyGhostLevels(): void {
     for (const b of this.binSides) {
-      for (const o of [b.door, b.body, ...b.extras] as THREE.Mesh[]) {
-        setGhosted(o.material as THREE.Material, b.level > 0, THREE.MathUtils.lerp(1, BIN_GHOST_OPACITY, b.level));
-      }
+      const opacity = THREE.MathUtils.lerp(1, BIN_GHOST_OPACITY, b.level);
+      for (const o of [b.door, b.body, ...b.extras] as THREE.Mesh[]) setGhosted(o.material as THREE.Material, b.level > 0, opacity);
+      // an open bin's inside ghosts with its side
+      if (this.binInterior && this.bins?.open?.side.side === b.side) setGhosted(this.binInterior, b.level > 0, opacity);
     }
     for (const c of this.shellParts) {
       c.material.opacity = THREE.MathUtils.lerp(1, WALL_GHOST_OPACITY, c.level);
@@ -1195,12 +1226,33 @@ export class CabinScene {
       this.floorTint.instanceMatrix.needsUpdate = true;
       if (this.floorTint.instanceColor) this.floorTint.instanceColor.needsUpdate = true;
     }
+    // A shut bin's door shows the bin's status, an open bin's face its door's own, and its inside each piece's own.
+    const open = this.bins?.target ?? null;
     for (const b of this.binSides) {
       b.locations.forEach((l, i) => {
-        const s = status ? this.statusOf(l.id) : "none";
+        const s = !status ? "none" : l.id === open ? (this.states.get(l.id)?.components.BIN_DOOR ?? "none") : this.statusOf(l.id);
         b.door.setColorAt(i, s === "none" ? WHITE : BIN_STATUS_COLOUR[s]);
       });
       if (b.door.instanceColor) b.door.instanceColor.needsUpdate = true;
+    }
+    const inside = this.bins?.open?.location.id;
+    this.bins?.tint((piece) => {
+      const s = status && inside ? this.states.get(inside)?.components[piece] : undefined;
+      return s ? colourFor(s) : null;
+    }, HEADREST_TINT_OPACITY);
+    if (this.binMarkers) {
+      // a shut bin with a status carries a band in its colour on its face, shown with the badges (packed like floorTint)
+      let markers = 0;
+      for (const m of this.binMarkerEntries) {
+        const s = this.colourMode === "none" || m.locationId === open ? "none" : this.statusOf(m.locationId);
+        if (s === "none") continue;
+        this.binMarkers.setMatrixAt(markers, m.matrix);
+        this.binMarkers.setColorAt(markers++, STATUS_COLOUR[s]);
+      }
+      this.binMarkers.count = markers;
+      this.binMarkers.visible = markers > 0;
+      this.binMarkers.instanceMatrix.needsUpdate = true;
+      if (this.binMarkers.instanceColor) this.binMarkers.instanceColor.needsUpdate = true;
     }
     this.applyBadges();
     this.invalidate();
@@ -1218,6 +1270,8 @@ export class CabinScene {
     let shown = 0;
     for (const b of this.badgeEntries) {
       if (this.colourMode === "none" || !this.layers[b.layer]) continue;
+      // an open bin shows its pieces' own tints instead
+      if (b.layer === "bins" && b.locationId === this.bins?.target) continue;
       // a blocked seat shows "Blocked" in grey, over whatever status it has
       const blocked = b.seat && this.blocked.has(b.locationId);
       const s = blocked ? "none" : this.statusOf(b.locationId);
@@ -1306,6 +1360,8 @@ export class CabinScene {
       marks.hull.geometry = pad;
       marks.hull.matrix.makeTranslation(p.x, 0, p.z);
     } else {
+      // an open bin is not outlined: its shut shape is not where its door or bucket is
+      if (this.bins?.target === location.id) return;
       const side = location.bin?.side === "L" ? "L" : "R";
       const hull = this.binHulls[side];
       if (!hull) return;
@@ -1534,7 +1590,11 @@ export class CabinScene {
       this.limitZoomOut();
       this.place(() => this.controls.update());
     }
-    if (reduced) this.updateGhosting(true);
+    if (reduced) {
+      this.updateGhosting(true);
+      // a bin opening or closing gets there at once
+      this.bins?.finish();
+    }
     this.invalidate();
   }
 
@@ -1610,9 +1670,27 @@ export class CabinScene {
     this.invalidate();
   }
 
+  // ---- bins -----------------------------------------------------------------------------------
+
+  /**
+   * Open a bin, shutting any other at once (at most one is open), or close the open one with null. It opens over 350 ms,
+   * easing out; at once with reduced motion or while the view is hidden. The same bin again, or a location that is not a
+   * pickable bin, changes nothing. onBinOpenChange reports each change.
+   */
+  openBin(locationId: string | null): void {
+    const bins = this.bins;
+    if (!bins || this.disposed || !bins.openBin(locationId, performance.now(), this.reducedMotion || this.paused)) return;
+    this.applyGhostLevels();
+    this.applyStates();
+    this.applySelection();
+    if (this.hoverMarks.location) this.placeMarks(this.hoverMarks, this.hoverMarks.location, "hover", this.hoverMarks.piece);
+    this.callbacks.onBinOpenChange?.(bins.target);
+    this.invalidate();
+  }
+
   // ---- picking --------------------------------------------------------------------------------
 
-  private hit(clientX: number, clientY: number): { location: CabinLocation; component: string | null; piece?: PiecePick } | null {
+  private hit(clientX: number, clientY: number): { location: CabinLocation; component: string | null; piece?: PiecePick; opensBin?: boolean } | null {
     if (!this.layout) return null;
     const rect = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
@@ -1627,8 +1705,9 @@ export class CabinScene {
       // raycasting ignores visibility, so the strip is a target even while it shows no status
       if (this.fullCabinOverlay) targets.push(this.fullCabinOverlay);
     }
-    if (this.layers.bins && this.pickableFloorBins)
-      for (const b of this.binSides) if (!b.door.userData.ghost && b.locations.length) targets.push(b.door, b.body);
+    // a ghosted side's bins, shut or open, are not picked
+    if (this.layers.bins && this.pickableFloorBins && this.bins)
+      targets.push(...this.bins.targets((side) => !this.binSides.find((b) => b.side === side)?.ghost));
     const hits = this.raycaster.intersectObjects(targets, false);
     const first = hits[0];
     if (!first || first.object === this.bulkheadPanels) return null;
@@ -1644,10 +1723,9 @@ export class CabinScene {
       const location = this.layout.locations.find((l) => l.id === floor.locationId);
       return location ? { location, component: null } : null;
     }
-    const bin = this.binSides.find((b) => b.door === first.object || b.body === first.object);
-    const binLocation = bin && first.instanceId !== undefined ? bin.locations[first.instanceId] : undefined;
-    if (binLocation) return { location: binLocation, component: null };
-    return null;
+    // a shut bin selects its door, and a tap opens it; inside an open bin, the piece under the pointer
+    const bin = this.bins?.pick(hits);
+    return bin ? { location: bin.location, component: bin.component, opensBin: bin.closed } : null;
   }
 
   private static sample(e: PointerEvent): PointerSample {
@@ -1670,6 +1748,7 @@ export class CabinScene {
     const hit = this.hit(at.x, at.y);
     if (!hit) return;
     if (this.onFrameRendered) this.pickStamp = performance.now();
+    if (hit.opensBin) this.openBin(hit.location.id);
     this.callbacks.onPick(hit.location.id, hit.component);
   };
 
@@ -1820,6 +1899,11 @@ export class CabinScene {
         this.stepGhostFade(now);
         this.needsRender = true;
       }
+      // a bin opening or closing moves a step each frame
+      if (this.bins?.animating) {
+        this.bins.step(now);
+        this.needsRender = true;
+      }
       if (animating)
         this.place(() => {
           settling = this.controls.update();
@@ -1835,7 +1919,7 @@ export class CabinScene {
     } finally {
       this.inFrame = false;
     }
-    if (settling || this.measureStep || this.needsRender || this.transition || this.ghostClock !== null) this.requestFrame();
+    if (settling || this.measureStep || this.needsRender || this.transition || this.ghostClock !== null || this.bins?.animating) this.requestFrame();
   };
 
   /**

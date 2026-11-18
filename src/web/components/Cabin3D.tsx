@@ -16,6 +16,8 @@ interface Props {
   /** the seats an open deferral blocks (buildStates' flags.blocked): their badge shows "Blocked" */
   blocked?: ReadonlySet<string>;
   selection: string | null;
+  /** the piece focused at the selection (Go to location, the piece list, a pick): a bin piece opens that bin */
+  focusComponent?: string | null;
   onSelect(locationId: string, componentId: string | null): void;
   visualProfiles: VisualProfile[];
   onFailed(reason: string): void;
@@ -139,7 +141,17 @@ export function hoverLabelPosition(
  * The interactive 3D cutaway. The renderer is loaded on demand; any failure (module, WebGL,
  * lost context) is reported upward so the complete map-and-list fallback takes over.
  */
-export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, onSelect, visualProfiles, onFailed, paused = false }: Props) {
+export function Cabin3D({
+  workspace,
+  states,
+  blocked = NO_BLOCKED,
+  selection,
+  focusComponent = null,
+  onSelect,
+  visualProfiles,
+  onFailed,
+  paused = false,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<CabinScene | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -155,6 +167,12 @@ export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, on
   const [wheelHint, setWheelHint] = useState(false);
   const wheelHintTimer = useRef<number | undefined>(undefined);
   const [ready, setReady] = useState(false);
+  /** the bin open in the scene (onBinOpenChange), or null */
+  const [openBin, setOpenBin] = useState<string | null>(null);
+  const openBinRef = useRef(openBin);
+  openBinRef.current = openBin;
+  /** the selection and focused piece last seen, so only a new focus opens a bin (a closed one stays closed) */
+  const focusedRef = useRef<string | null>(null);
   const [hover, setHover] = useState<{ locationId: string; componentId: string | null; x: number; y: number } | null>(null);
   const hoverRef = useRef<HTMLParagraphElement | null>(null);
   const [layers, setLayers] = useState<Layers>({ seats: true, floor: true, bins: true, underSeat: false, context: false });
@@ -181,6 +199,7 @@ export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, on
             onSelectRef.current(locationId, componentId);
           },
           onHover: setHover,
+          onBinOpenChange: setOpenBin,
           onContextLost: () => onFailedRef.current("The graphics context was lost."),
           onWheelPassedThrough: () => {
             if (!firstWheelHint()) return;
@@ -231,6 +250,19 @@ export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, on
     if (previous === undefined || selection === null || selection === previous || picked || pausedRef.current) return;
     scene.revealLocation(selection);
   }, [ready, selection]);
+  // Focusing a bin piece (Go to location, the piece list, a pick inside the bin) opens that bin, also while the 3D view is
+  // hidden behind the map, so it is open when the view shows; the scene then opens it at once. Selecting the bin as a
+  // whole leaves it as it is. Selecting anything else closes an open bin.
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!ready || !scene) return;
+    const key = `${selection}|${focusComponent}`;
+    const focused = key !== focusedRef.current;
+    focusedRef.current = key;
+    const kind = selection ? layout.locations.find((l) => l.id === selection)?.kind : undefined;
+    if (focused && kind === "BIN" && focusComponent !== null) scene.openBin(selection);
+    else if (openBinRef.current !== null && openBinRef.current !== selection) scene.openBin(null);
+  }, [ready, selection, focusComponent, layout]);
   useEffect(() => {
     if (ready) sceneRef.current?.setPaused(paused);
   }, [ready, paused]);
@@ -283,7 +315,21 @@ export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, on
     return () => observer.disconnect();
   }, []);
 
+  /** Close the open bin. Focus goes to the canvas, so it does not drop to the page when the Close bin button goes. */
+  const closeBin = () => {
+    sceneRef.current?.openBin(null);
+    canvasRef.current?.focus();
+  };
+  /** Escape closes an open bin; with none open it is left to whatever else handles it. */
+  const escapeClosesBin = (e: React.KeyboardEvent) => {
+    if (e.key !== "Escape" || openBin === null || e.defaultPrevented) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    closeBin();
+    return true;
+  };
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (escapeClosesBin(e)) return;
     const scene = sceneRef.current;
     // Browser and system shortcuts (zoom with Cmd/Ctrl and plus, history with Alt and an arrow) pass straight through (WEB-12).
     if (!scene || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -354,6 +400,11 @@ export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, on
       {/* biome-ignore lint/a11y/useSemanticElements: groups of buttons and fields, not one form fieldset */}
       <div className="toolbar" role="group" aria-label="3D view controls">
         <div className="toolbar-row">
+          {openBin !== null && (
+            <button type="button" onClick={closeBin} onKeyDown={escapeClosesBin}>
+              Close bin
+            </button>
+          )}
           {/* biome-ignore lint/a11y/useSemanticElements: a group of buttons with a visible label */}
           <div className="tool-group" role="group" aria-labelledby={`${toolbarId}-view`}>
             <span className="group-label" id={`${toolbarId}-view`}>
@@ -439,6 +490,7 @@ export function Cabin3D({ workspace, states, blocked = NO_BLOCKED, selection, on
           <li>Plus and minus zoom in and out.</li>
           <li>Home resets the view.</li>
           <li>Enter goes to the parts for the selected location.</li>
+          <li>Clicking a bin opens it; Escape closes it.</li>
           <li>Drag to orbit, right-drag or two fingers to pan, pinch to zoom. The wheel zooms once the view has focus; until then it scrolls the page.</li>
           <li>On a touch screen, drag up or down to scroll the page and sideways to orbit.</li>
           <li>Use the Map and list tab to select locations by keyboard.</li>

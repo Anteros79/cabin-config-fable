@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { ARMREST_BOTTOM, ARMREST_HEIGHT, BIN_DRAWN_TOP } from "../../domain/geometry.ts";
-import type { CabinLocation, LayoutRevision } from "../../domain/types.ts";
+import { ARMREST_BOTTOM, ARMREST_HEIGHT, BIN_DRAWN_TOP, FORWARD_MARGIN } from "../../domain/geometry.ts";
+import { type BinType, binTypeOf, type CabinLocation, type LayoutRevision } from "../../domain/types.ts";
 import { STATUS_TINT_ATTRIBUTE } from "./materials.ts";
 
 /**
@@ -470,19 +470,173 @@ export function pickPiece(
   return location ? { location, component: piece.components[first.instanceId] ?? null, piece, instance: first.instanceId } : null;
 }
 
-/** Cross-section of a closed overhead bin for one side (z > 0 = left). Extruded along X with unit length. */
-export function buildBinGeometry(side: 1 | -1): { door: THREE.BufferGeometry; body: THREE.BufferGeometry } {
-  const cz = 1.31;
-  const cy = 2.2;
-  const r = 0.55;
-  const a0 = (-5 * Math.PI) / 180;
-  const a1 = (-95 * Math.PI) / 180;
-  const seg = 14;
-  const arc: [number, number][] = [];
-  for (let i = 0; i <= seg; i++) {
-    const a = a0 + ((a1 - a0) * i) / seg;
-    arc.push([cz - r * Math.cos(a), cy + r * Math.sin(a)]);
+// ---- overhead bins ------------------------------------------------------------------------------
+
+/** The pieces of a bin module (the fixture's component ids). Which a bin has depends on its type (importer/fixtures.ts). */
+export type BinPiece =
+  | "BIN_DOOR"
+  | "BIN_LATCH"
+  | "BIN_STRIKER"
+  | "BIN_PIVOT"
+  | "BIN_ASSIST"
+  | "BIN_LINER"
+  | "BIN_SIDE_PANEL"
+  | "BIN_BUMPER"
+  | "BIN_SEAL"
+  | "BIN_PLACARD"
+  | "BIN_LABEL";
+
+/** A point of a bin's cross-section: cabin z (lateral, left side), then height. */
+type ZY = readonly [z: number, y: number];
+
+const DEG = Math.PI / 180;
+/** The door's cross-section: a convex arc from its upper, aisle-side edge down to its lower, outboard edge (left side). */
+const DOOR_ARC = { cz: 1.31, cy: 2.2, r: 0.55, from: -5 * DEG, to: -95 * DEG, segments: 14 } as const;
+const arcPoint = (a: number, r: number = DOOR_ARC.r): ZY => [DOOR_ARC.cz - r * Math.cos(a), DOOR_ARC.cy + r * Math.sin(a)];
+function arcPoints(r: number, from: number = DOOR_ARC.from, to: number = DOOR_ARC.to, segments: number = DOOR_ARC.segments): ZY[] {
+  return Array.from({ length: segments + 1 }, (_, i) => arcPoint(from + ((to - from) * i) / segments, r));
+}
+/** The door's upper, aisle-side edge: the hinge line of a classic door. */
+const DOOR_TOP = arcPoint(DOOR_ARC.from);
+/** The door's lower, outboard edge. */
+const DOOR_BOTTOM = arcPoint(DOOR_ARC.to);
+/** The fixed housing an open bin shows: its top, its outboard wall and the underside of the closed bin. */
+const HOUSING = { top: BIN_DRAWN_TOP, outboard: 1.74, bottom: 1.652, wall: 0.014 } as const;
+/** How far outboard a pivot bin's bucket reaches (its back wall): the large bucket is deeper. Its pivots sit this high. */
+const BUCKET_BACK = { PIVOT: 1.44, LARGE_PIVOT: 1.49 } as const;
+const BUCKET_PIVOT_Y = 2.05;
+/** A large pivot bin's open bucket hangs this much lower than a pivot bin's (docs/research: about 2 in). */
+const LARGE_PIVOT_DROP = 0.05;
+
+/** Turn a cross-section point by `a` (radians, as THREE's makeRotationX) about a pivot. */
+function turnAbout(p: ZY, pivot: ZY, a: number): ZY {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const dz = p[0] - pivot[0];
+  const dy = p[1] - pivot[1];
+  return [pivot[0] + dy * s + dz * c, pivot[1] + dy * c - dz * s];
+}
+
+/** The lowest point of a left-side door turned open by `angleDeg` about `pivot`. */
+function lowestOpen(pivot: ZY, angleDeg: number): number {
+  return Math.min(...arcPoints(DOOR_ARC.r).map((p) => turnAbout(p, pivot, -angleDeg * DEG)[1]));
+}
+
+/**
+ * The pivot that turns a bucket by `angleDeg` to where it would come to rest about `base`, lowered by `drop`. The open
+ * transform is p → Rp + t with t = (I − R)·base; lowering it adds (0, −drop) to t, and that is a turn about (I − R)⁻¹·t.
+ */
+function loweredPivot(base: ZY, angleDeg: number, drop: number): ZY {
+  const a = -angleDeg * DEG;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  // R on (z, y): z' = c z + s y, y' = −s z + c y
+  const tz = base[0] - (c * base[0] + s * base[1]);
+  const ty = base[1] - (-s * base[0] + c * base[1]) - drop;
+  const det = (1 - c) ** 2 + s ** 2;
+  return [((1 - c) * tz + s * ty) / det, (-s * tz + (1 - c) * ty) / det];
+}
+
+/** How a bin type opens: the turn in degrees, the axis it turns about (left side; mirrored on the right) and the pieces that turn with the door or bucket. */
+export interface BinMotion {
+  angleDeg: number;
+  pivot: { z: number; y: number };
+  moving: readonly BinPiece[];
+}
+
+const PIVOT_AXIS: ZY = [BUCKET_BACK.PIVOT, BUCKET_PIVOT_Y];
+const LARGE_AXIS: ZY = (() => {
+  const base: ZY = [BUCKET_BACK.LARGE_PIVOT, BUCKET_PIVOT_Y];
+  const wanted = lowestOpen(PIVOT_AXIS, 35) - LARGE_PIVOT_DROP;
+  return loweredPivot(base, 38, lowestOpen(base, 38) - wanted);
+})();
+const BUCKET_PIECES: readonly BinPiece[] = ["BIN_DOOR", "BIN_LATCH", "BIN_LINER", "BIN_SIDE_PANEL"];
+
+/**
+ * How each bin type opens (docs/research/2026-11-18-southwest-737-overhead-bins.md). A classic door turns up 75° about its
+ * top edge over a fixed shelf (a fictional stand-in: no public source shows it). A pivot bin's whole bucket turns 35°
+ * down on its side pivots; a large pivot bin's deeper bucket 38°, its open bottom edge 5 cm lower than a pivot bin's.
+ */
+export const BIN_OPENING: Readonly<Record<BinType, BinMotion>> = {
+  CLASSIC: { angleDeg: 75, pivot: { z: DOOR_TOP[0], y: DOOR_TOP[1] }, moving: ["BIN_DOOR", "BIN_LATCH"] },
+  PIVOT: { angleDeg: 35, pivot: { z: PIVOT_AXIS[0], y: PIVOT_AXIS[1] }, moving: BUCKET_PIECES },
+  LARGE_PIVOT: { angleDeg: 38, pivot: { z: LARGE_AXIS[0], y: LARGE_AXIS[1] }, moving: BUCKET_PIECES },
+};
+
+/** The lowest point of the open door or bucket face, in cabin height. */
+export function openBottomEdge(binType: BinType): number {
+  const { pivot, angleDeg } = BIN_OPENING[binType];
+  return lowestOpen([pivot.z, pivot.y], angleDeg);
+}
+
+/** A bin opens or closes over this long, easing out (none with reduced motion). */
+export const BIN_OPEN_MS = 350;
+export const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
+
+/**
+ * Where the door or bucket of a bin on `side` is, `level` of the way open (0 shut, 1 open), in the bin's own frame: a turn
+ * about the hinge or pivot line, which runs along the bin (X), so it commutes with a module's length scale.
+ */
+export function binOpenMatrix(side: 1 | -1, binType: BinType, level: number): THREE.Matrix4 {
+  const { pivot, angleDeg } = BIN_OPENING[binType];
+  const z = side * pivot.z;
+  return new THREE.Matrix4()
+    .makeTranslation(0, pivot.y, z)
+    .multiply(new THREE.Matrix4().makeRotationX(-side * angleDeg * DEG * level))
+    .multiply(new THREE.Matrix4().makeTranslation(0, -pivot.y, -z));
+}
+
+/** A thin strip along a cross-section polyline, across the bin from x0 to x1: one box per segment. */
+function strip(points: readonly ZY[], thickness: number, x0: number, x1: number): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  points.forEach((from, i) => {
+    const to = points[i + 1];
+    if (!to) return;
+    const g = new THREE.BoxGeometry(x1 - x0, Math.hypot(to[0] - from[0], to[1] - from[1]), thickness);
+    // the box's height runs along the segment: THREE's rotateX takes +Y to (0, cos, sin)
+    g.rotateX(Math.atan2(to[0] - from[0], to[1] - from[1]));
+    g.translate((x0 + x1) / 2, (from[1] + to[1]) / 2, (from[0] + to[0]) / 2);
+    parts.push(g);
+  });
+  return merged(parts);
+}
+
+/** A flat plate across the bin at x, in the shape of a cross-section polygon. */
+function plate(points: readonly ZY[], x: number): THREE.BufferGeometry {
+  const g = new THREE.ShapeGeometry(new THREE.Shape(points.map(([z, y]) => new THREE.Vector2(z, y))));
+  // shape x is cabin z, shape y is height
+  g.applyMatrix4(new THREE.Matrix4().set(0, 0, 0, x, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1));
+  return g;
+}
+
+/** A plain box centred at x and a cross-section point. */
+const block = (lx: number, ly: number, lz: number, x: number, [z, y]: ZY) => box(lx, ly, lz, x, y, z, 0);
+
+/** The same geometry on the other side of the cabin: mirrored across the centreline, every triangle turned back the right way out. */
+function onSide(g: THREE.BufferGeometry, side: 1 | -1): THREE.BufferGeometry {
+  if (side > 0) return g;
+  const out = g.index ? g.toNonIndexed() : g;
+  out.applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+  for (const name of Object.keys(out.attributes)) {
+    const a = out.getAttribute(name);
+    const { array, itemSize } = a;
+    for (let t = 0; t + 2 < a.count; t += 3) {
+      for (let k = 0; k < itemSize; k++) {
+        const i1 = (t + 1) * itemSize + k;
+        const i2 = (t + 2) * itemSize + k;
+        const v = array[i1] as number;
+        array[i1] = array[i2] as number;
+        array[i2] = v;
+      }
+    }
   }
+  return out;
+}
+
+/** The closed bin of one side (z > 0 = left): the door's convex arc and the body behind it. Extruded along X with unit length. */
+function closedBin(side: 1 | -1): { door: THREE.BufferGeometry; closedBody: THREE.BufferGeometry } {
+  const { r, segments: seg } = DOOR_ARC;
+  const arc = arcPoints(r);
   // door: the convex arc, UV v = 1 at the upper edge, 0 at the lower edge
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -506,19 +660,14 @@ export function buildBinGeometry(side: 1 | -1): { door: THREE.BufferGeometry; bo
 
   // body: top, outboard wall and end caps so the module reads as a solid from outside.
   // Its inner arc sits just inside the door so the two surfaces never coincide.
-  const inner: [number, number][] = [];
-  for (let i = 0; i <= seg; i++) {
-    const a = a0 + ((a1 - a0) * i) / seg;
-    inner.push([cz - (r - 0.02) * Math.cos(a), cy + (r - 0.02) * Math.sin(a)]);
-  }
-  const [innerStart, ...innerRest] = inner;
+  const [innerStart, ...innerRest] = arcPoints(r - 0.02);
   const [arcStart] = arc;
   if (!innerStart || !arcStart) throw new Error("invariant: both arcs have seg + 1 points");
   const shape = new THREE.Shape();
   shape.moveTo(innerStart[0], innerStart[1]);
   for (const [z, y] of innerRest) shape.lineTo(z, y);
-  shape.lineTo(1.74, 1.652);
-  shape.lineTo(1.74, BIN_DRAWN_TOP);
+  shape.lineTo(HOUSING.outboard, HOUSING.bottom);
+  shape.lineTo(HOUSING.outboard, BIN_DRAWN_TOP);
   shape.lineTo(arcStart[0], BIN_DRAWN_TOP);
   shape.closePath();
   const body = new THREE.ExtrudeGeometry(shape, { depth: 0.985, bevelEnabled: false, steps: 1 });
@@ -545,5 +694,515 @@ export function buildBinGeometry(side: 1 | -1): { door: THREE.BufferGeometry; bo
     }
   }
   body.computeVertexNormals();
-  return { door, body };
+  return { door, closedBody: body };
+}
+
+/** A bin's geometry for one side and type: the closed shape, and what an open bin shows inside. */
+export interface BinGeometry {
+  /** the closed body, extruded along X with unit length (a module's instance scales it): the same for every type */
+  closedBody: THREE.BufferGeometry;
+  /** the door or bucket face, unit length like the body; binOpenMatrix() turns it open */
+  door: THREE.BufferGeometry;
+  /** the housing an open bin shows in place of its closed body, `length` long: it selects the bin as a whole */
+  openBody: THREE.BufferGeometry;
+  /** the rest of a pivot bin's bucket (its bottom and back wall), which turns with the face and selects BIN_DOOR; none for a classic bin */
+  bucket: THREE.BufferGeometry | null;
+  /** each piece the type has inside, `length` long; BIN_DOOR is the door itself */
+  interior: Partial<Record<BinPiece, THREE.BufferGeometry>>;
+}
+
+/**
+ * The geometry of a bin of one type on one side (z > 0 = left), with the interior for a module `length` long, centred on
+ * x = 0. Sizes are illustrative, not from a drawing: only the opening angles and the large bucket's drop are given.
+ */
+export function buildBinGeometry(side: 1 | -1, binType: BinType, length = 1): BinGeometry {
+  const { door, closedBody } = closedBin(side);
+  const h = length / 2;
+  const x0 = -h + 0.012;
+  const x1 = h - 0.012;
+  const { top, outboard, bottom, wall } = HOUSING;
+  const wallZ = outboard - wall / 2;
+  const valance = strip(
+    [
+      [DOOR_TOP[0] + wall / 2, DOOR_TOP[1]],
+      [DOOR_TOP[0] + wall / 2, top],
+    ],
+    wall,
+    -h,
+    h,
+  );
+  const outboardWall = strip(
+    [
+      [wallZ, bottom],
+      [wallZ, top],
+    ],
+    wall,
+    -h,
+    h,
+  );
+  const roof = (from: number) =>
+    strip(
+      [
+        [from, top - wall / 2],
+        [outboard, top - wall / 2],
+      ],
+      wall,
+      -h,
+      h,
+    );
+  const floor = (from: number) =>
+    strip(
+      [
+        [from, bottom + wall / 2],
+        [outboard, bottom + wall / 2],
+      ],
+      wall,
+      -h,
+      h,
+    );
+  // on the outboard wall, facing the aisle: the maximum-weight placard and the row label
+  const onWall = (lx: number, ly: number, x: number, y: number) => block(lx, ly, 0.004, x, [wallZ - wall / 2 - 0.002, y]);
+  const interior: Partial<Record<BinPiece, THREE.BufferGeometry>> = {
+    BIN_PLACARD: onWall(0.14, 0.09, length * 0.15, 2.04),
+    BIN_LABEL: onWall(0.12, 0.045, -length * 0.15, 2.06),
+  };
+  let openBody: THREE.BufferGeometry;
+  let bucket: THREE.BufferGeometry | null = null;
+  if (binType === "CLASSIC") {
+    // The door lifts into a recess above it, so the roof starts outboard of where it swings; the shelf is fixed.
+    const shelfY = 1.705;
+    openBody = merged([
+      roof(1.45),
+      outboardWall,
+      valance,
+      floor(DOOR_BOTTOM[0]),
+      strip(
+        [
+          [1.13, shelfY],
+          [wallZ - wall / 2, shelfY],
+        ],
+        0.012,
+        -h,
+        h,
+      ),
+    ]);
+    interior.BIN_LINER = strip(
+      [
+        [1.14, shelfY + 0.009],
+        [wallZ - wall / 2 - 0.006, shelfY + 0.009],
+      ],
+      0.005,
+      x0,
+      x1,
+    );
+    const end = [...arcPoints(DOOR_ARC.r - 0.004), [wallZ - wall / 2, bottom] as ZY, [wallZ - wall / 2, top] as ZY, [DOOR_TOP[0] + 0.004, top] as ZY];
+    interior.BIN_SIDE_PANEL = merged([plate(end, x0), plate(end, x1)]);
+    // on the door's inner face at its free edge; the striker under the shelf's front edge
+    interior.BIN_LATCH = block(0.16, 0.03, 0.03, 0, [1.273, 1.671]);
+    interior.BIN_STRIKER = block(0.1, 0.02, 0.03, 0, [1.215, 1.689]);
+    interior.BIN_PIVOT = block(length - 0.06, 0.024, 0.024, 0, [DOOR_TOP[0] + 0.018, DOOR_TOP[1] + 0.008]);
+    interior.BIN_SEAL = block(length - 0.04, 0.014, 0.012, 0, [1.124, shelfY]);
+  } else {
+    const back = BUCKET_BACK[binType];
+    const { pivot } = BIN_OPENING[binType];
+    const rim = 1.95;
+    openBody = merged([roof(DOOR_TOP[0]), outboardWall, valance, floor(1.62)]);
+    bucket = merged([
+      strip(
+        [
+          [DOOR_BOTTOM[0], bottom + 0.006],
+          [back, bottom + 0.006],
+        ],
+        0.012,
+        -h + 0.004,
+        h - 0.004,
+      ),
+      strip(
+        [
+          [back - 0.007, bottom],
+          [back - 0.007, rim],
+        ],
+        0.014,
+        -h + 0.004,
+        h - 0.004,
+      ),
+    ]);
+    interior.BIN_LINER = strip([...arcPoints(DOOR_ARC.r - 0.03, -50 * DEG, DOOR_ARC.to, 6), [back - 0.02, bottom + 0.016]], 0.006, x0, x1);
+    const end = [...arcPoints(DOOR_ARC.r - 0.004), [back, bottom] as ZY, [back, rim] as ZY];
+    interior.BIN_SIDE_PANEL = merged([plate(end, x0), plate(end, x1)]);
+    // the latch inside the bucket's lip with its release button on the face; the striker on the housing just above it,
+    // under the valance
+    interior.BIN_LATCH = merged([block(0.16, 0.03, 0.03, 0, [0.8, 2.105]), block(0.05, 0.022, 0.012, 0, arcPoint(-12 * DEG, DOOR_ARC.r + 0.006))]);
+    interior.BIN_STRIKER = block(0.1, 0.02, 0.03, 0, [0.8, 2.14]);
+    interior.BIN_PIVOT = merged([block(0.03, 0.06, 0.06, x0 + 0.015, [pivot.z, pivot.y]), block(0.03, 0.06, 0.06, x1 - 0.015, [pivot.z, pivot.y])]);
+    interior.BIN_BUMPER = block(0.05, 0.035, 0.035, x0 + 0.08, [wallZ - wall / 2 - 0.018, 1.72]);
+    // the closeout seal along the underside of the housing's front, where the bucket's lip closes against it
+    interior.BIN_SEAL = block(length - 0.04, 0.01, 0.022, 0, [DOOR_TOP[0] + 0.01, DOOR_TOP[1] - 0.005]);
+    if (binType === "PIVOT")
+      interior.BIN_ASSIST = strip(
+        [
+          [wallZ - wall, top - 0.05],
+          [pivot.z - 0.06, pivot.y - 0.22],
+        ],
+        0.025,
+        x1 - 0.07,
+        x1 - 0.045,
+      );
+  }
+  return {
+    closedBody,
+    door,
+    openBody: onSide(openBody, side),
+    bucket: bucket && onSide(bucket, side),
+    interior: Object.fromEntries(Object.entries(interior).map(([piece, g]) => [piece, onSide(g, side)])) as Partial<Record<BinPiece, THREE.BufferGeometry>>,
+  };
+}
+
+/** The coloured marker on a closed bin's face (one per bin with a status): a band along the lower face, unit length, left side. */
+export function buildBinMarker(): THREE.BufferGeometry {
+  return strip([arcPoint(-57 * DEG, DOOR_ARC.r + 0.004), arcPoint(-64 * DEG, DOOR_ARC.r + 0.004)], 0.004, -0.5, 0.5);
+}
+
+/** The shades of an open bin's inside: plain greys, the pale housing of the closed bin, a white placard. */
+const BIN_SHADES: Readonly<Record<BinPiece | "housing", string>> = {
+  housing: "#d5d8df",
+  BIN_DOOR: "#d5d8df",
+  BIN_LINER: "#5b6170",
+  BIN_SIDE_PANEL: "#c4c8d1",
+  BIN_LATCH: "#3a3f4a",
+  BIN_STRIKER: "#8a909c",
+  BIN_PIVOT: "#8a909c",
+  BIN_ASSIST: "#6b7280",
+  BIN_BUMPER: "#2b2f36",
+  BIN_SEAL: "#4a4f5a",
+  BIN_PLACARD: "#f4f4f0",
+  BIN_LABEL: "#e3e6ee",
+};
+
+/** One run of triangles of an open bin's interior mesh, and the piece a pick there selects (null: the bin as a whole). */
+export interface BinRange {
+  mesh: THREE.Mesh;
+  piece: string | null;
+  /** first triangle and how many */
+  start: number;
+  count: number;
+}
+
+/**
+ * What an open bin draws, built for that one bin (two draw calls): the parts that turn with the door or bucket, and the
+ * housing with what is fixed to it. Its closed door instance turns open with it; its closed body is not drawn.
+ */
+export interface OpenBin {
+  location: CabinLocation;
+  side: ClosedBins;
+  /** the bin's instance in its side's door and body */
+  instance: number;
+  binType: BinType;
+  moving: THREE.Mesh;
+  fixed: THREE.Mesh;
+  ranges: BinRange[];
+}
+
+/** One side's closed bins: an instanced door and body, one instance per module (WEB-20). */
+export interface ClosedBins {
+  side: "L" | "R";
+  sign: 1 | -1;
+  door: THREE.InstancedMesh;
+  body: THREE.InstancedMesh;
+  /** the bin location of instance i; none on a layout without a bin map, whose modules are illustrative and unpickable */
+  locations: CabinLocation[];
+  /** where instance i sits, shut: the module's length and place */
+  matrices: THREE.Matrix4[];
+}
+
+/** A pick on the bins: the bin, the piece, and whether the bin was shut (a tap on a shut bin opens it). */
+export interface BinPick {
+  location: CabinLocation;
+  component: string | null;
+  closed: boolean;
+}
+
+const WHITE = new THREE.Color("#ffffff");
+const ZERO_SCALE = new THREE.Matrix4().makeScale(0, 0, 0);
+
+/**
+ * The overhead bins of a layout, renderer-free (as buildPieceMeshes): the closed bins of each side, at most one open bin
+ * with its interior, the opening and closing, and what a pick on them selects. The scene owns the materials and adds
+ * `group`; dispose() releases every geometry and mesh made here.
+ */
+export class BinRun {
+  readonly group = new THREE.Group();
+  readonly sides: ClosedBins[] = [];
+  /** the bin drawn open (opening, open or closing), or null when every bin is shut */
+  open: OpenBin | null = null;
+  /** the bin opening or open; null while closing or shut */
+  target: string | null = null;
+  /** how far the open bin is open, eased: 0 shut, 1 open */
+  level = 0;
+  private motion: { from: number; to: number; start: number } | null = null;
+  private readonly interiorMaterial: THREE.Material;
+  private readonly closedGeometries: THREE.BufferGeometry[] = [];
+  private openGeometries: THREE.BufferGeometry[] = [];
+
+  constructor(layout: LayoutRevision, materials: { door: THREE.Material; body: THREE.Material; interior: THREE.Material }) {
+    this.interiorMaterial = materials.interior;
+    const rows = layout.rows.filter((r) => r.exists).length;
+    const bins = layout.locations.filter((l) => l.kind === "BIN");
+    for (const side of ["L", "R"] as const) {
+      const sign = side === "L" ? 1 : -1;
+      const { door, closedBody } = closedBin(sign);
+      this.closedGeometries.push(door, closedBody);
+      const locations = bins.filter((l) => l.bin?.side === side);
+      // Without a supplied bin map the run is drawn as illustrative, unpickable three-row modules.
+      const spans: { x: number; lx: number }[] =
+        locations.length > 0
+          ? locations.map((l) => ({ x: l.placement.x, lx: l.placement.lx }))
+          : Array.from({ length: Math.ceil(rows / 3) }, (_, i) => {
+              const from = i * 3;
+              const to = Math.min(from + 3, rows);
+              const x0 = layout.geometry.rowPitch * from + FORWARD_MARGIN;
+              const x1 = layout.geometry.rowPitch * to + FORWARD_MARGIN;
+              return { x: (x0 + x1) / 2, lx: x1 - x0 };
+            });
+      const count = Math.max(spans.length, 1);
+      const doorMesh = new THREE.InstancedMesh(door, materials.door, count);
+      const bodyMesh = new THREE.InstancedMesh(closedBody, materials.body, count);
+      const matrices = spans.map((s) => new THREE.Matrix4().makeScale(s.lx, 1, 1).setPosition(s.x, 0, 0));
+      matrices.forEach((m, i) => {
+        doorMesh.setMatrixAt(i, m);
+        doorMesh.setColorAt(i, WHITE);
+        bodyMesh.setMatrixAt(i, m);
+      });
+      if (spans.length === 0) doorMesh.count = bodyMesh.count = 0;
+      for (const mesh of [doorMesh, bodyMesh]) {
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.computeBoundingSphere();
+      }
+      this.group.add(doorMesh, bodyMesh);
+      this.sides.push({ side, sign, door: doorMesh, body: bodyMesh, locations, matrices });
+    }
+    this.group.updateMatrixWorld(true);
+  }
+
+  /** True while a bin is opening or closing: each frame calls step(). */
+  get animating(): boolean {
+    return this.motion !== null;
+  }
+
+  /**
+   * Open a bin (any other open bin shuts at once, so at most one is open), or close the open one with null. Over
+   * BIN_OPEN_MS from `now`, easing out, or at once when `instant` (reduced motion). True if anything changed: the same
+   * bin again, or a location that is no pickable bin, changes nothing.
+   */
+  openBin(locationId: string | null, now: number, instant: boolean): boolean {
+    if (locationId === this.target) return false;
+    if (locationId === null) {
+      this.target = null;
+      this.moveTo(0, now, instant);
+      return true;
+    }
+    const side = this.sides.find((s) => s.locations.some((l) => l.id === locationId));
+    const instance = side ? side.locations.findIndex((l) => l.id === locationId) : -1;
+    const location = side?.locations[instance];
+    if (!side || !location) return false;
+    if (this.open && this.open.location.id !== locationId) this.shut();
+    if (!this.open) this.open = this.build(side, instance, location);
+    this.target = locationId;
+    this.moveTo(1, now, instant);
+    return true;
+  }
+
+  /** Advance the opening or closing to `now`. */
+  step(now: number): void {
+    const m = this.motion;
+    if (!m) return;
+    const t = Math.min(Math.max(now - m.start, 0) / BIN_OPEN_MS, 1);
+    if (t >= 1) this.motion = null;
+    this.setLevel(m.from + (m.to - m.from) * easeOutCubic(t));
+  }
+
+  /** Finish an opening or closing at once (reduced motion turned on part-way). */
+  finish(): void {
+    const m = this.motion;
+    if (!m) return;
+    this.motion = null;
+    this.setLevel(m.to);
+  }
+
+  /** The meshes a pick may hit on the sides `usable` allows (a ghosted side is not): the closed bins, and the open bin's inside. */
+  targets(usable: (side: "L" | "R") => boolean): THREE.Object3D[] {
+    const out: THREE.Object3D[] = [];
+    for (const s of this.sides) if (s.locations.length > 0 && usable(s.side)) out.push(s.door, s.body);
+    if (this.open && this.target !== null && usable(this.open.side.side)) out.push(this.open.moving, this.open.fixed);
+    return out;
+  }
+
+  /**
+   * What the nearest hit on a bin selects, or null when the nearest hit is something else. A shut bin selects its door
+   * (BIN_DOOR, if it lists one); inside an open bin, the piece under the pointer, or the bin as a whole on its housing.
+   */
+  pick(hits: readonly THREE.Intersection[]): BinPick | null {
+    for (const hit of hits) {
+      const open = this.open;
+      if (open && (hit.object === open.moving || hit.object === open.fixed)) {
+        const tri = hit.faceIndex ?? -1;
+        const range = open.ranges.find((r) => r.mesh === hit.object && tri >= r.start && tri < r.start + r.count);
+        return { location: open.location, component: range?.piece ?? null, closed: false };
+      }
+      const side = this.sides.find((s) => s.door === hit.object || s.body === hit.object);
+      if (!side || hit.instanceId === undefined) return null;
+      const location = side.locations[hit.instanceId];
+      if (!location) return null;
+      const opened = open?.location.id === location.id;
+      // an open bin's closed body is not drawn
+      if (opened && hit.object === side.body) continue;
+      return { location, component: location.componentIds.includes("BIN_DOOR") ? "BIN_DOOR" : null, closed: !(opened && this.target !== null) };
+    }
+    return null;
+  }
+
+  /** Tint the open bin's pieces, each by its own status colour (null: none), at `opacity`. */
+  tint(colourOf: (piece: string) => THREE.Color | null, opacity: number): void {
+    const open = this.open;
+    if (!open) return;
+    for (const range of open.ranges) {
+      const attribute = range.mesh.geometry.getAttribute(STATUS_TINT_ATTRIBUTE) as THREE.BufferAttribute;
+      const colour = range.piece ? colourOf(range.piece) : null;
+      for (let v = range.start * 3; v < (range.start + range.count) * 3; v++) {
+        if (colour) attribute.setXYZW(v, colour.r, colour.g, colour.b, opacity);
+        else attribute.setXYZW(v, 0, 0, 0, 0);
+      }
+      attribute.needsUpdate = true;
+    }
+  }
+
+  /** A point on one of the open bin's pieces, in cabin coordinates (the door: the middle of its face), or null if it draws none. */
+  pointOf(piece: string): THREE.Vector3 | null {
+    const open = this.open;
+    if (!open) return null;
+    if (piece === "BIN_DOOR") {
+      const m = new THREE.Matrix4();
+      open.side.door.getMatrixAt(open.instance, m);
+      const [z, y] = arcPoint(-50 * DEG);
+      return new THREE.Vector3(0, y, open.side.sign * z).applyMatrix4(m);
+    }
+    const range = open.ranges.find((r) => r.piece === piece);
+    if (!range) return null;
+    // the middle triangle's centre lies on the piece
+    const position = range.mesh.geometry.getAttribute("position");
+    const first = (range.start + Math.floor(range.count / 2)) * 3;
+    const centre = new THREE.Vector3();
+    for (let v = first; v < first + 3; v++) centre.add(new THREE.Vector3().fromBufferAttribute(position, v));
+    return centre.divideScalar(3).applyMatrix4(range.mesh.matrixWorld);
+  }
+
+  dispose(): void {
+    this.shut();
+    for (const s of this.sides) {
+      s.door.dispose();
+      s.body.dispose();
+    }
+    for (const g of this.closedGeometries) g.dispose();
+    this.group.clear();
+  }
+
+  private moveTo(to: number, now: number, instant: boolean): void {
+    if (instant) {
+      this.motion = null;
+      this.setLevel(to);
+    } else {
+      this.motion = { from: this.level, to, start: now };
+      this.place();
+    }
+  }
+
+  private setLevel(level: number): void {
+    this.level = level;
+    if (level === 0 && this.target === null) this.shut();
+    else this.place();
+  }
+
+  /** The open bin's interior: two merged meshes with a colour and a status tint per vertex, and what each run of triangles is. */
+  private build(side: ClosedBins, instance: number, location: CabinLocation): OpenBin {
+    const { binType } = binTypeOf(location.bin as NonNullable<CabinLocation["bin"]>);
+    const geometry = buildBinGeometry(side.sign, binType, location.placement.lx);
+    const listed = (piece: string) => location.componentIds.includes(piece);
+    const moving = new Set<string>(BIN_OPENING[binType].moving);
+    type Part = { piece: string | null; shade: string; geometry: THREE.BufferGeometry };
+    const parts = { moving: [] as Part[], fixed: [] as Part[] };
+    parts.fixed.push({ piece: null, shade: BIN_SHADES.housing, geometry: geometry.openBody });
+    if (geometry.bucket) parts.moving.push({ piece: listed("BIN_DOOR") ? "BIN_DOOR" : null, shade: BIN_SHADES.BIN_DOOR, geometry: geometry.bucket });
+    // only the pieces the bin lists are drawn (a bin stored before the pieces lists its door alone)
+    for (const [piece, g] of Object.entries(geometry.interior) as [BinPiece, THREE.BufferGeometry][]) {
+      if (listed(piece)) (moving.has(piece) ? parts.moving : parts.fixed).push({ piece, shade: BIN_SHADES[piece], geometry: g });
+      else g.dispose();
+    }
+    for (const g of [geometry.door, geometry.closedBody]) g.dispose();
+    const ranges: BinRange[] = [];
+    const meshOf = (list: Part[]) => {
+      const g = merged(list.map((p) => p.geometry));
+      for (const p of list) p.geometry.dispose();
+      const vertices = g.getAttribute("position").count;
+      const colours = new Float32Array(vertices * 3);
+      g.setAttribute(STATUS_TINT_ATTRIBUTE, new THREE.BufferAttribute(new Float32Array(vertices * 4), 4));
+      const mesh = new THREE.Mesh(g, this.interiorMaterial);
+      mesh.matrixAutoUpdate = false;
+      let start = 0;
+      for (const p of list) {
+        const count = geometryTriangles(p.geometry);
+        const c = new THREE.Color(p.shade);
+        for (let v = start * 3; v < (start + count) * 3; v++) c.toArray(colours, v * 3);
+        ranges.push({ mesh, piece: p.piece, start, count });
+        start += count;
+      }
+      g.setAttribute("color", new THREE.BufferAttribute(colours, 3));
+      this.openGeometries.push(g);
+      this.group.add(mesh);
+      return mesh;
+    };
+    return { location, side, instance, binType, moving: meshOf(parts.moving), fixed: meshOf(parts.fixed), ranges };
+  }
+
+  /** Put the open bin's door, body and interior where `level` has them. */
+  private place(): void {
+    const open = this.open;
+    if (!open) return;
+    const { side, instance } = open;
+    const closed = side.matrices[instance];
+    if (!closed) return;
+    const turn = binOpenMatrix(side.sign, open.binType, this.level);
+    side.door.setMatrixAt(instance, closed.clone().multiply(turn));
+    side.body.setMatrixAt(instance, ZERO_SCALE);
+    for (const mesh of [side.door, side.body]) {
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    }
+    const along = new THREE.Matrix4().makeTranslation(open.location.placement.x, 0, 0);
+    open.fixed.matrix.copy(along);
+    open.moving.matrix.copy(along).multiply(turn);
+    this.group.updateMatrixWorld(true);
+  }
+
+  /** Shut the open bin at once: its closed door and body back in place, its interior gone. */
+  private shut(): void {
+    const open = this.open;
+    if (!open) return;
+    const closed = open.side.matrices[open.instance];
+    if (closed) {
+      open.side.door.setMatrixAt(open.instance, closed);
+      open.side.body.setMatrixAt(open.instance, closed);
+      for (const mesh of [open.side.door, open.side.body]) {
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.computeBoundingSphere();
+      }
+    }
+    this.group.remove(open.moving, open.fixed);
+    for (const g of this.openGeometries) g.dispose();
+    this.openGeometries = [];
+    this.open = null;
+    this.level = 0;
+    this.motion = null;
+    if (this.target !== null) this.target = null;
+    this.group.updateMatrixWorld(true);
+  }
 }

@@ -351,6 +351,59 @@ test("floor areas and bin modules are pickable in 3D", async ({ page, visit }) =
   await expect(page.locator(".component-card[data-component=BIN_DOOR]")).toContainText("FAKE-V01-BIN-R-03");
 });
 
+test("open a bin, select the latch: the inspector shows Bin latch and release button; draw calls stay within budget with a bin open (VAC-11)", async ({
+  page,
+  visit,
+}) => {
+  await openScene(page, visit.id);
+  await setCamera(page, "focus", "BIN:L-04");
+  // a tap on the closed bin opens it and selects its door
+  await clickLocation(page, "BIN:L-04");
+  await expectInspector(page, "Overhead bin L-04");
+  await settle(page);
+  expect((await scene(page)).openBin, "the bin is open").toBe("BIN:L-04");
+  await expect(page.locator(".component-card[data-component=BIN_DOOR].highlighted")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close bin" })).toBeVisible();
+  // the latch inside it is a piece of its own
+  const latch = await page.evaluate(() => window.__cabinKit?.scene?.screenPointOfPiece("BIN:L-04", "BIN_LATCH") ?? null);
+  if (!latch) throw new Error("no screen point for the latch of BIN:L-04");
+  await pressAt(page, latch);
+  const card = page.locator(".component-card[data-component=BIN_LATCH].highlighted");
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("Bin latch and release button");
+  // Escape on the view closes it again
+  await page.locator("canvas").focus();
+  await page.keyboard.press("Escape");
+  await settle(page);
+  expect((await scene(page)).openBin, "Escape closed the bin").toBeNull();
+  await expect(page.getByRole("button", { name: "Close bin" })).toHaveCount(0);
+
+  // every location with a status, 7C selected, and bin L-04 open: still within budgets.json in every preset
+  await openMap(page);
+  await selectLocation(page, "Seat 7C");
+  await open3D(page);
+  await sceneCall(page, "openBin", "BIN:L-04");
+  await settle(page);
+  const statuses = ["recorded", "unresolved", "alternate", "mustFix", "deferred", "carried", "noted"];
+  const locations = await page.evaluate(() => {
+    const s = window.__cabinKit?.scene as unknown as { layout: { locations: { id: string; componentIds: string[] }[] } };
+    return s.layout.locations.map((l) => ({ id: l.id, componentIds: l.componentIds }));
+  });
+  let n = 0;
+  const every = Object.fromEntries(
+    locations.map((l) => [l.id, Object.fromEntries(l.componentIds.map((c) => [c, statuses[n++ % statuses.length] ?? "recorded"]))]),
+  );
+  await expectWithinSceneBudget(page, every, async (where) => {
+    const info = await scene(page);
+    expect(info.openBin, `${where}: the bin is open`).toBe("BIN:L-04");
+    // the open bin's pieces are tinted instead of its badge: every other location keeps one
+    const marks = info.marks as { badges: number; binMarkers: number };
+    expect(marks.badges, `${where}: a badge on every other location`).toBe(441);
+    // and a coloured marker on the face of every other bin: 22 modules, one open
+    expect(marks.binMarkers, `${where}: a marker on every shut bin`).toBe(21);
+  });
+});
+
 test("a hidden layer never blocks a pick: the seat behind a hidden bin is selected", async ({ page, visit }) => {
   await openScene(page, visit.id);
   const layer = (name: string) => page.getByRole("group", { name: "Layers" }).getByRole("button", { name });
