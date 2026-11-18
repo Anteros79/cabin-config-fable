@@ -530,11 +530,12 @@ export class VisitStore {
   }
 
   /**
-   * The tail's OPEN observations that another visit opened, placed on this visit's layout. The snapshot is
+   * The tail's OPEN DEFERRED and MUST_FIX observations that another visit opened, placed on this visit's layout. The snapshot is
    * read only when there is something to place. Must be called inside a transaction.
    */
   private carriedInto(visitId: string, tail: string, checkDate: string): CarriedObservation[] {
-    const others = this.openObservations(tail).filter((o) => o.openedInVisitId !== visitId);
+    // R13: a NOTED item needs no action, so it stays on its own visit.
+    const others = this.openObservations(tail).filter((o) => o.openedInVisitId !== visitId && o.outcome !== "NOTED");
     if (others.length === 0) return [];
     return mapCarried(others, this.loadSnapshot(visitId).context.layoutRevision.locations, checkDate);
   }
@@ -972,7 +973,7 @@ export class VisitStore {
         }
       }
       const mustFix = this.openObservations(visit.tail)
-        .filter((o) => o.outcome === "MUST_FIX" || effectiveClass(o, visit.checkDate).class === "NO_GO")
+        .filter((o) => o.outcome !== "NOTED" && (o.outcome === "MUST_FIX" || effectiveClass(o, visit.checkDate).class === "NO_GO"))
         .map((o) => o.id)
         .sort();
       if (mustFix.length > 0 && !held) {

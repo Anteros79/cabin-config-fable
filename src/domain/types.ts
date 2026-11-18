@@ -640,7 +640,7 @@ export interface Visit extends VisitSummary {
   events: VisitEvent[];
   /** Observations opened or closed in this visit. */
   observations: Observation[];
-  /** The tail's other OPEN observations, placed on this visit's layout. */
+  /** The tail's other OPEN DEFERRED and MUST_FIX observations, placed on this visit's layout. */
   carried: CarriedObservation[];
 }
 

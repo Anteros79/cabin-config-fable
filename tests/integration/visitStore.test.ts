@@ -688,7 +688,8 @@ describe("observations", () => {
     const store = openVisits(makeStores());
     const first = store.createVisit(snap(), "Demo").visit;
     const belt = at(store.addObservation(first.id, BELT_3A).visit.observations, 0);
-    store.addObservation(first.id, { ...STAIN_3A, componentId: "HEADREST" });
+    // a cosmetic deferral carries too
+    store.addObservation(first.id, { ...STAIN_3A, componentId: "HEADREST", outcome: "DEFERRED", deferUntil: "NEXT_STOP", reason: "NO_TIME" });
     const done = store.completeVisit(first.id, undefined);
     expect(done.visit).toMatchObject({ status: "COMPLETED", aircraftHeld: false });
     const other = store.createVisit(snapshotFor(release, "N200TL", "2026-11-12"), "Demo").visit;
@@ -717,6 +718,24 @@ describe("observations", () => {
     expect(codeOf(() => store.closeObservation(next.id, at(closed.carried, 0).observation.id, "FIXED", 1))).toBe("VISIT_LOCKED");
     const third = store.createVisit(snapshotFor(release, "N100TL", "2026-11-21"), "Demo").visit;
     expect(third.carried.map((c) => c.observation.componentId)).toEqual(["HEADREST"]);
+  });
+
+  it("a NOTED problem does not carry to the next visit", () => {
+    const store = openVisits(makeStores());
+    const first = store.createVisit(snap(), "Demo").visit;
+    const noted = at(store.addObservation(first.id, STAIN_3A).visit.observations, 0);
+    const mustFix = at(
+      store.addObservation(first.id, { locationId: "SEAT:3A", componentId: "TRAY", condition: "BROKEN", note: "", outcome: "MUST_FIX" }).visit.observations,
+      1,
+    );
+    store.completeVisit(first.id, undefined, { aircraftHeld: true });
+    const next = store.createVisit(snapshotFor(release, "N100TL", "2026-11-20"), "Demo").visit;
+    expect(next.carried.map((c) => c.observation.id)).toEqual([mustFix.id]);
+    // it stays OPEN and listed on its own visit, and never blocks completion
+    expect(store.getVisit(first.id).observations.find((o) => o.id === noted.id)).toMatchObject({ status: "OPEN", outcome: "NOTED" });
+    store.closeObservation(next.id, mustFix.id, "FIXED", 1);
+    expect(store.completeVisit(next.id, undefined).visit).toMatchObject({ status: "COMPLETED", aircraftHeld: false });
+    expect(store.createVisit(snapshotFor(release, "N100TL", "2026-11-21"), "Demo").visit.carried).toEqual([]);
   });
 
   it("an MEL deferral past its due date blocks completion with MUST_FIX_OPEN until aircraftHeld", () => {
